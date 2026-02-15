@@ -6,18 +6,21 @@ import { HelmetProvider } from 'react-helmet-async'
 import App from './App'
 import './index.css'
 import { registerSW } from 'virtual:pwa-register'
+import { ErrorBoundary } from './components/common/ErrorBoundary'
 
 const queryClient = new QueryClient()
 registerSW({ immediate: true })
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <HelmetProvider>
-      <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
-      </QueryClientProvider>
-    </HelmetProvider>
+    <ErrorBoundary>
+      <HelmetProvider>
+        <QueryClientProvider client={queryClient}>
+          <BrowserRouter>
+            <App />
+          </BrowserRouter>
+        </QueryClientProvider>
+      </HelmetProvider>
+    </ErrorBoundary>
   </StrictMode>
 )
