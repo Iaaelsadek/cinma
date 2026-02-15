@@ -7,10 +7,10 @@ import { useAuth } from '../../../hooks/useAuth'
 import { addToWatchlist, isInWatchlist, removeFromWatchlist } from '../../../lib/supabase'
 
 export type VideoItem = {
-  id: string
+  id: string | number
   title: string
   thumbnail?: string | null
-  url: string
+  url?: string
   views?: number | null
   duration?: number | null
   category?: string | null
