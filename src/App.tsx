@@ -29,6 +29,7 @@ import { setTmdbLanguage } from './lib/tmdb'
 const CinematicDetails = lazy(() => import('./pages/CinematicDetails').then(m => ({ default: m.default })))
 import { useInitAuth } from './hooks/useInitAuth'
 const CategoryPage = lazy(() => import('./pages/Category').then(m => ({ default: m.CategoryPage })))
+const ReciterDetails = lazy(() => import('./pages/ReciterDetails').then(m => ({ default: m.ReciterDetails })))
 import { QuranPage } from './pages/Quran'
 
 const WatchVideo = lazy(() => import('./pages/WatchVideo').then(m => ({ default: m.WatchVideo })))
@@ -100,6 +101,7 @@ const App = () => {
         <Route path="/kids" element={<CategoryPage />} />
         <Route path="/anime" element={<CategoryPage />} />
         <Route path="/quran" element={<QuranPage />} />
+        <Route path="/quran/reciter/:id" element={<ReciterDetails />} />
         <Route path="/movies" element={<MoviesRoot />} />
         <Route path="/series" element={<SeriesRoot />} />
         <Route path="/movies/year/:year" element={<MoviesByYear />} />

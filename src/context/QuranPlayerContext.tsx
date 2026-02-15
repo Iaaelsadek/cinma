@@ -148,18 +148,39 @@ export const QuranPlayerBar = () => {
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-[#050505]/90 backdrop-blur-2xl shadow-2xl">
       {/* Progress Bar (Top Line) */}
-      <div className="absolute top-0 left-0 right-0 h-1 bg-white/5 cursor-pointer group" onClick={(e) => {
-        const rect = e.currentTarget.getBoundingClientRect()
-        const x = e.clientX - rect.left
-        const p = x / rect.width
-        seek(p * duration)
-      }}>
+      <div className="absolute top-0 left-0 right-0 h-1.5 bg-white/10 group cursor-pointer">
+        {/* Background Track */}
         <div 
-          className="h-full bg-primary relative transition-all group-hover:h-1.5"
+          className="absolute inset-0 w-full h-full"
+          onClick={(e) => {
+            const rect = e.currentTarget.getBoundingClientRect()
+            const x = e.clientX - rect.left
+            const p = x / rect.width
+            seek(p * duration)
+          }}
+        />
+        
+        {/* Filled Progress */}
+        <div 
+          className="h-full bg-gradient-to-r from-emerald-600 to-emerald-400 relative pointer-events-none"
           style={{ width: `${(currentTime / duration) * 100}%` }}
         >
-          <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow-lg scale-0 group-hover:scale-100 transition-transform" />
+          {/* Draggable Knob (Simulated) */}
+          <div className="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 bg-white rounded-full shadow-[0_0_10px_rgba(16,185,129,0.5)] scale-0 group-hover:scale-100 transition-transform duration-200" />
         </div>
+
+        {/* Hidden Range Input for Accessibility & Dragging */}
+        <input
+          type="range"
+          min={0}
+          max={duration || 100}
+          value={currentTime}
+          onChange={(e) => {
+            const val = Number(e.target.value)
+            seek(val)
+          }}
+          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+        />
       </div>
 
       <div className="mx-auto flex w-full max-w-7xl items-center gap-4 px-4 py-3 md:py-4">

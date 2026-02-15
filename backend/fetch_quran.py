@@ -69,6 +69,7 @@ def insert_reciters(items):
         
         server = selected_moshaf.get("server")
         rewaya = selected_moshaf.get("name")
+        surah_list = selected_moshaf.get("surah_list")
         
         if not server:
             print(f"Skipping {item.get('name')} - No server found")
@@ -80,6 +81,7 @@ def insert_reciters(items):
             "rewaya": rewaya,
             "letter": item.get("letter"),
             "server": server,
+            "surah_list": surah_list,
             "category": categorize(item),
             "is_active": True,
             "featured": False,
