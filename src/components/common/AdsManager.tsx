@@ -60,9 +60,21 @@ export const AdsManager = ({ type, position, onDone, durationSeconds = 8 }: Prop
     ;(async () => {
       try {
         const a = await fetchAd(type, position)
-        if (!cancelled) setAd(a)
+        if (!cancelled) {
+          setAd(a)
+          // Fix: If no ad found for preroll, proceed immediately
+          if (!a && type === 'preroll') {
+            onDone?.()
+          }
+        }
       } catch {
-        if (!cancelled) setAd(null)
+        if (!cancelled) {
+          setAd(null)
+          // Fix: If error fetching ad, proceed immediately
+          if (type === 'preroll') {
+            onDone?.()
+          }
+        }
       }
     })()
     return () => { cancelled = true }
