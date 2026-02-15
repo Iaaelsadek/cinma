@@ -47,6 +47,7 @@ export const Watch = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
 
+  // Hook 1: Sync URL params
   useEffect(() => {
     const p = new URLSearchParams(sp)
     if (type === 'tv') {
@@ -61,6 +62,7 @@ export const Watch = () => {
     setSp(p, { replace: true })
   }, [season, episode, type, setSp])
 
+  // Hook 2: Fetch Details
   useEffect(() => {
     let mounted = true
     setLoading(true)
@@ -90,9 +92,7 @@ export const Watch = () => {
     return () => { mounted = false }
   }, [id, type])
 
-  if (error) return <NotFound />
-  if (loading && !details) return <div className="min-h-screen bg-[#0f0f0f] p-8"><SkeletonGrid count={1} variant="video" /></div>
-
+  // Hook 3: Progress Tracking (Moved UP before early returns)
   useEffect(() => {
     let timer: ReturnType<typeof setInterval> | undefined
     let mounted = true
@@ -145,27 +145,32 @@ export const Watch = () => {
     }
   }, [user, id, type, season, episode])
 
+  // Hook 4: Memos (Moved UP before early returns)
   const title = useMemo(() => {
     return details?.title || details?.name || (type === 'movie' ? `فيلم #${id}` : `مسلسل #${id}`)
   }, [details, type, id])
+  
   const year = useMemo(() => {
     const d = type === 'movie' ? details?.release_date : details?.first_air_date
     return d ? new Date(d).getFullYear() : null
   }, [details, type])
+  
   const runtimeMin: number | null = useMemo(() => {
     if (type === 'movie' && typeof details?.runtime === 'number') return details.runtime
     if (type === 'tv' && Array.isArray(details?.episode_run_time) && details.episode_run_time[0]) return details.episode_run_time[0]
     return null
   }, [details, type])
+  
   const rating = useMemo(() => {
     return typeof details?.vote_average === 'number' ? Math.round(details.vote_average * 10) / 10 : null
   }, [details])
+  
   const genres = useMemo<Array<{ id: number; name: string }>>(() => details?.genres || [], [details])
   const overview = useMemo(() => details?.overview || 'لا يوجد وصف متاح', [details])
   const poster = useMemo(() => (details?.poster_path ? `https://image.tmdb.org/t/p/w500${details.poster_path}` : ''), [details])
   const backdrop = useMemo(() => (details?.backdrop_path ? `https://image.tmdb.org/t/p/original${details.backdrop_path}` : ''), [details])
   const cast = useMemo(() => (details?.credits?.cast || []).slice(0, 10), [details])
-  const quality = 'WEB-DL 1080p'
+  
   const dlList = useMemo<DownloadLink[]>(() => (
     downloads.length
       ? downloads
@@ -174,6 +179,10 @@ export const Watch = () => {
           { label: 'Download 720p', url: `https://files.cinma.online/${type}/${id}/720p.mp4` }
         ]
   ), [downloads, id, type])
+
+  // Early Returns (Now safe because all hooks are declared above)
+  if (error) return <NotFound />
+  if (loading && !details) return <div className="min-h-screen bg-[#0f0f0f] p-8"><SkeletonGrid count={1} variant="video" /></div>
 
   return (
     <div className="min-h-screen bg-[#0f0f0f]">
