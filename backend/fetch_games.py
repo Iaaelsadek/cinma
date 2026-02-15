@@ -110,21 +110,25 @@ def upsert_games(rows: List[Dict[str, Any]]):
     sb = get_supabase()
     batch = []
     for i, row in enumerate(rows, 1):
-        batch.append(row)
+        # Transform row to match DB schema
+        db_row = {
+            "id": row.get("id"),
+            "title": row.get("title"),
+            "overview": row.get("description"),
+            "poster_path": row.get("poster_url"),
+            "release_date": f"{row.get('year')}-01-01" if row.get("year") else None,
+            "category": row.get("category"),
+            "rating": row.get("rating"),
+            "download_urls": {"default": row.get("download_url")} if row.get("download_url") else {},
+            "is_active": True
+        }
+        batch.append(db_row)
+        
         if len(batch) >= 50 or i == len(rows):
             try:
                 sb.table("games").upsert(batch).execute()
             except Exception as e:
-                if "year" in str(e) and "column" in str(e):
-                    fallback = []
-                    for r in batch:
-                        r2 = dict(r)
-                        if "year" in r2:
-                            r2["release_year"] = r2.pop("year")
-                        fallback.append(r2)
-                    sb.table("games").upsert(fallback).execute()
-                else:
-                    raise
+                print(f"Batch upsert failed: {e}")
             batch = []
 
 def main():

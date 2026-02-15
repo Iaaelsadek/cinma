@@ -67,31 +67,30 @@ export const SearchBar = ({ placeholder, className, size = 'md', onQueryChange, 
         onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
         placeholder={isListening ? (lang === 'ar' ? 'تحدث الآن...' : 'Listening...') : (placeholder || 'ابحث عن فيلم...')}
         size={size}
-        // Adjust padding to accommodate both icons (Mic + Search)
-        // LTR: padding-right for icons on right. RTL: padding-left for icons on left.
-        className="w-full pr-24 rtl:pr-4 rtl:pl-24"
+        // Increase padding significantly to push text away from left icons
+        // Increase border opacity and bg opacity to make input more visible
+        className="w-full bg-black/60 border-white/20 hover:border-white/40 focus:border-primary/60 transition-colors pl-28 rtl:pl-28 rtl:pr-4"
         {...props}
       />
       
-      <div className={`absolute top-1/2 -translate-y-1/2 flex items-center gap-2 ${lang === 'ar' ? 'left-3' : 'right-3'}`}>
+      {/* Position icons on the far LEFT (in RTL) or RIGHT (in LTR) */}
+      <div className={`absolute top-1/2 -translate-y-1/2 flex items-center gap-1 ${lang === 'ar' ? 'left-2' : 'right-2'}`}>
         <button
           type="button"
           onClick={startListening}
-          className="p-2 text-zinc-400 hover:text-primary transition-colors hover:bg-white/5 rounded-full"
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition-all hover:bg-white/10 hover:text-primary active:scale-95"
           aria-label="Voice Search"
         >
-          {isListening ? <Loader2 className="animate-spin text-primary" size={20} /> : <Mic size={20} />}
+          {isListening ? <Loader2 className="animate-spin text-primary" size={18} /> : <Mic size={18} />}
         </button>
-
-        <div className="h-6 w-px bg-white/10" />
 
         <button
           type="button"
           onClick={handleSearch}
-          className="p-2 text-zinc-400 hover:text-white transition-colors bg-white/5 rounded-full border border-white/10 hover:bg-primary hover:border-primary"
+          className="flex h-8 w-8 items-center justify-center rounded-lg border border-primary/30 bg-primary/20 text-zinc-300 transition-all hover:bg-primary/40 hover:text-white active:scale-95"
           aria-label="Search"
         >
-          <Search size={20} />
+          <Search size={16} />
         </button>
       </div>
     </div>

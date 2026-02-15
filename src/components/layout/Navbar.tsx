@@ -129,14 +129,13 @@ export const Navbar = ({ isScrolled }: { isScrolled?: boolean }) => {
   }
 
   const navLinks = [
-    { to: '/', label: lang === 'ar' ? 'الرئيسية' : 'Home' },
-    { to: '/movies', label: lang === 'ar' ? 'الأفلام' : 'Movies' },
-    { to: '/series', label: lang === 'ar' ? 'المسلسلات' : 'Series' },
-    { to: '/gaming', label: lang === 'ar' ? 'الألعاب' : 'Gaming' },
-    { to: '/software', label: lang === 'ar' ? 'البرمجيات' : 'Software' },
-    { to: '/anime', label: lang === 'ar' ? 'الأنمي' : 'Anime' },
-    { to: '/quran', label: lang === 'ar' ? 'القرآن' : 'Quran' },
-    { to: '/kids', label: lang === 'ar' ? 'الأطفال' : 'Kids' }
+    { to: '/', label: lang === 'ar' ? 'الرئيسية' : 'Home', icon: Home, color: 'text-primary', glow: 'shadow-neon-emerald' },
+    { to: '/movies', label: lang === 'ar' ? 'الأفلام' : 'Movies', icon: Film, color: 'text-blue-400', glow: 'shadow-neon-blue' },
+    { to: '/series', label: lang === 'ar' ? 'المسلسلات' : 'Series', icon: Tv, color: 'text-purple-400', glow: 'shadow-[0_0_15px_rgba(168,85,247,0.5)]' },
+    { to: '/gaming', label: lang === 'ar' ? 'الألعاب' : 'Gaming', icon: Gamepad2, color: 'text-red-400', glow: 'shadow-[0_0_15px_rgba(248,113,113,0.5)]' },
+    { to: '/software', label: lang === 'ar' ? 'البرمجيات' : 'Software', icon: Cpu, color: 'text-cyan-400', glow: 'shadow-[0_0_15px_rgba(34,211,238,0.5)]' },
+    { to: '/anime', label: lang === 'ar' ? 'الأنمي' : 'Anime', icon: Zap, color: 'text-yellow-400', glow: 'shadow-[0_0_15px_rgba(250,204,21,0.5)]' },
+    { to: '/quran', label: lang === 'ar' ? 'القرآن الكريم' : 'Holy Quran', icon: BookOpen, color: 'text-emerald-400', glow: 'shadow-[0_0_15px_rgba(52,211,153,0.5)]' }
   ]
 
   return (
@@ -146,19 +145,42 @@ export const Navbar = ({ isScrolled }: { isScrolled?: boolean }) => {
       }`}
     >
       <div className="mx-auto grid max-w-[1920px] grid-cols-[auto_1fr_auto] items-center gap-6 h-16">
-        <div className="flex items-center gap-4">
-          <Link to="/" className="text-lg font-black uppercase tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-primary to-neon-blue">
-            {lang === 'ar' ? 'سينما أونلاين' : 'Cinema Online'}
+        <div className="flex items-center gap-6">
+          <Link to="/" className="group relative py-2">
+            <div className="relative z-10 flex items-center gap-1 font-black text-2xl tracking-tighter">
+              <div className="relative">
+                <span className="bg-gradient-to-r from-primary via-emerald-400 to-cyan-500 bg-clip-text text-transparent drop-shadow-[0_0_15px_rgba(16,185,129,0.5)] group-hover:drop-shadow-[0_0_25px_rgba(16,185,129,0.8)] transition-all duration-300">
+                  {lang === 'ar' ? 'سينما' : 'CINEMA'}
+                </span>
+                {/* Animated Dot for 'Cinema' */}
+                <span className="absolute -right-1.5 -top-0.5 h-2 w-2 rounded-full bg-red-500 shadow-[0_0_8px_#ef4444] animate-pulse" />
+              </div>
+              
+              <span className="relative text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                {lang === 'ar' ? 'أونلاين' : 'ONLINE'}
+                <div className="absolute -bottom-1 left-0 right-0 h-[2px] w-0 bg-gradient-to-r from-primary to-cyan-500 transition-all duration-500 group-hover:w-full" />
+              </span>
+            </div>
+            {/* Ambient Glow behind logo */}
+            <div className="absolute -inset-4 rounded-full bg-primary/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
           </Link>
-          <nav className="hidden items-center gap-6 lg:flex">
+          <nav className="hidden items-center gap-1 xl:gap-2 lg:flex">
             {navLinks.map((link) => (
               <Link
                 key={link.to}
                 to={link.to}
-                className="group relative text-xs font-semibold uppercase tracking-widest text-zinc-300 transition-colors hover:text-white"
+                className="group relative flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold text-zinc-300 transition-all hover:bg-white/5 hover:text-white"
               >
-                {link.label}
-                <span className="absolute -bottom-1 left-0 h-[2px] w-0 bg-primary transition-all group-hover:w-full" />
+                {/* Custom Glow Effect for each icon */}
+                <div className="relative flex items-center justify-center transition-transform duration-300 group-hover:scale-110">
+                  {/* The Glow */}
+                  <div className={`absolute inset-0 rounded-full opacity-0 blur-[8px] transition-opacity duration-300 group-hover:opacity-60 ${link.glow?.replace('shadow-', 'bg-') || 'bg-primary'}`} 
+                       style={{ backgroundColor: 'currentColor' }} 
+                  />
+                  {/* The Icon */}
+                  <link.icon size={18} className={`relative z-10 transition-colors duration-300 ${link.color || 'text-primary'}`} />
+                </div>
+                <span className="transition-colors group-hover:text-white whitespace-nowrap">{link.label}</span>
               </Link>
             ))}
           </nav>
@@ -423,7 +445,7 @@ export const Navbar = ({ isScrolled }: { isScrolled?: boolean }) => {
                     onClick={() => setMobileMenuOpen(false)}
                     className="flex items-center gap-3 rounded-xl px-4 py-3 text-base font-bold text-zinc-200 hover:bg-white/10 transition-colors"
                   >
-                    {link.icon && <link.icon size={20} className="text-primary" />}
+                    <link.icon size={20} className="text-primary" />
                     {link.label}
                   </Link>
                 ))}

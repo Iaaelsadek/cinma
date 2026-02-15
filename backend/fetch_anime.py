@@ -46,26 +46,25 @@ def categorize(item) -> str:
 def upsert_anime(items):
     supabase = get_supabase()
     for item in items:
+        # Map Jikan response to DB Schema
         payload = {
             "id": item.get("mal_id"),
-            "mal_id": item.get("mal_id"),
             "title": item.get("title"),
-            "title_english": item.get("title_english"),
-            "title_japanese": item.get("title_japanese"),
-            "type": item.get("type"),
-            "episodes": item.get("episodes"),
-            "status": item.get("status"),
-            "score": item.get("score"),
-            "rank": item.get("rank"),
-            "popularity": item.get("popularity"),
-            "synopsis": item.get("synopsis"),
-            "year": item.get("year"),
-            "season": item.get("season"),
+            "overview": item.get("synopsis"),
+            "poster_path": (item.get("images") or {}).get("jpg", {}).get("image_url"),
+            "backdrop_path": (item.get("images") or {}).get("jpg", {}).get("large_image_url"),
+            "release_date": f"{item.get('year')}-01-01" if item.get("year") else None,
+            "episodes": item.get("episodes"),  # Now supported by migration
+            "rating": item.get("score"),       # Now supported by migration
             "category": categorize(item),
-            "image_url": (item.get("images") or {}).get("jpg", {}).get("image_url"),
-            "trailer_url": (item.get("trailer") or {}).get("url"),
-            "source": "jikan",
+            "is_active": True,
+            # "embed_links": {}, # Populate later if needed
+            # Fields not in DB: rank, popularity, season, trailer_url (unless added)
         }
+        
+        # Clean None values
+        payload = {k: v for k, v in payload.items() if v is not None}
+
         try:
             supabase.table("anime").upsert(payload, on_conflict="id").execute()
         except Exception as e:
