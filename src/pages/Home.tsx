@@ -166,31 +166,6 @@ export const Home = () => {
       <div className="relative -mt-10 z-[25] px-4 lg:px-12 pointer-events-none md:pointer-events-auto">
         <CinemaTrain />
       </div>
-      <nav className="relative z-30 px-4 lg:px-12">
-        <div className="glass-card p-2 overflow-x-auto no-scrollbar">
-          <div className="flex items-center gap-2">
-            {[
-              { id: 'trending', label: lang === 'ar' ? 'الرائج' : 'Trending' },
-              { id: 'continue', label: lang === 'ar' ? 'متابعة' : 'Continue' },
-              { id: 'movies', label: lang === 'ar' ? 'أفلام' : 'Movies' },
-              { id: 'series', label: lang === 'ar' ? 'مسلسلات' : 'Series' },
-              { id: 'mena', label: lang === 'ar' ? 'مصر والشرق الأوسط' : 'MENA' },
-              { id: 'anime', label: lang === 'ar' ? 'أنمي' : 'Anime' },
-              { id: 'kids', label: lang === 'ar' ? 'الأطفال' : 'Kids' },
-              { id: 'quran', label: lang === 'ar' ? 'القرآن' : 'Quran' },
-              { id: 'software', label: lang === 'ar' ? 'برمجيات' : 'Software' }
-            ].map((item) => (
-              <a
-                key={item.id}
-                href={`#${item.id}`}
-                className="btn-ghost h-10 px-4 whitespace-nowrap"
-              >
-                {item.label}
-              </a>
-            ))}
-          </div>
-        </div>
-      </nav>
 
       <div className="relative z-20 space-y-12 -mt-28 md:-mt-36 lg:-mt-44">
         <div id="trending" />
