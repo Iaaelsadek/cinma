@@ -135,6 +135,7 @@ export const Navbar = ({ isScrolled }: { isScrolled?: boolean }) => {
     { to: '/gaming', label: lang === 'ar' ? 'الألعاب' : 'Gaming', icon: Gamepad2, color: 'text-red-400', glow: 'shadow-[0_0_15px_rgba(248,113,113,0.5)]' },
     { to: '/software', label: lang === 'ar' ? 'البرمجيات' : 'Software', icon: Cpu, color: 'text-cyan-400', glow: 'shadow-[0_0_15px_rgba(34,211,238,0.5)]' },
     { to: '/anime', label: lang === 'ar' ? 'الأنمي' : 'Anime', icon: Zap, color: 'text-yellow-400', glow: 'shadow-[0_0_15px_rgba(250,204,21,0.5)]' },
+    { to: '/kids', label: lang === 'ar' ? 'أطفال' : 'Kids', icon: Smile, color: 'text-pink-400', glow: 'shadow-[0_0_15px_rgba(244,114,182,0.5)]' },
     { to: '/quran', label: lang === 'ar' ? 'القرآن الكريم' : 'Holy Quran', icon: BookOpen, color: 'text-emerald-400', glow: 'shadow-[0_0_15px_rgba(52,211,153,0.5)]' }
   ]
 

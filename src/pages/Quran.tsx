@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useQuranPlayer } from '../context/QuranPlayerContext'
 import { Link } from 'react-router-dom'
 import { useLang } from '../state/useLang'
 import { supabase } from '../lib/supabase'
@@ -96,6 +97,8 @@ export const QuranPage = () => {
     const safe = server.endsWith('/') ? server : `${server}/`
     return `${safe}001.mp3` // Default to Al-Fatiha for demo, ideally we list surahs
   }
+
+  const { currentTrack, toggle, playTrack } = useQuranPlayer()
 
   const handlePlay = (reciter: QuranRow) => {
     const url = buildUrl(reciter.server)
