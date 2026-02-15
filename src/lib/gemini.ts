@@ -41,8 +41,38 @@ export const correctSearchTerm = async (query: string): Promise<string> => {
     }
     
     return text;
+/**
+ * Uses Gemini to generate a short Arabic summary for a movie/show.
+ * @param title Title of the content.
+ * @param originalOverview The original overview (English or Arabic).
+ * @returns A concise Arabic summary.
+ */
+export const generateArabicSummary = async (title: string, originalOverview?: string): Promise<string> => {
+  if (!genAI || !title) return originalOverview || "لا يوجد وصف متاح";
+
+  try {
+    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+    const prompt = `
+    Summarize the plot of the movie/show "${title}" in Arabic.
+    Context: ${originalOverview || "No overview provided, use general knowledge about this title."}
+    
+    Requirements:
+    1. Language: Arabic (Modern Standard Arabic).
+    2. Length: Concise (2-3 sentences max).
+    3. Tone: Engaging and professional.
+    4. Do not include spoilers.
+    5. Return ONLY the Arabic summary text.
+    `;
+    
+    const result = await model.generateContent(prompt);
+    const response = result.response;
+    const text = response.text().trim();
+    
+    if (text.length === 0) return originalOverview || "";
+    return text;
   } catch (error) {
-    console.warn("Gemini search correction failed, using original query:", error);
-    return query;
+    console.warn("Gemini summary generation failed:", error);
+    return originalOverview || "";
   }
 };
+
