@@ -92,7 +92,10 @@ export const Home = () => {
     staleTime: 300000
   })
 
-  const heroItems = useMemo(() => (trendingMovies.data?.results || []).slice(0, 5), [trendingMovies.data])
+  const heroItems = useMemo(() => {
+    const source = trendingMovies.data?.results || popularMovies.data?.results || []
+    return source.slice(0, 5)
+  }, [trendingMovies.data, popularMovies.data])
   const trendingVideos = useCategoryVideos('trending', { limit: 20 })
   const latestMovies = useCategoryVideos('movie', { limit: 20 })
   const tvSeries = useCategoryVideos('series', { limit: 20 })
@@ -137,6 +140,50 @@ export const Home = () => {
       const { data } = await tmdb.get('/discover/movie', { 
         params: { region: 'EG', sort_by: 'popularity.desc', page: 1 } 
       })
+      return data
+    },
+    enabled: !!CONFIG.TMDB_API_KEY,
+    staleTime: 300000
+  })
+
+  const topRatedMovies = useQuery<{ results: TmdbMedia[] }>({
+    queryKey: ['home', 'top-rated-movies'],
+    queryFn: async () => {
+      const { data } = await tmdb.get('/movie/top_rated', { params: { page: 1 } })
+      return data
+    },
+    enabled: !!CONFIG.TMDB_API_KEY,
+    staleTime: 300000
+  })
+
+  const actionMovies = useQuery<{ results: TmdbMedia[] }>({
+    queryKey: ['home', 'action-movies'],
+    queryFn: async () => {
+      const { data } = await tmdb.get('/discover/movie', { 
+        params: { with_genres: 28, sort_by: 'popularity.desc', page: 1 } 
+      })
+      return data
+    },
+    enabled: !!CONFIG.TMDB_API_KEY,
+    staleTime: 300000
+  })
+
+  const comedyMovies = useQuery<{ results: TmdbMedia[] }>({
+    queryKey: ['home', 'comedy-movies'],
+    queryFn: async () => {
+      const { data } = await tmdb.get('/discover/movie', { 
+        params: { with_genres: 35, sort_by: 'popularity.desc', page: 1 } 
+      })
+      return data
+    },
+    enabled: !!CONFIG.TMDB_API_KEY,
+    staleTime: 300000
+  })
+
+  const topRatedTV = useQuery<{ results: TmdbMedia[] }>({
+    queryKey: ['home', 'top-rated-tv'],
+    queryFn: async () => {
+      const { data } = await tmdb.get('/tv/top_rated', { params: { page: 1 } })
       return data
     },
     enabled: !!CONFIG.TMDB_API_KEY,
@@ -242,6 +289,34 @@ export const Home = () => {
           <MovieRow 
             title={lang === 'ar' ? 'الأكثر مشاهدة في مصر والشرق الأوسط' : 'Trending in MENA'} 
             movies={(popularAr.data?.results || []).slice(0, 15)} 
+          />
+        )}
+
+        {topRatedMovies.data?.results && (
+          <MovieRow 
+            title={lang === 'ar' ? 'الأعلى تقييمًا عالميًا' : 'Top Rated Worldwide'} 
+            movies={topRatedMovies.data.results.slice(0, 15)} 
+          />
+        )}
+
+        {actionMovies.data?.results && (
+          <MovieRow 
+            title={lang === 'ar' ? 'أفلام الحركة والإثارة' : 'Action Movies'} 
+            movies={actionMovies.data.results.slice(0, 15)} 
+          />
+        )}
+
+        {comedyMovies.data?.results && (
+          <MovieRow 
+            title={lang === 'ar' ? 'كوميديا وضحك' : 'Comedy Movies'} 
+            movies={comedyMovies.data.results.slice(0, 15)} 
+          />
+        )}
+
+        {topRatedTV.data?.results && (
+          <MovieRow 
+            title={lang === 'ar' ? 'أفضل المسلسلات تقييمًا' : 'Top Rated TV Series'} 
+            movies={topRatedTV.data.results.slice(0, 15).map(m => ({ ...m, media_type: 'tv' }))} 
           />
         )}
 
