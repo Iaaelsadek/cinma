@@ -35,6 +35,7 @@ export const MovieCard = ({ movie, index = 0 }: { movie: Movie; index?: number }
   const watchUrl = isTv ? `/watch/tv/${movie.id}?season=1&episode=1` : `/watch/movie/${movie.id}`
   const contentType = isTv ? 'tv' : 'movie'
   const rating = typeof movie.vote_average === 'number' ? Math.round(movie.vote_average * 10) / 10 : null
+
   const toggleList = async (e: MouseEvent<HTMLButtonElement>) => {
     e.preventDefault()
     e.stopPropagation()
@@ -56,6 +57,7 @@ export const MovieCard = ({ movie, index = 0 }: { movie: Movie; index?: number }
       setListBusy(false)
     }
   }
+
   const onWatch = (e: MouseEvent<HTMLButtonElement>) => {
     e.preventDefault()
     e.stopPropagation()
@@ -66,24 +68,24 @@ export const MovieCard = ({ movie, index = 0 }: { movie: Movie; index?: number }
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.5, delay: index * 0.05 }}
-      className="relative z-0"
+      viewport={{ once: true, margin: "-50px" }}
+      transition={{ duration: 0.4, delay: index * 0.05, ease: "easeOut" }}
+      className="relative z-0 group/card"
     >
       <Link
         to={href}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        className="group/card block relative"
+        className="block relative h-full w-full"
       >
-        <div className="relative overflow-hidden rounded-xl bg-luxury-charcoal border border-white/5 transition-all duration-500 transform-gpu glass-smooth hover:scale-[1.05] hover:shadow-glass hover:border-primary/50">
+        <div className="relative overflow-hidden rounded-2xl bg-luxury-charcoal border border-white/5 transition-all duration-500 transform-gpu hover:scale-[1.03] hover:shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5)] hover:border-primary/40 h-full flex flex-col">
           {/* Poster Image */}
           <div className="relative aspect-[2/3] w-full overflow-hidden bg-zinc-900">
             {movie.poster_path ? (
               <img
                 src={IMG(movie.poster_path)}
                 alt={title}
-                className={`h-full w-full object-cover transition-transform duration-700 ${isHovered ? 'scale-110 blur-[1px]' : 'scale-100'}`}
+                className={`h-full w-full object-cover transition-transform duration-700 will-change-transform ${isHovered ? 'scale-110 blur-[2px] brightness-50' : 'scale-100'}`}
                 loading="lazy"
               />
             ) : (
@@ -94,55 +96,57 @@ export const MovieCard = ({ movie, index = 0 }: { movie: Movie; index?: number }
 
             {/* Rating Tag */}
             {rating != null && (
-              <div className="absolute top-2 right-2 z-10 flex items-center gap-1 rounded-md bg-black/60 backdrop-blur-md border border-white/10 px-1.5 py-0.5 text-[10px] font-bold text-yellow-500">
+              <div className="absolute top-2.5 right-2.5 z-10 flex items-center gap-1 rounded-lg bg-black/60 backdrop-blur-md border border-white/10 px-2 py-1 text-[10px] font-bold text-yellow-400 shadow-lg">
                 <Star size={10} fill="currentColor" />
                 {rating}
               </div>
             )}
 
             {/* Hover Content Overlay */}
-            <div className={`absolute inset-0 z-20 flex flex-col justify-end p-4 bg-gradient-to-t from-luxury-obsidian via-luxury-obsidian/40 to-transparent transition-opacity duration-300 ${isHovered ? 'opacity-100' : 'opacity-0'}`}>
-              <div className="flex items-center gap-2 mb-3">
+            <div className={`absolute inset-0 z-20 flex flex-col justify-center items-center p-4 transition-all duration-300 ${isHovered ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+              
+              <div className="flex items-center gap-3 transform translate-y-4 group-hover/card:translate-y-0 transition-transform duration-300">
                 <motion.button 
-                  initial={{ scale: 0 }}
-                  animate={{ scale: isHovered ? 1 : 0 }}
-                  className="rounded-full bg-primary text-white shadow-[0_0_15px_rgba(225,29,72,0.5)] h-11 w-11 flex items-center justify-center"
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="rounded-full bg-primary text-white shadow-[0_0_20px_rgba(225,29,72,0.6)] h-12 w-12 flex items-center justify-center hover:brightness-110"
                   type="button"
                   onClick={onWatch}
                   aria-label="watch"
                 >
-                  <Play size={16} fill="currentColor" />
+                  <Play size={20} fill="currentColor" className="ml-0.5" />
                 </motion.button>
-                <div className="flex gap-1.5">
-                  <button
-                    className="rounded-full bg-white/10 hover:bg-white/20 transition-colors border border-white/10 backdrop-blur-md h-11 w-11 flex items-center justify-center"
-                    onClick={toggleList}
-                    disabled={listBusy}
-                    type="button"
-                    aria-label="my-list"
-                  >
-                    {inList ? <Check size={14} className="text-white" /> : <Plus size={14} className="text-white" />}
-                  </button>
-                  <button className="rounded-full bg-white/10 hover:bg-white/20 transition-colors border border-white/10 backdrop-blur-md h-11 w-11 flex items-center justify-center">
-                    <Info size={14} className="text-white" />
-                  </button>
-                </div>
+                
+                <motion.button
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="rounded-full bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-md h-10 w-10 flex items-center justify-center"
+                  onClick={toggleList}
+                  disabled={listBusy}
+                  type="button"
+                  aria-label="my-list"
+                >
+                  {inList ? <Check size={16} className="text-primary" /> : <Plus size={16} className="text-white" />}
+                </motion.button>
               </div>
-              <p className="text-[11px] text-zinc-300 line-clamp-3 leading-relaxed">
-                {movie.overview}
-              </p>
+
+              <div className="absolute bottom-0 left-0 right-0 p-4 transform translate-y-full group-hover/card:translate-y-0 transition-transform duration-300">
+                 <p className="text-[10px] text-zinc-300 line-clamp-2 leading-relaxed text-center font-medium drop-shadow-md">
+                  {movie.overview || "No description available."}
+                </p>
+              </div>
             </div>
           </div>
 
           {/* Title and Info */}
-          <div className="p-3">
+          <div className="p-3 flex-1 flex flex-col justify-between bg-gradient-to-b from-transparent to-black/20">
             <h3 className="line-clamp-1 text-sm font-bold text-zinc-100 group-hover/card:text-primary transition-colors">
               {title}
             </h3>
-            <div className="mt-1 flex items-center justify-between text-[10px] font-medium uppercase tracking-wider text-zinc-500">
+            <div className="mt-2 flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-zinc-500">
               <span>{year}</span>
-              <span className="px-1.5 py-0.5 rounded border border-white/10 bg-white/5">
-                {isTv ? 'TV Series' : 'Movie'}
+              <span className={`px-1.5 py-0.5 rounded border ${isTv ? 'border-purple-500/20 text-purple-400' : 'border-blue-500/20 text-blue-400'} bg-white/5`}>
+                {isTv ? 'Series' : 'Movie'}
               </span>
             </div>
           </div>
