@@ -85,27 +85,13 @@ export const ServerGrid = ({ tmdbId, type, season, episode }: Props) => {
       }
     })
 
-    // Priorities (optional)
-    let sources: Array<{ name: string; priority: number; response_time_ms?: number }> = []
-    try {
-      const resp = await supabase
-        .from('embed_sources')
-        .select('name, priority, response_time_ms')
-        .in('name', Object.keys(dbLinks))
-      sources = resp.data || []
-    } catch {}
-
-    const list = Object.entries(dbLinks)
-      .map(([name, url]) => {
-        const meta = sources.find((s) => s.name === name)
-        return {
-          name,
-          url,
-          priority: meta?.priority || 5,
-          responseTime: meta?.response_time_ms
-        } as Server
-      })
-      .sort((a, b) => a.priority - b.priority)
+    // Prepare servers list
+    const list = Object.entries(dbLinks).map(([name, url]) => ({
+      name,
+      url,
+      priority: 5,
+      responseTime: undefined
+    } as Server))
 
     setServers(list)
     setActive(0)
