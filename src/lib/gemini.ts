@@ -41,6 +41,12 @@ export const correctSearchTerm = async (query: string): Promise<string> => {
     }
     
     return text;
+  } catch (error) {
+    console.warn("Gemini search correction failed, using original query:", error);
+    return query;
+  }
+};
+
 /**
  * Uses Gemini to generate a short Arabic summary for a movie/show.
  * @param title Title of the content.
