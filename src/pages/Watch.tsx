@@ -7,6 +7,8 @@ import { ServerGrid } from '../components/features/media/ServerGrid'
 import { tmdb } from '../lib/tmdb'
 import { Helmet } from 'react-helmet-async'
 import { Calendar, Clock, Star } from 'lucide-react'
+import { NotFound } from './NotFound'
+import { SkeletonGrid } from '../components/common/Skeletons'
 
 type DownloadLink = { label?: string; url: string }
 
@@ -42,6 +44,8 @@ export const Watch = () => {
   const type = typeParam || sp.get('type') || 'movie'
   const [details, setDetails] = useState<TmdbDetails | null>(null)
   const [downloads, setDownloads] = useState<DownloadLink[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
 
   useEffect(() => {
     const p = new URLSearchParams(sp)
@@ -59,8 +63,14 @@ export const Watch = () => {
 
   useEffect(() => {
     let mounted = true
+    setLoading(true)
+    setError(false)
     ;(async () => {
-      if (!id) return
+      if (!id) {
+        setError(true)
+        setLoading(false)
+        return
+      }
       try {
         if (type === 'movie') {
           const { data: row } = await supabase.from('movies').select('download_urls').eq('id', Number(id)).maybeSingle()
@@ -71,10 +81,17 @@ export const Watch = () => {
         const path = type === 'movie' ? `/movie/${id}` : `/tv/${id}`
         const { data } = await tmdb.get(path, { params: { append_to_response: 'credits,videos' } })
         if (mounted) setDetails(data)
-      } catch {}
+      } catch (e) {
+        if (mounted) setError(true)
+      } finally {
+        if (mounted) setLoading(false)
+      }
     })()
     return () => { mounted = false }
   }, [id, type])
+
+  if (error) return <NotFound />
+  if (loading && !details) return <div className="min-h-screen bg-[#0f0f0f] p-8"><SkeletonGrid count={1} variant="video" /></div>
 
   useEffect(() => {
     let timer: ReturnType<typeof setInterval> | undefined

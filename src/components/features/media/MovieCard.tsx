@@ -128,7 +128,7 @@ export const MovieCard = ({ movie, index = 0 }: { movie: Movie; index?: number }
                   </button>
                 </div>
               </div>
-              <p className="text-[11px] text-zinc-300 line-clamp-3 leading-relaxed" dir="auto">
+              <p className="text-[11px] text-zinc-300 line-clamp-3 leading-relaxed">
                 {movie.overview}
               </p>
             </div>
@@ -136,7 +136,7 @@ export const MovieCard = ({ movie, index = 0 }: { movie: Movie; index?: number }
 
           {/* Title and Info */}
           <div className="p-3">
-            <h3 className="line-clamp-1 text-sm font-bold text-zinc-100 group-hover/card:text-primary transition-colors" dir="auto">
+            <h3 className="line-clamp-1 text-sm font-bold text-zinc-100 group-hover/card:text-primary transition-colors">
               {title}
             </h3>
             <div className="mt-1 flex items-center justify-between text-[10px] font-medium uppercase tracking-wider text-zinc-500">

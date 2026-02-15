@@ -39,6 +39,7 @@ const GameDetails = lazy(() => import('./pages/GameDetails').then(m => ({ defaul
 const SoftwareDetails = lazy(() => import('./pages/SoftwareDetails').then(m => ({ default: m.SoftwareDetails })))
 const Terms = lazy(() => import('./pages/Terms').then(m => ({ default: m.Terms })))
 const Privacy = lazy(() => import('./pages/Privacy').then(m => ({ default: m.Privacy })))
+const RequestPage = lazy(() => import('./pages/Request').then(m => ({ default: m.RequestPage })))
 import { QuranPlayerProvider } from './context/QuranPlayerContext'
 
 const ProtectedAdmin = ({ children }: { children: JSX.Element }) => {
@@ -114,6 +115,7 @@ const App = () => {
         <Route path="/search" element={<Search />} />
         <Route path="/terms" element={<Terms />} />
         <Route path="/privacy" element={<Privacy />} />
+        <Route path="/request" element={<RequestPage />} />
         <Route
           path="/admin/*"
           element={<ProtectedAdmin><AdminLayout /></ProtectedAdmin>}

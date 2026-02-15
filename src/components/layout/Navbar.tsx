@@ -6,7 +6,33 @@ import { useAuth } from '../../hooks/useAuth'
 import { supabase } from '../../lib/supabase'
 import { getProfile } from '../../lib/supabase'
 import { useEffect, useMemo, useState } from 'react'
-import { Menu, X, User, LogOut, LayoutDashboard } from 'lucide-react'
+import { Menu, X, User, LogOut, LayoutDashboard, Download, Home, Film, Tv, Gamepad2, Cpu, Zap, BookOpen, Smile } from 'lucide-react'
+
+// Add this install hook
+const useInstallPrompt = () => {
+  const [prompt, setPrompt] = useState<any>(null)
+
+  useEffect(() => {
+    const handler = (e: any) => {
+      e.preventDefault()
+      setPrompt(e)
+    }
+    window.addEventListener('beforeinstallprompt', handler)
+    return () => window.removeEventListener('beforeinstallprompt', handler)
+  }, [])
+
+  const install = () => {
+    if (!prompt) return
+    prompt.prompt()
+    prompt.userChoice.then((choice: any) => {
+      if (choice.outcome === 'accepted') {
+        setPrompt(null)
+      }
+    })
+  }
+
+  return { prompt, install }
+}
 
 export const Navbar = ({ isScrolled }: { isScrolled?: boolean }) => {
   const { user, loading } = useAuth()
@@ -16,6 +42,7 @@ export const Navbar = ({ isScrolled }: { isScrolled?: boolean }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [searchLoading, setSearchLoading] = useState(false)
+  const { prompt, install } = useInstallPrompt() // Use the hook
   const [searchResults, setSearchResults] = useState<{
     movies: Array<{ id: number; title: string; poster_path: string | null }>
     series: Array<{ id: number; title: string; poster_path: string | null }>
@@ -338,6 +365,17 @@ export const Navbar = ({ isScrolled }: { isScrolled?: boolean }) => {
             >
               {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
+            
+            {/* Desktop Install Button - Only shows if PWA is installable */}
+            {prompt && (
+              <button
+                onClick={install}
+                className="hidden lg:flex h-10 w-10 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary hover:bg-primary/20 transition-all"
+                title={lang === 'ar' ? 'تثبيت التطبيق' : 'Install App'}
+              >
+                <Download size={20} />
+              </button>
+            )}
           </div>
         </div>
       <AnimatePresence>
@@ -374,6 +412,7 @@ export const Navbar = ({ isScrolled }: { isScrolled?: boolean }) => {
                   placeholder={lang === 'ar' ? 'ابحث بسرعة...' : 'Quick search...'}
                   size="lg"
                   className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold placeholder:text-zinc-500 focus:border-primary focus:ring-2 focus:ring-primary/40"
+                  aria-label={lang === 'ar' ? 'بحث سريع' : 'Quick search'}
                 />
               </div>
               <nav className="grid gap-2">
@@ -382,11 +421,25 @@ export const Navbar = ({ isScrolled }: { isScrolled?: boolean }) => {
                     key={link.to}
                     to={link.to}
                     onClick={() => setMobileMenuOpen(false)}
-                    className="rounded-xl px-4 py-3 text-base font-bold text-zinc-200 hover:bg-white/10"
+                    className="flex items-center gap-3 rounded-xl px-4 py-3 text-base font-bold text-zinc-200 hover:bg-white/10 transition-colors"
                   >
+                    {link.icon && <link.icon size={20} className="text-primary" />}
                     {link.label}
                   </Link>
                 ))}
+                
+                {prompt && (
+                  <button
+                    onClick={() => {
+                      install()
+                      setMobileMenuOpen(false)
+                    }}
+                    className="flex items-center gap-3 rounded-xl bg-primary/20 px-4 py-3 text-base font-bold text-primary hover:bg-primary/30 mt-4"
+                  >
+                    <Download size={20} />
+                    {lang === 'ar' ? 'تثبيت التطبيق' : 'Install App'}
+                  </button>
+                )}
               </nav>
             </motion.div>
           </motion.div>

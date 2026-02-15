@@ -154,7 +154,7 @@ export const VideoCard = ({ video, index = 0 }: { video: VideoItem; index?: numb
                   </button>
                 </div>
               </div>
-              <p className="text-[11px] text-zinc-300 line-clamp-2 leading-relaxed" dir="auto">
+              <p className="text-[11px] text-zinc-300 line-clamp-2 leading-relaxed">
                 {video.description || video.title}
               </p>
             </div>
@@ -162,7 +162,7 @@ export const VideoCard = ({ video, index = 0 }: { video: VideoItem; index?: numb
 
           {/* Static Info (Visible when not hovered or small screens) */}
           <div className="p-3">
-            <h3 className="line-clamp-1 text-sm font-bold text-zinc-100 group-hover/card:text-primary transition-colors text-right" dir="auto">
+            <h3 className="line-clamp-1 text-sm font-bold text-zinc-100 group-hover/card:text-primary transition-colors text-right">
               {video.title}
             </h3>
             <div className="mt-1.5 flex items-center justify-between text-[10px] font-medium uppercase tracking-wider text-zinc-500">

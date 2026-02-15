@@ -22,6 +22,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@radix-ui/react-switch": "^1.2.6",
     "@radix-ui/react-tabs": "^1.1.13",
     "@supabase/supabase-js": "^2.45.1",
@@ -60,7 +61,7 @@
     "tailwindcss": "^3.4.10",
     "typescript": "^5.4.5",
     "vite": "^5.2.10",
-    "vite-plugin-pwa": "^0.20.0",
+    "vite-plugin-pwa": "^0.20.5",
     "vite-plugin-sitemap": "^0.5.0"
   }
 }

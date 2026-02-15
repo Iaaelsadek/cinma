@@ -11,6 +11,9 @@ import { supabase } from '../lib/supabase'
 import { Helmet } from 'react-helmet-async'
 import { CONFIG } from '../lib/constants'
 import { SkeletonGrid } from '../components/common/Skeletons'
+import { Button } from '../components/common/Button'
+import { FileQuestion } from 'lucide-react'
+import { useLang } from '../state/useLang'
 
 type SearchItem = {
   id: number
@@ -45,12 +48,17 @@ export const Search = () => {
     queryKey: ['search-supabase', q],
     queryFn: async () => {
       if (!q || q.length < 2) return []
-      const { data } = await supabase
+      // Use fuzzy search RPC function
+      const { data, error } = await supabase.rpc('fuzzy_search_videos', { query_text: q })
+      if (!error && data) return data as VideoItem[]
+      
+      // Fallback if RPC not ready or error
+      const { data: fallback } = await supabase
         .from('videos')
         .select('*')
         .ilike('title', `%${q}%`)
         .limit(20)
-      return data || []
+      return fallback || []
     },
     enabled: q.length >= 2,
     placeholderData: keepPreviousData
@@ -186,6 +194,8 @@ export const Search = () => {
     })
   }
 
+  const { lang } = useLang()
+
   return (
     <div className="grid grid-cols-1 gap-6">
       <Helmet>
@@ -290,6 +300,7 @@ export const Search = () => {
             </div>
           )}
         </div>
+        
         <h1 className="text-2xl font-bold">نتائج البحث</h1>
         
         {supabaseQuery.data && supabaseQuery.data.length > 0 && (
@@ -374,6 +385,27 @@ export const Search = () => {
         )}
 
         {isLoading && <SkeletonGrid count={10} variant="poster" />}
+        {!isLoading && items.length === 0 && !supabaseQuery.data?.length && !gamesQuery.data?.length && !softwareQuery.data?.length && !animeQuery.data?.length && !recitersQuery.data?.length && (
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <div className="mb-4 rounded-full bg-white/5 p-4">
+              <FileQuestion size={48} className="text-zinc-500" />
+            </div>
+            <h3 className="mb-2 text-xl font-bold text-white">
+              {lang === 'ar' ? 'لم يتم العثور على نتائج' : 'No results found'}
+            </h3>
+            <p className="mb-6 max-w-md text-zinc-400">
+              {lang === 'ar' 
+                ? 'جرب البحث بكلمات مختلفة أو تحقق من الإملاء. إذا لم تجد ما تبحث عنه، يمكنك طلبه.'
+                : 'Try searching with different keywords or check spelling. If you can\'t find it, you can request it.'}
+            </p>
+            <Link to="/request">
+              <Button variant="primary">
+                {lang === 'ar' ? 'طلب محتوى جديد' : 'Request New Content'}
+              </Button>
+            </Link>
+          </div>
+        )}
+
         {!isLoading && items.length > 0 && (
           <InfiniteScroll
             dataLength={items.length}

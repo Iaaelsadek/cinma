@@ -75,35 +75,48 @@ export const HeroSlider = ({ items }: Props) => {
   return (
     <section className="relative h-[85vh] min-h-[600px] overflow-hidden group">
       <Swiper
-        modules={[Autoplay, EffectFade, Parallax]}
+        modules={[Autoplay, EffectFade]}
         effect="fade"
-        parallax={true}
-        speed={1000}
+        fadeEffect={{ crossFade: true }}
+        speed={2000} // Slower transition for cinematic feel
         loop={items.length > 1}
-        autoplay={{ delay: 6000, disableOnInteraction: false }}
+        autoplay={{ delay: 10000, disableOnInteraction: false }} // 10s display duration
         onSwiper={(swiper) => { swiperRef.current = swiper }}
         onSlideChange={(swiper) => setIdx(swiper.realIndex)}
         className="absolute inset-0 h-full w-full"
       >
-        {items.map((item) => {
+        {items.map((item, i) => {
           const slideUrl = item.backdrop_path || item.poster_path || ''
           const src = slideUrl ? `https://image.tmdb.org/t/p/original${slideUrl}` : ''
+          // Alternate zoom direction: even indices Zoom IN, odd indices Zoom OUT
+          const isEven = i % 2 === 0
+          
           return (
-            <SwiperSlide key={item.id} className="h-full w-full overflow-hidden">
+            <SwiperSlide key={item.id} className="h-full w-full overflow-hidden bg-black">
+               {/* Ken Burns Effect Container */}
               <div 
-                className="absolute inset-0 h-full w-full"
-                data-swiper-parallax="50%"
-                data-swiper-parallax-scale="1.1"
+                className={`absolute inset-0 h-full w-full`}
+                style={{
+                  // Even: Zoom IN (1 -> 1.1), Odd: Zoom OUT (1.1 -> 1)
+                  animation: idx === i ? `kenBurns${isEven ? 'In' : 'Out'} 12s ease-out forwards` : 'none',
+                  transformOrigin: 'center center'
+                }}
               >
                 {src ? (
-                  <img src={src} alt={item.title || item.name} className="h-full w-full object-cover" />
+                  <img src={src} alt={item.title || item.name} className="h-full w-full object-cover opacity-60" />
                 ) : (
                   <div className="h-full w-full bg-zinc-900" />
                 )}
-                {/* Advanced Vignette & Gradients */}
-                <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/40 to-transparent" />
-                <div className="absolute inset-0 bg-gradient-to-r from-[#050505]/90 via-[#050505]/20 to-transparent" />
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_transparent_0%,_#050505_120%)] opacity-60" />
+              </div>
+              
+              {/* Static Overlays - kept outside animation to remain stable */}
+              <div className="absolute inset-0 z-10 pointer-events-none">
+                  {/* Bottom fade */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/40 to-transparent" />
+                  {/* Side fade for RTL */}
+                  <div className="absolute inset-0 bg-gradient-to-l from-[#050505]/90 via-[#050505]/20 to-transparent" />
+                  {/* Radial vignette */}
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_transparent_0%,_#050505_120%)] opacity-60" />
               </div>
             </SwiperSlide>
           )

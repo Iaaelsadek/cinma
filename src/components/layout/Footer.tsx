@@ -40,6 +40,7 @@ export const Footer = () => {
           <nav className="grid gap-2 text-sm text-zinc-300">
             <Link to="/login" className="hover:text-white transition-colors">{lang === 'ar' ? 'دخول' : 'Login'}</Link>
             <Link to="/register" className="hover:text-white transition-colors">{lang === 'ar' ? 'إنشاء حساب' : 'Register'}</Link>
+            <Link to="/request" className="hover:text-white transition-colors">{lang === 'ar' ? 'طلب محتوى' : 'Request Content'}</Link>
             <Link to="/terms" className="hover:text-white transition-colors">{lang === 'ar' ? 'الشروط' : 'Terms'}</Link>
             <Link to="/privacy" className="hover:text-white transition-colors">{lang === 'ar' ? 'الخصوصية' : 'Privacy'}</Link>
           </nav>

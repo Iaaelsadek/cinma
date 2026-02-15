@@ -46,7 +46,7 @@ body {
     @apply inline-flex h-11 items-center justify-center rounded-xl bg-primary px-5 font-bold text-white shadow-md transition hover:brightness-110 active:brightness-95;
   }
   .btn-ghost {
-    @apply inline-flex h-11 items-center justify-center rounded-xl border border-white/10 bg-white/5 px-5 font-bold text-white hover:bg-white/10;
+    @apply inline-flex h-11 items-center justify-center rounded-xl border border-white/10 bg-black/20 backdrop-blur-md px-5 font-bold text-white hover:bg-white/10 hover:border-white/20 transition-all;
   }
   .input-glass {
     @apply rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm placeholder:text-zinc-500 focus:border-primary focus:ring-2 focus:ring-primary/40;
@@ -59,6 +59,16 @@ body {
   }
   .pause-on-hover:hover {
     animation-play-state: paused;
+  }
+  
+  /* Ken Burns Animations */
+  @keyframes kenBurnsIn {
+    0% { transform: scale(1) translate(0, 0); }
+    100% { transform: scale(1.1) translate(2%, 0); }
+  }
+  @keyframes kenBurnsOut {
+    0% { transform: scale(1.1) translate(0, 0); }
+    100% { transform: scale(1) translate(-2%, 0); }
   }
 }
 

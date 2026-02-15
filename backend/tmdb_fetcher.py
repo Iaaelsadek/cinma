@@ -1,14 +1,17 @@
 import requests
 import time
 import os
+import re
 from typing import Dict, List, Optional
 from datetime import datetime
 from supabase import create_client, Client
 from dotenv import load_dotenv
+import google.generativeai as genai
 
 load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
 
 TMDB_API_KEY = os.environ.get("TMDB_API_KEY")
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 SUPABASE_URL = os.environ.get("SUPABASE_URL") or os.environ.get("VITE_SUPABASE_URL")
 SUPABASE_KEY = (
     os.environ.get("SUPABASE_SERVICE_ROLE")
@@ -18,6 +21,9 @@ SUPABASE_KEY = (
     or os.environ.get("SUPABASE_KEY")
     or os.environ.get("VITE_SUPABASE_ANON_KEY")
 )
+
+if GEMINI_API_KEY:
+    genai.configure(api_key=GEMINI_API_KEY)
 
 class TMDBFetcher:
     def __init__(self):
@@ -35,6 +41,51 @@ class TMDBFetcher:
             "Authorization": f"Bearer {os.environ.get('TMDB_ACCESS_TOKEN')}", # Optional if using key in params
             "Content-Type": "application/json;charset=utf-8"
         }
+
+    def generate_slug(self, title: str, item_id: int) -> str:
+        """Generate a unique slug using Gemini, with fallback."""
+        if not GEMINI_API_KEY:
+            return self._fallback_slug(title, item_id)
+            
+        try:
+            model = genai.GenerativeModel('gemini-pro')
+            prompt = f"Create a clean, SEO-friendly URL slug for the movie/series title '{title}'. Return ONLY the slug (e.g., 'the-dark-knight'). No explanation."
+            response = model.generate_content(prompt)
+            slug = response.text.strip().lower().replace(' ', '-')
+            # Basic validation
+            if not re.match(r'^[a-z0-9-]+$', slug):
+                return self._fallback_slug(title, item_id)
+            return f"{slug}-{item_id}"
+        except Exception as e:
+            print(f"Gemini slug generation failed: {e}")
+            return self._fallback_slug(title, item_id)
+
+    def _fallback_slug(self, title: str, item_id: int) -> str:
+        """Simple regex based slug generation."""
+        slug = re.sub(r'[^a-zA-Z0-9\s-]', '', title).strip().lower()
+        slug = re.sub(r'[\s]+', '-', slug)
+        return f"{slug}-{item_id}"
+
+    def ensure_category(self, category_name: str):
+        """Ensure category exists in the categories table."""
+        if not self.supabase or not category_name:
+            return
+
+        try:
+            # Check if exists
+            res = self.supabase.table('categories').select('id').eq('name', category_name).execute()
+            if res.data:
+                return
+            
+            # Create if not exists
+            slug = re.sub(r'[^a-zA-Z0-9\s-]', '', category_name).strip().lower().replace(' ', '-')
+            self.supabase.table('categories').insert({
+                'name': category_name,
+                'slug': slug
+            }).execute()
+            print(f"Created new category: {category_name}")
+        except Exception as e:
+            print(f"Error ensuring category {category_name}: {e}")
 
     def fetch_details(self, media_type: str, item_id: int) -> Optional[Dict]:
         """Fetch detailed information including release dates, videos, and credits."""
@@ -130,9 +181,19 @@ class TMDBFetcher:
                 trailer_key = self._select_trailer(fallback_videos)
         trailer_url = f"https://www.youtube.com/watch?v={trailer_key}" if trailer_key else None
         
+        title = details.get('title') or details.get('name')
+        slug = self.generate_slug(title, item['id'])
+        
+        genres = [g['name'] for g in details.get('genres', [])]
+        main_category = genres[0] if genres else ('Movies' if media_type == 'movie' else 'TV Series')
+        
+        # Ensure category exists
+        self.ensure_category(main_category)
+
         data = {
             'id': details['id'],
-            'title': details.get('title') or details.get('name'),
+            'title': title,
+            'slug': slug,
             'arabic_title': details.get('title') or details.get('name'), # Already fetched with ar-SA
             'overview': details.get('overview'),
             'poster_path': details.get('poster_path'),
@@ -140,7 +201,8 @@ class TMDBFetcher:
             'release_date': details.get('release_date') or details.get('first_air_date'),
             'rating_color': rating_color,
             'trailer_url': trailer_url,
-            'genres': [g['name'] for g in details.get('genres', [])],
+            'genres': genres,
+            'category': main_category,
             'source': 'tmdb',
             'is_active': True,
             'updated_at': datetime.now().isoformat()

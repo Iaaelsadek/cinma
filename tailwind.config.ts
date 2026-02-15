@@ -1,4 +1,5 @@
 import type { Config } from 'tailwindcss'
+// @ts-ignore
 import rtl from 'tailwindcss-rtl'
 
 export default {
