@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery, keepPreviousData } from '@tanstack/react-query'
 import { tmdb } from '../lib/tmdb'
@@ -53,14 +53,29 @@ type QuranRow = {
 export const Home = () => {
   const { user } = useAuth()
   const { lang } = useLang()
-  const [page, setPage] = useState(1)
 
   // TMDB Queries
   const popularMovies = useQuery<{ results: TmdbMedia[] }>({
-    queryKey: ['popular', page],
+    queryKey: ['popular-train'],
     queryFn: async () => {
-      const { data } = await tmdb.get('/movie/popular', { params: { page } })
-      return data
+      const [moviePage1, moviePage2, tvPage1, tvPage2] = await Promise.all([
+        tmdb.get('/movie/popular', { params: { page: 1 } }),
+        tmdb.get('/movie/popular', { params: { page: 2 } }),
+        tmdb.get('/tv/popular', { params: { page: 1 } }),
+        tmdb.get('/tv/popular', { params: { page: 2 } })
+      ])
+
+      const withType = (items: TmdbMedia[] | undefined, type: 'movie' | 'tv'): TmdbMedia[] =>
+        (items || []).map((item) => ({ ...item, media_type: item.media_type || type }))
+
+      const combined: TmdbMedia[] = [
+        ...withType(moviePage1.data.results, 'movie'),
+        ...withType(moviePage2.data.results, 'movie'),
+        ...withType(tvPage1.data.results, 'tv'),
+        ...withType(tvPage2.data.results, 'tv')
+      ]
+
+      return { results: combined }
     },
     enabled: !!CONFIG.TMDB_API_KEY,
     placeholderData: keepPreviousData,
@@ -164,10 +179,10 @@ export const Home = () => {
       </section>
 
       <div className="relative -mt-10 z-[25] px-4 lg:px-12 pointer-events-none md:pointer-events-auto">
-        <CinemaTrain />
+        <CinemaTrain items={popularMovies.data?.results || []} />
       </div>
 
-      <div className="relative z-20 space-y-12 -mt-28 md:-mt-36 lg:-mt-44">
+      <div className="relative z-20 space-y-12 mt-6">
         <div id="trending" />
         {/* Trending Section - Bento Grid */}
         {trendingVideos.isPending ? (
