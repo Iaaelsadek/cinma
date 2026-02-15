@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { FLAGS } from '../../lib/constants'
 
@@ -53,16 +53,20 @@ export const AdsManager = ({ type, position, onDone, durationSeconds = 8 }: Prop
   const [ad, setAd] = useState<AdRow | null>(null)
   const [countdown, setCountdown] = useState(durationSeconds)
   const onceRef = useRef(false)
-  const visible = !!ad
-  if (!FLAGS.ADS_ENABLED) return null
+  
+  // 1. Fetch Ad
   useEffect(() => {
+    if (!FLAGS.ADS_ENABLED) {
+        if (type === 'preroll') onDone?.()
+        return
+    }
+
     let cancelled = false
     ;(async () => {
       try {
         const a = await fetchAd(type, position)
         if (!cancelled) {
           setAd(a)
-          // Fix: If no ad found for preroll, proceed immediately
           if (!a && type === 'preroll') {
             onDone?.()
           }
@@ -70,7 +74,6 @@ export const AdsManager = ({ type, position, onDone, durationSeconds = 8 }: Prop
       } catch {
         if (!cancelled) {
           setAd(null)
-          // Fix: If error fetching ad, proceed immediately
           if (type === 'preroll') {
             onDone?.()
           }
@@ -80,11 +83,13 @@ export const AdsManager = ({ type, position, onDone, durationSeconds = 8 }: Prop
     return () => { cancelled = true }
   }, [type, position])
 
+  // 2. Impressions
   useEffect(() => {
     if (!ad) return
     incImpression(ad).catch(() => {})
   }, [ad])
 
+  // 3. Popunder Logic
   useEffect(() => {
     if (type !== 'popunder' || !ad) return
     const key = 'cinma_popunder_once'
@@ -107,7 +112,27 @@ export const AdsManager = ({ type, position, onDone, durationSeconds = 8 }: Prop
     return () => document.removeEventListener('click', handler)
   }, [type, ad])
 
-  if (!visible) return null
+  // 4. Preroll Logic (Timer) - MOVED TO TOP LEVEL
+  useEffect(() => {
+    if (type !== 'preroll' || !ad) return
+    
+    setCountdown(durationSeconds)
+    const t = setInterval(() => {
+      setCountdown((c) => {
+        if (c <= 1) {
+          clearInterval(t)
+          onDone?.()
+          return 0
+        }
+        return c - 1
+      })
+    }, 1000)
+    return () => clearInterval(t)
+  }, [type, ad, durationSeconds]) // Removed onDone from deps to avoid loop if onDone isn't stable, but safe if stable
+
+  // Render Logic
+  if (!FLAGS.ADS_ENABLED) return null
+  if (!ad) return null
 
   if (type === 'banner') {
     return (
@@ -121,21 +146,6 @@ export const AdsManager = ({ type, position, onDone, durationSeconds = 8 }: Prop
   }
 
   if (type === 'preroll') {
-    useEffect(() => {
-      if (!ad) return
-      setCountdown(durationSeconds)
-      const t = setInterval(() => {
-        setCountdown((c) => {
-          if (c <= 1) {
-            clearInterval(t)
-            onDone?.()
-            return 0
-          }
-          return c - 1
-        })
-      }, 1000)
-      return () => clearInterval(t)
-    }, [ad, durationSeconds, onDone])
     return (
       <div className="relative z-10 flex h-full w-full items-center justify-center bg-black/90">
         <div className="absolute right-3 top-3 text-xs text-white/80">ينتهي خلال {countdown}s</div>
