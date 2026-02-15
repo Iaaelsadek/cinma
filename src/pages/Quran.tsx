@@ -1,10 +1,10 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { Link } from 'react-router-dom'
 import { useLang } from '../state/useLang'
-import { useQuranPlayer } from '../context/QuranPlayerContext'
 import { supabase } from '../lib/supabase'
 import { Helmet } from 'react-helmet-async'
-import { Search, Play, Pause, Heart, Share2, BookOpen } from 'lucide-react'
+import { Search, BookOpen, User } from 'lucide-react'
 import { SkeletonGrid } from '../components/common/Skeletons'
 
 type QuranRow = {
@@ -18,7 +18,6 @@ type QuranRow = {
 
 export const QuranPage = () => {
   const { lang } = useLang()
-  const { playTrack, currentTrack, isPlaying, toggle } = useQuranPlayer()
   const [search, setSearch] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
 
@@ -189,48 +188,35 @@ export const QuranPage = () => {
         ) : filteredReciters.length > 0 ? (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8">
             {filteredReciters.map((reciter) => {
-              const active = currentTrack?.id === reciter.id
               return (
-                <div 
+                <Link
                   key={reciter.id} 
-                  className={`group relative flex flex-col items-center gap-3 overflow-hidden rounded-xl border bg-white/5 p-3 transition-all hover:bg-white/10 text-center ${
-                    active ? 'border-primary/50 bg-primary/5' : 'border-white/5'
-                  }`}
+                  to={`/quran/reciter/${reciter.id}`}
+                  className="group relative flex flex-col items-center gap-3 overflow-hidden rounded-xl border border-white/5 bg-white/5 p-3 transition-all hover:bg-white/10 hover:border-primary/20 text-center"
                 >
                   {/* Image / Avatar */}
                   <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-full border border-white/10 bg-black/40 shadow-lg">
                     {reciter.image ? (
-                      <img src={reciter.image} alt={reciter.name || ''} className="h-full w-full object-cover" loading="lazy" />
+                      <img src={reciter.image} alt={reciter.name || ''} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" loading="lazy" />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-zinc-800 to-zinc-900 text-lg font-bold text-zinc-500">
                         {(reciter.name || '?').charAt(0)}
                       </div>
                     )}
-                    {/* Play Overlay */}
-                    <button
-                      onClick={() => handlePlay(reciter)}
-                      className={`absolute inset-0 flex items-center justify-center bg-black/40 transition-opacity ${
-                        active ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-                      }`}
-                    >
-                      {active && isPlaying ? (
-                        <Pause className="h-5 w-5 text-white" fill="currentColor" />
-                      ) : (
-                        <Play className="h-5 w-5 text-white" fill="currentColor" />
-                      )}
-                    </button>
+                    {/* Hover Overlay */}
+                    <div className="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity" />
                   </div>
 
                   {/* Info */}
                   <div className="min-w-0 w-full">
-                    <h3 className={`truncate text-sm font-bold ${active ? 'text-primary' : 'text-white'}`}>
+                    <h3 className="truncate text-sm font-bold text-white group-hover:text-primary transition-colors">
                       {reciter.name}
                     </h3>
                     <p className="truncate text-[10px] text-zinc-400 mt-0.5">
                       {reciter.rewaya || reciter.category || (lang === 'ar' ? 'قارئ' : 'Reciter')}
                     </p>
                   </div>
-                </div>
+                </Link>
               )
             })}
           </div>

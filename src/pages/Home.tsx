@@ -505,37 +505,31 @@ const QuranHub = ({ reciters, title }: { reciters: QuranRow[]; title: string }) 
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
         {reciters.slice(0, 5).map((r) => (
-          <button
+          <Link
             key={r.id}
-            onClick={() => {
-              const url = buildUrl(r.server)
-              if (!url) return
-              playTrack({
-                id: r.id,
-                title: lang === 'ar' ? 'سورة الفاتحة' : 'Al-Fatiha',
-                reciter: r.name || (lang === 'ar' ? 'قارئ' : 'Reciter'),
-                url,
-                image: r.image
-              })
-            }}
-            className="group rounded-2xl border border-white/10 bg-white/5 p-4 text-left transition hover:border-primary/40 hover:bg-white/10"
+            to={`/quran/reciter/${r.id}`}
+            className="group rounded-2xl border border-white/10 bg-white/5 p-4 text-left transition hover:border-primary/40 hover:bg-white/10 block"
           >
             <div className="flex items-center gap-4">
-              <div className="h-14 w-14 overflow-hidden rounded-2xl bg-black/40">
+              <div className="h-14 w-14 overflow-hidden rounded-2xl bg-black/40 relative">
                 {r.image ? (
-                  <img src={r.image} alt={r.name || ''} className="h-full w-full object-cover" loading="lazy" />
+                  <img src={r.image} alt={r.name || ''} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" loading="lazy" />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center text-sm font-bold text-zinc-500">
                     {(r.name || '—').slice(0, 1)}
                   </div>
                 )}
+                {/* Hover Play Overlay */}
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Play size={20} className="text-white" fill="currentColor" />
+                </div>
               </div>
               <div className="min-w-0">
-                <div className="truncate text-sm font-bold text-white">{r.name || '—'}</div>
+                <div className="truncate text-sm font-bold text-white group-hover:text-primary transition-colors">{r.name || '—'}</div>
                 <div className="text-xs text-zinc-500">{r.rewaya || r.category || (lang === 'ar' ? 'تلاوات مختارة' : 'Selected Recitations')}</div>
               </div>
             </div>
-          </button>
+          </Link>
         ))}
       </div>
     </section>
