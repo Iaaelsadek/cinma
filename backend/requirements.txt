@@ -1,0 +1,11 @@
+requests
+beautifulsoup4
+pandas
+supabase
+yt-dlp
+python-dotenv
+aiohttp
+schedule
+google-generativeai
+fuzzywuzzy
+python-levenshtein

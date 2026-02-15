@@ -1,0 +1,87 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: #050505;
+  font-family: Cairo, system-ui, sans-serif;
+}
+
+:lang(en) body {
+  font-family: Inter, system-ui, sans-serif;
+}
+
+.glass-smooth {
+  will-change: transform, filter;
+  transform: translateZ(0);
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-white/10 backdrop-blur-md border border-white/20 shadow-glass rounded-2xl;
+  }
+  .glass-panel {
+    @apply bg-black/40 backdrop-blur-xl border-b border-white/10;
+  }
+  .surface-section {
+    @apply rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md;
+  }
+  .btn-primary {
+    @apply inline-flex h-11 items-center justify-center rounded-xl bg-primary px-5 font-bold text-white shadow-md transition hover:brightness-110 active:brightness-95;
+  }
+  .btn-ghost {
+    @apply inline-flex h-11 items-center justify-center rounded-xl border border-white/10 bg-white/5 px-5 font-bold text-white hover:bg-white/10;
+  }
+  .input-glass {
+    @apply rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm placeholder:text-zinc-500 focus:border-primary focus:ring-2 focus:ring-primary/40;
+  }
+}
+
+@layer utilities {
+  .pause-on-hover {
+    animation-play-state: running;
+  }
+  .pause-on-hover:hover {
+    animation-play-state: paused;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
