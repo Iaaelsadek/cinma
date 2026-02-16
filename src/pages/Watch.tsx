@@ -176,7 +176,7 @@ export const Watch = () => {
   const overview = useMemo(() => details?.overview || 'لا يوجد وصف متاح', [details])
   const poster = useMemo(() => (details?.poster_path ? `https://image.tmdb.org/t/p/w500${details.poster_path}` : ''), [details])
   const backdrop = useMemo(() => (details?.backdrop_path ? `https://image.tmdb.org/t/p/original${details.backdrop_path}` : ''), [details])
-  const cast = useMemo(() => (details?.credits?.cast || []).slice(0, 10), [details])
+  const cast = useMemo(() => (details?.credits?.cast || []).slice(0, 16), [details])
   
   const dlList = useMemo<DownloadLink[]>(() => (
     downloads.length
@@ -217,7 +217,7 @@ export const Watch = () => {
         <div className="relative z-10 mx-auto max-w-6xl px-4 pt-32 pb-10">
           <div className="grid grid-cols-1 gap-6 md:grid-cols-[1fr_260px]">
             <div className="order-2 md:order-1">
-              <h1 className="text-3xl md:text-4xl font-black tracking-tight text-white mt-4" dir="auto">{title}</h1>
+              <h1 className="text-3xl md:text-4xl font-black tracking-tight text-white mt-12" dir="auto">{title}</h1>
               <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-zinc-300">
                 {year && (
                   <span className="inline-flex items-center gap-1">
@@ -248,17 +248,17 @@ export const Watch = () => {
                 </div>
               )}
               {!!cast.length && (
-                <div className="mt-4">
-                  <div className="text-sm font-semibold text-zinc-200 mb-2">طاقم العمل</div>
-                  <div className="flex gap-3 overflow-x-auto no-scrollbar">
+                <div className="mt-8">
+                  <div className="text-sm font-semibold text-zinc-200 mb-4">طاقم العمل</div>
+                  <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4">
                     {cast.map((p) => {
                       const img = p.profile_path ? `https://image.tmdb.org/t/p/w185${p.profile_path}` : ''
                       return (
-                        <div key={p.id} className="w-16 text-center">
-                          <div className="mx-auto h-14 w-14 overflow-hidden rounded-full bg-zinc-800">
+                        <div key={p.id} className="flex flex-col items-center text-center group">
+                          <div className="relative h-16 w-16 overflow-hidden rounded-full border border-white/10 bg-zinc-800 transition-transform duration-300 group-hover:scale-110 group-hover:border-primary/50">
                             {img && <img src={img} alt={p.name} className="h-full w-full object-cover" loading="lazy" />}
                           </div>
-                          <div className="mt-1 truncate text-[10px] text-zinc-300">{p.name}</div>
+                          <div className="mt-2 truncate w-full text-[10px] font-bold text-zinc-200 group-hover:text-primary transition-colors">{p.name}</div>
                         </div>
                       )
                     })}
