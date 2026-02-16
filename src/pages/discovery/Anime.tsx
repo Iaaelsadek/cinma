@@ -86,10 +86,10 @@ export const AnimePage = () => {
   })
 
   // Group by category
-  const categories = [...new Set(animeList?.map(a => a.category).filter(Boolean))]
-  const byCategory = (cat: string) => animeList?.filter(a => a.category === cat) || []
+  const categories = [...new Set(animeList?.map((a: any) => a.category).filter(Boolean))]
+  const byCategory = (cat: string) => animeList?.filter((a: any) => a.category === cat) || []
   const latest = animeList?.slice(0, 15) || []
-  const topRated = [...(animeList || [])].sort((a, b) => b.vote_average - a.vote_average).slice(0, 15)
+  const topRated = [...(animeList || [])].sort((a: any, b: any) => b.vote_average - a.vote_average).slice(0, 15)
 
   const heroItems = latest.slice(0, 10)
 
@@ -115,9 +115,9 @@ export const AnimePage = () => {
           link="/search?types=anime&sort=top_rated"
         />
 
-        {categories.map(cat => (
+        {categories.map((cat: any) => (
           <QuantumTrain 
-            key={cat}
+            key={cat as string}
             items={byCategory(cat as string)} 
             title={cat as string} 
             link={`/search?types=anime&genres=${encodeURIComponent(cat as string)}`}

@@ -100,7 +100,7 @@ export const CategoryPage = () => {
     if (isKids) return omarSondos.slice(0, 5)
     if (isQuran) return (quranQuery.data || []).slice(0, 5).map(r => ({ ...r, title: r.name, poster_path: r.image, backdrop_path: r.image, media_type: 'quran' }))
     if (isAnime) return (animeQuery.data || []).slice(0, 5).map(a => ({ ...a, poster_path: a.image_url, backdrop_path: a.image_url, media_type: 'anime' }))
-    return items.slice(0, 5).map(i => ({ ...i, poster_path: i.thumbnail || i.poster_path, backdrop_path: i.thumbnail || i.backdrop_path }))
+    return items.slice(0, 5).map((i: any) => ({ ...i, poster_path: i.thumbnail || i.poster_path, backdrop_path: i.thumbnail || i.backdrop_path }))
   }, [isKids, isQuran, isAnime, omarSondos, quranQuery.data, animeQuery.data, items])
 
   const canonicalUrl = typeof window !== 'undefined' ? `${location.origin}${location.pathname}` : ''
@@ -137,7 +137,7 @@ export const CategoryPage = () => {
         {isKids && (
           <div className="space-y-12">
              {/* Replaced old static hero with QuantumHero above, but keeping the chips/features */}
-            <div className="grid gap-8 lg:grid-cols-[1.2fr_1fr] mb-12">
+            <section className="grid gap-8 lg:grid-cols-[1.2fr_1fr] mb-12">
               <div className="space-y-4">
                 <h2 className="text-4xl md:text-5xl font-black tracking-tight text-white">
                   {lang === 'ar' ? 'مغامرات عمر وسندس' : 'Omar & Sondos Adventures'}
@@ -175,7 +175,6 @@ export const CategoryPage = () => {
                   </div>
                 ))}
               </div>
-            </div>
           </section>
 
           <section className="space-y-4">
@@ -300,6 +299,7 @@ export const CategoryPage = () => {
           ))}
         </div>
       ) : null}
+      </div>
     </div>
   )
 }

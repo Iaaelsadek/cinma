@@ -164,7 +164,7 @@ export const Home = () => {
          <QuantumHero items={heroItems} />
       </section>
 
-      <AdsManager />
+      <AdsManager type="banner" position="home-top" />
 
       <div className="max-w-[2400px] mx-auto px-4 md:px-12 w-full">
         {/* 2. THE INFINITE TRAIN */}
