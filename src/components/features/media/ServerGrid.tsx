@@ -231,7 +231,7 @@ export const ServerGrid = ({ tmdbId, type, season, episode }: Props) => {
         <button
           onClick={reportBroken}
           disabled={reporting}
-          className="absolute bottom-6 right-6 flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 h-10 text-xs font-bold uppercase tracking-widest text-red-400 hover:bg-red-500/20 transition-all opacity-0 group-hover:opacity-100 backdrop-blur-md"
+          className="absolute bottom-16 right-6 z-20 flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 h-10 text-xs font-bold uppercase tracking-widest text-red-400 hover:bg-red-500/20 transition-all opacity-0 group-hover:opacity-100 backdrop-blur-md"
         >
           {reporting ? <Loader2 size={14} className="animate-spin" /> : <AlertTriangle size={14} />}
           <span>Report Issue</span>
