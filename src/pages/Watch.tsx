@@ -18,20 +18,27 @@ type TmdbCastMember = {
   profile_path?: string | null
 }
 
-type TmdbDetails = {
-  title?: string
-  name?: string
-  release_date?: string
-  first_air_date?: string
-  runtime?: number
-  episode_run_time?: number[]
-  vote_average?: number
-  genres?: Array<{ id: number; name: string }>
-  overview?: string
-  poster_path?: string | null
-  backdrop_path?: string | null
-  credits?: { cast?: TmdbCastMember[] }
-}
+type TmdbCrewMember = {
+    id: number
+    name: string
+    job: string
+  }
+  
+  type TmdbDetails = {
+    title?: string
+    name?: string
+    release_date?: string
+    first_air_date?: string
+    runtime?: number
+    episode_run_time?: number[]
+    vote_average?: number
+    genres?: Array<{ id: number; name: string }>
+    overview?: string
+    poster_path?: string | null
+    backdrop_path?: string | null
+    credits?: { cast?: TmdbCastMember[]; crew?: TmdbCrewMember[] }
+    videos?: { results: Array<{ key: string; type: string; site: string }> }
+  }
 
 export const Watch = () => {
   const { type: typeParam, id } = useParams()
@@ -184,6 +191,10 @@ export const Watch = () => {
   if (error) return <NotFound />
   if (loading && !details) return <div className="min-h-screen bg-[#0f0f0f] p-8"><SkeletonGrid count={1} variant="video" /></div>
 
+  const trailer = useMemo(() => {
+    return details?.videos?.results?.find((v) => v.type === 'Trailer' && v.site === 'YouTube')?.key
+  }, [details])
+
   return (
     <div className="min-h-screen bg-[#0f0f0f]">
       <Helmet>
@@ -206,7 +217,7 @@ export const Watch = () => {
         <div className="relative z-10 mx-auto max-w-6xl px-4 pt-32 pb-10">
           <div className="grid grid-cols-1 gap-6 md:grid-cols-[1fr_260px]">
             <div className="order-2 md:order-1">
-              <h1 className="text-3xl md:text-4xl font-black tracking-tight text-white" dir="auto">{title}</h1>
+              <h1 className="text-3xl md:text-4xl font-black tracking-tight text-white mt-4" dir="auto">{title}</h1>
               <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-zinc-300">
                 {year && (
                   <span className="inline-flex items-center gap-1">
@@ -229,7 +240,13 @@ export const Watch = () => {
                   </span>
                 )}
               </div>
-              <p className="mt-3 max-w-3xl text-zinc-300">{overview}</p>
+              <p className="mt-3 max-w-2xl text-zinc-300">{overview}</p>
+              {details?.credits?.crew?.find((c) => c.job === 'Director') && (
+                <div className="mt-2 text-sm text-zinc-400">
+                  <span className="text-zinc-500">المخرج: </span>
+                  <span className="text-white">{details.credits.crew.find((c) => c.job === 'Director')?.name}</span>
+                </div>
+              )}
               {!!cast.length && (
                 <div className="mt-4">
                   <div className="text-sm font-semibold text-zinc-200 mb-2">طاقم العمل</div>
@@ -262,12 +279,23 @@ export const Watch = () => {
             </div>
             <div className="order-1 md:order-2">
               <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-black shadow-2xl">
-                <div className="aspect-[2/3] w-full bg-[#1a1a1a]">
-                  {poster && <img src={poster} alt={title} className="h-full w-full object-cover" loading="lazy" />}
+                <div className="aspect-video w-full bg-[#1a1a1a]">
+                  {trailer ? (
+                    <iframe
+                      src={`https://www.youtube.com/embed/${trailer}?autoplay=1&mute=1&loop=1&playlist=${trailer}&controls=0&showinfo=0&modestbranding=1`}
+                      className="h-full w-full pointer-events-none scale-110"
+                      allow="autoplay; encrypted-media"
+                      title="Trailer"
+                    />
+                  ) : (
+                    poster && <img src={poster} alt={title} className="h-full w-full object-cover opacity-80" loading="lazy" />
+                  )}
                 </div>
-                <div className="absolute top-3 left-3 rounded-md bg-black/80 px-2 py-1 text-xs font-bold text-[#f5c518] border border-white/10">
-                  WEB-DL 1080p
-                </div>
+                {!trailer && (
+                  <div className="absolute top-3 left-3 rounded-md bg-black/80 px-2 py-1 text-xs font-bold text-[#f5c518] border border-white/10">
+                    WEB-DL 1080p
+                  </div>
+                )}
               </div>
             </div>
           </div>
