@@ -203,7 +203,7 @@ export const Watch = () => {
         ) : (
           <div className="absolute inset-0 h-[36vh] bg-[#1a1a1a]" />
         )}
-        <div className="relative z-10 mx-auto max-w-6xl px-4 pt-8 pb-10">
+        <div className="relative z-10 mx-auto max-w-6xl px-4 pt-32 pb-10">
           <div className="grid grid-cols-1 gap-6 md:grid-cols-[1fr_260px]">
             <div className="order-2 md:order-1">
               <h1 className="text-3xl md:text-4xl font-black tracking-tight text-white" dir="auto">{title}</h1>
