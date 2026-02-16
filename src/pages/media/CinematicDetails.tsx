@@ -5,8 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import ReactPlayer from 'react-player'
 import { Play, Download, Star, Eye, Heart } from 'lucide-react'
 import { Helmet } from 'react-helmet-async'
-import { useLang } from '../state/useLang'
-import { tmdb } from '../lib/tmdb'
+import { useLang } from '../../state/useLang'
+import { tmdb } from '../../lib/tmdb'
 
 type Badge = { label: string; tone?: 'gold' | 'yellow' | 'slate' | 'red' }
 type Cast = { id: number; name: string; role?: string; avatar?: string }

@@ -45,7 +45,7 @@ export const VideoRow = ({ title, videos }: Props) => {
           className="scrollbar-hide no-scrollbar flex snap-x snap-mandatory flex-row flex-nowrap gap-5 overflow-x-auto overflow-y-hidden scroll-smooth px-4 lg:px-12 pb-6"
         >
           {videos.map((v, idx) => (
-            <div key={v.id} className="snap-start w-[300px] md:w-[340px] shrink-0">
+            <div key={v.id} className="snap-start w-[260px] xs:w-[280px] sm:w-[300px] md:w-[340px] xl:w-[380px] 2xl:w-[420px] 3xl:w-[480px] shrink-0">
               <VideoCard video={v} index={idx} />
             </div>
           ))}

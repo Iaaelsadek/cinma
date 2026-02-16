@@ -7,6 +7,11 @@ export default {
   darkMode: 'class',
   theme: {
     extend: {
+      screens: {
+        '3xl': '1920px',
+        '4xl': '2560px',
+        '5xl': '3840px',
+      },
       colors: {
         primary: {
           DEFAULT: '#10B981',
@@ -41,8 +46,7 @@ export default {
       },
       animation: {
         'float': 'float 6s ease-in-out infinite',
-        'pulse-glow': 'pulse-glow 2s ease-in-out infinite',
-        'slow-train': 'slow-train 60s linear infinite'
+        'pulse-glow': 'pulse-glow 2s ease-in-out infinite'
       },
       keyframes: {
         float: {
@@ -52,10 +56,6 @@ export default {
         'pulse-glow': {
           '0%, 100%': { opacity: '0.5', transform: 'scale(1)' },
           '50%': { opacity: '1', transform: 'scale(1.05)' }
-        },
-        'slow-train': {
-          '0%': { transform: 'translateX(100%)' },
-          '100%': { transform: 'translateX(-200%)' }
         }
       }
     }

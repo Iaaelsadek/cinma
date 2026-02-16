@@ -1,14 +1,14 @@
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
-import { useAuth } from '../hooks/useAuth'
-import { addHistory, getProgress, supabase, upsertProgress } from '../lib/supabase'
-import { AdsManager } from '../components/common/AdsManager'
-import { ServerGrid } from '../components/features/media/ServerGrid'
-import { tmdb } from '../lib/tmdb'
+import { useAuth } from '../../hooks/useAuth'
+import { addHistory, getProgress, supabase, upsertProgress } from '../../lib/supabase'
+import { AdsManager } from '../../components/common/AdsManager'
+import { ServerGrid } from '../../components/features/media/ServerGrid'
+import { tmdb } from '../../lib/tmdb'
 import { Helmet } from 'react-helmet-async'
 import { Calendar, Clock, Star } from 'lucide-react'
-import { NotFound } from './NotFound'
-import { SkeletonGrid } from '../components/common/Skeletons'
+import { NotFound } from '../NotFound'
+import { SkeletonGrid } from '../../components/common/Skeletons'
 
 type DownloadLink = { label?: string; url: string }
 

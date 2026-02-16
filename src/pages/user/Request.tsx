@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
-import { supabase } from '../lib/supabase'
-import { useLang } from '../state/useLang'
-import { useAuth } from '../hooks/useAuth'
+import { supabase } from '../../lib/supabase'
+import { useLang } from '../../state/useLang'
+import { useAuth } from '../../hooks/useAuth'
 import { Helmet } from 'react-helmet-async'
 import { Send, Film, MessageSquare } from 'lucide-react'
-import { Button } from '../components/common/Button'
-import { Input } from '../components/common/Input'
+import { Button } from '../../components/common/Button'
+import { Input } from '../../components/common/Input'
 
 type RequestForm = {
   title: string

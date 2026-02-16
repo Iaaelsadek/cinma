@@ -4,112 +4,195 @@
 
 :root {
   color-scheme: dark;
+  --neon-primary: #00ffcc;
+  --neon-secondary: #ff00ff;
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-bg: rgba(0, 0, 0, 0.3);
+  --deep-space: #030305;
 }
 
-* {
-  -webkit-tap-highlight-color: transparent;
-}
-
-html, body, #root {
-  height: 100%;
-}
+/* -------------------------------------------------------------------------- */
+/*  THE "UNPRECEDENTED" RESET                                                 */
+/* -------------------------------------------------------------------------- */
 
 html {
   scroll-behavior: smooth;
 }
 
 body {
-  background: #050505;
-  font-family: Cairo, system-ui, sans-serif;
+  background: var(--deep-space);
+  font-family: 'Cairo', system-ui, sans-serif;
+  overflow-x: hidden;
+  color: #e0e0e0;
+  perspective: 1000px; /* Enable 3D space globally */
 }
 
 :lang(en) body {
-  font-family: Inter, system-ui, sans-serif;
+  font-family: 'Inter', system-ui, sans-serif;
 }
 
-.glass-smooth {
-  will-change: transform, filter;
-  transform: translateZ(0);
+/* Hide Scrollbar but keep functionality */
+::-webkit-scrollbar {
+  width: 0px;
+  background: transparent;
 }
+
+/* -------------------------------------------------------------------------- */
+/*  QUANTUM UTILITIES                                                         */
+/* -------------------------------------------------------------------------- */
+
+@layer utilities {
+  .perspective-1000 {
+    perspective: 1000px;
+  }
+  
+  .transform-style-3d {
+    transform-style: preserve-3d;
+  }
+
+  .backface-hidden {
+    backface-visibility: hidden;
+  }
+
+  /* Text Glitch Effect */
+  .text-glitch {
+    position: relative;
+  }
+  .text-glitch::before,
+  .text-glitch::after {
+    content: attr(data-text);
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--deep-space);
+  }
+  .text-glitch::before {
+    left: 2px;
+    text-shadow: -1px 0 var(--neon-secondary);
+    clip: rect(24px, 550px, 90px, 0);
+    animation: glitch-anim-2 3s infinite linear alternate-reverse;
+  }
+  .text-glitch::after {
+    left: -2px;
+    text-shadow: -1px 0 var(--neon-primary);
+    clip: rect(85px, 550px, 140px, 0);
+    animation: glitch-anim 2.5s infinite linear alternate-reverse;
+  }
+
+  /* Holographic Card */
+  .holographic-card {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 
+      0 0 0 1px rgba(0,0,0,0.5),
+      0 20px 50px rgba(0,0,0,0.5),
+      inset 0 0 60px rgba(255,255,255,0.02);
+  }
+
+  /* Liquid Gradient Text */
+  .text-liquid {
+    background: linear-gradient(
+      to right,
+      #00ffcc,
+      #00ccff,
+      #ff00ff,
+      #00ffcc
+    );
+    background-size: 200% auto;
+    color: transparent;
+    -webkit-background-clip: text;
+    background-clip: text;
+    animation: shine 3s linear infinite;
+  }
+
+  /* Neon Glows */
+  .glow-primary {
+    box-shadow: 0 0 20px rgba(0, 255, 204, 0.5);
+  }
+  .glow-secondary {
+    box-shadow: 0 0 20px rgba(255, 0, 255, 0.5);
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/*  BLACK MAGIC ANIMATIONS                                                    */
+/* -------------------------------------------------------------------------- */
+
+@keyframes shine {
+  to {
+    background-position: 200% center;
+  }
+}
+
+@keyframes glitch-anim {
+  0% { clip: rect(12px, 9999px, 5px, 0); }
+  20% { clip: rect(78px, 9999px, 96px, 0); }
+  40% { clip: rect(12px, 9999px, 25px, 0); }
+  60% { clip: rect(45px, 9999px, 5px, 0); }
+  80% { clip: rect(98px, 9999px, 65px, 0); }
+  100% { clip: rect(32px, 9999px, 85px, 0); }
+}
+
+@keyframes glitch-anim-2 {
+  0% { clip: rect(65px, 9999px, 100px, 0); }
+  20% { clip: rect(12px, 9999px, 5px, 0); }
+  40% { clip: rect(87px, 9999px, 32px, 0); }
+  60% { clip: rect(5px, 9999px, 65px, 0); }
+  80% { clip: rect(25px, 9999px, 12px, 0); }
+  100% { clip: rect(96px, 9999px, 78px, 0); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-20px); }
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(0.8); opacity: 0.5; }
+  100% { transform: scale(2); opacity: 0; }
+}
+
+/* -------------------------------------------------------------------------- */
+/*  COMPONENT OVERRIDES                                                       */
+/* -------------------------------------------------------------------------- */
 
 @layer components {
   .glass-card {
-    @apply bg-white/10 backdrop-blur-md border border-white/20 shadow-glass rounded-2xl;
-  }
-  .glass-panel {
-    @apply bg-black/40 backdrop-blur-xl border-b border-white/10;
-  }
-  .surface-section {
-    @apply rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md;
-  }
-  .btn-primary {
-    @apply inline-flex h-11 items-center justify-center rounded-xl bg-primary px-5 font-bold text-white shadow-md transition hover:brightness-110 active:brightness-95;
-  }
-  .btn-ghost {
-    @apply inline-flex h-11 items-center justify-center rounded-xl border border-white/10 bg-black/20 backdrop-blur-md px-5 font-bold text-white hover:bg-white/10 hover:border-white/20 transition-all;
-  }
-  .input-glass {
-    @apply rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm placeholder:text-zinc-500 focus:border-primary focus:ring-2 focus:ring-primary/40;
-  }
-}
-
-@layer utilities {
-  .pause-on-hover {
-    animation-play-state: running;
-  }
-  .pause-on-hover:hover {
-    animation-play-state: paused;
+    @apply bg-black/40 backdrop-blur-xl border border-white/10 shadow-2xl transition-all duration-500;
   }
   
-  /* Ken Burns Animations */
-  @keyframes kenBurnsIn {
-    0% { transform: scale(1) translate(0, 0); }
-    100% { transform: scale(1.1) translate(2%, 0); }
-  }
-  @keyframes kenBurnsOut {
-    0% { transform: scale(1.1) translate(0, 0); }
-    100% { transform: scale(1) translate(-2%, 0); }
+  .glass-panel {
+    @apply bg-black/60 backdrop-blur-2xl border-b border-white/5;
   }
 
-  /* Neon Rectangle Snake Animation */
-  @keyframes neonSnake {
-    0% {
-      stroke-dasharray: 0 400;
-      stroke-dashoffset: 0;
-      opacity: 0;
-    }
-    10% {
-      opacity: 1;
-    }
-    100% {
-      stroke-dasharray: 400 0;
-      stroke-dashoffset: 0;
-      opacity: 1;
-    }
+  .btn-primary {
+    @apply relative overflow-hidden rounded-xl bg-white text-black font-black uppercase tracking-widest px-8 py-4 transition-all duration-300 hover:scale-105 hover:shadow-[0_0_40px_rgba(255,255,255,0.5)];
   }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  * {
-    animation-duration: 0.001ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.001ms !important;
-    scroll-behavior: auto !important;
+  
+  .btn-primary::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(
+      to bottom right,
+      rgba(255,255,255,0) 0%,
+      rgba(255,255,255,0.8) 50%,
+      rgba(255,255,255,0) 100%
+    );
+    transform: rotate(45deg);
+    transition: all 0.5s;
+    opacity: 0;
   }
-}
-
-.scrollbar-hide {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-.scrollbar-hide::-webkit-scrollbar {
-  display: none;
-}
-
-/* Global scrollbar hiding */
-::-webkit-scrollbar {
-  display: none;
-}
-* {
-  scrollbar-width: none;
+  
+  .btn-primary:hover::after {
+    left: 100%;
+    opacity: 1;
+    transition: 0.7s;
+  }
 }

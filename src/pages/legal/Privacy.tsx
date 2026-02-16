@@ -1,5 +1,5 @@
 import { Helmet } from 'react-helmet-async'
-import { useLang } from '../state/useLang'
+import { useLang } from '../../state/useLang'
 
 export const Privacy = () => {
   const { lang } = useLang()
