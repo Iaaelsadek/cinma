@@ -13,7 +13,10 @@ if (!CONFIG.SUPABASE_URL || !CONFIG.SUPABASE_ANON_KEY) {
 }
 
 export const FLAGS = {
-  ADS_ENABLED: false,
+  ADS_ENABLED:
+    import.meta.env.MODE === 'production' &&
+    !!(CONFIG.SUPABASE_URL && CONFIG.SUPABASE_ANON_KEY) &&
+    /supabase\.co/.test(CONFIG.SUPABASE_URL),
 }
 
 export function assertEnv() {
