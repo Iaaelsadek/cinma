@@ -209,6 +209,8 @@ export const ServerGrid = ({ tmdbId, type, season, episode }: Props) => {
             src={activeServer.url}
             className="h-full w-full"
             allowFullScreen
+            scrolling="no"
+            style={{ border: 'none', overflow: 'hidden' }}
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             title={`Stream ${activeServer.name}`}
           />
