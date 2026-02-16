@@ -70,6 +70,23 @@ body {
     0% { transform: scale(1.1) translate(0, 0); }
     100% { transform: scale(1) translate(-2%, 0); }
   }
+
+  /* Neon Rectangle Snake Animation */
+  @keyframes neonSnake {
+    0% {
+      stroke-dasharray: 0 400;
+      stroke-dashoffset: 0;
+      opacity: 0;
+    }
+    10% {
+      opacity: 1;
+    }
+    100% {
+      stroke-dasharray: 400 0;
+      stroke-dashoffset: 0;
+      opacity: 1;
+    }
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
