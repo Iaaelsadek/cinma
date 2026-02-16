@@ -170,8 +170,33 @@ export const Navbar = ({ isScrolled }: { isScrolled?: boolean }) => {
               <Link
                 key={link.to}
                 to={link.to}
-                className="group relative flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold text-zinc-300 transition-all hover:bg-white/5 hover:text-white"
+                className="group relative flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold text-zinc-300 transition-all hover:text-white"
               >
+                {/* Neon Snake Border Effect */}
+                <div className="absolute inset-0 rounded-xl pointer-events-none opacity-0 group-hover:opacity-100">
+                  <svg className="absolute inset-0 h-full w-full rounded-xl" viewBox="0 0 100 100" preserveAspectRatio="none">
+                    <rect 
+                      x="0" y="0" width="100" height="100" rx="12" ry="12" 
+                      fill="none" 
+                      stroke={link.color?.replace('text-', '') || '#10b981'} 
+                      strokeWidth="2"
+                      className="path-snake"
+                      pathLength="100"
+                    />
+                  </svg>
+                  <style>{`
+                    .group:hover .path-snake {
+                      stroke-dasharray: 100;
+                      stroke-dashoffset: 100;
+                      animation: snakeRun 0.6s linear forwards;
+                    }
+                    @keyframes snakeRun {
+                      0% { stroke-dashoffset: 100; }
+                      100% { stroke-dashoffset: 0; }
+                    }
+                  `}</style>
+                </div>
+
                 {/* Custom Glow Effect for each icon */}
                 <div className="relative flex items-center justify-center transition-transform duration-300 group-hover:scale-110">
                   {/* The Glow */}
