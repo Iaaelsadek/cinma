@@ -232,15 +232,13 @@ const SeriesDetails = () => {
   }, [vote, remote.data, title, poster, backdrop, overview, cast, genres, id])
   return (
     <div className="relative space-y-6">
-      <Helmet>
-        <title>{`${title} | ${t('مسلسل', 'Series')} | cinma.online`}</title>
-        <meta name="description" content={(overview || '').slice(0, 160)} />
-        <meta property="og:title" content={title} />
-        <meta property="og:description" content={(overview || '').slice(0, 160)} />
-        <meta property="og:image" content={series.data?.backdrop_path ? `https://image.tmdb.org/t/p/original${series.data.backdrop_path}` : '/og-image.jpg'} />
-        <link rel="canonical" href={canonicalUrl} />
-      </Helmet>
-      <SeoHead schema={jsonLdSeries} />
+      <SeoHead
+        title={`${title} | ${t('مسلسل', 'Series')}`}
+        description={overview || ''}
+        image={backdrop || poster || undefined}
+        type="video.tv_show"
+        schema={jsonLdSeries}
+      />
       {backdrop && (
         <div className="pointer-events-none fixed inset-0 -z-10">
           <img src={backdrop} alt={title} className="h-full w-full object-cover" />
