@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate, useParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import ReactPlayer from 'react-player'
 import { Play, Download, Star, Eye, Heart } from 'lucide-react'
-import { Helmet } from 'react-helmet-async'
+import { SeoHead } from '../../components/common/SeoHead'
 import { useLang } from '../../state/useLang'
 import { tmdb } from '../../lib/tmdb'
 
@@ -201,19 +201,41 @@ const CinematicDetails = () => {
     { label: data.audio, tone: 'slate' },
     { label: data.age, tone: 'red' }
   ]
-  const canonicalUrl = typeof window !== 'undefined' ? `${location.origin}${location.pathname}` : ''
   const metaDescription = data.synopsis.slice(0, 160)
+  const jsonLdCinematic = useMemo(() => {
+    return {
+      '@context': 'https://schema.org',
+      '@type': type === 'movie' ? 'Movie' : 'TVSeries',
+      name: data.title,
+      image: data.backdrop || data.poster || '',
+      description: data.synopsis.slice(0, 200),
+      datePublished: data.tech.releaseDate || '',
+      aggregateRating: {
+        '@type': 'AggregateRating',
+        ratingValue: data.imdb,
+        ratingCount: 100,
+        bestRating: '10',
+        worstRating: '1'
+      },
+      potentialAction: {
+        '@type': 'WatchAction',
+        target: {
+          '@type': 'EntryPoint',
+          urlTemplate: `https://cinma.online/watch/${data.id}?type=${type}`
+        }
+      }
+    }
+  }, [data, type])
 
   return (
     <div className="relative min-h-[100svh]">
-      <Helmet>
-        <title>{`${data.title} | ${type === 'movie' ? t('فيلم', 'Movie') : t('مسلسل', 'Series')} | cinma.online`}</title>
-        <meta name="description" content={metaDescription} />
-        <meta property="og:title" content={data.title} />
-        <meta property="og:description" content={metaDescription} />
-        <meta property="og:image" content={data.backdrop || data.poster || '/og-image.jpg'} />
-        <link rel="canonical" href={canonicalUrl} />
-      </Helmet>
+      <SeoHead
+        title={`${data.title} | ${type === 'movie' ? t('فيلم', 'Movie') : t('مسلسل', 'Series')}`}
+        description={metaDescription}
+        image={data.backdrop || data.poster || undefined}
+        type={type === 'movie' ? 'video.movie' : 'video.tv_show'}
+        schema={jsonLdCinematic}
+      />
       <AnimatePresence>
         <motion.div
           key={data.backdrop}

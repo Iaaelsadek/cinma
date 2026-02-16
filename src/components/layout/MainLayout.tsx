@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { ReactNode } from 'react'
 import { QuantumNavbar } from './QuantumNavbar'
-import { LivingBackground } from '../effects/LivingBackground'
+import { AuroraBackground } from '../effects/AuroraBackground'
 import { Footer } from './Footer'
 import { useLocation } from 'react-router-dom'
 import { useLang } from '../../state/useLang'
@@ -18,7 +18,7 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
   return (
     <div className={`min-h-screen font-inter selection:bg-cyan-500 selection:text-black ${lang === 'ar' ? 'font-cairo' : ''}`}>
       {/* THE LIVING ORGANISM CORE */}
-      <LivingBackground />
+      <AuroraBackground />
 
       <QuantumNavbar />
       

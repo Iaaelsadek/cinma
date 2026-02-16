@@ -288,15 +288,13 @@ export const MovieDetails = () => {
   }, [rating, data, trailerUrl, title, poster, backdrop, aiSummary, overview, genres, director, runtimeMin, id])
   return (
     <div className="relative space-y-6">
-      <Helmet>
-        <title>{`${title} | ${quality} | cinma.online`}</title>
-        <meta name="description" content={(aiSummary || overview).slice(0, 160)} />
-        <meta property="og:title" content={title} />
-        <meta property="og:description" content={(aiSummary || overview).slice(0, 160)} />
-        <meta property="og:image" content={data?.backdrop_path ? `https://image.tmdb.org/t/p/original${data.backdrop_path}` : '/og-image.jpg'} />
-        <link rel="canonical" href={canonicalUrl} />
-      </Helmet>
-      <SeoHead schema={jsonLdMovie} />
+      <SeoHead
+        title={`${title} | ${quality}`}
+        description={aiSummary || overview || ''}
+        image={backdrop || poster || undefined}
+        type="video.movie"
+        schema={jsonLdMovie}
+      />
       {/* Cinematic background */}
       {backdrop && (
         <div className="pointer-events-none fixed inset-0 -z-10">

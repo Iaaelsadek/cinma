@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { Play, Star, Plus, Info, Check } from 'lucide-react'
+import { Play, Star, Plus, Check } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useState, type MouseEvent } from 'react'
 import { useAuth } from '../../../hooks/useAuth'
@@ -78,7 +78,7 @@ export const MovieCard = ({ movie, index = 0 }: { movie: Movie; index?: number }
         onMouseLeave={() => setIsHovered(false)}
         className="block relative h-full w-full"
       >
-        <div className="relative overflow-hidden rounded-2xl bg-luxury-charcoal border border-white/5 transition-all duration-500 transform-gpu hover:scale-[1.03] hover:shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5)] hover:border-primary/40 h-full flex flex-col">
+        <div className="relative overflow-hidden rounded-2xl bg-white/5 backdrop-blur-md border border-white/10 transition-transform duration-300 hover:scale-105 hover:shadow-[0_0_30px_rgba(124,58,237,0.5)] h-full flex flex-col">
           {/* Poster Image */}
           <div className="relative aspect-[2/3] w-full overflow-hidden bg-zinc-900">
             {movie.poster_path ? (
@@ -87,6 +87,7 @@ export const MovieCard = ({ movie, index = 0 }: { movie: Movie; index?: number }
                 alt={title}
                 className={`h-full w-full object-cover transition-transform duration-700 will-change-transform ${isHovered ? 'scale-110 blur-[2px] brightness-50' : 'scale-100'}`}
                 loading="lazy"
+                decoding="async"
               />
             ) : (
               <div className="flex h-full w-full items-center justify-center bg-zinc-800 text-zinc-600">

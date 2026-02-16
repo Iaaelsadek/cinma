@@ -5,7 +5,7 @@ import { addHistory, getProgress, supabase, upsertProgress } from '../../lib/sup
 import { AdsManager } from '../../components/common/AdsManager'
 import { ServerGrid } from '../../components/features/media/ServerGrid'
 import { tmdb } from '../../lib/tmdb'
-import { Helmet } from 'react-helmet-async'
+import { SeoHead } from '../../components/common/SeoHead'
 import { Calendar, Clock, Star } from 'lucide-react'
 import { NotFound } from '../NotFound'
 import { SkeletonGrid } from '../../components/common/Skeletons'
@@ -32,6 +32,7 @@ type TmdbCrewMember = {
     runtime?: number
     episode_run_time?: number[]
     vote_average?: number
+    vote_count?: number
     genres?: Array<{ id: number; name: string }>
     overview?: string
     poster_path?: string | null
@@ -191,20 +192,39 @@ export const Watch = () => {
     return details?.videos?.results?.find((v) => v.type === 'Trailer' && v.site === 'YouTube')?.key
   }, [details])
 
+  const jsonLdWatch = useMemo(() => {
+    if (!details) return undefined
+    return {
+      '@context': 'https://schema.org',
+      '@type': 'VideoObject',
+      name: title,
+      description: overview.slice(0, 200),
+      thumbnailUrl: [backdrop, poster].filter(Boolean),
+      uploadDate: (type === 'movie' ? details.release_date : details.first_air_date) || new Date().toISOString(),
+      duration: runtimeMin ? `PT${runtimeMin}M` : undefined,
+      aggregateRating: rating ? {
+        '@type': 'AggregateRating',
+        ratingValue: rating,
+        ratingCount: details.vote_count || 100,
+        bestRating: '10',
+        worstRating: '1'
+      } : undefined
+    }
+  }, [details, title, overview, backdrop, poster, type, runtimeMin, rating])
+
   // Early Returns (Now safe because all hooks are declared above)
   if (error) return <NotFound />
   if (loading && !details) return <div className="min-h-screen bg-[#0f0f0f] p-8"><SkeletonGrid count={1} variant="video" /></div>
 
   return (
     <div className="min-h-screen bg-[#0f0f0f]">
-      <Helmet>
-        <title>{title} | {type === 'movie' ? 'Movie' : 'Series'} | cinma.online</title>
-        <meta name="description" content={overview.slice(0, 160)} />
-        <meta property="og:title" content={title} />
-        <meta property="og:description" content={overview.slice(0, 160)} />
-        <meta property="og:image" content={backdrop || poster || '/og-image.jpg'} />
-        <link rel="canonical" href={typeof window !== 'undefined' ? `${location.origin}${location.pathname}` : ''} />
-      </Helmet>
+      <SeoHead
+        title={`${title} | ${type === 'movie' ? 'Movie' : 'Series'}`}
+        description={overview || ''}
+        image={backdrop || poster || undefined}
+        type={type === 'movie' ? 'video.movie' : 'video.tv_show'}
+        schema={jsonLdWatch}
+      />
       <div className="relative">
         {backdrop ? (
           <>

@@ -33,6 +33,7 @@ const SoftwareDetails = lazy(() => import('./pages/media/SoftwareDetails').then(
 // Discovery
 const Search = lazy(() => import('./pages/discovery/Search').then(m => ({ default: m.Search })))
 const CategoryPage = lazy(() => import('./pages/discovery/Category').then(m => ({ default: m.CategoryPage })))
+const CategoryHub = lazy(() => import('./pages/CategoryHub').then(m => ({ default: m.CategoryHub })))
 const Gaming = lazy(() => import('./pages/discovery/Gaming').then(m => ({ default: m.Gaming })))
 const Software = lazy(() => import('./pages/discovery/Software').then(m => ({ default: m.Software })))
 const MoviesPage = lazy(() => import('./pages/discovery/Movies').then(m => ({ default: m.MoviesPage })))
@@ -120,6 +121,15 @@ const App = () => {
 
             {/* Discovery Routes */}
             <Route path="/search" element={<Search />} />
+            
+            {/* Silo Routes */}
+            <Route path="/movies/:category/:year/:genre" element={<CategoryHub type="movie" />} />
+            <Route path="/movies/:category/:year" element={<CategoryHub type="movie" />} />
+            <Route path="/movies/:category" element={<CategoryHub type="movie" />} />
+            <Route path="/series/:category/:year/:genre" element={<CategoryHub type="tv" />} />
+            <Route path="/series/:category/:year" element={<CategoryHub type="tv" />} />
+            <Route path="/series/:category" element={<CategoryHub type="tv" />} />
+
             <Route path="/category/:category" element={<CategoryPage />} />
             <Route path="/kids" element={<CategoryPage />} />
             <Route path="/anime" element={<AnimePage />} />
