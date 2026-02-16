@@ -22,9 +22,11 @@ type Server = {
 // 10+ Redundant Sources for Maximum Uptime
 // ------------------------------------------------------------------
 const PROVIDERS = [
+  { id: 'vidsrc', name: 'VidSrc (Primary)', base: 'https://vidsrc.to/embed' },
   { id: 'vidsrc_pro', name: 'VidSrc Pro', base: 'https://vidsrc.pro/embed' },
   { id: 'vidsrc_vip', name: 'VidSrc VIP', base: 'https://vidsrc.vip/embed' },
   { id: '2embed', name: '2Embed', base: 'https://www.2embed.cc/embed' },
+  { id: 'embed_su', name: 'EmbedSU', base: 'https://embed.su/embed' },
   { id: 'autoembed', name: 'AutoEmbed', base: 'https://autoembed.to' },
   { id: 'smashystream', name: 'SmashyStream', base: 'https://player.smashy.stream' },
   { id: 'aniwave', name: 'AniWave (Backup)', base: 'https://aniwave.to/embed' },
