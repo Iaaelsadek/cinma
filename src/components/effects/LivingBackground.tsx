@@ -39,19 +39,23 @@ export const LivingBackground = () => {
 
       {/* 2. The Living Orbs */}
       <motion.div
-        className="absolute top-1/2 left-1/2 w-[800px] h-[800px] -translate-x-1/2 -translate-y-1/2 bg-purple-600/30 rounded-full blur-[120px] mix-blend-screen"
+        className="absolute top-1/2 left-1/2 w-[800px] h-[800px] -translate-x-1/2 -translate-y-1/2 bg-purple-600/30 rounded-full blur-[80px] mix-blend-screen will-change-transform"
         style={{ x, y }}
+        animate={{ scale: [1, 1.1, 1], opacity: [0.3, 0.4, 0.3] }}
+        transition={{ duration: 8, repeat: Infinity, repeatType: "mirror" }}
       />
       <motion.div
-        className="absolute top-1/2 left-1/2 w-[600px] h-[600px] -translate-x-1/2 -translate-y-1/2 bg-cyan-500/20 rounded-full blur-[100px] mix-blend-screen"
+        className="absolute top-1/2 left-1/2 w-[600px] h-[600px] -translate-x-1/2 -translate-y-1/2 bg-cyan-500/20 rounded-full blur-[60px] mix-blend-screen will-change-transform"
         style={{ x: useSpring(mouseX, { damping: 50, stiffness: 100 }), y: useSpring(mouseY, { damping: 50, stiffness: 100 }) }}
+        animate={{ scale: [1.1, 1, 1.1], opacity: [0.2, 0.3, 0.2] }}
+        transition={{ duration: 10, repeat: Infinity, repeatType: "mirror", delay: 1 }}
       />
 
-      {/* 3. Scanline Overlay (Encoded Base64 Noise to avoid external dependency issues) */}
+      {/* 3. Scanline Overlay (Optimized Noise) */}
       <div 
-        className="absolute inset-0 z-50 pointer-events-none opacity-[0.05]"
+        className="absolute inset-0 z-50 pointer-events-none opacity-[0.03]"
         style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`
+            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='1' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`
         }} 
       />
       

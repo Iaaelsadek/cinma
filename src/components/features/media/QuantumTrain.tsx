@@ -92,6 +92,8 @@ export const QuantumTrain = ({ items, title, link }: { items: any[], title?: str
                   <img
                     src={movie.poster_path?.startsWith('http') ? movie.poster_path : `https://image.tmdb.org/t/p/w500${movie.poster_path}`}
                     alt={movie.title}
+                    loading="lazy"
+                    decoding="async"
                     className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                   />
                   
