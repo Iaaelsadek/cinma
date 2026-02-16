@@ -160,7 +160,7 @@ export const Home = () => {
       </Helmet>
 
       {/* 1. QUANTUM HERO PORTAL */}
-      <section className="relative z-10 -mt-32 w-full">
+      <section className="relative z-10 w-full">
          <QuantumHero items={heroItems} />
       </section>
 
@@ -183,7 +183,13 @@ export const Home = () => {
               {popularAr.data?.results?.slice(0, 12).map((movie, idx) => (
                  <HolographicCard key={movie.id} className="aspect-[2/3]">
                     <Link to={`/watch/movie/${movie.id}`}>
-                      <img src={`https://image.tmdb.org/t/p/w500${movie.poster_path}`} className="w-full h-full object-cover" alt={movie.title} />
+                      <img 
+                        src={`https://image.tmdb.org/t/p/w500${movie.poster_path}`} 
+                        className="w-full h-full object-cover" 
+                        alt={movie.title} 
+                        loading="lazy"
+                        decoding="async"
+                      />
                       <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                         <Play className="w-12 h-12 text-cyan-400 drop-shadow-[0_0_10px_rgba(0,255,204,0.8)]" />
                       </div>

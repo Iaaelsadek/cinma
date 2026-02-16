@@ -30,15 +30,33 @@ export const QuantumHero = ({ items }: { items: any[] }) => {
           transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
           className="absolute inset-0"
         >
-          {/* Background Image */}
-          <div 
-            className="absolute inset-0 bg-cover bg-center transition-transform duration-[20s] ease-linear scale-110 group-hover:scale-100"
-            style={{ backgroundImage: `url(${current.backdrop_path?.startsWith('http') ? current.backdrop_path : `https://image.tmdb.org/t/p/original${current.backdrop_path}`})` }}
+          {/* Legendary Alive Background Animation */}
+          <motion.div 
+            className="absolute inset-0 bg-cover bg-center"
+            style={{ 
+              backgroundImage: `url(${current.backdrop_path?.startsWith('http') ? current.backdrop_path : `https://image.tmdb.org/t/p/w1280${current.backdrop_path}`})` 
+            }}
+            initial={{ scale: 1.1, x: 0, y: 0 }}
+            animate={{ 
+              scale: [1.1, 1.25, 1.1],
+              x: [0, -20, 0],
+              y: [0, -15, 0],
+            }}
+            transition={{ 
+              duration: 25, 
+              ease: "linear", 
+              repeat: Infinity,
+              repeatType: "mirror" 
+            }}
           />
           
-          {/* Cinematic Vignette & Noise */}
-          <div className="absolute inset-0 bg-gradient-to-t from-[#030305] via-[#030305]/40 to-transparent" />
-          <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03]" />
+          {/* Cinematic Vignette & Noise with Pulse */}
+          <div className="absolute inset-0 bg-gradient-to-t from-[#030305] via-[#030305]/20 to-transparent" />
+          <motion.div 
+            className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03]"
+            animate={{ opacity: [0.03, 0.06, 0.03] }}
+            transition={{ duration: 0.2, repeat: Infinity, repeatType: "mirror" }}
+          />
         </motion.div>
       </AnimatePresence>
 

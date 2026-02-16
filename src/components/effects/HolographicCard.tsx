@@ -1,5 +1,5 @@
 import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 
 export const HolographicCard = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => {
   const x = useMotionValue(0)
@@ -8,8 +8,15 @@ export const HolographicCard = ({ children, className = '' }: { children: React.
   const rotateX = useTransform(y, [-100, 100], [10, -10])
   const rotateY = useTransform(x, [-100, 100], [-10, 10])
 
+  const rectRef = useRef<DOMRect | null>(null)
+
+  const handleMouseEnter = (e: React.MouseEvent<HTMLDivElement>) => {
+    rectRef.current = e.currentTarget.getBoundingClientRect()
+  }
+
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect()
+    if (!rectRef.current) return
+    const rect = rectRef.current
     const centerX = rect.left + rect.width / 2
     const centerY = rect.top + rect.height / 2
     x.set(e.clientX - centerX)
@@ -19,6 +26,7 @@ export const HolographicCard = ({ children, className = '' }: { children: React.
   const handleMouseLeave = () => {
     x.set(0)
     y.set(0)
+    rectRef.current = null
   }
 
   return (
@@ -28,6 +36,7 @@ export const HolographicCard = ({ children, className = '' }: { children: React.
         rotateX: useSpring(rotateX, { stiffness: 300, damping: 30 }),
         rotateY: useSpring(rotateY, { stiffness: 300, damping: 30 }),
       }}
+      onMouseEnter={handleMouseEnter}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
       className={`relative group transform-style-3d ${className}`}
