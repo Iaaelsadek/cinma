@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
-import { ensureProfile } from '../lib/supabase'
+import { supabase } from '../../lib/supabase'
+import { ensureProfile } from '../../lib/supabase'
+import { Eye, EyeOff } from 'lucide-react'
 
 export const Login = () => {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const navigate = useNavigate()
@@ -70,13 +72,22 @@ export const Login = () => {
           </div>
           <div className="space-y-2">
             <label className="text-xs font-bold uppercase tracking-widest text-zinc-400">كلمة المرور</label>
-            <input
-              type="password"
-              className="w-full h-12 rounded-xl border border-white/10 bg-black/40 px-4 text-sm text-white focus:border-primary outline-none"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                className="w-full h-12 rounded-xl border border-white/10 bg-black/40 px-4 text-sm text-white focus:border-primary outline-none pr-10"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white"
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
           </div>
           {error && <div className="text-sm text-red-400">{error}</div>}
           <button
@@ -86,6 +97,7 @@ export const Login = () => {
           >
             دخول
           </button>
+          {/* Google Auth Disabled - Not configured in Supabase
           <button
             onClick={signInWithGoogle}
             disabled={loading}
@@ -93,6 +105,7 @@ export const Login = () => {
           >
             المتابعة عبر Google
           </button>
+          */}
           <div className="text-center text-sm text-zinc-400">
             لا تملك حساباً؟ <Link to="/register" className="text-primary font-bold">إنشاء حساب</Link>
           </div>

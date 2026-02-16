@@ -3,17 +3,17 @@ import { Star } from 'lucide-react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useQuery, keepPreviousData } from '@tanstack/react-query'
 import InfiniteScroll from 'react-infinite-scroll-component'
-import { advancedSearch, fetchGenres } from '../lib/tmdb'
-import { MovieCard } from '../components/features/media/MovieCard'
-import { VideoCard, VideoItem } from '../components/features/media/VideoCard'
-import { useDebounce } from '../hooks/useDebounce'
-import { supabase } from '../lib/supabase'
+import { advancedSearch, fetchGenres } from '../../lib/tmdb'
+import { MovieCard } from '../../components/features/media/MovieCard'
+import { VideoCard, VideoItem } from '../../components/features/media/VideoCard'
+import { useDebounce } from '../../hooks/useDebounce'
+import { supabase } from '../../lib/supabase'
 import { Helmet } from 'react-helmet-async'
-import { CONFIG } from '../lib/constants'
-import { SkeletonGrid } from '../components/common/Skeletons'
-import { Button } from '../components/common/Button'
+import { CONFIG } from '../../lib/constants'
+import { SkeletonGrid } from '../../components/common/Skeletons'
+import { Button } from '../../components/common/Button'
 import { FileQuestion } from 'lucide-react'
-import { useLang } from '../state/useLang'
+import { useLang } from '../../state/useLang'
 
 type SearchItem = {
   id: number
@@ -34,8 +34,10 @@ type ReciterRow = { id: number; name: string; image: string | null; rewaya: stri
 export const Search = () => {
   const [sp, setSp] = useSearchParams()
   const q = sp.get('q') || ''
-  const types = (sp.get('types') || 'movie').split(',').filter(Boolean) as Array<'movie'|'tv'>
-  const genres = (sp.get('genres') || '').split(',').filter(Boolean).map(Number)
+  const types = (sp.get('types') || 'movie').split(',').filter(Boolean)
+  const rawGenres = sp.get('genres') || ''
+  const keywords = sp.get('keywords') || ''
+  const genres = rawGenres.split(',').filter(Boolean).map(Number).filter(n => !isNaN(n))
   const yfrom = Number(sp.get('yfrom') || '') || undefined
   const yto = Number(sp.get('yto') || '') || undefined
   const rfrom = Number(sp.get('rfrom') || '') || undefined
@@ -65,62 +67,94 @@ export const Search = () => {
   })
 
   const gamesQuery = useQuery<GameRow[]>({
-    queryKey: ['search-games', q],
+    queryKey: ['search-games', q, types.join(','), rawGenres, keywords],
     queryFn: async () => {
-      if (!q || q.length < 2) return []
-      const { data } = await supabase
-        .from('games')
-        .select('id,title,poster_url,category,rating')
-        .ilike('title', `%${q}%`)
-        .limit(12)
+      let query = supabase.from('games').select('id,title,poster_url,category,rating')
+      
+      if (q && q.length >= 2) {
+        query = query.ilike('title', `%${q}%`)
+      } else if (types.includes('game')) {
+        if (keywords) query = query.ilike('category', `%${keywords}%`)
+        else if (rawGenres) query = query.ilike('category', `%${rawGenres}%`)
+      } else {
+        return []
+      }
+
+      const { data } = await query.limit(20)
       return (data as GameRow[]) || []
     },
-    enabled: q.length >= 2,
+    enabled: (q.length >= 2) || (types.includes('game') && (keywords.length > 0 || rawGenres.length > 0)),
     placeholderData: keepPreviousData
   })
 
   const softwareQuery = useQuery<SoftwareRow[]>({
-    queryKey: ['search-software', q],
+    queryKey: ['search-software', q, types.join(','), rawGenres, keywords],
     queryFn: async () => {
-      if (!q || q.length < 2) return []
-      const { data } = await supabase
-        .from('software')
-        .select('id,title,poster_url,category,rating')
-        .ilike('title', `%${q}%`)
-        .limit(12)
+      let query = supabase.from('software').select('id,title,poster_url,category,rating')
+      
+      if (q && q.length >= 2) {
+        query = query.ilike('title', `%${q}%`)
+      } else if (types.includes('software')) {
+        if (keywords) query = query.ilike('category', `%${keywords}%`)
+        else if (rawGenres) query = query.ilike('category', `%${rawGenres}%`)
+      } else {
+        return []
+      }
+
+      const { data } = await query.limit(20)
       return (data as SoftwareRow[]) || []
     },
-    enabled: q.length >= 2,
+    enabled: (q.length >= 2) || (types.includes('software') && (keywords.length > 0 || rawGenres.length > 0)),
     placeholderData: keepPreviousData
   })
 
   const animeQuery = useQuery<AnimeRow[]>({
-    queryKey: ['search-anime', q],
+    queryKey: ['search-anime', q, types.join(','), rawGenres, keywords],
     queryFn: async () => {
-      if (!q || q.length < 2) return []
-      const { data } = await supabase
-        .from('anime')
-        .select('id,title,image_url,category,score')
-        .ilike('title', `%${q}%`)
-        .limit(12)
+      let query = supabase.from('anime').select('id,title,image_url,category,score')
+      
+      if (q && q.length >= 2) {
+        query = query.ilike('title', `%${q}%`)
+      } else if (types.includes('anime')) {
+        if (keywords) query = query.ilike('category', `%${keywords}%`)
+        else if (rawGenres) query = query.ilike('category', `%${rawGenres}%`)
+      } else {
+        return []
+      }
+
+      const { data } = await query.limit(20)
       return (data as AnimeRow[]) || []
     },
-    enabled: q.length >= 2,
+    enabled: (q.length >= 2) || (types.includes('anime') && (keywords.length > 0 || rawGenres.length > 0)),
     placeholderData: keepPreviousData
   })
 
   const recitersQuery = useQuery<ReciterRow[]>({
-    queryKey: ['search-reciters', q],
+    queryKey: ['search-reciters', q, types.join(','), keywords],
     queryFn: async () => {
-      if (!q || q.length < 2) return []
-      const { data } = await supabase
-        .from('quran_reciters')
-        .select('id,name,image,rewaya')
-        .ilike('name', `%${q}%`)
-        .limit(12)
+      let query = supabase.from('quran_reciters').select('id,name,image,rewaya')
+      
+      if (q && q.length >= 2) {
+        query = query.ilike('name', `%${q}%`)
+      } else if (types.includes('quran')) {
+        if (keywords === 'famous') {
+          // Just return top ones
+          query = query.limit(20)
+        } else if (keywords === 'hafs') {
+          query = query.ilike('rewaya', '%حفص%')
+        } else if (keywords === 'warsh') {
+          query = query.ilike('rewaya', '%ورش%')
+        } else if (keywords) {
+          query = query.ilike('rewaya', `%${keywords}%`)
+        }
+      } else {
+        return []
+      }
+
+      const { data } = await query.limit(20)
       return (data as ReciterRow[]) || []
     },
-    enabled: q.length >= 2,
+    enabled: (q.length >= 2) || (types.includes('quran') && keywords.length > 0),
     placeholderData: keepPreviousData
   })
 

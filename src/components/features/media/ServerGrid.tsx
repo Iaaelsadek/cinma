@@ -201,42 +201,48 @@ export const ServerGrid = ({ tmdbId, type, season, episode }: Props) => {
         })}
       </div>
 
-      {/* Video Player Container */}
-      <div className="relative aspect-video w-full overflow-hidden rounded-3xl border border-white/10 bg-black shadow-2xl ring-1 ring-white/5 group">
-        {activeServer ? (
-          <iframe
-            key={activeServer.url}
-            src={activeServer.url}
-            className="h-full w-full"
-            allowFullScreen
-            scrolling="no"
-            style={{ border: 'none', overflow: 'hidden' }}
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            title={`Stream ${activeServer.name}`}
-          />
-        ) : (
-          <div className="flex h-full flex-col items-center justify-center text-zinc-500 gap-4">
-            <WifiOff size={48} className="opacity-50" />
-            <span className="text-lg font-medium">No servers available</span>
-          </div>
-        )}
-
-        {/* Floating Actions */}
-        <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-          <div className="px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-xs font-bold text-emerald-400 flex items-center gap-2">
+      {/* Video Player Section */}
+      <div className="space-y-2">
+        {/* Header: Secure Stream */}
+        <div className="flex justify-end px-1">
+          <div className="flex items-center gap-2 text-xs font-bold text-emerald-400">
             <Signal size={12} />
             <span>Secure Stream</span>
           </div>
         </div>
 
-        <button
-          onClick={reportBroken}
-          disabled={reporting}
-          className="absolute bottom-16 right-6 z-20 flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 h-10 text-xs font-bold uppercase tracking-widest text-red-400 hover:bg-red-500/20 transition-all opacity-0 group-hover:opacity-100 backdrop-blur-md"
-        >
-          {reporting ? <Loader2 size={14} className="animate-spin" /> : <AlertTriangle size={14} />}
-          <span>Report Issue</span>
-        </button>
+        {/* Video Player Container */}
+        <div className="relative aspect-video w-full overflow-hidden rounded-3xl border border-white/10 bg-black shadow-2xl ring-1 ring-white/5 group">
+          {activeServer ? (
+            <iframe
+              key={activeServer.url}
+              src={activeServer.url}
+              className="h-full w-full"
+              allowFullScreen
+              scrolling="no"
+              style={{ border: 'none', overflow: 'hidden' }}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              title={`Stream ${activeServer.name}`}
+            />
+          ) : (
+            <div className="flex h-full flex-col items-center justify-center text-zinc-500 gap-4">
+              <WifiOff size={48} className="opacity-50" />
+              <span className="text-lg font-medium">No servers available</span>
+            </div>
+          )}
+        </div>
+
+        {/* Footer: Report Button */}
+        <div className="flex justify-end px-1">
+          <button
+            onClick={reportBroken}
+            disabled={reporting}
+            className="flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 h-10 text-xs font-bold uppercase tracking-widest text-red-400 hover:bg-red-500/20 transition-all backdrop-blur-md"
+          >
+            {reporting ? <Loader2 size={14} className="animate-spin" /> : <AlertTriangle size={14} />}
+            <span>Report Issue</span>
+          </button>
+        </div>
       </div>
       
       <div className="flex items-center justify-center gap-2 text-[10px] text-zinc-500 font-medium uppercase tracking-widest">

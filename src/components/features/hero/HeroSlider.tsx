@@ -232,19 +232,7 @@ export const HeroSlider = ({ items }: Props) => {
         </div>
       </div>
 
-      {/* Progress Indicators */}
-      <div className="absolute bottom-12 left-6 lg:left-16 z-20 flex gap-3">
-        {items.map((item, i) => (
-          <button
-            key={item.id}
-            onClick={() => swiperRef.current?.slideToLoop(i)}
-            className={`h-1.5 rounded-full transition-all duration-500 ${
-              i === idx ? 'w-12 bg-primary shadow-neon-emerald' : 'w-2 bg-white/20 hover:bg-white/40'
-            }`}
-            aria-label={`slide-${i + 1}`}
-          />
-        ))}
-      </div>
+      {/* Progress Indicators Removed */}
     </section>
   )
 }

@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { useParams } from 'react-router-dom'
 import { Star } from 'lucide-react'
-import { incrementClicks, supabase } from '../lib/supabase'
-import { useLang } from '../state/useLang'
+import { incrementClicks, supabase } from '../../lib/supabase'
+import { useLang } from '../../state/useLang'
 
 type SoftwareRow = {
   id: number

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { tmdb, getUsTvRating, getRatingColorFromCert } from '../lib/tmdb'
+import { tmdb, getUsTvRating, getRatingColorFromCert } from '../../lib/tmdb'
 import {
   addToWatchlist,
   deleteEpisode,
@@ -13,20 +13,20 @@ import {
   upsertEpisode,
   upsertSeason,
   upsertSeries
-} from '../lib/supabase'
-import { useAuth } from '../hooks/useAuth'
+} from '../../lib/supabase'
+import { useAuth } from '../../hooks/useAuth'
 import { toast } from 'sonner'
 import { useForm } from 'react-hook-form'
-import { addComment, deleteComment, getComments } from '../lib/supabase'
-import { getProfile } from '../lib/supabase'
+import { addComment, deleteComment, getComments } from '../../lib/supabase'
+import { getProfile } from '../../lib/supabase'
 import { Helmet } from 'react-helmet-async'
 import { motion } from 'framer-motion'
 import { Star } from 'lucide-react'
-import { useLang } from '../state/useLang'
+import { useLang } from '../../state/useLang'
 import React from 'react'
 import ReactPlayer from 'react-player'
-import { getEmbedUrlByIndex } from '../services/embedService'
-import { SeoHead } from '../components/common/SeoHead'
+import { getEmbedUrlByIndex } from '../../services/embedService'
+import { SeoHead } from '../../components/common/SeoHead'
 
 const SeriesDetails = () => {
   const { id } = useParams()

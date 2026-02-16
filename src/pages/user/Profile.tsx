@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Navigate } from 'react-router-dom'
-import { useAuth } from '../hooks/useAuth'
-import { getProfile, updateUsername, uploadAvatar, supabase, getWatchlist, getContinueWatching, getHistory, removeFromWatchlist } from '../lib/supabase'
+import { useAuth } from '../../hooks/useAuth'
+import { getProfile, updateUsername, uploadAvatar, supabase, getWatchlist, getContinueWatching, getHistory, removeFromWatchlist } from '../../lib/supabase'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useQuery as useRQ } from '@tanstack/react-query'
-import { getRecommendations, RecommendationItem } from '../services/recommendations'
+import { getRecommendations, RecommendationItem } from '../../services/recommendations'
 import { Helmet } from 'react-helmet-async'
-import { SkeletonGrid } from '../components/common/Skeletons'
+import { SkeletonGrid } from '../../components/common/Skeletons'
 
 type Role = 'user' | 'admin'
 

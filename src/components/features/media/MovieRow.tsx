@@ -59,7 +59,7 @@ export const MovieRow = ({ title, movies, isSeries }: Props) => {
           className="scrollbar-hide no-scrollbar flex snap-x snap-mandatory flex-row flex-nowrap gap-6 overflow-x-auto overflow-y-hidden scroll-smooth px-4 lg:px-12 pb-6"
         >
           {movies.map((m, idx) => (
-            <div key={`${m.media_type || 'm'}-${m.id}`} className="snap-start w-[160px] md:w-[220px] shrink-0">
+            <div key={`${m.media_type || 'm'}-${m.id}`} className="snap-start w-[140px] xs:w-[160px] sm:w-[180px] md:w-[220px] xl:w-[240px] 2xl:w-[260px] 3xl:w-[300px] shrink-0">
               <MovieCard movie={m as any} index={idx} />
             </div>
           ))}

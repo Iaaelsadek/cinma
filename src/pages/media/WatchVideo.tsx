@@ -1,12 +1,12 @@
 import { useEffect, useState, useRef } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
-import { VideoPlayer } from '../components/features/media/VideoPlayer'
+import { supabase } from '../../lib/supabase'
+import { VideoPlayer } from '../../components/features/media/VideoPlayer'
 import { ChevronLeft, Eye, Clock, Calendar, Maximize2, Users, Send, X, MessageSquare, Sparkles } from 'lucide-react'
 import { Helmet } from 'react-helmet-async'
-import { useLang } from '../state/useLang'
+import { useLang } from '../../state/useLang'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useAuth } from '../hooks/useAuth'
+import { useAuth } from '../../hooks/useAuth'
 
 type VideoData = {
   id: string

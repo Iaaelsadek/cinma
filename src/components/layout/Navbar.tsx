@@ -134,8 +134,7 @@ export const Navbar = ({ isScrolled }: { isScrolled?: boolean }) => {
     { to: '/series', label: lang === 'ar' ? 'المسلسلات' : 'Series', icon: Tv, color: 'text-purple-400', glow: 'shadow-[0_0_15px_rgba(168,85,247,0.5)]' },
     { to: '/gaming', label: lang === 'ar' ? 'الألعاب' : 'Gaming', icon: Gamepad2, color: 'text-red-400', glow: 'shadow-[0_0_15px_rgba(248,113,113,0.5)]' },
     { to: '/software', label: lang === 'ar' ? 'البرمجيات' : 'Software', icon: Cpu, color: 'text-cyan-400', glow: 'shadow-[0_0_15px_rgba(34,211,238,0.5)]' },
-    { to: '/anime', label: lang === 'ar' ? 'الأنمي' : 'Anime', icon: Zap, color: 'text-yellow-400', glow: 'shadow-[0_0_15px_rgba(250,204,21,0.5)]' },
-    { to: '/kids', label: lang === 'ar' ? 'أطفال' : 'Kids', icon: Smile, color: 'text-pink-400', glow: 'shadow-[0_0_15px_rgba(244,114,182,0.5)]' },
+    { to: '/anime', label: lang === 'ar' ? 'الأنمي والكرتون' : 'Anime & Cartoons', icon: Zap, color: 'text-yellow-400', glow: 'shadow-[0_0_15px_rgba(250,204,21,0.5)]' },
     { to: '/quran', label: lang === 'ar' ? 'القرآن الكريم' : 'Holy Quran', icon: BookOpen, color: 'text-emerald-400', glow: 'shadow-[0_0_15px_rgba(52,211,153,0.5)]' }
   ]
 
@@ -145,8 +144,8 @@ export const Navbar = ({ isScrolled }: { isScrolled?: boolean }) => {
         isScrolled ? 'bg-black/80 border-b border-white/10 backdrop-blur-xl shadow-lg' : 'bg-gradient-to-b from-black/80 to-transparent backdrop-blur-sm'
       }`}
     >
-      <div className="mx-auto grid max-w-[1920px] grid-cols-[auto_1fr_auto] items-center gap-6 h-16">
-        <div className="flex items-center gap-6">
+      <div className="mx-auto flex w-full max-w-[2560px] items-center justify-between gap-4 h-16">
+        <div className="flex items-center gap-2 lg:gap-6 flex-shrink-0">
           <Link to="/" className="group relative py-2">
             <div className="relative z-10 flex items-center gap-1 font-black text-2xl tracking-tighter">
               <div className="relative">
@@ -165,7 +164,7 @@ export const Navbar = ({ isScrolled }: { isScrolled?: boolean }) => {
             {/* Ambient Glow behind logo */}
             <div className="absolute -inset-4 rounded-full bg-primary/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
           </Link>
-          <nav className="hidden items-center gap-1 xl:gap-2 lg:flex">
+          <nav className="hidden items-center gap-1 xl:gap-2 lg:flex flex-shrink-0">
             {navLinks.map((link) => (
               <Link
                 key={link.to}
@@ -212,8 +211,8 @@ export const Navbar = ({ isScrolled }: { isScrolled?: boolean }) => {
           </nav>
         </div>
 
-        <div className="hidden md:flex justify-center">
-          <div className="relative w-full max-w-xl">
+        <div className="hidden md:flex justify-center flex-1 max-w-xl mx-4">
+          <div className="relative w-full">
             <SearchBar
               placeholder={lang === 'ar' ? 'ابحث عن فيلم، مسلسل، لعبة...' : 'Search movies, series, games...'}
               size="lg"
@@ -358,7 +357,7 @@ export const Navbar = ({ isScrolled }: { isScrolled?: boolean }) => {
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-3">
+        <div className="flex items-center justify-end gap-2 lg:gap-3 flex-shrink-0">
             <button
               onClick={() => toggle()}
               className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/10 text-[11px] font-bold text-zinc-300 transition-all hover:bg-white/20 hover:border-white/20 active:scale-95"
@@ -381,12 +380,12 @@ export const Navbar = ({ isScrolled }: { isScrolled?: boolean }) => {
                 {/* Dropdown Menu - Simplified for brevity */}
                 <div className="absolute right-0 top-full mt-2 w-56 origin-top-right scale-95 opacity-0 pointer-events-none group-hover:scale-100 group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-200">
                   <div className="glass-card p-2">
-                    {isAdmin && (
+                    {/* {isAdmin && (
                       <Link to="/admin/dashboard" className="flex items-center gap-3 rounded-xl p-3 text-sm font-bold text-zinc-300 transition-colors hover:bg-primary/10 hover:text-primary">
                         <LayoutDashboard size={18} />
                         {lang === 'ar' ? 'لوحة الإدارة' : 'Dashboard'}
                       </Link>
-                    )}
+                    )} */}
                     <Link to="/profile" className="flex items-center gap-3 rounded-xl p-3 text-sm font-bold text-zinc-300 transition-colors hover:bg-white/5 hover:text-white">
                       <User size={18} />
                       {lang === 'ar' ? 'الملف الشخصي' : 'Profile'}
@@ -401,7 +400,7 @@ export const Navbar = ({ isScrolled }: { isScrolled?: boolean }) => {
             ) : (
               <Link
                 to="/login"
-                className="rounded-xl bg-primary px-6 py-2.5 text-sm font-bold text-white shadow-neon-emerald transition-all hover:bg-primary/90 hover:scale-105 active:scale-95"
+                className="rounded-xl bg-primary px-6 py-2.5 text-sm font-bold text-white shadow-neon-emerald transition-all hover:bg-primary/90 hover:scale-105 active:scale-95 shrink-0 whitespace-nowrap"
               >
                 {lang === 'ar' ? 'دخول' : 'Sign In'}
               </Link>
