@@ -168,7 +168,7 @@ export const Search = () => {
     queryFn: async () => {
       const res = await advancedSearch({
         query: q,
-        types: types.length ? types : ['movie'],
+        types: (types.length ? types : ['movie']) as any,
         genres,
         yearFrom: yfrom,
         yearTo: yto,
