@@ -187,13 +187,13 @@ export const Watch = () => {
         ]
   ), [downloads, id, type])
 
-  // Early Returns (Now safe because all hooks are declared above)
-  if (error) return <NotFound />
-  if (loading && !details) return <div className="min-h-screen bg-[#0f0f0f] p-8"><SkeletonGrid count={1} variant="video" /></div>
-
   const trailer = useMemo(() => {
     return details?.videos?.results?.find((v) => v.type === 'Trailer' && v.site === 'YouTube')?.key
   }, [details])
+
+  // Early Returns (Now safe because all hooks are declared above)
+  if (error) return <NotFound />
+  if (loading && !details) return <div className="min-h-screen bg-[#0f0f0f] p-8"><SkeletonGrid count={1} variant="video" /></div>
 
   return (
     <div className="min-h-screen bg-[#0f0f0f]">
