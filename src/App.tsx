@@ -38,6 +38,8 @@ const Software = lazy(() => import('./pages/discovery/Software').then(m => ({ de
 const MoviesPage = lazy(() => import('./pages/discovery/Movies').then(m => ({ default: m.MoviesPage })))
 const SeriesPage = lazy(() => import('./pages/discovery/Series').then(m => ({ default: m.SeriesPage })))
 const AnimePage = lazy(() => import('./pages/discovery/Anime').then(m => ({ default: m.AnimePage })))
+const PlaysPage = lazy(() => import('./pages/discovery/Plays').then(m => ({ default: m.PlaysPage })))
+const ClassicsPage = lazy(() => import('./pages/discovery/Classics').then(m => ({ default: m.ClassicsPage })))
 const QuranPage = lazy(() => import('./pages/discovery/Quran').then(m => ({ default: m.QuranPage })))
 const ReciterDetails = lazy(() => import('./pages/media/ReciterDetails').then(m => ({ default: m.ReciterDetails })))
 
