@@ -88,10 +88,11 @@ body {
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
-.no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-.no-scrollbar::-webkit-scrollbar {
+
+/* Global scrollbar hiding */
+::-webkit-scrollbar {
   display: none;
+}
+* {
+  scrollbar-width: none;
 }
