@@ -72,7 +72,7 @@ export const QuantumHero = ({ items }: { items: any[] }) => {
           >
           {/* Title with Glitch Effect */}
           <h1 
-            className="w-fit text-4xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-white to-white/50 leading-tight text-glitch"
+            className="hero-title w-fit text-4xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-white to-white/50 leading-tight text-glitch"
             data-text={current.title || current.name}
           >
             {current.title || current.name}

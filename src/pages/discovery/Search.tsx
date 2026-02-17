@@ -8,7 +8,7 @@ import { MovieCard } from '../../components/features/media/MovieCard'
 import { VideoCard, VideoItem } from '../../components/features/media/VideoCard'
 import { useDebounce } from '../../hooks/useDebounce'
 import { supabase } from '../../lib/supabase'
-import { Helmet } from 'react-helmet-async'
+import { SeoHead } from '../../components/common/SeoHead'
 import { CONFIG } from '../../lib/constants'
 import { SkeletonGrid } from '../../components/common/Skeletons'
 import { Button } from '../../components/common/Button'
@@ -230,12 +230,14 @@ export const Search = () => {
 
   const { lang } = useLang()
 
+  const searchTitle = q ? `${q} - البحث | سينما أونلاين` : 'البحث | سينما أونلاين'
+  const searchDesc = q
+    ? `نتائج البحث عن "${q}" - أفلام، مسلسلات، ألعاب، برمجيات على سينما أونلاين`
+    : 'ابحث عن الأفلام والمسلسلات حسب الاسم والتصنيف والسنة والتقييم على سينما أونلاين'
+
   return (
     <div className="grid grid-cols-1 gap-6">
-      <Helmet>
-        <title>البحث | cinma.online</title>
-        <meta name="description" content="ابحث عن الأفلام والمسلسلات حسب الاسم والتصنيف والسنة والتقييم." />
-      </Helmet>
+      <SeoHead title={searchTitle} description={searchDesc} />
       <section className="space-y-4">
         <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-4">
           <div className="flex items-center gap-3">

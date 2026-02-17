@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../../lib/supabase'
-import { Server as ServerIcon, Radio, AlertTriangle, Loader2, Signal, Wifi, WifiOff } from 'lucide-react'
+import { Server as ServerIcon, Radio, AlertTriangle, Loader2, Signal, Wifi, WifiOff, Lightbulb, SkipForward } from 'lucide-react'
 
 type Props = {
   tmdbId: number
   type: 'movie' | 'tv'
   season?: number
   episode?: number
+  cinemaMode: boolean
+  toggleCinemaMode: () => void
 }
 
 type Server = {
@@ -22,10 +24,10 @@ type Server = {
 // 10+ Redundant Sources for Maximum Uptime
 // ------------------------------------------------------------------
 const PROVIDERS = [
-  { id: 'vidsrc_pro', name: 'VidSrc Pro', base: 'https://vidsrc.pro/embed' },
-  { id: 'autoembed', name: 'AutoEmbed', base: 'https://autoembed.to' },
-  { id: 'vidsrc_vip', name: 'VidSrc VIP', base: 'https://vidsrc.vip/embed' },
   { id: 'vidsrc', name: 'VidSrc (Primary)', base: 'https://vidsrc.to/embed' },
+  { id: 'vidsrc_vip', name: 'VidSrc VIP', base: 'https://vidsrc.vip/embed' },
+  { id: 'autoembed', name: 'AutoEmbed', base: 'https://autoembed.to' },
+  { id: 'vidsrc_pro', name: 'VidSrc Pro', base: 'https://vidsrc.pro/embed' },
   { id: '2embed', name: '2Embed', base: 'https://www.2embed.cc/embed' },
   { id: 'smashystream', name: 'SmashyStream', base: 'https://player.smashy.stream' },
   { id: 'aniwave', name: 'AniWave (Backup)', base: 'https://aniwave.to/embed' },
@@ -33,7 +35,7 @@ const PROVIDERS = [
   { id: 'multiembed', name: 'MultiEmbed', base: 'https://multiembed.mov' },
 ]
 
-export const ServerGrid = ({ tmdbId, type, season, episode }: Props) => {
+export const ServerGrid = ({ tmdbId, type, season, episode, cinemaMode, toggleCinemaMode }: Props) => {
   const [servers, setServers] = useState<Server[]>([])
   const [active, setActive] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -140,11 +142,14 @@ export const ServerGrid = ({ tmdbId, type, season, episode }: Props) => {
         status_code: 0,
         response_time_ms: 0
       })
-      // Auto-switch to next server
-      if (active < servers.length - 1) {
-        setActive(prev => prev + 1)
-      }
     } catch {}
+    
+    // Auto-switch to next server
+    if (active < servers.length - 1) {
+      setActive(prev => prev + 1)
+    } else {
+      setActive(0) // Cycle back to first if at end
+    }
     setReporting(false)
   }
 
@@ -159,7 +164,7 @@ export const ServerGrid = ({ tmdbId, type, season, episode }: Props) => {
   const activeServer = servers[active]
 
   return (
-    <div className="space-y-6">
+    <div className={`space-y-6 transition-all duration-500 ${cinemaMode ? 'relative z-[60]' : ''}`}>
       {/* 
         STAGE 3: PIXEL-PERFECT UI 
         Glassmorphism Server Selector 
@@ -175,8 +180,8 @@ export const ServerGrid = ({ tmdbId, type, season, episode }: Props) => {
               onClick={() => setActive(idx)}
               className={`group relative flex items-center gap-3 rounded-xl border p-3 text-xs font-bold transition-all duration-300 overflow-hidden
                 ${isActive
-                  ? 'bg-gradient-to-br from-primary/90 to-luxury-purple/90 border-primary/50 text-white shadow-[0_0_20px_rgba(229,9,20,0.3)] scale-[1.02]'
-                  : 'bg-luxury-charcoal border-white/5 text-zinc-400 hover:bg-white/5 hover:border-white/10 hover:text-white'}`}
+                  ? 'bg-gradient-to-br from-primary to-purple-600 border-primary text-white shadow-[0_0_30px_rgba(124,58,237,0.6)] scale-105 z-10'
+                  : 'bg-black/40 border-white/5 text-zinc-400 hover:bg-white/10 hover:border-white/20 hover:text-white hover:shadow-[0_0_15px_rgba(255,255,255,0.1)]'}`}
             >
               <div className={`relative z-10 flex items-center justify-center h-8 w-8 rounded-lg ${isActive ? 'bg-black/20' : 'bg-black/40'}`}>
                  <ServerIcon size={14} className={isActive ? 'text-white' : 'text-zinc-500'} />
@@ -203,16 +208,28 @@ export const ServerGrid = ({ tmdbId, type, season, episode }: Props) => {
 
       {/* Video Player Section */}
       <div className="space-y-2">
-        {/* Header: Secure Stream */}
-        <div className="flex justify-end px-1">
+        {/* Header: Secure Stream & Cinema Mode */}
+        <div className="flex justify-between items-center px-1">
           <div className="flex items-center gap-2 text-xs font-bold text-emerald-400">
             <Signal size={12} />
             <span>Secure Stream</span>
           </div>
+          
+          <button 
+            onClick={toggleCinemaMode}
+            className={`flex items-center gap-2 text-xs font-bold transition-colors ${cinemaMode ? 'text-[#f5c518] animate-pulse' : 'text-zinc-400 hover:text-white'}`}
+          >
+            <Lightbulb size={14} className={cinemaMode ? 'fill-[#f5c518]' : ''} />
+            <span>{cinemaMode ? 'Cinema ON' : 'Cinema Mode'}</span>
+          </button>
         </div>
 
         {/* Video Player Container */}
-        <div className="relative aspect-video w-full overflow-hidden rounded-3xl border border-white/10 bg-black shadow-2xl ring-1 ring-white/5 group">
+        <div className={`relative aspect-video w-full overflow-hidden rounded-3xl border bg-black shadow-2xl transition-all duration-500 group
+          ${cinemaMode 
+            ? 'border-[#f5c518]/20 shadow-[0_0_100px_rgba(0,0,0,0.9)] scale-[1.02]' 
+            : 'border-white/10 ring-1 ring-white/5'}`}
+        >
           {activeServer ? (
             <iframe
               key={activeServer.url}
@@ -232,22 +249,33 @@ export const ServerGrid = ({ tmdbId, type, season, episode }: Props) => {
           )}
         </div>
 
-        {/* Footer: Report Button */}
-        <div className="flex justify-end px-1">
-          <button
-            onClick={reportBroken}
-            disabled={reporting}
-            className="flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 h-10 text-xs font-bold uppercase tracking-widest text-red-400 hover:bg-red-500/20 transition-all backdrop-blur-md"
-          >
-            {reporting ? <Loader2 size={14} className="animate-spin" /> : <AlertTriangle size={14} />}
-            <span>Report Issue</span>
-          </button>
+        {/* Footer: Report & Auto-Switch */}
+        <div className="flex justify-between items-center px-1">
+          <div className="text-[10px] text-zinc-500 font-medium uppercase tracking-widest flex items-center gap-2">
+             <Wifi size={12} />
+             <span>Protocol v2.0 • {activeServer?.name}</span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={reportBroken}
+              disabled={reporting}
+              className="flex items-center gap-2 rounded-xl border border-white/5 bg-white/5 px-3 h-8 text-xs font-bold text-zinc-400 hover:bg-white/10 transition-all hover:text-white"
+            >
+              <SkipForward size={12} />
+              <span>Next Server</span>
+            </button>
+            
+            <button
+              onClick={reportBroken}
+              disabled={reporting}
+              className="flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-3 h-8 text-xs font-bold uppercase tracking-widest text-red-400 hover:bg-red-500/20 transition-all"
+            >
+              {reporting ? <Loader2 size={12} className="animate-spin" /> : <AlertTriangle size={12} />}
+              <span>Report</span>
+            </button>
+          </div>
         </div>
-      </div>
-      
-      <div className="flex items-center justify-center gap-2 text-[10px] text-zinc-500 font-medium uppercase tracking-widest">
-        <Wifi size={12} />
-        <span>Auto-Optimized Streaming Protocol v2.0</span>
       </div>
     </div>
   )

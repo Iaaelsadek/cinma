@@ -4,7 +4,6 @@ import { useQuery, keepPreviousData } from '@tanstack/react-query'
 import { tmdb } from '../lib/tmdb'
 import { AdsManager } from '../components/common/AdsManager'
 import { useAuth } from '../hooks/useAuth'
-import { Helmet } from 'react-helmet-async'
 import { CONFIG } from '../lib/constants'
 import { useLang } from '../state/useLang'
 import { getRecommendations, RecommendationItem } from '../services/recommendations'
@@ -19,6 +18,7 @@ import { SeoHead } from '../components/common/SeoHead'
 import { useQuranPlayer } from '../context/QuranPlayerContext'
 import { QuantumHero } from '../components/features/hero/QuantumHero'
 import { QuantumTrain } from '../components/features/media/QuantumTrain'
+import { ContinueWatchingRow } from '../components/features/media/ContinueWatchingRow'
 import { HolographicCard } from '../components/effects/HolographicCard'
 
 // Types (kept from original)
@@ -154,10 +154,10 @@ export const Home = () => {
 
   return (
     <div className="min-h-screen text-white overflow-x-hidden selection:bg-cyan-500 selection:text-black">
-      <Helmet>
-        <title>CINMA.OS | {lang === 'ar' ? 'المستقبل' : 'The Future'}</title>
-        <meta name="description" content={description} />
-      </Helmet>
+      <SeoHead
+        title={lang === 'ar' ? 'سينما أونلاين - منصة الأفلام والمسلسلات الأولى' : 'Cinema Online - #1 Arabic Streaming Platform'}
+        description={description}
+      />
 
       {/* 1. QUANTUM HERO PORTAL */}
       <section className="relative z-10 w-full">
@@ -167,6 +167,12 @@ export const Home = () => {
       <AdsManager type="banner" position="home-top" />
 
       <div className="max-w-[2400px] mx-auto px-4 md:px-12 w-full">
+        {/* Continue Watching - for logged-in users */}
+        {user && (
+          <section className="relative z-20 pt-8 pb-4">
+            <ContinueWatchingRow userId={user.id} />
+          </section>
+        )}
         {/* 2. THE INFINITE TRAIN */}
         <section className="relative z-20 -mt-10 w-full overflow-hidden pb-12 rounded-3xl">
           <QuantumTrain items={popularMovies.data?.results || []} />
