@@ -3,7 +3,6 @@ import { createClient } from '@supabase/supabase-js'
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
-import https from 'https'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -22,28 +21,13 @@ if (fs.existsSync(envPath)) {
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY || process.env.VITE_SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY
-const TMDB_API_KEY = process.env.VITE_TMDB_API_KEY || process.env.TMDB_API_KEY
 
-if (!SUPABASE_URL || !SUPABASE_KEY || !TMDB_API_KEY) {
+if (!SUPABASE_URL || !SUPABASE_KEY) {
   console.error("ERROR: Missing Environment Variables.")
   process.exit(1)
 }
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
-
-// Login as admin to bypass RLS
-async function loginAsAdmin() {
-  console.log('Logging in as admin...')
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email: 'iaaelsadek@gmail.com',
-    password: 'Eslam@26634095',
-  })
-  if (error) {
-    console.error('Admin login failed:', error.message)
-  } else {
-    console.log('Admin login successful. User:', data.user.email)
-  }
-}
 
 // ---------------------------------------------------------------------
 // 1. Helper: Ramadan Dates
@@ -75,13 +59,11 @@ function isDateInRamadanWindow(dateStr) {
 // 2. Tagger Logic
 // ---------------------------------------------------------------------
 async function tagContent() {
-  // await loginAsAdmin()
-
   console.log('--- Starting Content Tagger ---')
 
   // --- Tag Series (Ramadan) ---
   console.log('\nScanning Series for Ramadan content...')
-  const { data: series, error: sError } = await supabase.from('tv_series').select('id, name, overview, first_air_date, original_language')
+  const { data: series, error: sError } = await supabase.from('tv_series').select('id, name, first_air_date, original_language, origin_country')
   
   if (sError) {
     console.error('Error fetching series:', sError.message)
@@ -93,81 +75,66 @@ async function tagContent() {
 
       // Check 1: Date Window AND Language
       if (isDateInRamadanWindow(item.first_air_date)) {
-        if (item.original_language === 'ar') {
+        // Arabic language or origin country in MENA
+        const isArabic = item.original_language === 'ar'
+        const isMena = item.origin_country && Array.isArray(item.origin_country) && item.origin_country.some(c => ['EG', 'SA', 'AE', 'KW', 'QA', 'BH', 'OM', 'LB', 'SY', 'JO', 'PS', 'IQ', 'YE', 'LY', 'TN', 'DZ', 'MA', 'SD'].includes(c))
+        
+        if (isArabic || isMena) {
            isRamadan = true
            console.log(`[RAMADAN DETECTED]: ${title} (${item.first_air_date})`)
         }
       }
 
-      // Check 3: Keywords
-      if (!isRamadan) {
-         const keywords = ["رمضان", "Ramadan"]
-         const text = `${title} ${item.overview || ''}`
-         if (keywords.some(k => text.includes(k))) {
-            // Also check language or if keyword is Arabic
-            if (item.original_language === 'ar' || text.includes("رمضان")) {
-               isRamadan = true
-               console.log(`[RAMADAN KEYWORD]: ${title}`)
-            }
-         }
+      // Check 2: Keywords
+      if (!isRamadan && title) {
+        if (title.includes('رمضان') || title.includes('Ramadan')) {
+          isRamadan = true
+          console.log(`[RAMADAN KEYWORD]: ${title}`)
+        }
       }
 
       if (isRamadan) {
-        // Try update
-        const { error: uError } = await supabase.from('tv_series').update({ is_ramadan: true }).eq('id', item.id)
-        if (uError) {
-          console.error(`Failed to update ${title}:`, uError.message)
-          if (uError.message.includes('column "is_ramadan" does not exist')) {
-             console.error("CRITICAL: 'is_ramadan' column missing. Run migration script.")
-             break // Stop trying to update series
-          }
+        const { error: updateError } = await supabase.from('tv_series').update({ is_ramadan: true }).eq('id', item.id)
+        if (updateError) {
+            console.error(`Failed to tag ${title}:`, updateError.message)
         } else {
-          ramadanCount++
+            ramadanCount++
         }
       }
     }
-    console.log(`Tagged ${ramadanCount} Ramadan series.`)
-  } else {
-    console.log('No series found to scan.')
+    console.log(`Tagged ${ramadanCount} series as Ramadan content.`)
   }
 
   // --- Tag Movies (Plays) ---
   console.log('\nScanning Movies for Plays...')
-  const { data: movies, error: mError } = await supabase.from('movies').select('id, title, overview')
+  const { data: movies, error: mError } = await supabase.from('movies').select('id, title, original_language')
 
   if (mError) {
-    console.error('Error fetching movies:', mError.message)
+      console.error('Error fetching movies:', mError.message)
   } else if (movies && movies.length > 0) {
-    let playsCount = 0
-    for (const item of movies) {
-      let isPlay = false
-      const keywords = ["مسرحية", "Play", "theatre", "Theater"]
-      const text = `${item.title} ${item.overview || ''}`
-      
-      if (keywords.some(k => text.includes(k))) {
-        isPlay = true
-        console.log(`[PLAY DETECTED]: ${item.title}`)
-      }
+      let playsCount = 0
+      for (const item of movies) {
+          let isPlay = false
+          const title = item.title
 
-      if (isPlay) {
-        const { error: uError } = await supabase.from('movies').update({ is_play: true }).eq('id', item.id)
-        if (uError) {
-          console.error(`Failed to update ${item.title}:`, uError.message)
-          if (uError.message.includes('column "is_play" does not exist')) {
-             console.error("CRITICAL: 'is_play' column missing. Run migration script.")
-             break 
+          if (title && (title.includes('مسرحية') || title.includes('Play'))) {
+              isPlay = true
+              console.log(`[PLAY DETECTED]: ${title}`)
           }
-        } else {
-          playsCount++
-        }
+
+          if (isPlay) {
+              const { error: updateError } = await supabase.from('movies').update({ is_play: true }).eq('id', item.id)
+              if (updateError) {
+                  console.error(`Failed to tag ${title}:`, updateError.message)
+              } else {
+                  playsCount++
+              }
+          }
       }
-    }
-    console.log(`Tagged ${playsCount} plays.`)
-  } else {
-    console.log('No movies found to scan.')
+      console.log(`Tagged ${playsCount} movies as Plays.`)
   }
 
-  console.log('\n--- Tagging Complete ---')
+  console.log('--- Content Tagger Finished ---')
 }
 
 tagContent()
