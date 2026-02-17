@@ -31,20 +31,6 @@ if (!SUPABASE_URL || !SUPABASE_KEY || !TMDB_API_KEY) {
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
 
-// Login as admin to bypass RLS
-async function loginAsAdmin() {
-  console.log('Logging in as admin...')
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email: 'iaaelsadek@gmail.com',
-    password: 'Eslam@26634095',
-  })
-  if (error) {
-    console.error('Admin login failed:', error.message)
-  } else {
-    console.log('Admin login successful. User:', data.user.email)
-  }
-}
-
 const TMDB_BASE_URL = "https://api.themoviedb.org/3"
 
 function fetchTMDB(endpoint, params = {}) {
@@ -70,15 +56,14 @@ function fetchTMDB(endpoint, params = {}) {
 }
 
 async function processMovies(movieList) {
+  console.log(`Processing ${movieList.length} movies...`)
   for (const tmdbMovie of movieList) {
     const tmdbId = tmdbMovie.id
     const title = tmdbMovie.title
-    console.log(`Processing Movie: ${title} (${tmdbId})...`)
     
     try {
       // Check existing
-      // Use id as tmdb_id since schema uses id for TMDB ID
-      const { data: existing } = await supabase.from('movies').select('id').eq('id', tmdbId)
+      const { data: existing } = await supabase.from('movies').select('id').eq('tmdb_id', tmdbId)
       let movieId = existing && existing.length > 0 ? existing[0].id : null
       
       // Fetch details
@@ -86,8 +71,9 @@ async function processMovies(movieList) {
       if (!details) details = tmdbMovie
       
       const movieData = {
-        id: tmdbId, // Explicitly set id to tmdbId
+        tmdb_id: tmdbId,
         title: title,
+        original_title: details.original_title || tmdbMovie.original_title,
         overview: details.overview || tmdbMovie.overview,
         poster_path: details.poster_path || tmdbMovie.poster_path,
         backdrop_path: details.backdrop_path || tmdbMovie.backdrop_path,
@@ -95,141 +81,90 @@ async function processMovies(movieList) {
         vote_average: details.vote_average || tmdbMovie.vote_average,
         original_language: details.original_language || tmdbMovie.original_language,
         origin_country: details.origin_country || (details.production_countries && details.production_countries.map(c => c.iso_3166_1)) || tmdbMovie.origin_country || [],
-        is_active: true,
-        source: 'tmdb',
-        // category: 'Movies', // Default category
-        slug: `${title.replace(/\s+/g, '-').toLowerCase()}-${tmdbId}`,
-        arabic_title: title,
-        updated_at: new Date().toISOString()
+        is_published: true,
+        is_active: true
       }
-      
+
       if (movieId) {
+        console.log(`Updating Movie: ${title} (${tmdbId})...`)
         await supabase.from('movies').update(movieData).eq('id', movieId)
       } else {
-        const { data: newRec, error: insertError } = await supabase.from('movies').insert(movieData).select()
-        if (insertError) throw insertError
-        if (newRec) movieId = newRec[0].id
+        console.log(`Inserting Movie: ${title} (${tmdbId})...`)
+        await supabase.from('movies').insert(movieData)
       }
-      
-      console.log(` -> Upsert successful for ${title}`)
-      
-      // Links
-      if (movieId) {
-        const links = [
-          { movie_id: movieId, media_type: 'movie', name: 'VidSrc', url: `https://vidsrc.xyz/embed/movie/${tmdbId}`, quality: 'HD', is_active: true },
-          { movie_id: movieId, media_type: 'movie', name: 'SuperEmbed', url: `https://superembed.stream/movie/${tmdbId}`, quality: 'HD', is_active: true }
-        ]
-        // Simple insert for now (ignoring duplicates or relying on unique constraints if any)
-        // await supabase.from('embed_links').upsert(links) // upsert needs unique constraint
-      }
-      
     } catch (e) {
-      console.error(`Error processing movie ${title}: ${e.message}`)
+      console.error(`Error processing movie ${title}:`, e.message)
     }
   }
 }
 
 async function processSeries(seriesList) {
-  for (const tmdbShow of seriesList) {
-    const tmdbId = tmdbShow.id
-    const name = tmdbShow.name
-    console.log(`Processing Series: ${name} (${tmdbId})...`)
+  console.log(`Processing ${seriesList.length} series...`)
+  for (const tmdbSeries of seriesList) {
+    const tmdbId = tmdbSeries.id
+    const name = tmdbSeries.name
     
     try {
       // Check existing
-      // Use id as tmdb_id since schema uses id for TMDB ID
-      const { data: existing } = await supabase.from('tv_series').select('id').eq('id', tmdbId)
+      const { data: existing } = await supabase.from('tv_series').select('id').eq('tmdb_id', tmdbId)
       let seriesId = existing && existing.length > 0 ? existing[0].id : null
       
       // Fetch details
       let details = await fetchTMDB(`/tv/${tmdbId}`)
-      if (!details) details = tmdbShow
+      if (!details) details = tmdbSeries
       
       const seriesData = {
-        id: tmdbId, // Explicitly set id
-        name: name, // Map name to name
-        overview: details.overview || tmdbShow.overview,
-        poster_path: details.poster_path || tmdbShow.poster_path,
-        backdrop_path: details.backdrop_path || tmdbShow.backdrop_path,
-        first_air_date: details.first_air_date || tmdbShow.first_air_date,
-        vote_average: details.vote_average || tmdbShow.vote_average,
-        popularity: details.popularity || tmdbShow.popularity,
-        original_language: details.original_language || tmdbShow.original_language,
-        // origin_country: details.origin_country || tmdbShow.origin_country || [],
-        // Add fields that might satisfy RLS or constraints
-        is_active: true,
-        source: 'tmdb',
-        // category: 'TV Series', // Default category
-        slug: `${name.replace(/\s+/g, '-').toLowerCase()}-${tmdbId}`,
-        arabic_title: name,
-        updated_at: new Date().toISOString()
+        tmdb_id: tmdbId,
+        name: name,
+        original_name: details.original_name || tmdbSeries.original_name,
+        overview: details.overview || tmdbSeries.overview,
+        poster_path: details.poster_path || tmdbSeries.poster_path,
+        backdrop_path: details.backdrop_path || tmdbSeries.backdrop_path,
+        first_air_date: details.first_air_date || tmdbSeries.first_air_date,
+        vote_average: details.vote_average || tmdbSeries.vote_average,
+        original_language: details.original_language || tmdbSeries.original_language,
+        origin_country: details.origin_country || (details.production_countries && details.production_countries.map(c => c.iso_3166_1)) || tmdbSeries.origin_country || [],
+        is_published: true,
+        is_active: true
       }
-      
+
       if (seriesId) {
+        console.log(`Updating Series: ${name} (${tmdbId})...`)
         await supabase.from('tv_series').update(seriesData).eq('id', seriesId)
       } else {
-        const { error: insertError } = await supabase.from('tv_series').insert(seriesData)
-        if (insertError) throw insertError
+        console.log(`Inserting Series: ${name} (${tmdbId})...`)
+        await supabase.from('tv_series').insert(seriesData)
       }
-      
-      console.log(` -> Upsert successful for ${name}`)
-      
     } catch (e) {
-      console.error(`Error processing series ${name}: ${e.message}`)
+      console.error(`Error processing series ${name}:`, e.message)
     }
   }
 }
 
-async function runEngine() {
-  // await loginAsAdmin()
-  console.log("--- Starting Content Engine (Node.js) ---")
+async function main() {
+  console.log("Starting Content Engine...")
   
-  // Phase 1: Trending Movies
-  console.log("Fetching Trending Movies...")
-  const trendingMovies = await fetchTMDB('/trending/movie/week')
-  if (trendingMovies && trendingMovies.results) await processMovies(trendingMovies.results)
-  
-  // Phase 2: Now Playing Movies
-  console.log("Fetching Now Playing Movies...")
-  const nowPlaying = await fetchTMDB('/movie/now_playing')
-  if (nowPlaying && nowPlaying.results) await processMovies(nowPlaying.results)
-  
-  // Phase 3: Trending Series
-  console.log("Fetching Trending Series...")
-  const trendingSeries = await fetchTMDB('/trending/tv/week')
-  if (trendingSeries && trendingSeries.results) await processSeries(trendingSeries.results)
-  
-  // Phase 4: Arabic Content
-  console.log("Fetching Arabic Content...")
-  const arabicMovies = await fetchTMDB('/discover/movie', { with_original_language: 'ar', sort_by: 'popularity.desc' })
-  if (arabicMovies && arabicMovies.results) await processMovies(arabicMovies.results)
-  
-  const arabicSeries = await fetchTMDB('/discover/tv', { with_original_language: 'ar', sort_by: 'popularity.desc' })
-  if (arabicSeries && arabicSeries.results) await processSeries(arabicSeries.results)
-  
-  // Phase 5: Ramadan Content (2023-2026)
-  console.log("Fetching Ramadan Content (2023-2026)...")
-  for (let year = 2023; year <= 2026; year++) {
-    console.log(`Fetching Ramadan ${year}...`)
-    const ramadanSeries = await fetchTMDB('/discover/tv', { 
-      with_original_language: 'ar', 
-      'first_air_date.gte': `${year}-01-01`,
-      'first_air_date.lte': `${year}-12-31`,
-      sort_by: 'popularity.desc' 
-    })
-    if (ramadanSeries && ramadanSeries.results) await processSeries(ramadanSeries.results)
+  // 1. Fetch Movies
+  try {
+    const movies = await fetchTMDB('/movie/popular', { page: 1 })
+    if (movies && movies.results) {
+      await processMovies(movies.results)
+    }
+  } catch (e) {
+    console.error("Error fetching movies:", e.message)
   }
 
-  // Phase 6: Plays (Movies with keyword 'play' or genre?)
-  // Hard to search by keyword in discover, but we can search by query
-  console.log("Fetching Plays...")
-  const playsQueries = ['مسرحية', 'play']
-  for (const q of playsQueries) {
-      const plays = await fetchTMDB('/search/movie', { query: q, language: 'ar-SA' })
-      if (plays && plays.results) await processMovies(plays.results)
+  // 2. Fetch Series
+  try {
+    const series = await fetchTMDB('/tv/popular', { page: 1 })
+    if (series && series.results) {
+      await processSeries(series.results)
+    }
+  } catch (e) {
+    console.error("Error fetching series:", e.message)
   }
-
-  console.log("--- Cycle Complete ---")
+  
+  console.log("Content Engine Finished.")
 }
 
-runEngine()
+main()

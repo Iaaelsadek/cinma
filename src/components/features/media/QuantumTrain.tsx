@@ -5,34 +5,12 @@ import { Star, Calendar, Film, ChevronLeft, ChevronRight } from 'lucide-react'
 import { PrefetchLink } from '../../common/PrefetchLink'
 import { Swiper, SwiperSlide } from 'swiper/react'
 import { Autoplay, FreeMode, Navigation } from 'swiper/modules'
-import { MediaCard } from './MediaCard'
+import { MovieCard } from './MovieCard'
 import { useLang } from '../../../state/useLang'
 
 import 'swiper/css'
 import 'swiper/css/free-mode'
 import 'swiper/css/navigation'
-
-const GENRES: Record<number, { ar: string, en: string }> = {
-  28: { ar: 'أكشن', en: 'Action' },
-  12: { ar: 'مغامرة', en: 'Adventure' },
-  16: { ar: 'رسوم متحركة', en: 'Animation' },
-  35: { ar: 'كوميديا', en: 'Comedy' },
-  80: { ar: 'جريمة', en: 'Crime' },
-  99: { ar: 'وثائقي', en: 'Documentary' },
-  18: { ar: 'دراما', en: 'Drama' },
-  10751: { ar: 'عائلي', en: 'Family' },
-  14: { ar: 'خيال', en: 'Fantasy' },
-  36: { ar: 'تاريخي', en: 'History' },
-  27: { ar: 'رعب', en: 'Horror' },
-  10402: { ar: 'موسيقى', en: 'Music' },
-  9648: { ar: 'غموض', en: 'Mystery' },
-  10749: { ar: 'رومانسي', en: 'Romance' },
-  878: { ar: 'خيال علمي', en: 'Sci-Fi' },
-  10770: { ar: 'تلفزيوني', en: 'TV Movie' },
-  53: { ar: 'إثارة', en: 'Thriller' },
-  10752: { ar: 'حرب', en: 'War' },
-  37: { ar: 'غربي', en: 'Western' }
-}
 
 export const QuantumTrain = ({ items, title, link, type }: { items: any[], title?: string, link?: string, type?: string }) => {
   const { lang } = useLang()
@@ -83,11 +61,9 @@ export const QuantumTrain = ({ items, title, link, type }: { items: any[], title
           className="!pb-12 !overflow-visible"
         >
           {items.map((movie, index) => {
-            const genre = GENRES[movie.genre_ids?.[0]]?.[lang === 'ar' ? 'ar' : 'en'] || movie.category
-            
             return (
-            <SwiperSlide key={movie.id} className="!h-auto !w-auto">
-              <MediaCard movie={movie} index={index} genre={genre} />
+            <SwiperSlide key={movie.id} className="!h-auto !w-auto !min-w-[200px] !max-w-[240px]">
+              <MovieCard movie={movie} index={index} />
             </SwiperSlide>
             )})}
         </Swiper>

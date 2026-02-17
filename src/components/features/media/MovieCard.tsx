@@ -45,7 +45,7 @@ export const MovieCard = ({ movie, index = 0 }: { movie: Movie; index?: number }
   const contentType = isTv ? 'tv' : 'movie'
   const rating = typeof movie.vote_average === 'number' ? Math.round(movie.vote_average * 10) / 10 : null
   
-  const genre = getGenreName(movie.genre_ids?.[0], lang)
+  const genre = getGenreName(movie.genre_ids?.[0], lang) || (movie as any).category
   const currentYear = new Date().getFullYear()
   const isCurrentYear = year === currentYear
   
