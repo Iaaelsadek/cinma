@@ -15,6 +15,7 @@ import { addComment, deleteComment, getComments, updateComment } from '../../lib
 import { Helmet } from 'react-helmet-async'
 import { motion } from 'framer-motion'
 import { Star, Eye, Heart as HeartIcon } from 'lucide-react'
+import { ShareButton } from '../../components/common/ShareButton'
 import { useLang } from '../../state/useLang'
 import ReactPlayer from 'react-player'
 import { SeoHead } from '../../components/common/SeoHead'
@@ -377,7 +378,8 @@ export const MovieDetails = () => {
                 </div>
               </div>
             )}
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-3 items-center">
+              <ShareButton title={title} text={overview?.slice(0, 100)} />
               <Link
                 to={`/watch/movie/${id}#player`}
                 onClick={() => {

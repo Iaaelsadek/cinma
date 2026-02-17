@@ -9,6 +9,8 @@ const pathMap: Record<string, string> = {
   arabic: 'عربي',
   asian: 'آسيوي',
   turkish: 'تركي',
+  indian: 'هندي',
+  animation: 'انيميشن',
   action: 'أكشن',
   romance: 'رومانسي',
   comedy: 'كوميدي',

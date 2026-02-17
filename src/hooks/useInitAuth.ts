@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { supabase } from '../integrations/supabase/client'
+import { supabase } from '../lib/supabase'
 import { useAuth } from './useAuth'
 
 export function useInitAuth() {
@@ -9,21 +9,34 @@ export function useInitAuth() {
 
   useEffect(() => {
     let mounted = true
-    ;(async () => {
+
+    const init = async () => {
       try {
         await refreshProfile()
-      } catch {
-        // ignore
+      } catch (e: any) {
+        // Ignore AbortError and other non-critical errors during init
+        if (e?.name !== 'AbortError' && mounted) {
+          console.debug('Auth initialization silent fail:', e)
+        }
       }
-    })()
-    const { data: sub } = supabase.auth.onAuthStateChange(async () => {
+    }
+
+    init()
+
+    const { data: sub } = supabase.auth.onAuthStateChange(async (event) => {
       if (!mounted) return
-      try {
-        await refreshProfile()
-      } catch {
+      
+      if (event === 'SIGNED_OUT') {
         setProfile(null)
+      } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        try {
+          await refreshProfile()
+        } catch {
+          // ignore
+        }
       }
     })
+
     return () => {
       mounted = false
       sub.subscription.unsubscribe()

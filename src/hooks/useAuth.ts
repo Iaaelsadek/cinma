@@ -14,6 +14,7 @@ type AuthState = {
   logout: () => Promise<void>
   refreshProfile: () => Promise<void>
   setProfile: (p: Profile | null) => void
+  syncLocalData: () => Promise<void>
 }
 
 export const useAuth = create<AuthState>((set, get) => ({
@@ -31,6 +32,34 @@ export const useAuth = create<AuthState>((set, get) => ({
   async logout() {
     await supabase.auth.signOut()
     set({ profile: null, user: null, session: null })
+  },
+  async syncLocalData() {
+    const user = get().user
+    if (!user) return
+
+    // Sync Guest Progress
+    try {
+      const guestProgress = localStorage.getItem('guest_progress')
+      if (guestProgress) {
+        const progressMap = JSON.parse(guestProgress)
+        const updates = Object.values(progressMap).map((item: any) => ({
+          user_id: user.id,
+          content_id: item.contentId,
+          content_type: item.contentType,
+          season_number: item.season,
+          episode_number: item.episode,
+          progress_seconds: item.progress,
+          updated_at: new Date().toISOString()
+        }))
+        
+        if (updates.length > 0) {
+          await supabase.from('continue_watching').upsert(updates, { onConflict: 'user_id,content_id,content_type' })
+          localStorage.removeItem('guest_progress')
+        }
+      }
+    } catch (e) {
+      console.error('Failed to sync local data', e)
+    }
   },
   async refreshProfile() {
     set({ loading: true })

@@ -22,6 +22,7 @@ import { getProfile } from '../../lib/supabase'
 import { Helmet } from 'react-helmet-async'
 import { motion } from 'framer-motion'
 import { Star } from 'lucide-react'
+import { ShareButton } from '../../components/common/ShareButton'
 import { useLang } from '../../state/useLang'
 import React from 'react'
 import ReactPlayer from 'react-player'
@@ -371,11 +372,12 @@ const SeriesDetails = () => {
             <button onClick={() => setServerIndex(1)} className={`rounded-md px-4 h-11 text-xs ${serverIndex === 1 ? 'bg-primary text-white' : 'border border-white/10 bg-white/10 text-white hover:bg-white/20'}`}>2embed</button>
             <button onClick={() => setServerIndex(2)} className={`rounded-md px-4 h-11 text-xs ${serverIndex === 2 ? 'bg-primary text-white' : 'border border-white/10 bg-white/10 text-white hover:bg-white/20'}`}>embed.su</button>
           </div>
-          <div className="flex items-center gap-2">
-            <Link to={`/watch/${id}?type=tv&season=${seasonNumber || 1}&episode=${playingEpisode || 1}`} className="flex-1 rounded-md bg-gradient-to-r from-primary to-luxury-purple h-11 text-center text-white">
+          <div className="flex flex-wrap items-center gap-2">
+            <ShareButton title={title} text={overview?.slice(0, 100)} />
+            <Link to={`/watch/${id}?type=tv&season=${seasonNumber || 1}&episode=${playingEpisode || 1}`} className="flex-1 rounded-md bg-gradient-to-r from-primary to-luxury-purple h-11 flex items-center justify-center text-white font-bold min-w-[120px]">
               {t('شاهد الآن', 'Watch Now')}
             </Link>
-            <Link to={`/watch/${id}?type=tv&season=${seasonNumber || 1}&episode=1`} className="rounded-md border border-white/10 bg-white/10 px-4 h-11 text-white hover:bg-white/20">
+            <Link to={`/watch/${id}?type=tv&season=${seasonNumber || 1}&episode=1`} className="rounded-md border border-white/10 bg-white/10 px-4 h-11 flex items-center text-white hover:bg-white/20">
               {t('تحميل', 'Download')}
             </Link>
           </div>

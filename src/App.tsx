@@ -16,9 +16,7 @@ import { QuranPlayerProvider } from './context/QuranPlayerContext'
 // Home
 const Home = lazy(() => import('./pages/Home').then(m => ({ default: m.Home })))
 
-// Auth
-const Login = lazy(() => import('./pages/auth/Login').then(m => ({ default: m.Login })))
-const Register = lazy(() => import('./pages/auth/Register').then(m => ({ default: m.Register })))
+import Auth from './pages/Auth'
 const AdminLogin = lazy(() => import('./pages/auth/AdminLogin').then(m => ({ default: m.AdminLogin })))
 
 // Media & Content
@@ -62,6 +60,13 @@ const AdminUsersPage = lazy(() => import('./pages/admin/users').then(m => ({ def
 const AdminSettingsPage = lazy(() => import('./pages/admin/settings').then(m => ({ default: m.default })))
 const AdminAdsPage = lazy(() => import('./pages/admin/ads').then(m => ({ default: m.default })))
 const AdminBackupPage = lazy(() => import('./pages/admin/backup').then(m => ({ default: m.default })))
+
+const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
+  const { user, loading } = useAuth()
+  if (loading) return null
+  if (!user) return <Navigate to="/login" replace />
+  return children
+}
 
 const ProtectedAdmin = ({ children }: { children: JSX.Element }) => {
   const { user, loading } = useAuth()
@@ -151,11 +156,21 @@ const App = () => {
             <Route path="/series/genre/:id" element={<SeriesByGenre />} />
 
             {/* Auth Routes */}
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/login" element={<Auth />} />
+            <Route path="/register" element={<Auth />} />
             
             {/* User Routes */}
-            <Route path="/profile" element={<Profile />} />
+            <Route path="/profile" element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            } />
+            <Route path="/favorites" element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            } />
             <Route path="/request" element={<RequestPage />} />
 
             {/* Legal Routes */}

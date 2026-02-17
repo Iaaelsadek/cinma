@@ -7,6 +7,7 @@ import { ServerGrid } from '../../components/features/media/ServerGrid'
 import { tmdb } from '../../lib/tmdb'
 import { SeoHead } from '../../components/common/SeoHead'
 import { Calendar, Clock, Star } from 'lucide-react'
+import { ShareButton } from '../../components/common/ShareButton'
 import { NotFound } from '../NotFound'
 import { SkeletonGrid } from '../../components/common/Skeletons'
 
@@ -54,6 +55,7 @@ export const Watch = () => {
   const [downloads, setDownloads] = useState<DownloadLink[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
+  const [cinemaMode, setCinemaMode] = useState(false)
 
   // Hook 1: Sync URL params
   useEffect(() => {
@@ -104,46 +106,83 @@ export const Watch = () => {
   useEffect(() => {
     let timer: ReturnType<typeof setInterval> | undefined
     let mounted = true
+    
+    // Initial fetch
     ;(async () => {
-      if (!user || !id) return
-      const p = await getProgress(user.id, Number(id), (type === 'movie' ? 'movie' : 'tv'))
-      if (!mounted) return
-      if (p?.progress_seconds) setElapsed(p.progress_seconds)
+      if (!id) return
+      
+      if (user) {
+        const p = await getProgress(user.id, Number(id), (type === 'movie' ? 'movie' : 'tv'))
+        if (!mounted) return
+        if (p?.progress_seconds) setElapsed(p.progress_seconds)
+      } else {
+        // Guest: Read from local storage
+        try {
+          const guestProgress = JSON.parse(localStorage.getItem('guest_progress') || '{}')
+          const key = `${type}_${id}${type === 'tv' ? `_${season}_${episode}` : ''}`
+          if (guestProgress[key]) {
+            setElapsed(guestProgress[key].progress)
+          }
+        } catch {}
+      }
     })()
+
+    // Interval save
     timer = setInterval(() => {
-      if (!user || !id) return
+      if (!id) return
       setElapsed((e) => {
         const next = e + 10
-        upsertProgress({
-          userId: user.id,
-          contentId: Number(id),
-          contentType: type === 'movie' ? 'movie' : 'tv',
-          season: type === 'tv' ? season : null,
-          episode: type === 'tv' ? episode : null,
-          progressSeconds: next
-        }).catch(() => {})
+        
+        if (user) {
+          upsertProgress({
+            userId: user.id,
+            contentId: Number(id),
+            contentType: type === 'movie' ? 'movie' : 'tv',
+            season: type === 'tv' ? season : null,
+            episode: type === 'tv' ? episode : null,
+            progressSeconds: next
+          }).catch(() => {})
+        } else {
+          // Guest: Save to local storage
+          try {
+            const guestProgress = JSON.parse(localStorage.getItem('guest_progress') || '{}')
+            const key = `${type}_${id}${type === 'tv' ? `_${season}_${episode}` : ''}`
+            guestProgress[key] = {
+              contentId: Number(id),
+              contentType: type,
+              season: type === 'tv' ? season : null,
+              episode: type === 'tv' ? episode : null,
+              progress: next,
+              updatedAt: Date.now()
+            }
+            localStorage.setItem('guest_progress', JSON.stringify(guestProgress))
+          } catch {}
+        }
         return next
       })
     }, 10000)
+
     const onUnload = async () => {
-      if (!user || !id) return
-      try {
-        await upsertProgress({
-          userId: user.id,
-          contentId: Number(id),
-          contentType: type === 'movie' ? 'movie' : 'tv',
-          season: type === 'tv' ? season : null,
-          episode: type === 'tv' ? episode : null,
-          progressSeconds: elapsed
-        })
-        await addHistory({
-          userId: user.id,
-          contentId: Number(id),
-          contentType: type === 'movie' ? 'movie' : 'tv',
-          season: type === 'tv' ? season : null,
-          episode: type === 'tv' ? episode : null
-        })
-      } catch {}
+      if (!id) return
+      if (user) {
+        try {
+          await upsertProgress({
+            userId: user.id,
+            contentId: Number(id),
+            contentType: type === 'movie' ? 'movie' : 'tv',
+            season: type === 'tv' ? season : null,
+            episode: type === 'tv' ? episode : null,
+            progressSeconds: elapsed
+          })
+          await addHistory({
+            userId: user.id,
+            contentId: Number(id),
+            contentType: type === 'movie' ? 'movie' : 'tv',
+            season: type === 'tv' ? season : null,
+            episode: type === 'tv' ? episode : null
+          })
+        } catch {}
+      }
     }
     window.addEventListener('beforeunload', onUnload)
     return () => {
@@ -225,6 +264,15 @@ export const Watch = () => {
         type={type === 'movie' ? 'video.movie' : 'video.tv_show'}
         schema={jsonLdWatch}
       />
+      
+      {/* Cinema Mode Overlay */}
+      {cinemaMode && (
+        <div 
+          className="fixed inset-0 z-50 bg-black/95 transition-all duration-700 backdrop-blur-sm"
+          onClick={() => setCinemaMode(false)}
+        />
+      )}
+
       <div className="relative">
         {backdrop ? (
           <>
@@ -285,7 +333,8 @@ export const Watch = () => {
                   </div>
                 </div>
               )}
-              <div className="mt-6 flex flex-wrap gap-3">
+              <div className="mt-6 flex flex-wrap gap-3 items-center">
+                <ShareButton title={title} text={overview?.slice(0, 100)} />
                 <a href="#player" className="rounded-xl bg-[#e50914] px-6 h-12 flex items-center justify-center text-white font-bold shadow-md hover:brightness-110">
                   مشاهدة الآن
                 </a>
@@ -376,11 +425,21 @@ export const Watch = () => {
                 type={type as 'movie' | 'tv'}
                 season={season}
                 episode={episode}
+                cinemaMode={cinemaMode}
+                toggleCinemaMode={() => setCinemaMode(!cinemaMode)}
               />
             )}
           </div>
-          <div className="text-xs text-zinc-500 font-medium text-center">
-            إذا لم يعمل السيرفر الحالي، جرّب تغيير السيرفر أو استخدم زر التبليغ.
+          <div className="flex justify-center mt-4">
+            <div className="flex items-center gap-3 rounded-full border border-red-500/20 bg-red-500/10 px-6 py-2">
+              <span className="relative flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+              </span>
+              <span className="text-xs font-bold text-red-200">
+                Server Error? Try Server 2 (مشكلة في التشغيل؟ جرب سيرفر آخر)
+              </span>
+            </div>
           </div>
         </section>
 
