@@ -15,7 +15,7 @@ interface SeoHeadProps {
 
 export const SeoHead = ({ 
   title, 
-  description = 'شاهد أفضل الأفلام والمسلسلات العربية والأجنبية مترجمة بجودة عالية على سينما أونلاين',
+  description = 'أكبر منصة عربية لمشاهدة الأفلام والمسلسلات الأجنبية والعربية بجودة عالية. مكتبة ضخمة، سيرفرات سريعة، وبدون إعلانات مزعجة.',
   image = '/og-image.jpg',
   type = 'website',
   rating,
@@ -27,7 +27,7 @@ export const SeoHead = ({
   const { pathname } = useLocation()
   const siteUrl = 'https://cinma.online'
   const url = `${siteUrl}${pathname}`
-  const fullTitle = `${title} | سينما أونلاين`
+  const fullTitle = `${title} | أونلاين سينما`
 
   // Schema.org VideoObject for Google Rich Results
   const videoSchema = type.startsWith('video') ? {
@@ -60,7 +60,7 @@ export const SeoHead = ({
       <meta name="robots" content="index, follow" />
 
       {/* Open Graph */}
-      <meta property="og:site_name" content="Cinema Online" />
+      <meta property="og:site_name" content="Online Cinema" />
       <meta property="og:title" content={fullTitle} />
       <meta property="og:description" content={description} />
       <meta property="og:image" content={image} />

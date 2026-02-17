@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { Link } from 'react-router-dom'
+import { PrefetchLink } from '../../common/PrefetchLink'
 import { getContinueWatching } from '../../../lib/supabase'
 import { tmdb } from '../../../lib/tmdb'
 import { Clock } from 'lucide-react'
@@ -90,7 +90,7 @@ export const ContinueWatchingRow = ({ userId }: { userId: string }) => {
           }
 
           return (
-            <Link
+            <PrefetchLink
               key={`${r.content_type}-${r.content_id}`}
               to={href}
               className="snap-center shrink-0 w-[160px] md:w-[180px] group"
@@ -127,7 +127,7 @@ export const ContinueWatchingRow = ({ userId }: { userId: string }) => {
                   S{r.season_number || 1} E{r.episode_number || 1}
                 </p>
               )}
-            </Link>
+            </PrefetchLink>
           )
         })}
       </div>

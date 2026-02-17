@@ -236,7 +236,7 @@ export const Search = () => {
     : 'ابحث عن الأفلام والمسلسلات حسب الاسم والتصنيف والسنة والتقييم على سينما أونلاين'
 
   return (
-    <div className="grid grid-cols-1 gap-6">
+    <div className="grid grid-cols-1 gap-6 max-w-[2400px] mx-auto px-4 md:px-12 w-full pt-24">
       <SeoHead title={searchTitle} description={searchDesc} />
       <section className="space-y-4">
         <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-4">

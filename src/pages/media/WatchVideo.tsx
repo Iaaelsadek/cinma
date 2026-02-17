@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { VideoPlayer } from '../../components/features/media/VideoPlayer'
+import { SubtitleManager } from '../../components/features/media/SubtitleManager'
 import { ChevronLeft, Eye, Clock, Calendar, Maximize2, Users, Send, X, MessageSquare, Sparkles } from 'lucide-react'
 import { Helmet } from 'react-helmet-async'
 import { useLang } from '../../state/useLang'
@@ -19,12 +20,34 @@ type VideoData = {
   category?: string
   created_at?: string
   year?: number
+  tmdb_id?: number // Added for subtitle search
 }
 
 export const WatchVideo = () => {
-  const { id } = useParams()
+  const { id: idParam, slug } = useParams()
   const { lang } = useLang()
   const { user } = useAuth()
+  const [resolvedId, setResolvedId] = useState<string | null>(null)
+  const [subtitles, setSubtitles] = useState<{ label: string, src: string, srcLang: string, default?: boolean }[]>([])
+  
+  // Resolve ID from slug if needed
+  useEffect(() => {
+    if (idParam) {
+      setResolvedId(idParam)
+      return
+    }
+    if (slug) {
+      const parts = slug.split('-')
+      const potentialId = parts[parts.length - 1]
+      // YouTube IDs are 11 chars, but Supabase IDs are UUIDs or integers.
+      // If it's a Supabase video, it might be an int or uuid.
+      // If it's a YouTube video directly linked, it might be 11 chars.
+      // For now, assume the ID is at the end.
+      setResolvedId(potentialId)
+    }
+  }, [idParam, slug])
+
+  const id = resolvedId
   const [video, setVideo] = useState<VideoData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
@@ -49,12 +72,32 @@ export const WatchVideo = () => {
     async function load() {
       if (!id) return
       try {
-        const { data, error } = await supabase
+        let { data, error } = await supabase
           .from('videos')
           .select('*')
           .eq('id', id)
           .single()
         
+        // Fallback: If not found by ID, try searching by slug/title
+        if ((error || !data) && slug) {
+            // Remove ID suffix if present to get title part
+            // e.g. "movie-title-123" -> "movie title"
+            const titlePart = slug.split('-').filter(p => isNaN(Number(p))).join(' ')
+            if (titlePart.length > 2) {
+                const { data: searchData, error: searchError } = await supabase
+                    .from('videos')
+                    .select('*')
+                    .ilike('title', `%${titlePart}%`)
+                    .limit(1)
+                    .maybeSingle()
+                
+                if (searchData && !searchError) {
+                    data = searchData
+                    error = null
+                }
+            }
+        }
+
         if (error) throw error
         if (mounted) setVideo(data)
       } catch (err) {
@@ -67,7 +110,7 @@ export const WatchVideo = () => {
     
     load()
     return () => { mounted = false }
-  }, [id])
+  }, [id, slug])
 
   if (loading) {
     return (
@@ -171,10 +214,21 @@ export const WatchVideo = () => {
               
               <div className={`relative overflow-hidden rounded-2xl bg-black shadow-2xl transition-all duration-700 ${isCinemaMode ? 'scale-[1.02] ring-4 ring-primary/20 shadow-primary/20' : 'ring-1 ring-white/10'}`}>
                 <div className="aspect-video w-full">
-                  <VideoPlayer url={effectiveVideo.url} />
+                  <VideoPlayer url={effectiveVideo.url} subtitles={subtitles} />
                 </div>
               </div>
             </div>
+
+            <SubtitleManager 
+              tmdbId={effectiveVideo.tmdb_id || 0} 
+              title={effectiveVideo.title} 
+              currentLanguage={lang}
+              onSelect={(track) => setSubtitles(prev => {
+                // Avoid duplicates
+                if (prev.find(s => s.src === track.src)) return prev
+                return [...prev, { ...track, default: true }]
+              })}
+            />
 
             <motion.div 
               layout

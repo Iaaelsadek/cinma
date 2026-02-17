@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { toast } from 'sonner'
-import { Film, Tv, Gamepad2, Laptop, Sparkles, BookOpen, Server, Rocket, RefreshCw, Trash2, Loader2, CheckCircle2, Pencil, BarChart3 } from 'lucide-react'
+import { Film, Tv, Gamepad2, Laptop, Sparkles, BookOpen, Server, Rocket, RefreshCw, Trash2, Loader2, CheckCircle2, Pencil, BarChart3, AlertTriangle } from 'lucide-react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts'
 import { CONFIG } from '../../lib/constants'
 
@@ -110,6 +110,17 @@ async function getSoftwareCategoryBreakdown() {
   return Object.entries(counts).map(([name, value]) => ({ name, value }))
 }
 
+type LinkReportRow = { id: number; content_id: number; content_type: string; source_name: string | null; url: string | null; created_at?: string }
+async function getLinkReports(): Promise<LinkReportRow[]> {
+  const { data, error } = await supabase
+    .from('link_checks')
+    .select('id, content_id, content_type, source_name, url, created_at')
+    .order('created_at', { ascending: false })
+    .limit(100)
+  if (error) return []
+  return (data || []) as LinkReportRow[]
+}
+
 const AdminDashboard = () => {
   const queryClient = useQueryClient()
   const counts = useQuery({ queryKey: ['admin-counts'], queryFn: getCounts })
@@ -124,7 +135,8 @@ const AdminDashboard = () => {
   const visits = useQuery({ queryKey: ['admin-visits'], queryFn: getVisits })
   const engineLogs = useQuery({ queryKey: ['admin-engine-logs'], queryFn: getEngineLogs, refetchInterval: 60000 })
   const softwareCategories = useQuery({ queryKey: ['admin-software-categories'], queryFn: getSoftwareCategoryBreakdown })
-  const [activeTab, setActiveTab] = useState<'games' | 'software' | 'anime' | 'quran' | 'insights'>('games')
+  const linkReports = useQuery({ queryKey: ['admin-link-reports'], queryFn: getLinkReports })
+  const [activeTab, setActiveTab] = useState<'games' | 'software' | 'anime' | 'quran' | 'insights' | 'reports'>('games')
   const [gameSearch, setGameSearch] = useState('')
   const [softwareSearch, setSoftwareSearch] = useState('')
   const [animeSearch, setAnimeSearch] = useState('')
@@ -321,13 +333,13 @@ const AdminDashboard = () => {
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
-        {(['games', 'software', 'anime', 'quran', 'insights'] as const).map((tab) => (
+        {(['games', 'software', 'anime', 'quran', 'insights', 'reports'] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={`rounded-xl px-4 h-11 text-sm font-bold ${activeTab === tab ? 'bg-primary text-white' : 'bg-white/5 text-zinc-300 border border-white/10'}`}
           >
-            {tab === 'games' ? 'الألعاب' : tab === 'software' ? 'البرمجيات' : tab === 'anime' ? 'الأنمي' : tab === 'quran' ? 'القرّاء' : 'التحليلات'}
+            {tab === 'games' ? 'الألعاب' : tab === 'software' ? 'البرمجيات' : tab === 'anime' ? 'الأنمي' : tab === 'quran' ? 'القرّاء' : tab === 'reports' ? 'الإبلاغات' : 'التحليلات'}
           </button>
         ))}
       </div>
@@ -655,6 +667,49 @@ const AdminDashboard = () => {
               آخر سجلات المحرك
             </div>
             <pre className="max-h-64 overflow-auto whitespace-pre-wrap text-xs text-zinc-400">{(engineLogs.data?.logs || []).slice(-20).join('')}</pre>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'reports' && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 text-zinc-300">
+            <AlertTriangle size={20} />
+            <span>إبلاغات روابط لا تعمل (آخر 100)</span>
+          </div>
+          <div className="overflow-x-auto rounded-2xl border border-white/10">
+            <table className="w-full text-sm">
+              <thead className="bg-black/40 text-zinc-400">
+                <tr>
+                  <th className="px-4 py-3 text-start">المحتوى (ID)</th>
+                  <th className="px-4 py-3 text-start">النوع</th>
+                  <th className="px-4 py-3 text-start">السيرفر</th>
+                  <th className="px-4 py-3 text-start">الرابط</th>
+                  <th className="px-4 py-3 text-start">التاريخ</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(linkReports.data || []).map((r) => (
+                  <tr key={r.id} className="border-t border-white/10">
+                    <td className="px-4 py-3">{r.content_id}</td>
+                    <td className="px-4 py-3">{r.content_type || '—'}</td>
+                    <td className="px-4 py-3">{r.source_name || '—'}</td>
+                    <td className="px-4 py-3 max-w-[200px] truncate" title={r.url || ''}>{r.url || '—'}</td>
+                    <td className="px-4 py-3 text-zinc-400">{r.created_at ? new Date(r.created_at).toLocaleDateString('ar-EG') : '—'}</td>
+                  </tr>
+                ))}
+                {linkReports.isLoading && (
+                  <tr>
+                    <td className="px-4 py-6 text-zinc-400" colSpan={5}>جاري التحميل...</td>
+                  </tr>
+                )}
+                {!linkReports.isLoading && (linkReports.data || []).length === 0 && (
+                  <tr>
+                    <td className="px-4 py-6 text-zinc-400" colSpan={5}>لا توجد إبلاغات</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
       )}

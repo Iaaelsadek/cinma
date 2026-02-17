@@ -11,12 +11,14 @@ import { useLang } from './state/useLang'
 import { setTmdbLanguage } from './lib/tmdb'
 import { useInitAuth } from './hooks/useInitAuth'
 import { QuranPlayerProvider } from './context/QuranPlayerContext'
+import { PwaProvider } from './context/PwaContext'
+import { PageLoader } from './components/common/PageLoader'
 
 // --- Pages ---
 // Home
 const Home = lazy(() => import('./pages/Home').then(m => ({ default: m.Home })))
 
-import Auth from './pages/Auth'
+const Auth = lazy(() => import('./pages/Auth').then(m => ({ default: m.default })))
 const AdminLogin = lazy(() => import('./pages/auth/AdminLogin').then(m => ({ default: m.AdminLogin })))
 
 // Media & Content
@@ -39,7 +41,9 @@ const SeriesPage = lazy(() => import('./pages/discovery/Series').then(m => ({ de
 const AnimePage = lazy(() => import('./pages/discovery/Anime').then(m => ({ default: m.AnimePage })))
 const PlaysPage = lazy(() => import('./pages/discovery/Plays').then(m => ({ default: m.PlaysPage })))
 const ClassicsPage = lazy(() => import('./pages/discovery/Classics').then(m => ({ default: m.ClassicsPage })))
+const SummariesPage = lazy(() => import('./pages/discovery/Summaries').then(m => ({ default: m.SummariesPage })))
 const QuranPage = lazy(() => import('./pages/discovery/Quran').then(m => ({ default: m.QuranPage })))
+const RamadanPage = lazy(() => import('./pages/discovery/Ramadan').then(m => ({ default: m.RamadanPage })))
 const ReciterDetails = lazy(() => import('./pages/media/ReciterDetails').then(m => ({ default: m.ReciterDetails })))
 
 // User
@@ -60,6 +64,7 @@ const AdminUsersPage = lazy(() => import('./pages/admin/users').then(m => ({ def
 const AdminSettingsPage = lazy(() => import('./pages/admin/settings').then(m => ({ default: m.default })))
 const AdminAdsPage = lazy(() => import('./pages/admin/ads').then(m => ({ default: m.default })))
 const AdminBackupPage = lazy(() => import('./pages/admin/backup').then(m => ({ default: m.default })))
+const AddMovie = lazy(() => import('./pages/admin/AddMovie').then(m => ({ default: m.AddMovie })))
 
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
   const { user, loading } = useAuth()
@@ -106,16 +111,24 @@ const App = () => {
     navigate('/', { replace: true })
   }
   return (
-    <QuranPlayerProvider>
-      <MainLayout>
-        <Suspense fallback={null}>
+    <PwaProvider>
+      <QuranPlayerProvider>
+        <MainLayout>
+          <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route path="/" element={<Home />} />
             
             {/* Media Routes */}
             <Route path="/movie/:id" element={<MovieDetails />} />
+
+            {/* SEO Friendly Watch Routes */}
+            <Route path="/watch/:lang/summaries/:genre/:slug" element={<WatchVideo />} />
+            <Route path="/watch/:lang/video/:category/:genre/:slug" element={<WatchVideo />} />
+            <Route path="/watch/:lang/:type/:genre/:slug" element={<Watch />} />
+            
             <Route path="/video/:id" element={<WatchVideo />} />
             <Route path="/watch/yt/:id" element={<WatchVideo />} />
+            <Route path="/watch/video/:id" element={<WatchVideo />} />
             <Route path="/watch/:id" element={<Watch />} />
             <Route path="/watch/:type/:id" element={<Watch />} />
             <Route path="/series/:id" element={<SeriesDetails />} />
@@ -135,15 +148,36 @@ const App = () => {
             <Route path="/series/:category/:year" element={<CategoryHub type="tv" />} />
             <Route path="/series/:category" element={<CategoryHub type="tv" />} />
 
+            <Route path="/rating/:rating" element={<CategoryHub />} />
+            <Route path="/year/:year" element={<CategoryHub />} />
+
             <Route path="/category/:category" element={<CategoryPage />} />
             <Route path="/kids" element={<CategoryPage />} />
+            
+            {/* Anime Routes with Filters */}
             <Route path="/anime" element={<AnimePage />} />
+            <Route path="/anime/:genre" element={<AnimePage />} />
+            <Route path="/anime/:genre/:year" element={<AnimePage />} />
+            <Route path="/anime/:genre/:year/:rating" element={<AnimePage />} />
+
+            {/* Plays Routes with Filters */}
             <Route path="/plays" element={<PlaysPage />} />
+            <Route path="/plays/:genre" element={<PlaysPage />} />
+            <Route path="/plays/:genre/:year" element={<PlaysPage />} />
+            <Route path="/plays/:genre/:year/:rating" element={<PlaysPage />} />
+
+            {/* Summaries Routes with Filters */}
+            <Route path="/summaries" element={<SummariesPage />} />
+            <Route path="/summaries/:genre" element={<SummariesPage />} />
+            <Route path="/summaries/:genre/:year" element={<SummariesPage />} />
+            <Route path="/summaries/:genre/:year/:rating" element={<SummariesPage />} />
+
             <Route path="/classics" element={<ClassicsPage />} />
             <Route path="/gaming" element={<Gaming />} />
             <Route path="/game/:id" element={<GameDetails />} />
             <Route path="/software" element={<Software />} />
             <Route path="/software/:id" element={<SoftwareDetails />} />
+            <Route path="/ramadan" element={<RamadanPage />} />
             <Route path="/quran" element={<QuranPage />} />
             <Route path="/quran/reciter/:id" element={<ReciterDetails />} />
 
@@ -177,8 +211,10 @@ const App = () => {
             <Route path="/terms" element={<Terms />} />
             <Route path="/privacy" element={<Privacy />} />
 
-            {/* Admin Routes (Disabled) */}
-            {/* <Route
+            {/* Admin — غرفة القيادة */}
+            <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
+            <Route path="/admin/login" element={<AdminLogin />} />
+            <Route
               path="/admin/*"
               element={<ProtectedAdmin><AdminLayout /></ProtectedAdmin>}
             >
@@ -187,18 +223,19 @@ const App = () => {
               <Route path="series" element={<AdminSeriesList />} />
               <Route path="series/:id" element={<SeriesManage />} />
               <Route path="series/:id/season/:seasonId" element={<SeasonManage />} />
+              <Route path="add-movie" element={<AddMovie />} />
               <Route path="users" element={<AdminUsersPage />} />
               <Route path="settings" element={<AdminSettingsPage />} />
               <Route path="ads" element={<AdminAdsPage />} />
               <Route path="backup" element={<AdminBackupPage />} />
             </Route>
-            <Route path="/admin/login" element={<AdminLogin />} /> */}
           </Routes>
         </Suspense>
         <AdsManager type="popunder" position="global" />
         <Toaster richColors position="top-center" />
-      </MainLayout>
-    </QuranPlayerProvider>
+        </MainLayout>
+      </QuranPlayerProvider>
+    </PwaProvider>
   )
 }
 export default App

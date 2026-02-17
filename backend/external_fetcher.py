@@ -78,6 +78,58 @@ class ExternalContentFetcher:
             print(f"Error fetching YouTube playlist: {e}")
             return []
 
+    def search_and_fetch_videos(self, query, category='video', limit=20):
+        """Search YouTube and fetch videos."""
+        print(f"Searching YouTube for: {query} ({category})")
+        ydl_opts = {
+            'quiet': True,
+            'extract_flat': True,
+            'force_generic_extractor': False,
+        }
+        
+        try:
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                # ytsearch{limit}:{query}
+                search_query = f"ytsearch{limit}:{query}"
+                info = ydl.extract_info(search_query, download=False)
+                
+                if 'entries' in info:
+                    videos = []
+                    for entry in info['entries']:
+                        if not entry: continue
+                        # Skip if no title or id
+                        if not entry.get('title') or not entry.get('id'):
+                            continue
+
+                        video_data = {
+                            'id': entry.get('id'),
+                            'title': entry.get('title'),
+                            'url': f"https://www.youtube.com/embed/{entry.get('id')}",
+                            'thumbnail': f"https://i.ytimg.com/vi/{entry.get('id')}/hqdefault.jpg",
+                            'views': entry.get('view_count', 0),
+                            'duration': entry.get('duration'),
+                            'category': category,
+                            'created_at': datetime.now().isoformat(),
+                            'year': datetime.now().year 
+                        }
+                        videos.append(video_data)
+                        
+                        if self.supabase:
+                            try:
+                                existing = self.supabase.table('videos').select('id').eq('url', video_data['url']).execute()
+                                if not existing.data:
+                                    self.supabase.table('videos').insert(video_data).execute()
+                                    print(f"✓ Saved: {video_data['title']}")
+                                else:
+                                    print(f"• Skipped existing: {video_data['title']}")
+                            except Exception as e:
+                                print(f"✗ Error saving {video_data['title']}: {e}")
+                    
+                    return videos
+        except Exception as e:
+            print(f"Error searching YouTube: {e}")
+            return []
+
     def fetch_archive_items(self, query='movie', max_results=50):
         """Fetch content from Internet Archive."""
         print(f"Fetching Archive.org items for query: {query}")

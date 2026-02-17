@@ -10,23 +10,39 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png'],
       manifest: {
-        name: 'cinma.online',
-        short_name: 'cinma',
-        description: 'منصة المشاهدة العربية الأقوى',
-        theme_color: '#000000',
-        background_color: '#000000',
+        name: 'أونلاين سينما | Online Cinema',
+        short_name: 'سينما',
+        description: 'منصة المشاهدة العربية الأقوى — أفلام ومسلسلات',
+        theme_color: '#08080C',
+        background_color: '#08080C',
         display: 'standalone',
-        start_url: '/',
-        icons: [
-          { src: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
-          { src: '/icons/icon-512x512.png', sizes: '512x512', type: 'image/png' }
-        ],
+        display_override: ['standalone', 'minimal-ui', 'browser'],
+        start_url: '/?source=pwa',
+        scope: '/',
         dir: 'rtl',
-        lang: 'ar'
+        lang: 'ar',
+        orientation: 'any',
+        categories: ['entertainment', 'video'],
+        icons: [
+          { src: '/logo.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any maskable' },
+          { src: '/logo.svg', sizes: '512x512', type: 'image/svg+xml', purpose: 'any maskable' }
+        ],
+        prefer_related_applications: false
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}']
-      }
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/image\.tmdb\.org\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'tmdb-images',
+              expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 30 }
+            }
+          }
+        ]
+      },
+      devOptions: { enabled: true }
     }),
     sitemap({
       hostname: 'https://cinma.online',
@@ -52,7 +68,8 @@ export default defineConfig({
     target: 'esnext',
     minify: 'esbuild',
     cssCodeSplit: true,
-    chunkSizeWarningLimit: 1000,
+    chunkSizeWarningLimit: 800,
+    reportCompressedSize: false,
     rollupOptions: {
       output: {
         manualChunks(id) {

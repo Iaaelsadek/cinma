@@ -19,6 +19,7 @@ import { ShareButton } from '../../components/common/ShareButton'
 import { useLang } from '../../state/useLang'
 import ReactPlayer from 'react-player'
 import { SeoHead } from '../../components/common/SeoHead'
+import { useDualTitles } from '../../hooks/useDualTitles'
 
 type TmdbGenre = { id: number; name: string }
 type TmdbCrewMember = { id: number; job?: string; name?: string }
@@ -74,6 +75,8 @@ export const MovieDetails = () => {
     },
     enabled: Number.isFinite(movieId)
   })
+
+  const dualTitles = useDualTitles(data || {})
 
   useEffect(() => {
     let cancelled = false
@@ -132,7 +135,8 @@ export const MovieDetails = () => {
 
   const poster = data?.poster_path ? `https://image.tmdb.org/t/p/w500${data.poster_path}` : ''
   const backdrop = data?.backdrop_path ? `https://image.tmdb.org/t/p/original${data.backdrop_path}` : ''
-  const title = data?.title || data?.name || `فيلم #${id}`
+  const title = dualTitles.main || data?.title || data?.name || `فيلم #${id}`
+  const arabicTitle = dualTitles.sub
   const year = data?.release_date ? new Date(data.release_date).getFullYear() : ''
   const runtimeMin = typeof data?.runtime === 'number' ? data.runtime : null
   const runtime = runtimeMin != null ? `${Math.floor(runtimeMin / 60)}h ${runtimeMin % 60}m` : ''
@@ -324,7 +328,10 @@ export const MovieDetails = () => {
                 <span className="text-white">{title}</span>
               </nav>
               <div className="mt-2 flex items-center justify-between">
-                <h1 className="text-2xl font-extrabold tracking-tight">{title}</h1>
+                <div>
+                  <h1 className="text-2xl font-extrabold tracking-tight">{title}</h1>
+                  {arabicTitle && <h2 className="text-lg text-cyan-400 font-arabic opacity-90">{arabicTitle}</h2>}
+                </div>
               </div>
               <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-zinc-200">
                 <Link to={`/movies`} className="rounded-md border border-white/10 bg-white/10 px-2 py-0.5">

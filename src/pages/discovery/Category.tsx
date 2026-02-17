@@ -52,7 +52,15 @@ export const CategoryPage = () => {
         .order('id', { ascending: false })
         .limit(60)
       if (error) throw error
-      return data as AnimeRow[]
+      if (data && data.length > 0) return data as AnimeRow[]
+      // Mock Data
+      return [
+        { id: 101, title: 'Attack on Titan', category: 'Action', image_url: 'https://image.tmdb.org/t/p/original/8C5gDxV5b1bYy72FNUYGBO2LbAt.jpg' },
+        { id: 102, title: 'One Piece', category: 'Adventure', image_url: 'https://image.tmdb.org/t/p/original/cMD9Ygz11VJmK195pHeV4Crghgy.jpg' },
+        { id: 103, title: 'Demon Slayer', category: 'Fantasy', image_url: 'https://image.tmdb.org/t/p/original/nTvM4mhq82TQNnf3RFULl4UB26b.jpg' },
+        { id: 104, title: 'Jujutsu Kaisen', category: 'Supernatural', image_url: 'https://image.tmdb.org/t/p/original/h8jGnEsL5QZc32l621f3jXf5j5.jpg' },
+        { id: 105, title: 'Naruto Shippuden', category: 'Action', image_url: 'https://image.tmdb.org/t/p/original/zAYRe2bJxpWTVrwwmBc00VFkAf4.jpg' }
+      ] as AnimeRow[]
     },
     enabled: isAnime
   })
@@ -66,7 +74,12 @@ export const CategoryPage = () => {
         .order('id', { ascending: false })
         .limit(60)
       if (error) throw error
-      return data as QuranRow[]
+      if (data && data.length > 0) return data as QuranRow[]
+      // Mock Data
+      return [
+        { id: 1, name: 'Mishary Rashid Alafasy', category: 'Hafs', image: 'https://upload.wikimedia.org/wikipedia/commons/2/29/Mishary_Rashid_Al-Afasy.jpg', rewaya: 'Hafs', server: 'https://server8.mp3quran.net/afs/' },
+        { id: 2, name: 'Maher Al Muaiqly', category: 'Hafs', image: 'https://i1.sndcdn.com/artworks-000236613390-2p0a6v-t500x500.jpg', rewaya: 'Hafs', server: 'https://server12.mp3quran.net/maher/' }
+      ] as QuranRow[]
     },
     enabled: isQuran
   })

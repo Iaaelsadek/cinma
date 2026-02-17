@@ -6,6 +6,8 @@ import { useEffect, useState, type MouseEvent } from 'react'
 import { useAuth } from '../../../hooks/useAuth'
 import { addToWatchlist, isInWatchlist, removeFromWatchlist } from '../../../lib/supabase'
 
+import { useDualTitles } from '../../../hooks/useDualTitles'
+
 export type VideoItem = {
   id: string | number
   title: string
@@ -36,6 +38,7 @@ function formatViews(views: number): string {
 
 export const VideoCard = ({ video, index = 0 }: { video: VideoItem; index?: number }) => {
   const { lang } = useLang()
+  const titles = useDualTitles(video)
   const [isHovered, setIsHovered] = useState(false)
   const [inList, setInList] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -162,10 +165,17 @@ export const VideoCard = ({ video, index = 0 }: { video: VideoItem; index?: numb
 
           {/* Static Info (Visible when not hovered or small screens) */}
           <div className="p-3">
-            <h3 className="line-clamp-1 text-sm font-bold text-zinc-100 group-hover/card:text-primary transition-colors text-right">
-              {video.title}
-            </h3>
-            <div className="mt-1.5 flex items-center justify-between text-[10px] font-medium uppercase tracking-wider text-zinc-500">
+            <div className="flex flex-col items-end">
+              <h3 className="line-clamp-1 text-sm font-bold text-zinc-100 group-hover/card:text-primary transition-colors text-right w-full">
+                {titles.main}
+              </h3>
+              {titles.sub && (
+                <p className="line-clamp-1 text-xs text-lumen-gold/80 font-arabic mt-0.5 text-right w-full">
+                  {titles.sub}
+                </p>
+              )}
+            </div>
+            <div className="mt-1.5 flex items-center justify-between text-[10px] font-medium uppercase tracking-wider text-zinc-500 w-full">
               <span className="flex items-center gap-1.5">
                 <span className="h-1 w-1 rounded-full bg-primary" />
                 {video.category || (lang === 'ar' ? 'فيديو' : 'Video')}

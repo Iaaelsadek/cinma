@@ -2,48 +2,61 @@
 @tailwind components;
 @tailwind utilities;
 
+/* -------------------------------------------------------------------------- */
+/*  LUMEN Design System — CSS Custom Properties                               */
+/* -------------------------------------------------------------------------- */
 :root {
   color-scheme: dark;
-  --neon-primary: #00ffcc;
-  --neon-secondary: #ff00ff;
-  --glass-border: rgba(255, 255, 255, 0.08);
-  --glass-bg: rgba(0, 0, 0, 0.3);
-  --deep-space: #030305;
+  --lumen-void: #08080C;
+  --lumen-surface: #0F0F14;
+  --lumen-muted: #1C1B1F;
+  --lumen-cream: #E8E4DC;
+  --lumen-silver: #A8A5A0;
+  --lumen-gold: #C9A962;
+  --lumen-gold-dim: rgba(201, 169, 98, 0.2);
+  --glass-border: rgba(255, 255, 255, 0.06);
+  --glass-bg: rgba(0, 0, 0, 0.25);
+  --deep-space: #08080C;
+  /* Legacy */
+  --neon-primary: #C9A962;
+  --neon-secondary: #A8A5A0;
 }
 
 /* -------------------------------------------------------------------------- */
-/*  THE "UNPRECEDENTED" RESET                                                 */
+/*  Base                                                                      */
 /* -------------------------------------------------------------------------- */
-
 html {
   scroll-behavior: smooth;
 }
 
 body {
-  background: var(--deep-space);
-  font-family: 'Cairo', 'Inter', system-ui, sans-serif;
+  background: var(--lumen-void);
+  font-family: 'Cairo', 'DM Sans', system-ui, sans-serif;
   overflow-x: hidden;
-  color: #e0e0e0;
-  perspective: 1000px; /* Enable 3D space globally */
+  color: var(--lumen-cream);
+  -webkit-font-smoothing: antialiased;
 }
 
 :lang(en) body {
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: 'DM Sans', system-ui, sans-serif;
 }
 
-/* Hide Scrollbar but keep functionality */
+/* -------------------------------------------------------------------------- */
+/*  Scrollbar — minimal, LUMEN                                                */
+/* -------------------------------------------------------------------------- */
 ::-webkit-scrollbar {
-  width: 4px;
-  background: #0f0f0f;
+  width: 6px;
+  height: 6px;
+  background: var(--lumen-surface);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #333;
-  border-radius: 2px;
+  background: var(--lumen-muted);
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #555;
+  background: var(--lumen-silver);
 }
 
 @media (max-width: 768px) {
@@ -52,20 +65,124 @@ body {
   }
 }
 
-/* Hero titles readability against Aurora background */
-.hero-title {
-  text-shadow: 0 2px 8px rgba(0,0,0,0.8), 0 0 20px rgba(0,0,0,0.5);
+/* -------------------------------------------------------------------------- */
+/*  TV / Remote & Accessibility — high-contrast focus                         */
+/* -------------------------------------------------------------------------- */
+*:focus-visible {
+  outline: 3px solid var(--lumen-gold);
+  outline-offset: 2px;
+}
+
+button:focus-visible,
+a:focus-visible,
+[tabindex="0"]:focus-visible {
+  outline: 3px solid var(--lumen-gold);
+  outline-offset: 2px;
+}
+
+/* Optional: focus ring utility for custom components */
+.lumen-focus-ring:focus-visible {
+  outline: 3px solid var(--lumen-gold);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 6px var(--lumen-gold-dim);
 }
 
 /* -------------------------------------------------------------------------- */
-/*  QUANTUM UTILITIES                                                         */
+/*  LUMEN — Film grain (pure CSS, lightweight)                               */
 /* -------------------------------------------------------------------------- */
+.lumen-grain {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.04;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
 
+/* -------------------------------------------------------------------------- */
+/*  LUMEN — Vignette overlay                                                  */
+/* -------------------------------------------------------------------------- */
+.lumen-vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 80% 70% at 50% 100%,
+    transparent 30%,
+    rgba(8, 8, 12, 0.4) 70%,
+    rgba(8, 8, 12, 0.9) 100%
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Hero title — readable on any background                                   */
+/* -------------------------------------------------------------------------- */
+.hero-title {
+  text-shadow:
+    0 2px 12px rgba(0, 0, 0, 0.9),
+    0 0 24px rgba(0, 0, 0, 0.6);
+}
+
+/* -------------------------------------------------------------------------- */
+/*  LUMEN Card — base class for movie/content cards                           */
+/* -------------------------------------------------------------------------- */
+@layer components {
+  .lumen-card {
+    @apply relative overflow-hidden rounded-2xl bg-lumen-surface border border-lumen-muted;
+    box-shadow: 0 4px 24px -4px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(28, 27, 31, 0.6);
+    transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+      border-color 0.3s ease;
+  }
+
+  .lumen-card:hover,
+  .lumen-card:focus-within {
+    @apply border-lumen-gold/40;
+    box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.5),
+      0 0 0 1px rgba(201, 169, 98, 0.35),
+      0 0 40px -8px rgba(201, 169, 98, 0.15);
+  }
+
+  .glass-card {
+    @apply bg-lumen-surface/90 backdrop-blur-md border border-white/5 shadow-lg transition-all duration-300;
+  }
+
+  .glass-panel {
+    @apply bg-lumen-void/90 backdrop-blur-md border-b border-white/5;
+  }
+
+  .btn-primary {
+    @apply relative overflow-hidden rounded-xl font-semibold uppercase tracking-widest px-6 py-3 transition-all duration-300;
+    background: var(--lumen-gold);
+    color: #08080C;
+  }
+
+  .btn-primary:hover {
+    filter: brightness(1.1);
+    box-shadow: 0 0 24px -4px rgba(201, 169, 98, 0.4);
+  }
+
+  .btn-primary:focus-visible {
+    outline: 3px solid var(--lumen-gold);
+    outline-offset: 2px;
+  }
+
+  .btn-secondary {
+    @apply rounded-xl border border-lumen-muted px-6 py-3 font-semibold uppercase tracking-widest text-lumen-cream transition-all duration-300;
+  }
+
+  .btn-secondary:hover {
+    @apply border-lumen-gold/50 bg-lumen-gold/10;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Utilities — keep existing where used                                      */
+/* -------------------------------------------------------------------------- */
 @layer utilities {
   .perspective-1000 {
     perspective: 1000px;
   }
-  
+
   .transform-style-3d {
     transform-style: preserve-3d;
   }
@@ -74,7 +191,6 @@ body {
     backface-visibility: hidden;
   }
 
-  /* Text Glitch Effect */
   .text-glitch {
     position: relative;
   }
@@ -86,67 +202,72 @@ body {
     left: 0;
     width: 100%;
     height: 100%;
-    background: var(--deep-space);
+    background: var(--lumen-void);
   }
   .text-glitch::before {
     left: 2px;
-    text-shadow: -1px 0 var(--neon-secondary);
+    text-shadow: -1px 0 var(--lumen-silver);
     clip: rect(24px, 550px, 90px, 0);
     animation: glitch-anim-2 3s infinite linear alternate-reverse;
   }
   .text-glitch::after {
     left: -2px;
-    text-shadow: -1px 0 var(--neon-primary);
+    text-shadow: -1px 0 var(--lumen-gold);
     clip: rect(85px, 550px, 140px, 0);
     animation: glitch-anim 2.5s infinite linear alternate-reverse;
   }
 
-  /* Holographic Card */
+  .text-glitch-sm {
+    position: relative;
+  }
+  .text-glitch-sm::before,
+  .text-glitch-sm::after {
+    content: attr(data-text);
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--lumen-void);
+  }
+  .text-glitch-sm::before {
+    left: 1px;
+    text-shadow: -1px 0 var(--lumen-silver);
+    clip: rect(0, 900px, 0, 0);
+    animation: glitch-anim-sm-2 3s infinite linear alternate-reverse;
+  }
+  .text-glitch-sm::after {
+    left: -1px;
+    text-shadow: -1px 0 var(--lumen-gold);
+    clip: rect(0, 900px, 0, 0);
+    animation: glitch-anim-sm 2.5s infinite linear alternate-reverse;
+  }
+
   .holographic-card {
     background: rgba(255, 255, 255, 0.03);
-    backdrop-filter: blur(20px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 
-      0 0 0 1px rgba(0,0,0,0.5),
-      0 20px 50px rgba(0,0,0,0.5),
-      inset 0 0 60px rgba(255,255,255,0.02);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5), 0 10px 30px rgba(0, 0, 0, 0.3);
   }
 
-  /* Liquid Gradient Text */
   .text-liquid {
-    background: linear-gradient(
-      to right,
-      #00ffcc,
-      #00ccff,
-      #ff00ff,
-      #00ffcc
-    );
-    background-size: 200% auto;
-    color: transparent;
+    background: linear-gradient(to right, var(--lumen-gold), #E8D5A3);
     -webkit-background-clip: text;
     background-clip: text;
-    animation: shine 3s linear infinite;
+    color: transparent;
   }
 
-  /* Neon Glows */
   .glow-primary {
-    box-shadow: 0 0 20px rgba(0, 255, 204, 0.5);
+    box-shadow: 0 0 16px rgba(201, 169, 98, 0.25);
   }
   .glow-secondary {
-    box-shadow: 0 0 20px rgba(255, 0, 255, 0.5);
+    box-shadow: 0 0 16px rgba(168, 165, 160, 0.2);
   }
 }
 
 /* -------------------------------------------------------------------------- */
-/*  BLACK MAGIC ANIMATIONS                                                    */
+/*  Animations                                                                */
 /* -------------------------------------------------------------------------- */
-
-@keyframes shine {
-  to {
-    background-position: 200% center;
-  }
-}
-
 @keyframes glitch-anim {
   0% { clip: rect(12px, 9999px, 5px, 0); }
   20% { clip: rect(78px, 9999px, 96px, 0); }
@@ -165,6 +286,24 @@ body {
   100% { clip: rect(96px, 9999px, 78px, 0); }
 }
 
+@keyframes glitch-anim-sm {
+  0% { clip: rect(3px, 9999px, 1px, 0); }
+  20% { clip: rect(19px, 9999px, 24px, 0); }
+  40% { clip: rect(3px, 9999px, 6px, 0); }
+  60% { clip: rect(11px, 9999px, 1px, 0); }
+  80% { clip: rect(24px, 9999px, 16px, 0); }
+  100% { clip: rect(8px, 9999px, 21px, 0); }
+}
+
+@keyframes glitch-anim-sm-2 {
+  0% { clip: rect(16px, 9999px, 25px, 0); }
+  20% { clip: rect(3px, 9999px, 1px, 0); }
+  40% { clip: rect(21px, 9999px, 8px, 0); }
+  60% { clip: rect(1px, 9999px, 16px, 0); }
+  80% { clip: rect(6px, 9999px, 3px, 0); }
+  100% { clip: rect(24px, 9999px, 19px, 0); }
+}
+
 @keyframes float {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-20px); }
@@ -173,46 +312,4 @@ body {
 @keyframes pulse-ring {
   0% { transform: scale(0.8); opacity: 0.5; }
   100% { transform: scale(2); opacity: 0; }
-}
-
-/* -------------------------------------------------------------------------- */
-/*  COMPONENT OVERRIDES                                                       */
-/* -------------------------------------------------------------------------- */
-
-@layer components {
-  .glass-card {
-    @apply bg-black/40 backdrop-blur-xl border border-white/10 shadow-2xl transition-all duration-500;
-  }
-  
-  .glass-panel {
-    @apply bg-black/60 backdrop-blur-2xl border-b border-white/5;
-  }
-
-  .btn-primary {
-    @apply relative overflow-hidden rounded-xl bg-white text-black font-black uppercase tracking-widest px-8 py-4 transition-all duration-300 hover:scale-105 hover:shadow-[0_0_40px_rgba(255,255,255,0.5)];
-  }
-  
-  .btn-primary::after {
-    content: '';
-    position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
-    background: linear-gradient(
-      to bottom right,
-      rgba(255,255,255,0) 0%,
-      rgba(255,255,255,0.8) 50%,
-      rgba(255,255,255,0) 100%
-    );
-    transform: rotate(45deg);
-    transition: all 0.5s;
-    opacity: 0;
-  }
-  
-  .btn-primary:hover::after {
-    left: 100%;
-    opacity: 1;
-    transition: 0.7s;
-  }
 }

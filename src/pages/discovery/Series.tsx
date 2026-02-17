@@ -31,10 +31,33 @@ const fetchPopular = async (type: 'movie' | 'tv' = 'tv') => {
   return data.results.map((item: any) => ({ ...item, media_type: type }))
 }
 
+const fetchTurkish = async () => {
+  const { data } = await tmdb.get('/discover/tv', {
+    params: {
+      with_original_language: 'tr',
+      sort_by: 'popularity.desc',
+      'vote_count.gte': 50
+    }
+  })
+  return data.results.map((item: any) => ({ ...item, media_type: 'tv' }))
+}
+
+const fetchArabic = async () => {
+  const { data } = await tmdb.get('/discover/tv', {
+    params: {
+      with_original_language: 'ar',
+      sort_by: 'popularity.desc'
+    }
+  })
+  return data.results.map((item: any) => ({ ...item, media_type: 'tv' }))
+}
+
 export const SeriesPage = () => {
   const { lang } = useLang()
 
   const trending = useQuery({ queryKey: ['series-trending'], queryFn: () => fetchTrending('tv') })
+  const turkish = useQuery({ queryKey: ['series-turkish'], queryFn: fetchTurkish })
+  const arabic = useQuery({ queryKey: ['series-arabic'], queryFn: fetchArabic })
   const topRated = useQuery({ queryKey: ['series-top-rated'], queryFn: () => fetchTopRated('tv') })
   const popular = useQuery({ queryKey: ['series-popular'], queryFn: () => fetchPopular('tv') })
   
@@ -50,7 +73,7 @@ export const SeriesPage = () => {
   const heroItems = trending.data?.slice(0, 10) || []
 
   return (
-    <div className="min-h-screen bg-black text-white pb-24">
+    <div className="min-h-screen text-white pb-24 max-w-[2400px] mx-auto px-4 md:px-12 w-full">
       <Helmet>
         <title>{lang === 'ar' ? 'المسلسلات - سينما أونلاين' : 'Series - Cinema Online'}</title>
       </Helmet>
@@ -58,11 +81,23 @@ export const SeriesPage = () => {
       {/* Hero Section */}
       <QuantumHero items={heroItems} />
 
-      <div className="space-y-8 -mt-20 relative z-10">
+      <div className="space-y-8 -mt-20 relative z-10 px-4 md:px-0">
         <QuantumTrain 
           items={trending.data || []} 
           title={lang === 'ar' ? 'الرائج هذا الأسبوع' : 'Trending This Week'} 
           link="/search?types=tv&sort=trending"
+        />
+
+        <QuantumTrain 
+          items={arabic.data || []} 
+          title={lang === 'ar' ? 'مسلسلات عربية ورمضانية' : 'Arabic & Ramadan Series'} 
+          link="/search?types=tv&lang=ar"
+        />
+
+        <QuantumTrain 
+          items={turkish.data || []} 
+          title={lang === 'ar' ? 'الدراما التركية' : 'Turkish Drama'} 
+          link="/search?types=tv&lang=tr"
         />
         
         <QuantumTrain 
