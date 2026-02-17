@@ -4,6 +4,7 @@ import { QuantumHero } from '../../components/features/hero/QuantumHero'
 import { QuantumTrain } from '../../components/features/media/QuantumTrain'
 import { useLang } from '../../state/useLang'
 import { Helmet } from 'react-helmet-async'
+import { useCategoryVideos } from '../../hooks/useFetchContent'
 
 const fetchClassics = async (yearLimit: number, sort: string = 'popularity.desc') => {
   const { data } = await tmdb.get('/discover/movie', {
@@ -30,6 +31,19 @@ const fetchByGenre = async (genreId: number) => {
 export const ClassicsPage = () => {
   const { lang } = useLang()
 
+  // YouTube/Archive Content
+  const { data: ytClassics } = useCategoryVideos('classic', { limit: 20 })
+  const ytClassicsMapped = (ytClassics || []).map(item => ({
+    id: item.id,
+    title: item.title,
+    overview: item.description,
+    backdrop_path: item.thumbnail,
+    poster_path: item.thumbnail,
+    release_date: item.created_at,
+    vote_average: 9.0,
+    media_type: 'video'
+  }))
+
   const goldenAge = useQuery({ queryKey: ['classics-golden'], queryFn: () => fetchClassics(1970) })
   const eighties = useQuery({ queryKey: ['classics-80s'], queryFn: () => fetchClassics(1989) })
   const nineties = useQuery({ queryKey: ['classics-90s'], queryFn: () => fetchClassics(1999) })
@@ -37,7 +51,7 @@ export const ClassicsPage = () => {
   const classicAction = useQuery({ queryKey: ['classics-action'], queryFn: () => fetchByGenre(28) })
   const classicRomance = useQuery({ queryKey: ['classics-romance'], queryFn: () => fetchByGenre(10749) })
 
-  const heroItems = goldenAge.data?.slice(0, 10) || []
+  const heroItems = ytClassicsMapped.length > 0 ? ytClassicsMapped.slice(0, 10) : (goldenAge.data?.slice(0, 10) || [])
 
   return (
     <div className="min-h-screen bg-black text-white pb-24">
@@ -49,6 +63,14 @@ export const ClassicsPage = () => {
       <QuantumHero items={heroItems} />
 
       <div className="space-y-8 -mt-20 relative z-10">
+        {ytClassicsMapped.length > 0 && (
+          <QuantumTrain 
+            items={ytClassicsMapped} 
+            title={lang === 'ar' ? 'أفلام كلاسيكية (يوتيوب)' : 'Classic Movies (YouTube)'} 
+            type="video"
+          />
+        )}
+
         <QuantumTrain 
           items={goldenAge.data || []} 
           title={lang === 'ar' ? 'العصر الذهبي (قبل 1970)' : 'Golden Age (Pre-1970)'} 

@@ -164,12 +164,12 @@ export const Navbar = ({ isScrolled }: { isScrolled?: boolean }) => {
             {/* Ambient Glow behind logo */}
             <div className="absolute -inset-4 rounded-full bg-primary/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
           </Link>
-          <nav className="hidden items-center gap-1 xl:gap-2 lg:flex flex-shrink-0">
+          <nav className="hidden items-center gap-0.5 xl:gap-1 lg:flex flex-shrink-0">
             {navLinks.map((link) => (
               <Link
                 key={link.to}
                 to={link.to}
-                className="group relative flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold text-zinc-300 transition-all hover:text-white"
+                className="group relative flex items-center gap-2 rounded-xl px-1.5 py-2 text-sm font-bold text-zinc-300 transition-all hover:text-white"
               >
                 {/* Neon Snake Border Effect */}
                 <div className="absolute inset-0 rounded-xl pointer-events-none opacity-0 group-hover:opacity-100">
@@ -203,7 +203,7 @@ export const Navbar = ({ isScrolled }: { isScrolled?: boolean }) => {
                        style={{ backgroundColor: 'currentColor' }} 
                   />
                   {/* The Icon */}
-                  <link.icon size={18} className={`relative z-10 transition-colors duration-300 ${link.color || 'text-primary'}`} />
+                  <link.icon size={17} className={`relative z-10 transition-colors duration-300 ${link.color || 'text-primary'}`} />
                 </div>
                 <span className="transition-colors group-hover:text-white whitespace-nowrap">{link.label}</span>
               </Link>

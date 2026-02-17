@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { Link } from 'react-router-dom'
+import { PrefetchLink } from '../components/common/PrefetchLink'
 import { useQuery, keepPreviousData } from '@tanstack/react-query'
 import { tmdb } from '../lib/tmdb'
 import { AdsManager } from '../components/common/AdsManager'
@@ -7,8 +7,9 @@ import { useAuth } from '../hooks/useAuth'
 import { CONFIG } from '../lib/constants'
 import { useLang } from '../state/useLang'
 import { getRecommendations, RecommendationItem } from '../services/recommendations'
-import { BrainCircuit, Play, Plus, Zap, Cpu, Gamepad2, Tv, Film } from 'lucide-react'
+import { BrainCircuit, Play, Plus, Zap, Cpu, Gamepad2, Tv, Film, Drama } from 'lucide-react'
 import { MovieRow } from '../components/features/media/MovieRow'
+import { MovieCard } from '../components/features/media/MovieCard'
 import { VideoRow } from '../components/features/media/VideoRow'
 import { motion } from 'framer-motion'
 import { useCategoryVideos, useClassicVideos } from '../hooks/useFetchContent'
@@ -129,6 +130,38 @@ export const Home = () => {
     staleTime: 300000
   })
 
+  const arabicSeries = useQuery<{ results: TmdbMedia[] }>({
+    queryKey: ['home', 'arabic-series'],
+    queryFn: async () => {
+      const { data } = await tmdb.get('/discover/tv', { 
+        params: { 
+          with_original_language: 'ar', 
+          sort_by: 'popularity.desc', 
+          page: 1 
+        } 
+      })
+      return data
+    },
+    enabled: !!CONFIG.TMDB_API_KEY,
+    staleTime: 300000
+  })
+
+  const turkishSeries = useQuery<{ results: TmdbMedia[] }>({
+    queryKey: ['home', 'turkish-series'],
+    queryFn: async () => {
+      const { data } = await tmdb.get('/discover/tv', { 
+        params: { 
+          with_original_language: 'tr', 
+          sort_by: 'popularity.desc', 
+          page: 1 
+        } 
+      })
+      return data
+    },
+    enabled: !!CONFIG.TMDB_API_KEY,
+    staleTime: 300000
+  })
+
   const popularAr = useQuery<{ results: TmdbMedia[] }>({
     queryKey: ['home', 'popular-ar'],
     queryFn: async () => {
@@ -150,12 +183,12 @@ export const Home = () => {
   })
 
   const canonicalUrl = typeof window !== 'undefined' ? `${location.origin}${location.pathname}` : ''
-  const description = lang === 'ar' ? 'منصة سينما أونلاين - تجربة المستقبل' : 'Cinema Online - The Future Experience'
+  const description = lang === 'ar' ? 'منصة أونلاين سينما - تجربة المستقبل' : 'Online Cinema - The Future Experience'
 
   return (
     <div className="min-h-screen text-white overflow-x-hidden selection:bg-cyan-500 selection:text-black">
       <SeoHead
-        title={lang === 'ar' ? 'سينما أونلاين - منصة الأفلام والمسلسلات الأولى' : 'Cinema Online - #1 Arabic Streaming Platform'}
+        title={lang === 'ar' ? 'أونلاين سينما - منصة الأفلام والمسلسلات الأولى' : 'Online Cinema - #1 Arabic Streaming Platform'}
         description={description}
       />
 
@@ -181,26 +214,37 @@ export const Home = () => {
         {/* 3. MASONRY GRID & CONTENT */}
         <div className="relative z-30 space-y-32 pb-40">
         
-        {/* Section: Trending MENA */}
+        {/* Section: Trending Egypt (Aflam) */}
         <section>
-          <SectionHeader title={lang === 'ar' ? 'الأكثر مشاهدة' : 'Trending Now'} icon={<Zap />} />
+          <SectionHeader title={lang === 'ar' ? 'الأعلى مشاهدة في مصر' : 'Top Trending in Egypt'} icon={<Zap />} />
+          <QuantumTrain items={popularAr.data?.results || []} />
+        </section>
+
+        {/* Section: Ramadan & Arabic Series */}
+        <section>
+          <SectionHeader title={lang === 'ar' ? 'مسلسلات عربية ورمضانية' : 'Arabic & Ramadan Series'} icon={<Tv />} />
+          <QuantumTrain items={arabicSeries.data?.results || []} />
+        </section>
+
+        {/* Section: Masrahiyat (Plays) */}
+        <section>
+          <SectionHeader title={lang === 'ar' ? 'مسرحيات وكلاسيكيات' : 'Plays & Classics'} icon={<Drama />} />
+          <QuantumTrain items={plays.data || []} />
+        </section>
+
+        {/* Section: Turkish Drama */}
+        <section>
+          <SectionHeader title={lang === 'ar' ? 'الدراما التركية' : 'Turkish Drama'} icon={<Film />} />
+          <QuantumTrain items={turkishSeries.data?.results || []} />
+        </section>
+
+        {/* Section: Global Trending */}
+        <section>
+          <SectionHeader title={lang === 'ar' ? 'الرائج عالمياً' : 'Global Trending'} icon={<Zap />} />
           {popularAr.isPending ? <SkeletonGrid count={10} variant="poster" /> : (
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6 perspective-1000">
               {popularAr.data?.results?.slice(0, 12).map((movie, idx) => (
-                 <HolographicCard key={movie.id} className="aspect-[2/3]">
-                    <Link to={`/watch/movie/${movie.id}`}>
-                      <img 
-                        src={`https://image.tmdb.org/t/p/w500${movie.poster_path}`} 
-                        className="w-full h-full object-cover" 
-                        alt={movie.title} 
-                        loading="lazy"
-                        decoding="async"
-                      />
-                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                        <Play className="w-12 h-12 text-cyan-400 drop-shadow-[0_0_10px_rgba(0,255,204,0.8)]" />
-                      </div>
-                    </Link>
-                 </HolographicCard>
+                 <MovieCard key={movie.id} movie={movie} index={idx} />
               ))}
             </div>
           )}
@@ -226,14 +270,9 @@ export const Home = () => {
         <section>
            <SectionHeader title={lang === 'ar' ? 'الأعلى تقييماً' : 'Top Rated'} icon={<Film />} />
            <div className="flex gap-6 overflow-x-auto pb-8 snap-x scrollbar-none">
-              {topRatedMovies.data?.results?.slice(0, 10).map(movie => (
+              {topRatedMovies.data?.results?.slice(0, 10).map((movie, idx) => (
                 <div key={movie.id} className="snap-center shrink-0 w-[200px]">
-                   <HolographicCard className="aspect-[2/3]">
-                      <Link to={`/watch/movie/${movie.id}`}>
-                         <img src={`https://image.tmdb.org/t/p/w300${movie.poster_path}`} className="w-full h-full object-cover" alt={movie.title} />
-                      </Link>
-                   </HolographicCard>
-                   <h3 className="mt-4 font-bold truncate text-zinc-400 group-hover:text-cyan-400 transition-colors">{movie.title}</h3>
+                   <MovieCard movie={movie} index={idx} />
                 </div>
               ))}
            </div>
@@ -286,13 +325,13 @@ const BentoBox = ({ title, icon, items, color }: { title: string, icon: any, ite
       <div className="grid grid-cols-2 gap-4">
         {items.slice(0, 4).map((item, i) => (
           <HolographicCard key={item.id} className={`aspect-video ${i === 0 ? 'col-span-2 row-span-2 aspect-video' : ''}`}>
-             <Link to={`/watch/yt/${item.id}`} className="block h-full relative group">
+             <PrefetchLink to={`/watch/yt/${item.id}`} className="block h-full relative group">
                 <img src={item.thumbnail} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" alt={item.title} />
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
                 <div className="absolute bottom-4 left-4 right-4">
                    <h4 className="font-bold text-white leading-tight line-clamp-2 text-sm md:text-lg">{item.title}</h4>
                 </div>
-             </Link>
+             </PrefetchLink>
           </HolographicCard>
         ))}
       </div>
@@ -313,9 +352,9 @@ const AIRecommended = ({ userId }: { userId: string }) => {
     <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
       {q.data.slice(0, 5).map(m => (
         <HolographicCard key={m.id} className="aspect-[2/3]">
-           <Link to={`/watch/movie/${m.id}`}>
+           <PrefetchLink to={`/watch/movie/${m.id}`}>
              <img src={`https://image.tmdb.org/t/p/w300${m.poster_path}`} className="w-full h-full object-cover" alt={m.title} />
-           </Link>
+           </PrefetchLink>
         </HolographicCard>
       ))}
     </div>

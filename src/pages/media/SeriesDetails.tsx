@@ -28,6 +28,7 @@ import React from 'react'
 import ReactPlayer from 'react-player'
 import { getEmbedUrlByIndex } from '../../services/embedService'
 import { SeoHead } from '../../components/common/SeoHead'
+import { useDualTitles } from '../../hooks/useDualTitles'
 
 const SeriesDetails = () => {
   const { id } = useParams()
@@ -82,6 +83,8 @@ const SeriesDetails = () => {
     },
     enabled: Number.isFinite(tvId)
   })
+
+  const dualTitles = useDualTitles(series.data || {})
 
   const seasons = useQuery({
     queryKey: ['seasons', tvId, series.data?.id],
@@ -153,7 +156,8 @@ const SeriesDetails = () => {
 
   const poster = series.data?.poster_path ? `https://image.tmdb.org/t/p/w500${series.data.poster_path}` : ''
   const backdrop = series.data?.backdrop_path ? `https://image.tmdb.org/t/p/original${series.data.backdrop_path}` : ''
-  const title = series.data?.name || `مسلسل #${id}`
+  const title = dualTitles.main || series.data?.name || `مسلسل #${id}`
+  const arabicTitle = dualTitles.sub
   const overview = series.data?.overview || 'لا يوجد وصف متاح'
   const year = (series.data?.first_air_date ? new Date(series.data.first_air_date).getFullYear() : '') as any
   const episodeMin = Array.isArray(remote.data?.episode_run_time) && remote.data.episode_run_time.length ? remote.data.episode_run_time[0] : null
@@ -276,7 +280,10 @@ const SeriesDetails = () => {
               <span className="mx-1 text-lg text-zinc-200">›</span>
               <span className="text-white">{title}</span>
             </nav>
-            <h1 className="mt-2 text-2xl font-extrabold tracking-tight">{title}</h1>
+            <div>
+               <h1 className="mt-2 text-2xl font-extrabold tracking-tight">{title}</h1>
+               {arabicTitle && <h2 className="text-lg text-cyan-400 font-arabic opacity-90">{arabicTitle}</h2>}
+            </div>
             <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-zinc-300">
               {year && (
                 <Link to={`/series/year/${year}`} className="rounded-md border border-white/10 bg-white/10 px-2 py-0.5">

@@ -2,7 +2,7 @@ import ReactPlayer from 'react-player'
 import { AlertTriangle } from 'lucide-react'
 import { useState } from 'react'
 
-export const VideoPlayer = ({ url }: { url: string }) => {
+export const VideoPlayer = ({ url, subtitles = [] }: { url: string, subtitles?: { label: string, src: string, srcLang: string, kind?: string, default?: boolean }[] }) => {
   const [error, setError] = useState(false)
 
   if (error) {
@@ -25,7 +25,14 @@ export const VideoPlayer = ({ url }: { url: string }) => {
       config={{ 
         file: { 
           attributes: { crossOrigin: 'anonymous' },
-          forceHLS: url.includes('.m3u8')
+          forceHLS: url.includes('.m3u8'),
+          tracks: subtitles.map(sub => ({
+            kind: 'subtitles',
+            src: sub.src,
+            srcLang: sub.srcLang,
+            label: sub.label,
+            default: sub.default
+          }))
         },
         youtube: {
           playerVars: { showinfo: 0, modestbranding: 1 }

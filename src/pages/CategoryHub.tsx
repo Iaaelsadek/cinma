@@ -19,9 +19,14 @@ const CATEGORY_MAP: Record<string, any> = {
 
 const YEARS = Array.from({ length: 20 }, (_, i) => new Date().getFullYear() - i)
 
-export const CategoryHub = ({ type = 'movie' }: { type?: 'movie' | 'tv' }) => {
-  const { category, year, genre } = useParams()
+export const CategoryHub = ({ type: propsType = 'movie' }: { type?: 'movie' | 'tv' }) => {
+  const { category, year: paramYear, genre, rating } = useParams()
   const navigate = useNavigate()
+  // Determine type based on URL path or fallback to props
+  const pathType = window.location.pathname.includes('/series') ? 'tv' : 'movie'
+  const type = propsType || pathType
+  const year = paramYear ? Number(paramYear) : undefined
+
   const [content, setContent] = useState<any[]>([])
   const [featuredContent, setFeaturedContent] = useState<any[]>([])
   const [genresList, setGenresList] = useState<any[]>([])
@@ -47,6 +52,15 @@ export const CategoryHub = ({ type = 'movie' }: { type?: 'movie' | 'tv' }) => {
     // Apply Category Filter
     if (category && CATEGORY_MAP[category]) {
       Object.assign(params, CATEGORY_MAP[category])
+    }
+
+    // Apply Rating Filter
+    if (rating) {
+      params['vote_average.gte'] = Number(rating)
+      // Sorting by vote_average makes sense when filtering by rating
+      if (sort === 'popularity.desc') {
+        params.sort_by = 'vote_average.desc'
+      }
     }
 
     // Apply Year Filter
@@ -93,7 +107,7 @@ export const CategoryHub = ({ type = 'movie' }: { type?: 'movie' | 'tv' }) => {
 
   // Fetch Featured Content (Only for Hub Root - no year/genre drilling)
   useEffect(() => {
-    if (year || genre) return
+    if (year || genre || rating) return
     if (needsGenresForQuery) return
 
     const fetchFeatured = async () => {
@@ -192,7 +206,7 @@ export const CategoryHub = ({ type = 'movie' }: { type?: 'movie' | 'tv' }) => {
     return category || 'الكل'
   }, [category, genresList])
 
-  const hubTitle = `${type === 'movie' ? 'أفلام' : 'مسلسلات'} ${categoryTitle} ${year || ''} ${genre || ''}`.trim()
+  const hubTitle = `${type === 'movie' ? 'أفلام' : 'مسلسلات'} ${categoryTitle} ${year || ''} ${genre || ''} ${rating ? `تقييم ${rating}+` : ''}`.trim()
   const hubDesc = `استكشف أفضل ${hubTitle} على سينما أونلاين - جودة عالية ومترجم`
 
   return (

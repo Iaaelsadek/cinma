@@ -3,13 +3,17 @@ import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { addHistory, getProgress, supabase, upsertProgress } from '../../lib/supabase'
 import { AdsManager } from '../../components/common/AdsManager'
-import { ServerGrid } from '../../components/features/media/ServerGrid'
 import { tmdb } from '../../lib/tmdb'
 import { SeoHead } from '../../components/common/SeoHead'
 import { Calendar, Clock, Star } from 'lucide-react'
 import { ShareButton } from '../../components/common/ShareButton'
 import { NotFound } from '../NotFound'
 import { SkeletonGrid } from '../../components/common/Skeletons'
+import { SubtitleManager } from '../../components/features/media/SubtitleManager'
+import { useServers } from '../../hooks/useServers'
+import { EmbedPlayer } from '../../components/features/media/EmbedPlayer'
+import { ServerSelector } from '../../components/features/media/ServerSelector'
+import { EpisodeSelector } from '../../components/features/media/EpisodeSelector'
 
 type DownloadLink = { label?: string; url: string }
 
@@ -28,6 +32,7 @@ type TmdbCrewMember = {
   type TmdbDetails = {
     title?: string
     name?: string
+    original_language?: string
     release_date?: string
     first_air_date?: string
     runtime?: number
@@ -40,22 +45,72 @@ type TmdbCrewMember = {
     backdrop_path?: string | null
     credits?: { cast?: TmdbCastMember[]; crew?: TmdbCrewMember[] }
     videos?: { results: Array<{ key: string; type: string; site: string }> }
+    external_ids?: { imdb_id?: string }
+    seasons?: Array<{ season_number: number; episode_count: number; name: string }>
   }
 
 export const Watch = () => {
-  const { type: typeParam, id } = useParams()
+  const { type: typeParam, id: idParam, slug } = useParams()
   const [sp, setSp] = useSearchParams()
+  const [resolvedId, setResolvedId] = useState<string | null>(null)
+  
   const [season, setSeason] = useState(Math.max(1, Number(sp.get('season')) || 1))
   const [episode, setEpisode] = useState(Math.max(1, Number(sp.get('episode')) || 1))
   const { user } = useAuth()
   const [elapsed, setElapsed] = useState(0)
   const [showPreroll, setShowPreroll] = useState(true)
-  const type = typeParam || sp.get('type') || 'movie'
+  
+  // Normalize type param (movies -> movie, series -> tv)
+  const rawType = typeParam || sp.get('type') || 'movie'
+  let type = rawType
+  if (type === 'series' || type === 'anime') type = 'tv'
+  if (type === 'movies' || type === 'plays') type = 'movie'
+
   const [details, setDetails] = useState<TmdbDetails | null>(null)
   const [downloads, setDownloads] = useState<DownloadLink[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
   const [cinemaMode, setCinemaMode] = useState(false)
+
+  // Determine effective ID
+  const id = resolvedId || idParam
+
+  // Hook 0: Resolve Slug to ID
+  useEffect(() => {
+    if (idParam) return // Already have ID
+    if (!slug) return
+
+    const resolveSlug = async () => {
+      setLoading(true)
+      try {
+        // Try to extract ID from slug (e.g. "title-12345")
+        const parts = slug.split('-')
+        const potentialId = parts[parts.length - 1]
+        if (/^\d+$/.test(potentialId)) {
+          setResolvedId(potentialId)
+          return
+        }
+
+        // If no ID in slug, search TMDB
+        const query = slug.replace(/-/g, ' ')
+        const { data } = await tmdb.get(`/search/${type}`, {
+          params: { query, page: 1 }
+        })
+        
+        if (data.results?.[0]?.id) {
+          setResolvedId(String(data.results[0].id))
+        } else {
+          setError(true)
+          setLoading(false)
+        }
+      } catch (e) {
+        setError(true)
+        setLoading(false)
+      }
+    }
+
+    resolveSlug()
+  }, [slug, idParam, type])
 
   // Hook 1: Sync URL params
   useEffect(() => {
@@ -74,6 +129,9 @@ export const Watch = () => {
 
   // Hook 2: Fetch Details
   useEffect(() => {
+    // If using slug and not yet resolved, wait
+    if (slug && !id) return
+
     let mounted = true
     setLoading(true)
     setError(false)
@@ -91,7 +149,7 @@ export const Watch = () => {
       } catch {}
       try {
         const path = type === 'movie' ? `/movie/${id}` : `/tv/${id}`
-        const { data } = await tmdb.get(path, { params: { append_to_response: 'credits,videos' } })
+        const { data } = await tmdb.get(path, { params: { append_to_response: 'credits,videos,external_ids' } })
         if (mounted) setDetails(data)
       } catch (e) {
         if (mounted) setError(true)
@@ -100,7 +158,7 @@ export const Watch = () => {
       }
     })()
     return () => { mounted = false }
-  }, [id, type])
+  }, [id, type, slug])
 
   // Hook 3: Progress Tracking (Moved UP before early returns)
   useEffect(() => {
@@ -251,6 +309,14 @@ export const Watch = () => {
     }
   }, [details, title, overview, backdrop, poster, type, runtimeMin, rating])
 
+  // New Server Hook
+  const { servers, active, setActive, loading: serversLoading, reportBroken, reporting } = useServers(
+    Number(id), 
+    type as 'movie' | 'tv', 
+    season, 
+    episode
+  )
+
   // Early Returns (Now safe because all hooks are declared above)
   if (error) return <NotFound />
   if (loading && !details) return <div className="min-h-screen bg-[#0f0f0f] p-8"><SkeletonGrid count={1} variant="video" /></div>
@@ -347,8 +413,8 @@ export const Watch = () => {
               </div>
             </div>
             <div className="order-1 md:order-2">
-              <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-black shadow-2xl">
-                <div className="aspect-video w-full bg-[#1a1a1a]">
+              <div className={`relative overflow-hidden rounded-2xl border border-white/10 bg-black shadow-2xl ${trailer ? 'aspect-video' : 'aspect-[2/3]'}`}>
+                <div className="h-full w-full bg-[#1a1a1a]">
                   {trailer ? (
                     <iframe
                       src={`https://www.youtube.com/embed/${trailer}?autoplay=1&mute=1&loop=1&playlist=${trailer}&controls=0&showinfo=0&modestbranding=1`}
@@ -357,7 +423,7 @@ export const Watch = () => {
                       title="Trailer"
                     />
                   ) : (
-                    poster && <img src={poster} alt={title} className="h-full w-full object-cover opacity-80" loading="lazy" />
+                    poster && <img src={poster} alt={title} className="h-full w-full object-cover" loading="lazy" />
                   )}
                 </div>
                 {!trailer && (
@@ -371,76 +437,78 @@ export const Watch = () => {
         </div>
       </div>
 
-      <div className="mx-auto max-w-6xl px-4 py-8 space-y-8">
-        {type === 'tv' && (
-          <div className="flex flex-wrap items-center gap-4 p-4 rounded-xl bg-[#1a1a1a] border border-white/5">
-            <div className="flex items-center gap-2">
-              <label className="text-xs font-bold uppercase tracking-wider text-zinc-400">Season</label>
-              <input
-                type="number"
-                min={1}
-                value={season}
-                onChange={(e) => setSeason(Math.max(1, Number(e.target.value) || 1))}
-                className="w-20 h-11 rounded-lg border border-white/10 bg-black px-3 text-sm text-white focus:border-[#e50914] focus:outline-none"
-              />
-            </div>
-            <div className="h-8 w-px bg-white/10" />
-            <div className="flex items-center gap-2">
-              <label className="text-xs font-bold uppercase tracking-wider text-zinc-400">Episode</label>
-              <input
-                type="number"
-                min={1}
-                value={episode}
-                onChange={(e) => setEpisode(Math.max(1, Number(e.target.value) || 1))}
-                className="w-20 h-11 rounded-lg border border-white/10 bg-black px-3 text-sm text-white focus:border-[#e50914] focus:outline-none"
-              />
-              <div className="flex gap-1">
-                <button
-                  onClick={() => setEpisode((e) => Math.max(1, e - 1))}
-                  className="h-11 rounded-lg border border-white/10 bg-white/5 px-4 text-xs font-bold text-white hover:bg-white/10 transition-colors"
-                >
-                  Prev
-                </button>
-                <button
-                  onClick={() => setEpisode((e) => e + 1)}
-                  className="h-11 rounded-lg border border-white/10 bg-white/5 px-4 text-xs font-bold text-white hover:bg-white/10 transition-colors"
-                >
-                  Next
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+      <div className="mx-auto max-w-7xl px-4 py-8 space-y-8">
+        
+        {/* NEW LAYOUT: Grid with Side Panel */}
+        <section id="player" className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            
+            {/* Left Column: Video Player */}
+            <div className="order-2 lg:order-2 space-y-6">
+                <div className="relative w-full">
+                    {showPreroll ? (
+                    <div className="aspect-video w-full overflow-hidden rounded-2xl border border-zinc-800 bg-black">
+                        <AdsManager type="preroll" position="player" onDone={() => setShowPreroll(false)} />
+                    </div>
+                    ) : (
+                    <EmbedPlayer
+                        server={servers[active]}
+                        cinemaMode={cinemaMode}
+                        toggleCinemaMode={() => setCinemaMode(!cinemaMode)}
+                        loading={serversLoading}
+                        onNextServer={() => active < servers.length - 1 ? setActive(active + 1) : setActive(0)}
+                        onReport={reportBroken}
+                        reporting={reporting}
+                    />
+                    )}
+                </div>
 
-        <section id="player" className="space-y-3">
-          <h2 className="text-lg font-bold text-white">سيرفرات المشاهدة</h2>
-          <div className="relative w-full">
-            {showPreroll ? (
-              <div className="aspect-video w-full overflow-hidden rounded-2xl border border-zinc-800 bg-black">
-                <AdsManager type="preroll" position="player" onDone={() => setShowPreroll(false)} />
-              </div>
-            ) : (
-              <ServerGrid
-                tmdbId={Number(id)}
-                type={type as 'movie' | 'tv'}
-                season={season}
-                episode={episode}
-                cinemaMode={cinemaMode}
-                toggleCinemaMode={() => setCinemaMode(!cinemaMode)}
-              />
-            )}
-          </div>
-          <div className="flex justify-center mt-4">
-            <div className="flex items-center gap-3 rounded-full border border-red-500/20 bg-red-500/10 px-6 py-2">
-              <span className="relative flex h-3 w-3">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-              </span>
-              <span className="text-xs font-bold text-red-200">
-                Server Error? Try Server 2 (مشكلة في التشغيل؟ جرب سيرفر آخر)
-              </span>
+                {type === 'movie' && (
+                    <div className="mt-4">
+                    <SubtitleManager
+                        tmdbId={id || ''}
+                        imdbId={details?.external_ids?.imdb_id}
+                        title={details?.title || details?.name}
+                    />
+                    </div>
+                )}
+
+                <div className="flex justify-center mt-4">
+                    <div className="flex items-center gap-3 rounded-full border border-red-500/20 bg-red-500/10 px-6 py-2">
+                    <span className="relative flex h-3 w-3">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                    </span>
+                    <span className="text-xs font-bold text-red-200">
+                        Server Error? Try Server 2 (مشكلة في التشغيل؟ جرب سيرفر آخر)
+                    </span>
+                    </div>
+                </div>
             </div>
-          </div>
+
+            {/* Right Column: Sidebar (Seasons, Episodes, Servers) */}
+            <div className="order-1 lg:order-1 space-y-6">
+                {/* Episodes Selector (TV Only) */}
+                {type === 'tv' && (
+                    <EpisodeSelector 
+                        season={season}
+                        episode={episode}
+                        setSeason={setSeason}
+                        setEpisode={setEpisode}
+                        seasonsCount={details?.seasons?.length}
+                        episodesCount={details?.seasons?.find(s => s.season_number === season)?.episode_count}
+                    />
+                )}
+
+                {/* Server Selector */}
+                <div className="bg-black/40 border border-white/5 rounded-2xl p-4 backdrop-blur-sm">
+                    <ServerSelector 
+                        servers={servers}
+                        active={active}
+                        onSelect={setActive}
+                    />
+                </div>
+            </div>
+
         </section>
 
         <section id="downloads" className="space-y-3">

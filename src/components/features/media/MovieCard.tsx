@@ -1,9 +1,14 @@
 import { motion } from 'framer-motion'
 import { Play, Star, Plus, Check } from 'lucide-react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
+import { PrefetchLink } from '../../common/PrefetchLink'
 import { useState, type MouseEvent } from 'react'
 import { useAuth } from '../../../hooks/useAuth'
 import { addToWatchlist, isInWatchlist, removeFromWatchlist } from '../../../lib/supabase'
+import { getGenreName } from '../../../lib/genres'
+import { generateWatchPath } from '../../../lib/utils'
+import { useLang } from '../../../state/useLang'
+import { useDualTitles } from '../../../hooks/useDualTitles'
 
 type Movie = {
   id: number
@@ -16,6 +21,8 @@ type Movie = {
   vote_average?: number
   overview?: string
   media_type?: 'movie' | 'tv'
+  genre_ids?: number[]
+  original_language?: string
 }
 
 const IMG = (path?: string | null, size = 'w342') =>
@@ -26,15 +33,30 @@ export const MovieCard = ({ movie, index = 0 }: { movie: Movie; index?: number }
   const [listBusy, setListBusy] = useState(false)
   const [inList, setInList] = useState(false)
   const { user } = useAuth()
+  const { lang } = useLang()
+  const titles = useDualTitles(movie)
   const navigate = useNavigate()
   const title = movie.title || movie.name || 'Untitled'
   const date = movie.release_date || movie.first_air_date || ''
   const year = date ? new Date(date).getFullYear() : ''
   const isTv = movie.media_type === 'tv' || (!!movie.name && !movie.title)
-  const href = isTv ? `/series/${movie.id}` : `/movie/${movie.id}`
-  const watchUrl = isTv ? `/watch/tv/${movie.id}?season=1&episode=1` : `/watch/movie/${movie.id}`
+  const watchUrl = generateWatchPath({ ...movie, media_type: isTv ? 'tv' : 'movie' })
+  const href = watchUrl
   const contentType = isTv ? 'tv' : 'movie'
   const rating = typeof movie.vote_average === 'number' ? Math.round(movie.vote_average * 10) / 10 : null
+  
+  const genre = getGenreName(movie.genre_ids?.[0], lang)
+  const currentYear = new Date().getFullYear()
+  const isCurrentYear = year === currentYear
+  
+  // Truncate overview to max 15 words
+  const getShortOverview = (text?: string) => {
+    if (!text) return ''
+    const words = text.split(' ')
+    if (words.length <= 15) return text
+    return words.slice(0, 15).join(' ') + '...'
+  }
+  const shortOverview = getShortOverview(movie.overview)
 
   const toggleList = async (e: MouseEvent<HTMLButtonElement>) => {
     e.preventDefault()
@@ -66,93 +88,117 @@ export const MovieCard = ({ movie, index = 0 }: { movie: Movie; index?: number }
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 16 }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-50px" }}
-      transition={{ duration: 0.4, delay: index * 0.05, ease: "easeOut" }}
+      viewport={{ once: true, margin: '-40px' }}
+      transition={{ duration: 0.35, delay: index * 0.04, ease: [0.22, 1, 0.36, 1] }}
       className="relative z-0 group/card"
     >
-      <Link
+      <PrefetchLink
         to={href}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        className="block relative h-full w-full"
+        className="block relative h-full w-full lumen-focus-ring rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-lumen-gold focus-visible:outline-offset-2"
       >
-        <div className="relative overflow-hidden rounded-2xl bg-white/5 backdrop-blur-md border border-white/10 transition-transform duration-300 hover:scale-105 hover:shadow-[0_0_30px_rgba(124,58,237,0.5)] h-full flex flex-col">
-          {/* Poster Image */}
-          <div className="relative aspect-[2/3] w-full overflow-hidden bg-zinc-900">
+        <div className="lumen-card h-full flex flex-col transition-transform duration-300 ease-lumen hover:scale-[1.03] focus-within:scale-[1.02]">
+          {/* Poster */}
+          <div className="relative aspect-[2/3] w-full overflow-hidden bg-lumen-muted">
             {movie.poster_path ? (
               <img
                 src={IMG(movie.poster_path)}
                 alt={title}
-                className={`h-full w-full object-cover transition-transform duration-700 will-change-transform ${isHovered ? 'scale-110 blur-[2px] brightness-50' : 'scale-100'}`}
+                className={`h-full w-full object-cover transition-all duration-500 ease-lumen ${isHovered ? 'scale-105 brightness-75' : 'scale-100'}`}
                 loading="lazy"
                 decoding="async"
               />
             ) : (
-              <div className="flex h-full w-full items-center justify-center bg-zinc-800 text-zinc-600">
-                <Play size={40} className="opacity-20" />
+              <div className="flex h-full w-full items-center justify-center bg-lumen-muted text-lumen-silver">
+                <Play size={40} className="opacity-30" />
               </div>
             )}
 
-            {/* Rating Tag */}
-            {rating != null && (
-              <div className="absolute top-2.5 right-2.5 z-10 flex items-center gap-1 rounded-lg bg-black/60 backdrop-blur-md border border-white/10 px-2 py-1 text-[10px] font-bold text-yellow-400 shadow-lg">
-                <Star size={10} fill="currentColor" />
-                {rating}
-              </div>
-            )}
+            {/* LUMEN grain overlay (subtle) */}
+            <div className="lumen-grain rounded-2xl" aria-hidden />
 
-            {/* Hover Content Overlay */}
-            <div className={`absolute inset-0 z-20 flex flex-col justify-center items-center p-4 transition-all duration-300 ${isHovered ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-              
-              <div className="flex items-center gap-3 transform translate-y-4 group-hover/card:translate-y-0 transition-transform duration-300">
-                <motion.button 
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="rounded-full bg-primary text-white shadow-[0_0_20px_rgba(225,29,72,0.6)] h-12 w-12 flex items-center justify-center hover:brightness-110"
+            {/* Rating - Moved to bottom */}
+
+            {/* Hover overlay — actions */}
+            <div
+              className={`absolute inset-0 z-20 flex flex-col justify-center items-center p-4 transition-all duration-300 ease-lumen ${isHovered ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+            >
+              <div className="flex items-center gap-3 transform translate-y-3 group-hover/card:translate-y-0 transition-transform duration-300 ease-lumen">
+                <motion.button
                   type="button"
                   onClick={onWatch}
-                  aria-label="watch"
+                  aria-label="play"
+                  className="rounded-full bg-lumen-gold text-lumen-void h-12 w-12 flex items-center justify-center hover:brightness-110 shadow-lumen-glow transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lumen-cream"
+                  whileHover={{ scale: 1.08 }}
+                  whileTap={{ scale: 0.96 }}
                 >
                   <Play size={20} fill="currentColor" className="ml-0.5" />
                 </motion.button>
-                
                 <motion.button
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="rounded-full bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-md h-10 w-10 flex items-center justify-center"
+                  type="button"
                   onClick={toggleList}
                   disabled={listBusy}
-                  type="button"
-                  aria-label="my-list"
+                  aria-label="add to list"
+                  className="rounded-full bg-lumen-surface/90 border border-lumen-muted backdrop-blur-md h-10 w-10 flex items-center justify-center text-lumen-cream hover:border-lumen-gold/50 hover:bg-lumen-gold/10 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lumen-gold"
+                  whileHover={{ scale: 1.08 }}
+                  whileTap={{ scale: 0.96 }}
                 >
-                  {inList ? <Check size={16} className="text-primary" /> : <Plus size={16} className="text-white" />}
+                  {inList ? <Check size={16} className="text-lumen-gold" /> : <Plus size={16} />}
                 </motion.button>
               </div>
-
-              <div className="absolute bottom-0 left-0 right-0 p-4 transform translate-y-full group-hover/card:translate-y-0 transition-transform duration-300">
-                 <p className="text-[10px] text-zinc-300 line-clamp-2 leading-relaxed text-center font-medium drop-shadow-md">
-                  {movie.overview || "No description available."}
-                </p>
-              </div>
+              <p className="absolute bottom-3 left-3 right-3 text-[10px] text-lumen-silver line-clamp-2 leading-relaxed text-center opacity-0 group-hover/card:opacity-100 transform translate-y-2 group-hover/card:translate-y-0 transition-all duration-300">
+                {shortOverview}
+              </p>
             </div>
           </div>
 
-          {/* Title and Info */}
-          <div className="p-3 flex-1 flex flex-col justify-between bg-gradient-to-b from-transparent to-black/20">
-            <h3 className="line-clamp-1 text-sm font-bold text-zinc-100 group-hover/card:text-primary transition-colors">
-              {title}
+          {/* Title & meta */}
+          <div className="p-3 flex-1 flex flex-col justify-end bg-gradient-to-b from-transparent to-lumen-void/60">
+            <h3 className="line-clamp-1 text-sm font-semibold text-lumen-cream group-hover/card:text-lumen-gold transition-colors duration-200">
+              {titles.main}
             </h3>
-            <div className="mt-2 flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-zinc-500">
-              <span>{year}</span>
-              <span className={`px-1.5 py-0.5 rounded border ${isTv ? 'border-purple-500/20 text-purple-400' : 'border-blue-500/20 text-blue-400'} bg-white/5`}>
-                {isTv ? 'Series' : 'Movie'}
-              </span>
+            {titles.sub && (
+               <p className="line-clamp-1 text-xs text-lumen-gold/80 font-arabic mt-0.5">
+                 {titles.sub}
+               </p>
+            )}
+            <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[10px] font-medium uppercase tracking-wider text-lumen-silver">
+               {/* Rating */}
+               {rating != null && (
+                 <span className="flex items-center gap-0.5 text-lumen-gold">
+                   <Star size={10} fill="currentColor" />
+                   {rating}
+                 </span>
+               )}
+               
+               {/* Genre */}
+               {genre && (
+                 <>
+                   <span className="w-0.5 h-0.5 rounded-full bg-lumen-silver/50" />
+                   <span className="truncate max-w-[80px]">{genre}</span>
+                 </>
+               )}
+
+               {/* Year */}
+               {year && (
+                 <>
+                   <span className="w-0.5 h-0.5 rounded-full bg-lumen-silver/50" />
+                   <span className={isCurrentYear ? 'text-cyan-400 animate-neon-flash font-bold drop-shadow-[0_0_5px_rgba(34,211,238,0.8)]' : ''}>
+                     {year}
+                   </span>
+                 </>
+               )}
+
+               {/* Type */}
+               <span className="w-0.5 h-0.5 rounded-full bg-lumen-silver/50" />
+               <span>{isTv ? (lang === 'ar' ? 'مسلسل' : 'Series') : (lang === 'ar' ? 'فيلم' : 'Movie')}</span>
             </div>
           </div>
         </div>
-      </Link>
+      </PrefetchLink>
     </motion.div>
   )
 }

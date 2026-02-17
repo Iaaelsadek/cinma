@@ -5,8 +5,8 @@ export const Terms = () => {
   const { lang } = useLang()
   const title = lang === 'ar' ? 'الشروط والأحكام' : 'Terms & Conditions'
   const description = lang === 'ar'
-    ? 'الشروط التي تنظّم استخدام منصة سينما أونلاين ومحتواها.'
-    : 'The terms that govern your use of Cinema Online and its content.'
+    ? 'الشروط التي تنظّم استخدام منصة أونلاين سينما ومحتواها.'
+    : 'The terms that govern your use of Online Cinema and its content.'
 
   return (
     <div className="min-h-screen bg-luxury-obsidian px-4 lg:px-12 py-12 text-white">

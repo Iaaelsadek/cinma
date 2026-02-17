@@ -5,8 +5,8 @@ export const Privacy = () => {
   const { lang } = useLang()
   const title = lang === 'ar' ? 'سياسة الخصوصية' : 'Privacy Policy'
   const description = lang === 'ar'
-    ? 'كيف نجمع البيانات ونحميها داخل منصة سينما أونلاين.'
-    : 'How we collect and protect data on Cinema Online.'
+    ? 'كيف نجمع البيانات ونحميها داخل منصة أونلاين سينما.'
+    : 'How we collect and protect data on Online Cinema.'
 
   return (
     <div className="min-h-screen bg-luxury-obsidian px-4 lg:px-12 py-12 text-white">

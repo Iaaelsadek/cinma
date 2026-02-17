@@ -14,7 +14,7 @@ export const ShareButton = ({ title, url, text, className = '', size = 'md' }: S
   const [copied, setCopied] = useState(false)
 
   const shareUrl = url || (typeof window !== 'undefined' ? window.location.href : '')
-  const shareText = text || `${title} - شاهد على سينما أونلاين`
+  const shareText = text || `${title} - شاهد على أونلاين سينما`
 
   const handleShare = async () => {
     if (navigator.share) {

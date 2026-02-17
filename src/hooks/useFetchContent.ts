@@ -20,17 +20,24 @@ type UseCategoryOptions = {
   orderBy?: 'created_at' | 'views' | 'year'
   ascending?: boolean
   enabled?: boolean
+  year?: number
 }
 
 export function useCategoryVideos(category: string, options: UseCategoryOptions = {}) {
-  const { limit = 20, orderBy = 'created_at', ascending = false, enabled = true } = options
+  const { limit = 20, orderBy = 'created_at', ascending = false, enabled = true, year } = options
   return useQuery({
-    queryKey: ['videos', category, limit, orderBy, ascending],
+    queryKey: ['videos', category, limit, orderBy, ascending, year],
     queryFn: async () => {
-      const { data } = await supabase
+      let query = supabase
         .from('videos')
         .select('*')
         .eq('category', category)
+      
+      if (year) {
+        query = query.eq('year', year)
+      }
+
+      const { data } = await query
         .order(orderBy, { ascending })
         .limit(limit)
       return (data || []) as VideoItem[]

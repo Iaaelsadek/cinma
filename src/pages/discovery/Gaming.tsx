@@ -55,7 +55,7 @@ export const Gaming = () => {
   const heroItems = topRated.slice(0, 5)
 
   return (
-    <div className="min-h-screen bg-black text-white pb-24">
+    <div className="min-h-screen text-white pb-24 max-w-[2400px] mx-auto px-4 md:px-12 w-full">
       <Helmet>
         <title>{lang === 'ar' ? 'الألعاب - سينما أونلاين' : 'Gaming - Cinema Online'}</title>
       </Helmet>
@@ -63,7 +63,7 @@ export const Gaming = () => {
       {/* Hero Section */}
       <QuantumHero items={heroItems} />
 
-      <div className="space-y-8 -mt-20 relative z-10">
+      <div className="space-y-8 -mt-20 relative z-10 px-4 md:px-0">
         <QuantumTrain 
           items={topRated} 
           title={lang === 'ar' ? 'أعلى الألعاب تقييماً' : 'Top Rated Games'} 

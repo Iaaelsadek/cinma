@@ -8,6 +8,7 @@ const AdminLayout = () => {
         <nav className="grid gap-2 text-sm">
           <NavLink to="/admin" end className={({ isActive }) => isActive ? 'text-primary' : 'text-zinc-300 hover:text-white'}>Dashboard</NavLink>
           <NavLink to="/admin/users" className={({ isActive }) => isActive ? 'text-primary' : 'text-zinc-300 hover:text-white'}>المستخدمون</NavLink>
+          <NavLink to="/admin/add-movie" className={({ isActive }) => isActive ? 'text-primary' : 'text-zinc-300 hover:text-white'}>إضافة فيلم</NavLink>
           <NavLink to="/admin/series" className={({ isActive }) => isActive ? 'text-primary' : 'text-zinc-300 hover:text-white'}>المحتوى (مسلسلات)</NavLink>
           <NavLink to="/admin/ads" className={({ isActive }) => isActive ? 'text-primary' : 'text-zinc-300 hover:text-white'}>الإعلانات</NavLink>
           <NavLink to="/admin/settings" className={({ isActive }) => isActive ? 'text-primary' : 'text-zinc-300 hover:text-white'}>الإعدادات</NavLink>

@@ -52,7 +52,7 @@ export const MoviesPage = () => {
   const heroItems = trending.data?.slice(0, 10) || []
 
   return (
-    <div className="min-h-screen bg-black text-white pb-24">
+    <div className="min-h-screen text-white pb-24 max-w-[2400px] mx-auto px-4 md:px-12 w-full">
       <Helmet>
         <title>{lang === 'ar' ? 'الأفلام - سينما أونلاين' : 'Movies - Cinema Online'}</title>
       </Helmet>

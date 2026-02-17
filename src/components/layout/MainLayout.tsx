@@ -6,6 +6,7 @@ import { Footer } from './Footer'
 import { useLocation } from 'react-router-dom'
 import { useLang } from '../../state/useLang'
 import { QuranPlayerBar } from '../../context/QuranPlayerContext'
+import { PwaInstallPrompt } from '../common/PwaInstallPrompt'
 
 interface MainLayoutProps {
   children: ReactNode
@@ -16,7 +17,7 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
   const { lang } = useLang()
 
   return (
-    <div className={`min-h-screen font-inter selection:bg-cyan-500 selection:text-black ${lang === 'ar' ? 'font-cairo' : ''}`}>
+    <div className={`min-h-screen font-dm selection:bg-lumen-gold selection:text-lumen-void ${lang === 'ar' ? 'font-cairo' : ''}`}>
       {/* THE LIVING ORGANISM CORE */}
       <AuroraBackground />
 
@@ -29,7 +30,7 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
           animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
           exit={{ opacity: 0, scale: 1.02, filter: 'blur(10px)' }}
           transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-          className="relative z-10 pb-24 pt-0 max-w-[2400px] mx-auto border-x border-white/5 shadow-[0_0_100px_rgba(0,0,0,0.5)] min-h-screen bg-black/40 backdrop-blur-sm"
+          className="relative z-10 pb-24 pt-0 w-[96%] md:w-[95%] xl:w-[90%] max-w-[1920px] mx-auto border-x border-lumen-muted/50 min-h-screen bg-lumen-void/60 backdrop-blur-sm transition-all duration-300 overflow-x-hidden"
         >
           {children}
         </motion.main>
@@ -37,6 +38,7 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
 
       <Footer />
       <QuranPlayerBar />
+      <PwaInstallPrompt />
     </div>
   )
 }
