@@ -103,7 +103,13 @@ export const HeroSlider = ({ items }: Props) => {
                 }}
               >
                 {src ? (
-                  <img src={src} alt={item.title || item.name} className="h-full w-full object-cover opacity-60" />
+                  <img 
+                    src={src} 
+                    alt={item.title || item.name} 
+                    className="h-full w-full object-cover opacity-60"
+                    loading={i === 0 ? "eager" : "lazy"}
+                    fetchpriority={i === 0 ? "high" : "low"}
+                  />
                 ) : (
                   <div className="h-full w-full bg-zinc-900" />
                 )}

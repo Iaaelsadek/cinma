@@ -6,9 +6,10 @@ export const SkeletonVideoCard = memo(() => {
       <div className="aspect-video w-full overflow-hidden rounded-b-xl bg-zinc-900">
         <div className="h-full w-full animate-pulse bg-gradient-to-r from-zinc-800 via-zinc-700/60 to-zinc-800" />
       </div>
-      <div className="p-2">
-        <div className="h-4 w-2/3 animate-pulse rounded bg-zinc-800" />
-        <div className="mt-2 h-3 w-1/3 animate-pulse rounded bg-zinc-800" />
+      <div className="p-3 min-h-[64px]">
+        <div className="h-4 w-2/3 animate-pulse rounded bg-zinc-800 mb-2" />
+        <div className="h-3 w-1/2 animate-pulse rounded bg-zinc-800 mb-2" />
+        <div className="h-2 w-1/4 animate-pulse rounded bg-zinc-800" />
       </div>
     </div>
   )
@@ -20,8 +21,10 @@ export const SkeletonPosterCard = memo(() => {
       <div className="aspect-[2/3] w-full overflow-hidden rounded-b-xl bg-zinc-900">
         <div className="h-full w-full animate-pulse bg-gradient-to-r from-zinc-800 via-zinc-700/60 to-zinc-800" />
       </div>
-      <div className="p-2">
-        <div className="h-4 w-3/4 animate-pulse rounded bg-zinc-800" />
+      <div className="p-3 flex flex-col justify-end min-h-[80px]">
+        <div className="h-4 w-3/4 animate-pulse rounded bg-zinc-800 mb-2" />
+        <div className="h-3 w-1/2 animate-pulse rounded bg-zinc-800 mb-2" />
+        <div className="h-2 w-1/3 animate-pulse rounded bg-zinc-800" />
       </div>
     </div>
   )
@@ -29,7 +32,7 @@ export const SkeletonPosterCard = memo(() => {
 
 export const SkeletonHero = memo(() => {
   return (
-    <div className="relative h-[85vh] w-full overflow-hidden bg-zinc-900">
+    <div className="relative h-[45vh] md:h-[50vh] w-full overflow-hidden bg-zinc-900">
       <div className="absolute inset-0 animate-pulse bg-gradient-to-r from-zinc-900 via-zinc-800 to-zinc-900" />
       <div className="absolute bottom-0 left-0 p-8 w-full md:w-1/2 space-y-4">
         <div className="h-12 w-3/4 animate-pulse rounded-lg bg-zinc-800" />
