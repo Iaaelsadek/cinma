@@ -490,7 +490,7 @@ export const Watch = () => {
                     </div>
                 )}
 
-                <div className="flex justify-center mt-4">
+                <div className="flex flex-col items-center gap-3 mt-4">
                     <div className="flex items-center gap-3 rounded-full border border-red-500/20 bg-red-500/10 px-6 py-2">
                     <span className="relative flex h-3 w-3">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
@@ -500,6 +500,15 @@ export const Watch = () => {
                         Server Error? Try Server 2 (مشكلة في التشغيل؟ جرب سيرفر آخر)
                     </span>
                     </div>
+
+                    <a 
+                        href={`https://www.google.com/search?q=${encodeURIComponent(title + ' مشاهدة اونلاين')}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-xs font-bold text-zinc-400 hover:text-white transition-colors border-b border-zinc-600 hover:border-white pb-0.5"
+                    >
+                        بحث في Google (Search on Google)
+                    </a>
                 </div>
             </div>
 

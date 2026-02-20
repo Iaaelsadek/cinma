@@ -37,7 +37,7 @@ export const ServerSelector = ({ servers, active, onSelect }: Props) => {
                 <div className="flex items-center gap-1 mt-0.5">
                   <div className={`h-1 w-1 rounded-full ${isOnline ? 'bg-emerald-400 shadow-[0_0_4px_#34d399]' : 'bg-zinc-600'}`} />
                   <span className={`text-[8px] uppercase tracking-wider ${isOnline ? 'text-emerald-400' : 'text-zinc-600'}`}>
-                    {isOnline ? `${s.responseTime}ms` : 'Checking'}
+                    {isOnline ? 'Online' : 'Checking'}
                   </span>
                 </div>
               </div>
