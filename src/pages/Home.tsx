@@ -65,6 +65,57 @@ export const Home = () => {
   const { data: recommendations, isLoading: recommendationsLoading } = useRecommendations()
 
   // --- DATA FETCHING (Optimized & Parallelized) ---
+  // 1. DIVERSE HERO CONTENT
+  const diverseHero = useQuery<{ results: TmdbMedia[] }>({
+    queryKey: ['diverse-hero-content'],
+    queryFn: async () => {
+      const endpoints = [
+        { type: 'movie', lang: 'en' }, // Foreign Movie
+        { type: 'movie', lang: 'ar' }, // Arabic Movie
+        { type: 'tv', lang: 'ar' },    // Arabic Series
+        { type: 'tv', lang: 'en' },    // Foreign Series
+        { type: 'movie', lang: 'ko' }, // Korean Movie
+        { type: 'tv', lang: 'ko' },    // Korean Series
+        { type: 'tv', lang: 'zh' },    // Chinese Series
+        { type: 'tv', lang: 'tr' },    // Turkish Series
+      ] as const
+
+      const promises = endpoints.map(ep => 
+        tmdb.get(`/discover/${ep.type}`, { 
+          params: { 
+            with_original_language: ep.lang,
+            sort_by: 'popularity.desc',
+            page: 1
+          }
+        }).then(res => {
+          const item = res.data.results[0]
+          return item ? { ...item, media_type: ep.type } : null
+        })
+      )
+
+      const results = await Promise.all(promises)
+      return { results: results.filter((i): i is TmdbMedia => !!i) }
+    },
+    staleTime: 300000
+  })
+
+  // 2. CHINESE DRAMAS
+  const chineseSeries = useQuery<{ results: TmdbMedia[] }>({
+    queryKey: ['home', 'chinese-series'],
+    queryFn: async () => {
+      const { data } = await tmdb.get('/discover/tv', { 
+        params: { 
+          with_original_language: 'zh', 
+          sort_by: 'popularity.desc', 
+          page: 1 
+        } 
+      })
+      return { results: data.results.map((i: any) => ({ ...i, media_type: 'tv' })) }
+    },
+    enabled: !!CONFIG.TMDB_API_KEY,
+    staleTime: 300000
+  })
+
   const popularMovies = useQuery<{ results: TmdbMedia[] }>({
     queryKey: ['popular-train'],
     queryFn: async () => {
@@ -101,9 +152,8 @@ export const Home = () => {
   })
 
   const heroItems = useMemo(() => {
-    const source = trendingMovies.data?.results || popularMovies.data?.results || []
-    return source.slice(0, 8)
-  }, [trendingMovies.data, popularMovies.data])
+    return diverseHero.data?.results || []
+  }, [diverseHero.data])
 
   // Other Content
   const classics = useClassicVideos({ limit: 20 })
@@ -278,6 +328,23 @@ export const Home = () => {
               title={lang === 'ar' ? 'مسلسلات عربية ورمضانية' : 'Arabic & Ramadan Series'} 
               icon={<Tv />} 
               link="/ramadan" 
+            />
+          )}
+        </section>
+
+        {/* Section: Chinese Dramas */}
+        <section>
+          {chineseSeries.isLoading ? (
+            <>
+              <SectionHeader title={lang === 'ar' ? 'مسلسلات صينية (C-Dramas)' : 'Chinese Dramas'} icon={<Tv />} link="/chinese" />
+              <SkeletonGrid count={6} variant="poster" />
+            </>
+          ) : (
+            <QuantumTrain 
+              items={chineseSeries.data?.results || []} 
+              title={lang === 'ar' ? 'مسلسلات صينية (C-Dramas)' : 'Chinese Dramas'} 
+              icon={<Tv />} 
+              link="/chinese" 
             />
           )}
         </section>
