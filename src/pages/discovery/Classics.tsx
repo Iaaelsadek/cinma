@@ -54,15 +54,14 @@ export const ClassicsPage = () => {
   const heroItems = ytClassicsMapped.length > 0 ? ytClassicsMapped.slice(0, 10) : (goldenAge.data?.slice(0, 10) || [])
 
   return (
-    <div className="min-h-screen bg-black text-white pb-24">
+    <div className="min-h-screen bg-black text-white pb-4">
       <Helmet>
         <title>{lang === 'ar' ? 'كلاسيكيات - سينما أونلاين' : 'Classics - Cinema Online'}</title>
       </Helmet>
 
-      {/* Hero Section */}
       <QuantumHero items={heroItems} />
 
-      <div className="space-y-8 -mt-20 relative z-10">
+      <div className="space-y-2 pt-4 relative z-10">
         {ytClassicsMapped.length > 0 && (
           <QuantumTrain 
             items={ytClassicsMapped} 

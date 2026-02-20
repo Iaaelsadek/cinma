@@ -5,10 +5,11 @@ import { useLang } from '../../state/useLang'
 import { useCategoryVideos, useClassicVideos } from '../../hooks/useFetchContent'
 import { SkeletonGrid } from '../../components/common/Skeletons'
 import { VideoCard } from '../../components/features/media/VideoCard'
+import { MovieCard, type Movie } from '../../components/features/media/MovieCard'
 import { supabase } from '../../lib/supabase'
 import { Helmet } from 'react-helmet-async'
-import { BookOpen, Heart, Shield, Smile, Sparkles, Sun } from 'lucide-react'
-import { useQuranPlayer } from '../../context/QuranPlayerContext'
+import { BookOpen, Heart, Shield, Smile, Sparkles, Sun, Play } from 'lucide-react'
+import { SectionHeader } from '../../components/common/SectionHeader'
 import { QuantumHero } from '../../components/features/hero/QuantumHero'
 
 type AnimeRow = { id: number; title: string | null; category: string | null; image_url: string | null }
@@ -17,7 +18,6 @@ type QuranRow = { id: number; name: string | null; category: string | null; imag
 export const CategoryPage = () => {
   const { category } = useParams()
   const { lang } = useLang()
-  const { playTrack } = useQuranPlayer()
   const key = (category || '').toLowerCase()
   const isQuran = key === 'quran'
   const isAnime = key === 'anime'
@@ -120,14 +120,9 @@ export const CategoryPage = () => {
   const description = lang === 'ar'
     ? `استكشف محتوى ${title} بتجربة مشاهدة عربية فاخرة.`
     : `Explore ${title} with a luxury Arabic viewing experience.`
-  const buildUrl = (server: string | null) => {
-    if (!server) return null
-    const safe = server.endsWith('/') ? server : `${server}/`
-    return `${safe}001.mp3`
-  }
 
   return (
-    <div className="min-h-screen bg-luxury-obsidian pb-12">
+    <div className="min-h-screen bg-luxury-obsidian pb-8">
       <Helmet>
         <title>{`${title} | cinma.online`}</title>
         <meta name="description" content={description} />
@@ -136,22 +131,21 @@ export const CategoryPage = () => {
         <link rel="canonical" href={canonicalUrl} />
       </Helmet>
 
-      {/* Hero Section */}
       <QuantumHero items={heroItems as any[]} />
       
-      <div className="px-4 lg:px-12 -mt-20 relative z-10">
-        <div className="mb-8 flex items-end justify-between">
+      <div className="px-4 lg:px-12 pt-4 relative z-10">
+        <div className="mb-4 flex items-end justify-between">
           <div>
-            <h1 className="text-3xl md:text-4xl font-black tracking-tight text-white">{title}</h1>
+            <h1 className="text-2xl md:text-3xl font-black tracking-tight text-white">{title}</h1>
             <div className="mt-2 h-1 w-16 rounded-full bg-primary" />
           </div>
         </div>
         
         {isKids && (
-          <div className="space-y-12">
+          <div className="space-y-6">
              {/* Replaced old static hero with QuantumHero above, but keeping the chips/features */}
-            <section className="grid gap-8 lg:grid-cols-[1.2fr_1fr] mb-12">
-              <div className="space-y-4">
+            <section className="grid gap-4 lg:grid-cols-[1.2fr_1fr] mb-6">
+              <div className="space-y-3">
                 <h2 className="text-4xl md:text-5xl font-black tracking-tight text-white">
                   {lang === 'ar' ? 'مغامرات عمر وسندس' : 'Omar & Sondos Adventures'}
                 </h2>
@@ -160,20 +154,20 @@ export const CategoryPage = () => {
                     ? 'عالم مليء بالمرح والقيم الإيجابية والقصص الهادفة للأطفال.'
                     : 'A joyful world filled with positive values and meaningful stories for kids.'}
                 </p>
-                <div className="flex flex-wrap gap-3">
+                <div className="flex flex-wrap gap-2">
                   {[
                     { label: lang === 'ar' ? 'آمن للأطفال' : 'Kids Safe', icon: Shield, tone: 'from-emerald-400/20 to-emerald-500/10' },
                     { label: lang === 'ar' ? 'تعليمي' : 'Educational', icon: BookOpen, tone: 'from-sky-400/20 to-sky-500/10' },
                     { label: lang === 'ar' ? 'مرح يومي' : 'Daily Fun', icon: Smile, tone: 'from-pink-400/20 to-pink-500/10' }
                   ].map((chip) => (
-                    <div key={chip.label} className={`flex items-center gap-2 rounded-full border border-white/10 bg-gradient-to-r ${chip.tone} px-4 py-2 text-xs font-bold text-white`}>
+                    <div key={chip.label} className={`flex items-center gap-2 rounded-full border border-white/10 bg-gradient-to-r ${chip.tone} px-3 py-1.5 text-xs font-bold text-white`}>
                       <chip.icon size={14} />
                       {chip.label}
                     </div>
                   ))}
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 {[
                   { label: lang === 'ar' ? 'قصص الأنبياء' : 'Prophets Stories', icon: BookOpen, color: 'from-amber-400/30 to-orange-500/10' },
                   { label: lang === 'ar' ? 'قيم اجتماعية' : 'Social Values', icon: Heart, color: 'from-rose-400/30 to-pink-500/10' },
@@ -182,54 +176,65 @@ export const CategoryPage = () => {
                   { label: lang === 'ar' ? 'أمان رقمي' : 'Digital Safety', icon: Shield, color: 'from-sky-400/30 to-cyan-500/10' },
                   { label: lang === 'ar' ? 'طاقة إيجابية' : 'Positive Energy', icon: Sun, color: 'from-yellow-400/30 to-amber-500/10' }
                 ].map((tile) => (
-                  <div key={tile.label} className={`flex flex-col items-center justify-center gap-3 rounded-2xl border border-white/10 bg-gradient-to-br ${tile.color} p-5 text-center`}>
-                    <tile.icon className="h-10 w-10 text-white" />
-                    <span className="text-sm font-bold text-white">{tile.label}</span>
+                  <div key={tile.label} className={`flex flex-col items-center justify-center gap-2 rounded-xl border border-white/10 bg-gradient-to-br ${tile.color} p-4 text-center`}>
+                    <tile.icon className="h-8 w-8 text-white" />
+                    <span className="text-xs font-bold text-white">{tile.label}</span>
                   </div>
                 ))}
               </div>
           </section>
 
-          <section className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-2xl font-black text-white">{lang === 'ar' ? 'حلقات عمر وسندس' : 'Omar & Sondos Episodes'}</h3>
-              <span className="text-xs font-bold text-zinc-400">{lang === 'ar' ? 'مختارات خاصة للأطفال' : 'Curated for kids'}</span>
-            </div>
+          <section className="space-y-3">
+            <SectionHeader 
+              title={lang === 'ar' ? 'حلقات عمر وسندس' : 'Omar & Sondos Episodes'} 
+              icon={<Play />} 
+              badge={lang === 'ar' ? 'مختارات خاصة للأطفال' : 'Curated for kids'}
+              color="cyan"
+            />
             {query.isPending ? (
               <SkeletonGrid count={8} variant="video" />
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {omarSondos.slice(0, 8).map((video, idx) => (
-                  <VideoCard key={video.id} video={video} index={idx} />
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                {omarSondos.slice(0, 8).map((video: any, idx) => (
+                  <MovieCard 
+                    key={video.id} 
+                    movie={{
+                      ...video,
+                      media_type: 'tv', // Treat as series
+                      poster_path: video.poster_path || video.thumbnail,
+                      vote_average: video.vote_average || 0
+                    }} 
+                    index={idx} 
+                  />
                 ))}
               </div>
             )}
           </section>
 
-          <section className="grid gap-6 lg:grid-cols-2">
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
-              <h4 className="text-lg font-bold text-white">{lang === 'ar' ? 'قصص إسلامية ملهمة' : 'Inspiring Islamic Stories'}</h4>
-              <p className="mt-2 text-sm text-zinc-400">
+          <section className="grid gap-4 lg:grid-cols-2">
+            <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+              <h4 className="text-base font-bold text-white">{lang === 'ar' ? 'قصص إسلامية ملهمة' : 'Inspiring Islamic Stories'}</h4>
+              <p className="mt-1 text-xs text-zinc-400">
                 {lang === 'ar'
                   ? 'رحلة ممتعة مع قصص الأنبياء والقيم الأخلاقية بلغة مبسطة للأطفال.'
                   : 'A delightful journey through prophetic stories and values in kid-friendly language.'}
               </p>
-              <div className="mt-4 flex flex-wrap gap-2">
+              <div className="mt-3 flex flex-wrap gap-2">
                 {[lang === 'ar' ? 'الصبر' : 'Patience', lang === 'ar' ? 'الصدق' : 'Honesty', lang === 'ar' ? 'الإحسان' : 'Kindness'].map((tag) => (
-                  <span key={tag} className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-bold text-white">{tag}</span>
+                  <span key={tag} className="rounded-full border border-white/10 bg-white/10 px-2.5 py-0.5 text-[10px] font-bold text-white">{tag}</span>
                 ))}
               </div>
             </div>
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
-              <h4 className="text-lg font-bold text-white">{lang === 'ar' ? 'قيم اجتماعية إيجابية' : 'Positive Social Values'}</h4>
-              <p className="mt-2 text-sm text-zinc-400">
+            <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+              <h4 className="text-base font-bold text-white">{lang === 'ar' ? 'قيم اجتماعية إيجابية' : 'Positive Social Values'}</h4>
+              <p className="mt-1 text-xs text-zinc-400">
                 {lang === 'ar'
                   ? 'محتوى يشجع على التعاون، احترام الآخرين، وتنمية الذكاء العاطفي.'
                   : 'Content that encourages teamwork, respect, and emotional intelligence.'}
               </p>
-              <div className="mt-4 flex flex-wrap gap-2">
+              <div className="mt-3 flex flex-wrap gap-2">
                 {[lang === 'ar' ? 'التعاون' : 'Teamwork', lang === 'ar' ? 'الاحترام' : 'Respect', lang === 'ar' ? 'التعاطف' : 'Empathy'].map((tag) => (
-                  <span key={tag} className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-bold text-white">{tag}</span>
+                  <span key={tag} className="rounded-full border border-white/10 bg-white/10 px-2.5 py-0.5 text-[10px] font-bold text-white">{tag}</span>
                 ))}
               </div>
             </div>
@@ -243,39 +248,20 @@ export const CategoryPage = () => {
         quranQuery.isPending ? (
           <SkeletonGrid count={12} variant="video" />
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {(quranQuery.data || []).map((r) => (
-              <button
-                key={r.id}
-                onClick={() => {
-                  const url = buildUrl(r.server)
-                  if (!url) return
-                  playTrack({
-                    id: r.id,
-                    title: lang === 'ar' ? 'سورة الفاتحة' : 'Al-Fatiha',
-                    reciter: r.name || (lang === 'ar' ? 'قارئ' : 'Reciter'),
-                    url,
-                    image: r.image
-                  })
-                }}
-                className="group rounded-2xl border border-white/10 bg-white/5 p-4 text-left transition hover:border-primary/40 hover:bg-white/10"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="h-14 w-14 overflow-hidden rounded-2xl bg-black/40">
-                    {r.image ? (
-                      <img src={r.image} alt={r.name || ''} className="h-full w-full object-cover" loading="lazy" />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center text-sm font-bold text-zinc-500">
-                        {(r.name || '—').slice(0, 1)}
-                      </div>
-                    )}
-                  </div>
-                  <div className="min-w-0">
-                    <div className="truncate text-sm font-bold text-white">{r.name || '—'}</div>
-                    <div className="text-xs text-zinc-500">{r.rewaya || r.category || (lang === 'ar' ? 'تلاوات مختارة' : 'Selected Recitations')}</div>
-                  </div>
-                </div>
-              </button>
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
+            {(quranQuery.data || []).map((r, idx) => (
+              <MovieCard 
+                key={r.id} 
+                movie={{
+                  id: r.id,
+                  title: r.name || undefined,
+                  poster_path: r.image,
+                  media_type: 'quran',
+                  category: r.rewaya || r.category || '',
+                  vote_average: 0
+                } as Movie} 
+                index={idx} 
+              />
             ))}
           </div>
         )
@@ -284,29 +270,26 @@ export const CategoryPage = () => {
         animeQuery.isPending ? (
           <SkeletonGrid count={12} variant="video" />
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {(animeQuery.data || []).map((a) => (
-              <div key={a.id} className="group overflow-hidden rounded-2xl border border-white/10 bg-white/5 transition hover:border-primary/40">
-                <div className="aspect-[3/4] w-full bg-zinc-900">
-                  {a.image_url ? (
-                      <img src={a.image_url} alt={a.title || ''} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center text-sm font-bold text-zinc-500">
-                      {(a.title || 'ANIME').slice(0, 6)}
-                    </div>
-                  )}
-                </div>
-                <div className="p-4">
-                  <div className="truncate text-sm font-bold text-white">{a.title || '—'}</div>
-                  <div className="text-xs text-zinc-500">{a.category || (lang === 'ar' ? 'أنمي مختار' : 'Curated Anime')}</div>
-                </div>
-              </div>
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
+            {(animeQuery.data || []).map((a, idx) => (
+              <MovieCard 
+                key={a.id} 
+                movie={{
+                  id: a.id,
+                  title: a.title || undefined,
+                  poster_path: a.image_url,
+                  media_type: 'anime',
+                  category: a.category || '',
+                  vote_average: 0
+                } as Movie} 
+                index={idx} 
+              />
             ))}
           </div>
         )
       )}
       {!isQuran && !isAnime && !isKids && !query.isPending ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-3">
           {items.map((video, idx) => (
             <VideoCard key={video.id} video={video} index={idx} />
           ))}

@@ -1,8 +1,7 @@
 import { useRef } from 'react'
-import { ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Film } from 'lucide-react'
 import { MovieCard } from './MovieCard'
-import { useLang } from '../../../state/useLang'
-import { motion } from 'framer-motion'
+import { SectionHeader } from '../../common/SectionHeader'
 
 type Item = {
   id: number
@@ -21,10 +20,11 @@ type Props = {
   title: string
   movies: Item[]
   isSeries?: boolean
+  icon?: React.ReactNode
+  link?: string
 }
 
-export const MovieRow = ({ title, movies, isSeries }: Props) => {
-  const { lang } = useLang()
+export const MovieRow = ({ title, movies, isSeries, icon, link }: Props) => {
   const ref = useRef<HTMLDivElement>(null)
   
   const onLeft = () => ref.current?.scrollBy({ left: -window.innerWidth * 0.8, behavior: 'smooth' })
@@ -33,33 +33,22 @@ export const MovieRow = ({ title, movies, isSeries }: Props) => {
   if (!movies.length) return null
 
   return (
-    <section className="group relative py-8">
-      <div className="mb-6 flex items-end justify-between px-4 lg:px-12">
-        <div className="space-y-1">
-          <motion.h2 
-            initial={{ opacity: 0, x: -20 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            className="text-2xl font-black tracking-tight text-white md:text-3xl"
-          >
-            {title}
-          </motion.h2>
-          <div className="h-1 w-12 rounded-full bg-primary" />
-        </div>
-        
-        <button className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-zinc-500 transition-colors hover:text-primary group/link">
-          {lang === 'ar' ? 'عرض الكل' : 'View All'}
-          <ArrowRight size={14} className="transition-transform group-hover/link:translate-x-1" />
-        </button>
+    <section className="group relative py-4">
+      <div className="px-4 lg:px-12">
+        <SectionHeader 
+          title={title} 
+          icon={icon || <Film />} 
+          link={link} 
+        />
       </div>
 
       <div className="relative">
         <div
           ref={ref}
-          className="scrollbar-hide no-scrollbar flex snap-x snap-mandatory flex-row flex-nowrap gap-6 overflow-x-auto overflow-y-hidden scroll-smooth px-4 lg:px-12 pb-6"
+          className="scrollbar-hide no-scrollbar flex snap-x snap-mandatory flex-row flex-nowrap gap-3 overflow-x-auto overflow-y-hidden scroll-smooth px-4 lg:px-12 pb-4"
         >
           {movies.map((m, idx) => (
-            <div key={`${m.media_type || 'm'}-${m.id}`} className="snap-start w-[140px] xs:w-[160px] sm:w-[180px] md:w-[220px] xl:w-[240px] 2xl:w-[260px] 3xl:w-[300px] shrink-0">
+            <div key={`${m.media_type || 'm'}-${m.id}`} className="snap-start w-[120px] xs:w-[130px] sm:w-[140px] md:w-[160px] xl:w-[180px] 2xl:w-[200px] 3xl:w-[220px] shrink-0">
               <MovieCard movie={m as any} index={idx} />
             </div>
           ))}

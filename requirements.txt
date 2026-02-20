@@ -1,2 +1,14 @@
-requests==2.31.0
-supabase==2.3.0
+requests
+beautifulsoup4
+pandas
+supabase
+yt-dlp
+python-dotenv
+aiohttp
+schedule
+google-generativeai
+fuzzywuzzy
+python-levenshtein
+websockets>=11,<16
+sqlalchemy
+psycopg2-binary

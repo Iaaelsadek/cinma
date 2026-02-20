@@ -6,11 +6,13 @@ import { useLang } from '../state/useLang'
 export const useDualTitles = (movie: any) => {
   const { lang } = useLang()
   const [titles, setTitles] = useState<{ main: string; sub: string | null }>({
-    main: movie.original_title || movie.original_name || movie.title || movie.name || '',
+    main: movie?.original_title || movie?.original_name || movie?.title || movie?.name || '',
     sub: null
   })
 
   useEffect(() => {
+    if (!movie) return
+
     let isMounted = true
 
     const fetchTitles = async () => {
@@ -56,7 +58,7 @@ export const useDualTitles = (movie: any) => {
     fetchTitles()
 
     return () => { isMounted = false }
-  }, [movie, lang])
+  }, [movie?.id, lang])
 
   return titles
 }

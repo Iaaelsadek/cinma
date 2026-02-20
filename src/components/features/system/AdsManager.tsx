@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { supabase } from '../../lib/supabase'
-import { FLAGS } from '../../lib/constants'
+import { supabase } from '../../../lib/supabase'
+import { FLAGS } from '../../../lib/constants'
+import { errorLogger } from '../../../services/errorLogging'
 
 type AdRow = {
   id: number
@@ -32,20 +33,34 @@ async function fetchAd(type: AdRow['type'], position?: string) {
 async function incImpression(ad: AdRow) {
   try {
     await supabase.rpc?.('increment_ad_impressions', { ad_id: ad.id })
-  } catch {
+  } catch (err) {
     try {
       await supabase.from('ads').update({ impressions: (ad.impressions || 0) + 1 }).eq('id', ad.id)
-    } catch {}
+    } catch (updateErr) {
+      errorLogger.logError({
+        message: 'Failed to increment ad impression',
+        severity: 'low',
+        category: 'ads',
+        context: { adId: ad.id, error: updateErr }
+      })
+    }
   }
 }
 
 async function incClick(ad: AdRow) {
   try {
     await supabase.rpc?.('increment_ad_clicks', { ad_id: ad.id })
-  } catch {
+  } catch (err) {
     try {
       await supabase.from('ads').update({ clicks: (ad.clicks || 0) + 1 }).eq('id', ad.id)
-    } catch {}
+    } catch (updateErr) {
+      errorLogger.logError({
+        message: 'Failed to increment ad click',
+        severity: 'low',
+        category: 'ads',
+        context: { adId: ad.id, error: updateErr }
+      })
+    }
   }
 }
 

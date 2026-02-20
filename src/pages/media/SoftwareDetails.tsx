@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { useParams } from 'react-router-dom'
-import { Star } from 'lucide-react'
+import { Download, Star } from 'lucide-react'
+import { motion } from 'framer-motion'
 import { incrementClicks, supabase } from '../../lib/supabase'
 import { useLang } from '../../state/useLang'
 
@@ -42,96 +43,116 @@ export const SoftwareDetails = () => {
 
   const title = row?.title || (lang === 'ar' ? 'برنامج' : 'Software')
   const rating = typeof row?.rating === 'number' ? row.rating : 0
-  const year = row?.year ?? row?.release_year ?? null
+  const version = row?.version || row?.year || row?.release_year || null
   const platform = row?.category || 'PC'
   const description = row?.description || (lang === 'ar' ? 'لا يوجد وصف متاح' : 'No description available')
   const poster = row?.poster_url || ''
   const backdrop = row?.backdrop_url || row?.poster_url || ''
-
-  const starCount = useMemo(() => {
-    const stars = Math.round((rating / 10) * 5)
-    return Math.max(0, Math.min(5, stars))
-  }, [rating])
+  const downloadUrl = row?.download_url || '#'
 
   return (
-    <div className="min-h-screen bg-[#0f0f0f]">
+    <div className="min-h-screen bg-[#050505] pb-6 text-zinc-100">
       <Helmet>
-        <title>{title} | {lang === 'ar' ? 'البرمجيات' : 'Software'}</title>
-        <meta name="description" content={description.slice(0, 160)} />
-        <meta property="og:title" content={title} />
-        <meta property="og:description" content={description.slice(0, 160)} />
-        <meta property="og:image" content={backdrop || poster || '/og-image.jpg'} />
-        <link rel="canonical" href={typeof window !== 'undefined' ? `${location.origin}${location.pathname}` : ''} />
+        <title>{`${title} | ${lang === 'ar' ? 'برامج' : 'Software'}`}</title>
       </Helmet>
 
-      <div className="relative">
-        {backdrop ? (
-          <>
-            <img
-              src={backdrop}
-              alt={title}
-              className="absolute inset-0 h-[46vh] w-full object-cover object-center opacity-60 blur-2xl scale-105"
-            />
-            <div className="absolute inset-0 h-[46vh] bg-gradient-to-b from-black/50 via-[#0f0f0f]/70 to-[#0f0f0f]" />
-          </>
-        ) : (
-          <div className="absolute inset-0 h-[36vh] bg-[#1a1a1a]" />
+      {/* Hero Background */}
+      <div className="absolute inset-0 h-[30vh] w-full overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#050505]/80 to-[#050505] z-10" />
+        {backdrop && (
+          <motion.img
+            initial={{ scale: 1.1, opacity: 0 }}
+            animate={{ scale: 1, opacity: 0.4 }}
+            transition={{ duration: 1.5 }}
+            src={backdrop}
+            alt="Backdrop"
+            className="h-full w-full object-cover"
+          />
         )}
+      </div>
 
-        <div className="relative z-10 mx-auto max-w-6xl px-4 pt-8 pb-10">
-          {loading ? (
-            <div className="flex flex-col gap-6 md:flex-row">
-              <div className="aspect-[2/3] w-60 animate-pulse rounded-lg bg-zinc-800" />
-              <div className="flex-1 space-y-3">
-                <div className="h-7 w-1/2 animate-pulse rounded bg-zinc-800" />
-                <div className="h-4 w-1/3 animate-pulse rounded bg-zinc-800" />
-                <div className="h-24 w-full animate-pulse rounded bg-zinc-800" />
-              </div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-[1fr_260px]">
-              <div className="order-2 md:order-1">
-                <h1 className="text-3xl md:text-4xl font-black tracking-tight text-white" dir="auto">{title}</h1>
-                <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-zinc-300">
-                  {(row?.version || year) && (
-                    <span className="inline-flex items-center gap-2">
-                      <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-bold uppercase tracking-widest">
-                        {row?.version || year}
-                      </span>
-                    </span>
-                  )}
-                  <span className="inline-flex items-center gap-1 text-yellow-400">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <Star key={i} size={16} className={i < starCount ? 'fill-yellow-400' : 'text-zinc-600'} />
-                    ))}
-                    <span className="ml-1 text-xs font-bold text-yellow-400">{rating.toFixed(1)}/10</span>
+      <div className="relative z-20 px-4 md:px-8 max-w-[2400px] mx-auto">
+        {/* Main Content */}
+        <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-4 pt-4">
+          {/* Poster Column */}
+          <div className="hidden lg:block space-y-3">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="relative aspect-square overflow-hidden rounded-xl border border-white/10 shadow-2xl"
+            >
+              {poster ? (
+                <img src={poster} alt={title} className="h-full w-full object-cover" />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center bg-zinc-900">
+                  <span className="text-zinc-500">No Icon</span>
+                </div>
+              )}
+            </motion.div>
+            
+            <a
+              href={downloadUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full flex items-center justify-center gap-2 rounded-xl bg-sky-600 py-2.5 font-bold text-white hover:bg-sky-500 transition-colors text-sm"
+            >
+              <Download size={18} />
+              {lang === 'ar' ? 'تحميل البرنامج' : 'Download App'}
+            </a>
+          </div>
+
+          {/* Details Column */}
+          <div className="space-y-3">
+            <div className="space-y-2">
+              <motion.h1 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="text-xl md:text-3xl font-black text-white leading-tight"
+              >
+                {title}
+              </motion.h1>
+
+              <div className="flex flex-wrap items-center gap-3 text-sm text-zinc-400">
+                {version && (
+                  <span className="rounded bg-white/10 px-2 py-0.5 text-white">
+                    v{version}
                   </span>
-                  <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-bold uppercase tracking-widest">{platform}</span>
-                </div>
-                <p className="mt-4 max-w-3xl text-zinc-300">{description}</p>
-                <div className="mt-6">
-                  <a
-                    href={row?.download_url || '#'}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={() => {
-                      if (row?.id) incrementClicks('software', row.id).catch(() => undefined)
-                    }}
-                    className="inline-flex h-12 items-center justify-center rounded-xl bg-sky-600 px-8 text-sm font-bold text-white shadow-md hover:brightness-110"
-                  >
-                    {lang === 'ar' ? 'تحميل البرنامج' : 'Download App'}
-                  </a>
-                </div>
-              </div>
-              <div className="order-1 md:order-2">
-                <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-black shadow-2xl">
-                  <div className="aspect-[2/3] w-full bg-[#1a1a1a]">
-                    {poster && <img src={poster} alt={title} className="h-full w-full object-cover" loading="lazy" />}
+                )}
+                {rating > 0 && (
+                  <div className="flex items-center gap-1 text-yellow-500">
+                    <Star size={14} className="fill-current" />
+                    <span className="text-white font-bold">{rating.toFixed(1)}</span>
                   </div>
-                </div>
+                )}
+                <span className="text-sky-400 font-medium">{platform}</span>
               </div>
             </div>
-          )}
+
+            {/* Mobile Actions */}
+            <div className="lg:hidden">
+              <a
+                href={downloadUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full flex items-center justify-center gap-2 rounded-xl bg-sky-600 py-2.5 font-bold text-white hover:bg-sky-500 transition-colors text-sm"
+              >
+                <Download size={18} />
+                {lang === 'ar' ? 'تحميل البرنامج' : 'Download App'}
+              </a>
+            </div>
+
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="prose prose-invert max-w-4xl"
+            >
+              <p className="text-sm md:text-base leading-relaxed text-zinc-300">
+                {description}
+              </p>
+            </motion.div>
+          </div>
         </div>
       </div>
     </div>

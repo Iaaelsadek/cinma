@@ -2,7 +2,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { addHistory, getProgress, supabase, upsertProgress } from '../../lib/supabase'
-import { AdsManager } from '../../components/common/AdsManager'
+import { AdsManager } from '../../components/features/system/AdsManager'
 import { tmdb } from '../../lib/tmdb'
 import { SeoHead } from '../../components/common/SeoHead'
 import { Calendar, Clock, Star } from 'lucide-react'
@@ -11,6 +11,7 @@ import { NotFound } from '../NotFound'
 import { SkeletonGrid } from '../../components/common/Skeletons'
 import { SubtitleManager } from '../../components/features/media/SubtitleManager'
 import { useServers } from '../../hooks/useServers'
+import { errorLogger } from '../../services/errorLogging'
 import { EmbedPlayer } from '../../components/features/media/EmbedPlayer'
 import { ServerSelector } from '../../components/features/media/ServerSelector'
 import { EpisodeSelector } from '../../components/features/media/EpisodeSelector'
@@ -146,7 +147,14 @@ export const Watch = () => {
           const { data: row } = await supabase.from('movies').select('download_urls').eq('id', Number(id)).maybeSingle()
           if (mounted && row?.download_urls) setDownloads(row.download_urls as DownloadLink[])
         }
-      } catch {}
+      } catch (err) {
+        errorLogger.logError({
+          message: 'Failed to fetch download links',
+          severity: 'low',
+          category: 'media',
+          context: { error: err, id, type }
+        })
+      }
       try {
         const path = type === 'movie' ? `/movie/${id}` : `/tv/${id}`
         const { data } = await tmdb.get(path, { params: { append_to_response: 'credits,videos,external_ids' } })
@@ -239,7 +247,14 @@ export const Watch = () => {
             season: type === 'tv' ? season : null,
             episode: type === 'tv' ? episode : null
           })
-        } catch {}
+        } catch (err) {
+          errorLogger.logError({
+            message: 'Failed to save history on unload',
+            severity: 'low',
+            category: 'user_action',
+            context: { error: err, userId: user.id, contentId: id }
+          })
+        }
       }
     }
     window.addEventListener('beforeunload', onUnload)
@@ -342,25 +357,25 @@ export const Watch = () => {
       <div className="relative">
         {backdrop ? (
           <>
-            <img src={backdrop} alt={title} className="absolute inset-0 h-[46vh] w-full object-cover object-center opacity-60" loading="lazy" />
-            <div className="absolute inset-0 h-[46vh] bg-gradient-to-b from-black/40 via-[#0f0f0f]/60 to-[#0f0f0f]" />
+            <img src={backdrop} alt={title} className="absolute inset-0 h-[35vh] w-full object-cover object-center opacity-60" loading="lazy" />
+            <div className="absolute inset-0 h-[35vh] bg-gradient-to-b from-black/40 via-[#0f0f0f]/60 to-[#0f0f0f]" />
           </>
         ) : (
-          <div className="absolute inset-0 h-[36vh] bg-[#1a1a1a]" />
+          <div className="absolute inset-0 h-[25vh] bg-[#1a1a1a]" />
         )}
-        <div className="relative z-10 mx-auto max-w-6xl px-4 pt-32 pb-10">
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-[1fr_260px]">
+        <div className="relative z-10 mx-auto max-w-6xl px-4 pt-20 pb-6">
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-[1fr_240px]">
             <div className="order-2 md:order-1">
-              <h1 className="text-3xl md:text-4xl font-black tracking-tight text-white mt-12" dir="auto">{title}</h1>
-              <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-zinc-300">
+              <h1 className="text-2xl md:text-3xl font-black tracking-tight text-white mt-4" dir="auto">{title}</h1>
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-zinc-300">
                 {year && (
                   <span className="inline-flex items-center gap-1">
-                    <Calendar size={16} className="text-[#f5c518]" /> {year}
+                    <Calendar size={14} className="text-[#f5c518]" /> {year}
                   </span>
                 )}
                 {runtimeMin != null && (
                   <span className="inline-flex items-center gap-1">
-                    <Clock size={16} className="text-[#f5c518]" /> {Math.floor(runtimeMin / 60)}س {runtimeMin % 60}د
+                    <Clock size={14} className="text-[#f5c518]" /> {Math.floor(runtimeMin / 60)}س {runtimeMin % 60}د
                   </span>
                 )}
                 {!!genres.length && (
@@ -370,44 +385,44 @@ export const Watch = () => {
                 )}
                 {rating != null && (
                   <span className="inline-flex items-center gap-1">
-                    <Star size={16} className="text-[#f5c518] fill-[#f5c518]" /> {rating}
+                    <Star size={14} className="text-[#f5c518] fill-[#f5c518]" /> {rating}
                   </span>
                 )}
               </div>
-              <p className="mt-3 max-w-2xl text-zinc-300">{overview}</p>
+              <p className="mt-2 max-w-2xl text-sm text-zinc-300 line-clamp-3">{overview}</p>
               {details?.credits?.crew?.find((c) => c.job === 'Director') && (
-                <div className="mt-2 text-sm text-zinc-400">
+                <div className="mt-1 text-xs text-zinc-400">
                   <span className="text-zinc-500">المخرج: </span>
                   <span className="text-white">{details.credits.crew.find((c) => c.job === 'Director')?.name}</span>
                 </div>
               )}
               {!!cast.length && (
-                <div className="mt-8">
-                  <div className="text-sm font-semibold text-zinc-200 mb-4">طاقم العمل</div>
-                  <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4">
+                <div className="mt-4">
+                  <div className="text-xs font-semibold text-zinc-200 mb-2">طاقم العمل</div>
+                  <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2">
                     {cast.map((p) => {
                       const img = p.profile_path ? `https://image.tmdb.org/t/p/w185${p.profile_path}` : ''
                       return (
                         <div key={p.id} className="flex flex-col items-center text-center group">
-                          <div className="relative h-16 w-16 overflow-hidden rounded-full border border-white/10 bg-zinc-800 transition-transform duration-300 group-hover:scale-110 group-hover:border-primary/50">
+                          <div className="relative h-12 w-12 overflow-hidden rounded-full border border-white/10 bg-zinc-800 transition-transform duration-300 group-hover:scale-110 group-hover:border-primary/50">
                             {img && <img src={img} alt={p.name} className="h-full w-full object-cover" loading="lazy" />}
                           </div>
-                          <div className="mt-2 truncate w-full text-[10px] font-bold text-zinc-200 group-hover:text-primary transition-colors">{p.name}</div>
+                          <div className="mt-1 truncate w-full text-[9px] font-bold text-zinc-200 group-hover:text-primary transition-colors">{p.name}</div>
                         </div>
                       )
                     })}
                   </div>
                 </div>
               )}
-              <div className="mt-6 flex flex-wrap gap-3 items-center">
+              <div className="mt-4 flex flex-wrap gap-2 items-center">
                 <ShareButton title={title} text={overview?.slice(0, 100)} />
-                <a href="#player" className="rounded-xl bg-[#e50914] px-6 h-12 flex items-center justify-center text-white font-bold shadow-md hover:brightness-110">
+                <a href="#player" className="rounded-xl bg-[#e50914] px-5 h-9 flex items-center justify-center text-white text-xs font-bold shadow-md hover:brightness-110">
                   مشاهدة الآن
                 </a>
-                <a href="#downloads" className="rounded-xl bg-emerald-600 px-6 h-12 flex items-center justify-center text-white font-bold shadow-md hover:brightness-110">
+                <a href="#downloads" className="rounded-xl bg-emerald-600 px-5 h-9 flex items-center justify-center text-white text-xs font-bold shadow-md hover:brightness-110">
                   تحميل الآن
                 </a>
-                <Link to={type === 'movie' ? `/movie/${id}` : `/series/${id}`} className="rounded-xl border border-white/10 bg-white/10 px-6 h-12 flex items-center justify-center text-white">
+                <Link to={type === 'movie' ? `/movie/${id}` : `/series/${id}`} className="rounded-xl border border-white/10 bg-white/10 px-5 h-9 flex items-center justify-center text-white text-xs">
                   صفحة التفاصيل
                 </Link>
               </div>
@@ -437,10 +452,10 @@ export const Watch = () => {
         </div>
       </div>
 
-      <div className="mx-auto max-w-7xl px-4 py-8 space-y-8">
+      <div className="mx-auto max-w-7xl px-4 py-6 space-y-6">
         
         {/* NEW LAYOUT: Grid with Side Panel */}
-        <section id="player" className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <section id="player" className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             
             {/* Left Column: Video Player */}
             <div className="order-2 lg:order-2 space-y-6">

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Star } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useQuery, keepPreviousData } from '@tanstack/react-query'
 import InfiniteScroll from 'react-infinite-scroll-component'
@@ -37,12 +38,14 @@ export const Search = () => {
   const types = (sp.get('types') || 'movie').split(',').filter(Boolean)
   const rawGenres = sp.get('genres') || ''
   const keywords = sp.get('keywords') || ''
+  const filterLang = sp.get('lang') || undefined
   const genres = rawGenres.split(',').filter(Boolean).map(Number).filter(n => !isNaN(n))
   const yfrom = Number(sp.get('yfrom') || '') || undefined
   const yto = Number(sp.get('yto') || '') || undefined
   const rfrom = Number(sp.get('rfrom') || '') || undefined
   const rto = Number(sp.get('rto') || '') || undefined
   const rcolor = (sp.get('rcolor') || '').split(',').filter(Boolean) as Array<'green'|'yellow'|'red'>
+  const sort = sp.get('sort') || 'popularity.desc'
   const [page, setPage] = useState(1)
   const [items, setItems] = useState<SearchItem[]>([])
 
@@ -164,10 +167,14 @@ export const Search = () => {
   }, [q, sp.toString()])
   type PageRes = { page: number; results: SearchItem[]; total_pages: number }
   const { data, isLoading, isFetching } = useQuery<PageRes>({
-    queryKey: ['search-adv', q, types.join(','), genres.join(','), yfrom, yto, rfrom, rto, rcolor.join(','), page],
+    queryKey: ['search-adv', q, types.join(','), genres.join(','), yfrom, yto, rfrom, rto, rcolor.join(','), sort, page, filterLang, keywords],
     queryFn: async () => {
+      // If no query but we have text keywords (not IDs), use keywords as search query
+      const isKeywordSearch = !q && keywords && !/^\d+(,\d+)*$/.test(keywords)
+      const searchQuery = q || (isKeywordSearch ? keywords : '')
+      
       const res = await advancedSearch({
-        query: q,
+        query: searchQuery,
         types: (types.length ? types : ['movie']) as any,
         genres,
         yearFrom: yfrom,
@@ -175,11 +182,14 @@ export const Search = () => {
         ratingFrom: rfrom,
         ratingTo: rto,
         rating_color: rcolor,
-        page
+        sort_by: sort,
+        page,
+        with_original_language: filterLang,
+        with_keywords: !isKeywordSearch ? keywords : undefined
       })
       return res as PageRes
     },
-    enabled: !!CONFIG.TMDB_API_KEY && (q.trim().length > 0 || genres.length > 0 || !!yfrom || !!yto || !!rfrom || !!rto || rcolor.length > 0),
+    enabled: !!CONFIG.TMDB_API_KEY && (q.trim().length > 0 || genres.length > 0 || !!yfrom || !!yto || !!rfrom || !!rto || rcolor.length > 0 || !!sort || !!filterLang || !!keywords),
     placeholderData: keepPreviousData
   })
   const gq = useQuery<GenreItem[]>({
@@ -236,67 +246,74 @@ export const Search = () => {
     : 'ابحث عن الأفلام والمسلسلات حسب الاسم والتصنيف والسنة والتقييم على سينما أونلاين'
 
   return (
-    <div className="grid grid-cols-1 gap-6 max-w-[2400px] mx-auto px-4 md:px-12 w-full pt-24">
+    <div className="grid grid-cols-1 gap-2 max-w-[2400px] mx-auto px-4 md:px-12 w-full">
       <SeoHead title={searchTitle} description={searchDesc} />
-      <section className="space-y-4">
-        <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-4">
-          <div className="flex items-center gap-3">
+      <section className="space-y-3 pt-4">
+        <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-3">
+          <div className="flex items-center gap-2">
             <input
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
               placeholder="ابحث..."
-              className="flex-1 h-12 rounded-xl border border-white/10 bg-black/40 px-4 text-sm text-white focus:border-primary outline-none"
+              className="flex-1 h-10 rounded-xl border border-white/10 bg-black/40 px-4 text-sm text-white focus:border-primary outline-none"
             />
             <button
               onClick={() => setShowFilters((s) => !s)}
-              className="h-12 rounded-xl bg-white/10 px-4 text-sm font-bold text-white"
+              className={`h-10 rounded-xl px-4 text-sm font-bold text-white transition-colors ${showFilters ? 'bg-primary text-black' : 'bg-white/10'}`}
             >
               {showFilters ? 'إخفاء المرشحات' : 'إظهار المرشحات'}
             </button>
           </div>
-          {showFilters && (
-            <div className="mt-4 grid gap-4">
-              <div className="flex flex-wrap items-center gap-3">
-                {contentTypes.map((t) => {
-                  const checked = types.includes(t)
-                  return (
-                    <button
-                      key={t}
-                      onClick={() => {
-                        const next = checked ? types.filter(x => x !== t) : Array.from(new Set([...types, t]))
-                        setParam('types', next.join(',') || 'movie')
-                      }}
-                      className={`h-10 rounded-full border px-4 text-xs font-bold uppercase tracking-widest ${checked ? 'bg-white/10 border-white/20 text-white' : 'bg-black/40 border-white/10 text-zinc-400 hover:text-white'}`}
-                    >
-                      {t === 'movie' ? 'فيلم' : 'مسلسل'}
-                    </button>
-                  )
-                })}
+          <AnimatePresence>
+            {showFilters && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="overflow-hidden"
+              >
+                <div className="mt-3 grid gap-3 pt-3 border-t border-white/10">
+                  <div className="flex flex-wrap items-center gap-3">
+                    {contentTypes.map((t) => {
+                      const checked = types.includes(t)
+                      return (
+                        <button
+                          key={t}
+                          onClick={() => {
+                            const next = checked ? types.filter(x => x !== t) : Array.from(new Set([...types, t]))
+                            setParam('types', next.join(',') || 'movie')
+                          }}
+                          className={`h-9 rounded-lg border px-3 text-xs font-bold uppercase tracking-widest transition-all ${checked ? 'bg-primary border-primary text-black' : 'bg-black/40 border-white/10 text-zinc-400 hover:text-white'}`}
+                        >
+                          {t === 'movie' ? 'فيلم' : 'مسلسل'}
+                        </button>
+                      )
+                    })}
 
-                <div className="h-6 w-px bg-white/10" />
+                    <div className="h-6 w-px bg-white/10" />
 
-                <div className="flex items-center gap-1">
-                  {Array.from({ length: 10 }).map((_, i) => {
-                    const active = (rfrom || 0) >= (i + 1)
-                    return (
-                      <button
-                        key={i}
-                        onClick={() => setParam('rfrom', String(i + 1))}
-                        className="h-7 w-7 flex items-center justify-center rounded hover:bg-white/10"
-                        aria-label={`rating-${i + 1}+`}
-                        title={`${i + 1}+`}
-                      >
-                        <Star size={16} className={active ? 'text-yellow-400 fill-yellow-400' : 'text-zinc-500'} />
-                      </button>
-                    )
-                  })}
-                  <span className="ml-2 text-xs text-zinc-400 font-bold uppercase tracking-widest">+{rfrom || 0}</span>
-                </div>
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: 10 }).map((_, i) => {
+                        const active = (rfrom || 0) >= (i + 1)
+                        return (
+                          <button
+                            key={i}
+                            onClick={() => setParam('rfrom', String(i + 1))}
+                            className="h-7 w-7 flex items-center justify-center rounded hover:bg-white/10 transition-colors"
+                            aria-label={`rating-${i + 1}+`}
+                            title={`${i + 1}+`}
+                          >
+                            <Star size={16} className={active ? 'text-yellow-400 fill-yellow-400' : 'text-zinc-600'} />
+                          </button>
+                        )
+                      })}
+                      <span className="ml-2 text-xs text-zinc-400 font-bold uppercase tracking-widest">+{rfrom || 0}</span>
+                    </div>
 
-                <div className="h-6 w-px bg-white/10" />
+                    <div className="h-6 w-px bg-white/10" />
 
-                <select
-                  value={yfrom && yto && yfrom === yto ? yfrom : ''}
+                    <select
+                      value={yfrom && yto && yfrom === yto ? yfrom : ''}
                   onChange={(e) => {
                     const v = e.target.value
                     if (v) {
@@ -334,15 +351,17 @@ export const Search = () => {
                 })}
               </div>
             </div>
+            </motion.div>
           )}
-        </div>
+        </AnimatePresence>
+      </div>
         
-        <h1 className="text-2xl font-bold">نتائج البحث</h1>
+        <h1 className="text-xl font-bold">نتائج البحث</h1>
         
         {supabaseQuery.data && supabaseQuery.data.length > 0 && (
-          <div className="mb-8 space-y-4">
-            <h2 className="text-xl font-semibold text-zinc-300">محتوى حصري</h2>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+          <div className="mb-4 space-y-3">
+            <h2 className="text-lg font-semibold text-zinc-300">محتوى حصري</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
               {supabaseQuery.data.map((v) => (
                 <VideoCard key={v.id} video={v} />
               ))}
@@ -351,70 +370,88 @@ export const Search = () => {
         )}
 
         {gamesQuery.data && gamesQuery.data.length > 0 && (
-          <div className="mb-8 space-y-4">
-            <h2 className="text-xl font-semibold text-zinc-300">الألعاب</h2>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-              {gamesQuery.data.map((g) => (
-                <Link key={g.id} to={`/game/${g.id}`} className="group rounded-2xl border border-white/10 bg-white/5 p-3 backdrop-blur-xl transition hover:border-primary/40">
-                  <div className="aspect-[4/3] overflow-hidden rounded-xl bg-black/30">
-                    {g.poster_url && <img src={g.poster_url} alt={g.title} className="h-full w-full object-cover transition group-hover:scale-[1.03]" />}
-                  </div>
-                  <div className="mt-3 text-sm font-bold text-white line-clamp-1">{g.title}</div>
-                  <div className="mt-1 text-[10px] uppercase tracking-widest text-zinc-500">{g.category || ''}</div>
-                </Link>
+          <div className="mb-4 space-y-3">
+            <h2 className="text-lg font-semibold text-zinc-300">الألعاب</h2>
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
+              {gamesQuery.data.map((g, idx) => (
+                <MovieCard 
+                  key={g.id} 
+                  movie={{
+                    id: g.id,
+                    title: g.title,
+                    poster_path: g.poster_url,
+                    vote_average: g.rating || 0,
+                    media_type: 'game',
+                    category: g.category || ''
+                  }} 
+                  index={idx}
+                />
               ))}
             </div>
           </div>
         )}
 
         {softwareQuery.data && softwareQuery.data.length > 0 && (
-          <div className="mb-8 space-y-4">
-            <h2 className="text-xl font-semibold text-zinc-300">البرمجيات</h2>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-              {softwareQuery.data.map((g) => (
-                <Link key={g.id} to={`/software/${g.id}`} className="group rounded-2xl border border-white/10 bg-white/5 p-3 backdrop-blur-xl transition hover:border-primary/40">
-                  <div className="aspect-[4/3] overflow-hidden rounded-xl bg-black/30">
-                    {g.poster_url && <img src={g.poster_url} alt={g.title} className="h-full w-full object-cover transition group-hover:scale-[1.03]" />}
-                  </div>
-                  <div className="mt-3 text-sm font-bold text-white line-clamp-1">{g.title}</div>
-                  <div className="mt-1 text-[10px] uppercase tracking-widest text-zinc-500">{g.category || ''}</div>
-                </Link>
+          <div className="mb-4 space-y-3">
+            <h2 className="text-lg font-semibold text-zinc-300">البرمجيات</h2>
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
+              {softwareQuery.data.map((g, idx) => (
+                <MovieCard 
+                  key={g.id} 
+                  movie={{
+                    id: g.id,
+                    title: g.title,
+                    poster_path: g.poster_url,
+                    vote_average: g.rating || 0,
+                    media_type: 'software',
+                    category: g.category || ''
+                  }} 
+                  index={idx}
+                />
               ))}
             </div>
           </div>
         )}
 
         {animeQuery.data && animeQuery.data.length > 0 && (
-          <div className="mb-8 space-y-4">
-            <h2 className="text-xl font-semibold text-zinc-300">الأنمي</h2>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-              {animeQuery.data.map((g) => (
-                <div key={g.id} className="rounded-2xl border border-white/10 bg-white/5 p-3 backdrop-blur-xl">
-                  <div className="aspect-[4/3] overflow-hidden rounded-xl bg-black/30">
-                    {g.image_url && <img src={g.image_url} alt={g.title} className="h-full w-full object-cover" />}
-                  </div>
-                  <div className="mt-3 text-sm font-bold text-white line-clamp-1">{g.title}</div>
-                  <div className="mt-1 text-[10px] uppercase tracking-widest text-zinc-500">{g.category || ''}</div>
-                </div>
+          <div className="mb-4 space-y-3">
+            <h2 className="text-lg font-semibold text-zinc-300">الأنمي</h2>
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
+              {animeQuery.data.map((g, idx) => (
+                <MovieCard 
+                  key={g.id} 
+                  movie={{
+                    id: g.id,
+                    title: g.title,
+                    poster_path: g.image_url,
+                    vote_average: g.score || 0,
+                    media_type: 'anime',
+                    category: g.category || ''
+                  }} 
+                  index={idx}
+                />
               ))}
             </div>
           </div>
         )}
 
         {recitersQuery.data && recitersQuery.data.length > 0 && (
-          <div className="mb-8 space-y-4">
-            <h2 className="text-xl font-semibold text-zinc-300">القرّاء</h2>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-              {recitersQuery.data.map((g) => (
-                <div key={g.id} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-3 backdrop-blur-xl">
-                  <div className="h-14 w-14 overflow-hidden rounded-xl bg-black/30">
-                    {g.image && <img src={g.image} alt={g.name} className="h-full w-full object-cover" />}
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-sm font-bold text-white line-clamp-1">{g.name}</div>
-                    <div className="mt-1 text-[10px] uppercase tracking-widest text-zinc-500">{g.rewaya || ''}</div>
-                  </div>
-                </div>
+          <div className="mb-4 space-y-3">
+            <h2 className="text-lg font-semibold text-zinc-300">القرّاء</h2>
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
+              {recitersQuery.data.map((g, idx) => (
+                <MovieCard 
+                  key={g.id} 
+                  movie={{
+                    id: g.id,
+                    title: g.name,
+                    poster_path: g.image,
+                    media_type: 'quran',
+                    category: g.rewaya || '',
+                    vote_average: 0
+                  }} 
+                  index={idx}
+                />
               ))}
             </div>
           </div>
@@ -422,20 +459,20 @@ export const Search = () => {
 
         {isLoading && <SkeletonGrid count={10} variant="poster" />}
         {!isLoading && items.length === 0 && !supabaseQuery.data?.length && !gamesQuery.data?.length && !softwareQuery.data?.length && !animeQuery.data?.length && !recitersQuery.data?.length && (
-          <div className="flex flex-col items-center justify-center py-20 text-center">
+          <div className="flex flex-col items-center justify-center py-12 text-center">
             <div className="mb-4 rounded-full bg-white/5 p-4">
-              <FileQuestion size={48} className="text-zinc-500" />
+              <FileQuestion size={40} className="text-zinc-500" />
             </div>
-            <h3 className="mb-2 text-xl font-bold text-white">
+            <h3 className="mb-2 text-lg font-bold text-white">
               {lang === 'ar' ? 'لم يتم العثور على نتائج' : 'No results found'}
             </h3>
-            <p className="mb-6 max-w-md text-zinc-400">
+            <p className="mb-6 max-w-md text-sm text-zinc-400">
               {lang === 'ar' 
                 ? 'جرب البحث بكلمات مختلفة أو تحقق من الإملاء. إذا لم تجد ما تبحث عنه، يمكنك طلبه.'
                 : 'Try searching with different keywords or check spelling. If you can\'t find it, you can request it.'}
             </p>
             <Link to="/request">
-              <Button variant="primary">
+              <Button variant="primary" size="sm">
                 {lang === 'ar' ? 'طلب محتوى جديد' : 'Request New Content'}
               </Button>
             </Link>
@@ -450,7 +487,7 @@ export const Search = () => {
             loader={<SkeletonGrid count={10} variant="poster" />}
             scrollThreshold={0.8}
           >
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-5">
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
               {items.map((m) => (
                 <MovieCard key={`${m.media_type}-${m.id}`} movie={m} />
               ))}

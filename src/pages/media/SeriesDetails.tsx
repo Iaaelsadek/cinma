@@ -21,8 +21,9 @@ import { addComment, deleteComment, getComments } from '../../lib/supabase'
 import { getProfile } from '../../lib/supabase'
 import { Helmet } from 'react-helmet-async'
 import { motion } from 'framer-motion'
-import { Star } from 'lucide-react'
+import { Star, List, MessageSquare } from 'lucide-react'
 import { ShareButton } from '../../components/common/ShareButton'
+import { SectionHeader } from '../../components/common/SectionHeader'
 import { useLang } from '../../state/useLang'
 import React from 'react'
 import ReactPlayer from 'react-player'
@@ -30,8 +31,13 @@ import { getEmbedUrlByIndex } from '../../services/embedService'
 import { SeoHead } from '../../components/common/SeoHead'
 import { useDualTitles } from '../../hooks/useDualTitles'
 
-const SeriesDetails = () => {
-  const { id } = useParams()
+interface SeriesDetailsProps {
+  id?: string
+}
+
+const SeriesDetails = ({ id: propId }: SeriesDetailsProps = {}) => {
+  const params = useParams()
+  const id = propId || params.id
   const tvId = Number(id)
   const { user } = useAuth()
   const [seasonNumber, setSeasonNumber] = useState<number | null>(null)
@@ -236,7 +242,7 @@ const SeriesDetails = () => {
     }
   }, [vote, remote.data, title, poster, backdrop, overview, cast, genres, id])
   return (
-    <div className="relative space-y-6">
+    <div className="relative space-y-3">
       <SeoHead
         title={`${title} | ${t('مسلسل', 'Series')}`}
         description={overview || ''}
@@ -245,71 +251,64 @@ const SeriesDetails = () => {
         schema={jsonLdSeries}
       />
       {backdrop && (
-        <div className="pointer-events-none fixed inset-0 -z-10">
-          <img src={backdrop} alt={title} className="h-full w-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/60 to-[#0f0f0f]" />
+        <div className="absolute top-0 left-0 right-0 h-[30vh] -z-10 overflow-hidden">
+          <img src={backdrop} alt={title} className="h-full w-full object-cover opacity-50" />
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#050505]/60 to-[#050505]" />
         </div>
       )}
-      <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="grid grid-cols-1 gap-6 md:grid-cols-[260px_1fr_380px]">
+      <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="grid grid-cols-1 gap-2 md:grid-cols-[160px_1fr_240px]">
         {/* Left: Poster & actions */}
-        <div className="space-y-3">
+        <div className="space-y-2 order-2 md:order-1">
           <div className="overflow-hidden rounded-xl border border-white/10 bg-white/5 shadow-2xl backdrop-blur-md">
             <div className="aspect-[2/3] w-full bg-zinc-900/40">
               {poster && <img src={poster} alt={title} className="h-full w-full object-cover" />}
             </div>
           </div>
           {user && (
-            <button onClick={() => toggleHeart.mutate()} className={`w-full rounded-md px-3 py-2 text-sm ${heart ? 'bg-red-600 text-white' : 'bg-white/10 text-white hover:bg-white/20'}`}>
+            <button onClick={() => toggleHeart.mutate()} className={`w-full rounded-md px-3 py-2 text-xs ${heart ? 'bg-red-600 text-white' : 'bg-white/10 text-white hover:bg-white/20'}`}>
               {heart ? 'إزالة من المفضلة' : 'أضف إلى المفضلة'}
             </button>
           )}
         </div>
         {/* Center: Info */}
-        <div className="space-y-4">
-          <div className="rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
-            <nav className="text-xs text-zinc-400">
+        <div className="space-y-2">
+          <div className="rounded-xl border border-white/10 bg-white/5 p-3 backdrop-blur-md">
+            <nav className="text-xs text-zinc-400 mb-2">
               <Link to="/" className="hover:text-white">{t('الرئيسية', 'Home')}</Link>
-              <span className="mx-1 text-lg text-zinc-200">›</span>
+              <span className="mx-1 text-zinc-600">/</span>
               <Link to="/series" className="hover:text-white">{t('مسلسلات', 'Series')}</Link>
-              {year ? (
-                <>
-                  <span className="mx-1 text-lg text-zinc-200">›</span>
-                  <Link to={`/series/year/${year}`} className="hover:text-white">{year}</Link>
-                </>
-              ) : null}
-              <span className="mx-1 text-lg text-zinc-200">›</span>
+              <span className="mx-1 text-zinc-600">/</span>
               <span className="text-white">{title}</span>
             </nav>
-            <div>
-               <h1 className="mt-2 text-2xl font-extrabold tracking-tight">{title}</h1>
-               {arabicTitle && <h2 className="text-lg text-cyan-400 font-arabic opacity-90">{arabicTitle}</h2>}
+            
+            <div className="flex flex-col gap-1">
+               <h1 className="text-2xl font-extrabold tracking-tight text-white">{title}</h1>
+               {arabicTitle && <h2 className="text-lg text-primary font-arabic opacity-90">{arabicTitle}</h2>}
             </div>
-            <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-zinc-300">
-              {year && (
-                <Link to={`/series/year/${year}`} className="rounded-md border border-white/10 bg-white/10 px-2 py-0.5">
-                  {year}
-                </Link>
-              )}
-              <span className="mx-1 opacity-50">•</span>
-              {runtime && <span>{runtime}</span>}
-              <span className="mx-1 opacity-50">•</span>
-              {vote != null && <span className="inline-flex items-center gap-1"><Star className="h-4 w-4 text-yellow-400" /> {vote}</span>}
+            
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-zinc-300">
+              {year && <span className="rounded bg-white/10 px-2 py-0.5">{year}</span>}
+              {runtime && <span className="rounded bg-white/10 px-2 py-0.5">{runtime}</span>}
+              {vote != null && <span className="rounded bg-white/10 px-2 py-0.5 text-yellow-400 font-bold">★ {vote}</span>}
             </div>
+            
             {!!genres.length && (
-              <div className="mt-3 flex flex-wrap gap-2">
+              <div className="mt-2 flex flex-wrap gap-2">
                 {genres.map((g) => (
                   <Link
                     key={g.id}
                     to={`/series/genre/${g.id}`}
-                    className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs text-white/90 hover:bg-white/20"
+                    className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] text-zinc-300 hover:bg-white/10"
                   >
                     {g.name}
                   </Link>
                 ))}
               </div>
             )}
-            <p className="mt-3 text-zinc-200">{overview}</p>
-            <div className="mt-3 no-scrollbar flex gap-2 overflow-x-auto">
+            
+            <p className="mt-3 text-sm leading-relaxed text-zinc-300">{overview}</p>
+            
+            <div className="mt-3 no-scrollbar flex gap-2 overflow-x-auto pb-1">
               {(seasons.data || [])
                 .filter((s: any) => (s.season_number ?? 0) >= 0)
                 .map((s: any) => (
@@ -321,26 +320,26 @@ const SeriesDetails = () => {
                       setSeasonId(found?.id ?? null)
                       setPlayingEpisode(null)
                     }}
-                    className={`rounded-full px-3 py-1 text-sm ${seasonNumber === s.season_number ? 'bg-primary text-white' : 'border border-white/10 bg-white/10 text-white hover:bg-white/20'}`}
+                    className={`rounded-full px-3 py-1 text-xs whitespace-nowrap ${seasonNumber === s.season_number ? 'bg-primary text-white' : 'border border-white/10 bg-white/5 text-zinc-300 hover:bg-white/10'}`}
                   >
                     {t('الموسم', 'S')} {s.season_number}
                   </button>
                 ))}
             </div>
           </div>
+          
           {!!cast.length && (
-            <div className="rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
-              <div className="mb-2 text-sm font-semibold text-zinc-200">{t('طاقم العمل', 'Cast & Crew')}</div>
-              <div className="no-scrollbar flex gap-3 overflow-x-auto">
+            <div className="rounded-xl border border-white/10 bg-white/5 p-3 backdrop-blur-md">
+              <div className="mb-2 text-xs font-semibold text-zinc-400 uppercase tracking-wider">{t('طاقم العمل', 'Cast')}</div>
+              <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1">
                 {cast.map((p) => {
                   const img = p.profile_path ? `https://image.tmdb.org/t/p/w185${p.profile_path}` : ''
                   return (
-                    <div key={p.id} className="w-24 shrink-0 text-center">
-                      <div className="mx-auto h-20 w-20 overflow-hidden rounded-full bg-zinc-800">
+                    <div key={p.id} className="w-16 shrink-0 text-center">
+                      <div className="mx-auto h-16 w-16 overflow-hidden rounded-full bg-zinc-800 border border-white/5">
                         {img && <img src={img} alt={p.name} className="h-full w-full object-cover" />}
                       </div>
-                      <div className="mt-1 truncate text-xs text-white">{p.name}</div>
-                      <div className="truncate text-[10px] text-zinc-400">{p.roles?.[0]?.character || ''}</div>
+                      <div className="mt-1 truncate text-[10px] text-zinc-300">{p.name}</div>
                     </div>
                   )
                 })}
@@ -348,8 +347,9 @@ const SeriesDetails = () => {
             </div>
           )}
         </div>
+        
         {/* Right: Trailer + actions */}
-        <div className="space-y-3">
+        <div className="space-y-2 order-3">
           <div className="overflow-hidden rounded-xl border border-white/10 bg-black/60 p-2 backdrop-blur-md">
             <div className="aspect-video w-full overflow-hidden rounded-md">
               {playingEpisode ? (
@@ -375,16 +375,16 @@ const SeriesDetails = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={() => setServerIndex(0)} className={`rounded-md px-4 h-11 text-xs ${serverIndex === 0 ? 'bg-primary text-white' : 'border border-white/10 bg-white/10 text-white hover:bg-white/20'}`}>vidsrc</button>
-            <button onClick={() => setServerIndex(1)} className={`rounded-md px-4 h-11 text-xs ${serverIndex === 1 ? 'bg-primary text-white' : 'border border-white/10 bg-white/10 text-white hover:bg-white/20'}`}>2embed</button>
-            <button onClick={() => setServerIndex(2)} className={`rounded-md px-4 h-11 text-xs ${serverIndex === 2 ? 'bg-primary text-white' : 'border border-white/10 bg-white/10 text-white hover:bg-white/20'}`}>embed.su</button>
+            <button onClick={() => setServerIndex(0)} className={`rounded-md px-4 h-10 text-xs ${serverIndex === 0 ? 'bg-primary text-white' : 'border border-white/10 bg-white/10 text-white hover:bg-white/20'}`}>vidsrc</button>
+            <button onClick={() => setServerIndex(1)} className={`rounded-md px-4 h-10 text-xs ${serverIndex === 1 ? 'bg-primary text-white' : 'border border-white/10 bg-white/10 text-white hover:bg-white/20'}`}>2embed</button>
+            <button onClick={() => setServerIndex(2)} className={`rounded-md px-4 h-10 text-xs ${serverIndex === 2 ? 'bg-primary text-white' : 'border border-white/10 bg-white/10 text-white hover:bg-white/20'}`}>embed.su</button>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <ShareButton title={title} text={overview?.slice(0, 100)} />
-            <Link to={`/watch/${id}?type=tv&season=${seasonNumber || 1}&episode=${playingEpisode || 1}`} className="flex-1 rounded-md bg-gradient-to-r from-primary to-luxury-purple h-11 flex items-center justify-center text-white font-bold min-w-[120px]">
+            <Link to={`/watch/${id}?type=tv&season=${seasonNumber || 1}&episode=${playingEpisode || 1}`} className="flex-1 rounded-md bg-gradient-to-r from-primary to-luxury-purple h-10 flex items-center justify-center text-white font-bold min-w-[120px]">
               {t('شاهد الآن', 'Watch Now')}
             </Link>
-            <Link to={`/watch/${id}?type=tv&season=${seasonNumber || 1}&episode=1`} className="rounded-md border border-white/10 bg-white/10 px-4 h-11 flex items-center text-white hover:bg-white/20">
+            <Link to={`/watch/${id}?type=tv&season=${seasonNumber || 1}&episode=1`} className="rounded-md border border-white/10 bg-white/10 px-4 h-10 flex items-center text-white hover:bg-white/20">
               {t('تحميل', 'Download')}
             </Link>
           </div>
@@ -393,7 +393,7 @@ const SeriesDetails = () => {
 
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">{t('الحلقات', 'Episodes')}</h2>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
           {(episodes.data || []).map((e: any) => {
             const still = e.still_path ? `https://image.tmdb.org/t/p/w300${e.still_path}` : ''
             return (
@@ -426,8 +426,12 @@ const SeriesDetails = () => {
           ))}
         </div>
       </section>
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold">{t('التعليقات', 'Comments')}</h2>
+      <section className="space-y-2">
+        <SectionHeader 
+          title={t('التعليقات', 'Comments')} 
+          icon={<MessageSquare />} 
+          color="cyan"
+        />
         {user ? (
           <form onSubmit={handleSubmit(onAddComment)} className="grid gap-2">
             <textarea

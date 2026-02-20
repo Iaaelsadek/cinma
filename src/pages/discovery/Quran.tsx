@@ -4,6 +4,7 @@ import { useQuranPlayer } from '../../context/QuranPlayerContext'
 import { Link } from 'react-router-dom'
 import { useLang } from '../../state/useLang'
 import { supabase } from '../../lib/supabase'
+import { errorLogger } from '../../services/errorLogging'
 import { Helmet } from 'react-helmet-async'
 import { Search, BookOpen, User } from 'lucide-react'
 import { QuantumHero } from '../../components/features/hero/QuantumHero'
@@ -35,6 +36,16 @@ export const QuranPage = () => {
         .from('quran_reciters')
         .select('*')
         .eq('is_active', true)
+      
+      if (error) {
+        errorLogger.logError({
+          message: 'Error fetching Quran reciters',
+          severity: 'medium',
+          category: 'database',
+          context: { error }
+        })
+        return []
+      }
         
       const dbItems = (data || []).map((item: any) => ({
         ...item,
@@ -85,17 +96,16 @@ export const QuranPage = () => {
   const heroItems = famous.length > 0 ? famous.slice(0, 5) : (reciters?.slice(0, 5) || [])
 
   return (
-    <div className="min-h-screen bg-black text-white pb-24">
+    <div className="min-h-screen text-white pb-4 max-w-[2400px] mx-auto px-4 md:px-12 w-full">
       <Helmet>
         <title>{lang === 'ar' ? 'القرآن الكريم - سينما أونلاين' : 'Quran - Cinema Online'}</title>
       </Helmet>
 
-      {/* Hero Section */}
       <QuantumHero items={heroItems} />
 
-      <div className="space-y-8 -mt-20 relative z-10">
+      <div className="space-y-2 pt-4 relative z-10">
         <QuantumTrain 
-          items={famous} 
+          items={famous}  
           title={lang === 'ar' ? 'أشهر القراء' : 'Famous Reciters'} 
           link="/search?types=quran&keywords=famous"
         />

@@ -12,11 +12,19 @@ export function useInitAuth() {
 
     const init = async () => {
       try {
-        await refreshProfile()
+        // Force timeout for initial auth check to prevent white screen
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Auth timeout')), 5000)
+        )
+        await Promise.race([refreshProfile(), timeoutPromise])
       } catch (e: any) {
         // Ignore AbortError and other non-critical errors during init
-        if (e?.name !== 'AbortError' && mounted) {
-          console.debug('Auth initialization silent fail:', e)
+        if (mounted) {
+          if (e?.name !== 'AbortError') {
+             console.debug('Auth initialization silent fail:', e)
+          }
+          // Ensure we stop loading state if timeout occurs or any error happens
+          useAuth.getState().setLoading(false)
         }
       }
     }

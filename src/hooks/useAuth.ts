@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { Session, User } from '@supabase/supabase-js'
-import { supabase } from '../integrations/supabase/client'
+import { supabase, getProfile } from '../lib/supabase'
+import { logAuthError } from '../services/errorLogging'
 
 export type Role = 'user' | 'admin'
 export type Profile = { id: string; username: string; avatar_url?: string | null; role: Role }
@@ -10,10 +11,12 @@ type AuthState = {
   user: User | null
   session: Session | null
   loading: boolean
+  error: Error | null
   login: (email: string, password: string) => Promise<void>
   logout: () => Promise<void>
-  refreshProfile: () => Promise<void>
+  refreshProfile: (silent?: boolean) => Promise<void>
   setProfile: (p: Profile | null) => void
+  setLoading: (loading: boolean) => void
   syncLocalData: () => Promise<void>
 }
 
@@ -22,6 +25,8 @@ export const useAuth = create<AuthState>((set, get) => ({
   user: null,
   session: null,
   loading: true,
+  error: null,
+  setLoading: (loading) => set({ loading }),
   async login(email: string, password: string) {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) throw error
@@ -58,40 +63,84 @@ export const useAuth = create<AuthState>((set, get) => ({
         }
       }
     } catch (e) {
-      console.error('Failed to sync local data', e)
+      logAuthError('Failed to sync local data', e)
     }
   },
-  async refreshProfile() {
-    set({ loading: true })
-    const { data: sessionData } = await supabase.auth.getSession()
-    const session = sessionData?.session ?? null
-    const user = session?.user ?? null
-    if (!user) {
-      set({ profile: null, user: null, session: null, loading: false })
-      return
+  async refreshProfile(silent = false) {
+    // Dedupe concurrent refresh requests to prevent race conditions and duplicate toasts
+    if (refreshPromise) {
+      try {
+        await refreshPromise
+        return
+      } catch (e) {
+        // If the ongoing request fails, we let the caller handle it (or it's already handled)
+        throw e
+      }
     }
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('id, username, avatar_url, role')
-      .eq('id', user.id)
-      .maybeSingle()
-    if (error) {
-      set({ loading: false })
-      throw error
-    }
-    if (!data) {
-      const username = user.email?.split('@')[0] || 'user'
-      const { data: inserted } = await supabase
-        .from('profiles')
-        .insert({ id: user.id, username, role: 'user' })
-        .select('id, username, avatar_url, role')
-        .single()
-      set({ profile: inserted as Profile, user, session, loading: false })
-    } else {
-      set({ profile: data as Profile, user, session, loading: false })
+
+    refreshPromise = (async () => {
+      if (!silent) set({ loading: true, error: null })
+      const { data: sessionData } = await supabase.auth.getSession()
+      const session = sessionData?.session ?? null
+      const user = session?.user ?? null
+      
+      // تحديث الحالة فوراً إذا وجدنا مستخدماً، حتى لو فشل جلب البروفايل لاحقاً
+      if (user) {
+        if (!silent) set({ user, session, loading: true, error: null })
+        else set({ user, session })
+      } else {
+        set({ profile: null, user: null, session: null, loading: false, error: null })
+        return
+      }
+  
+      try {
+        // Use getProfile helper which handles RLS errors via admin proxy
+        const data = await getProfile(user.id)
+        
+        if (!data) {
+          // محاولة إنشاء بروفايل جديد
+          const username = user.email?.split('@')[0] || 'user'
+          const { data: inserted, error: insertError } = await supabase
+            .from('profiles')
+            .insert({ id: user.id, username, role: 'user' })
+            .select('id, username, avatar_url, role')
+            .single()
+            
+          if (insertError) {
+            // If profile already exists (race condition), try fetching it again
+            if (insertError.code === '23505') { // unique_violation
+              const retryData = await getProfile(user.id)
+              if (retryData) {
+                set({ profile: retryData as Profile, loading: false, error: null })
+                return
+              }
+            }
+            
+            const err = new Error(insertError.message || 'Failed to create profile');
+            logAuthError('Failed to create profile', insertError, user.id)
+            set({ error: err, loading: false }) // Ensure loading is turned off
+          } else {
+            set({ profile: inserted as Profile, loading: false, error: null })
+          }
+        } else {
+          set({ profile: data as Profile, loading: false, error: null })
+        }
+      } catch (e: any) {
+        const err = e instanceof Error ? e : new Error(e.message || 'Auth refresh error');
+        logAuthError('Auth refresh error', e)
+        set({ loading: false, error: err })
+        throw err // Re-throw so deduping logic knows it failed
+      }
+    })()
+
+    try {
+      await refreshPromise
+    } finally {
+      refreshPromise = null
     }
   },
-  setProfile(p) {
-    set({ profile: p })
-  }
+  setProfile: (p) => set({ profile: p }),
 }))
+
+// Module-level variable to track ongoing refresh request
+let refreshPromise: Promise<void> | null = null

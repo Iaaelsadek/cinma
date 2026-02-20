@@ -1,16 +1,16 @@
 import { useRef, useMemo } from 'react'
-import { ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Play } from 'lucide-react'
 import { VideoCard, VideoItem } from './VideoCard'
-import { useLang } from '../../../state/useLang'
-import { motion } from 'framer-motion'
+import { SectionHeader } from '../../common/SectionHeader'
 
 type Props = {
   title: string
   videos: VideoItem[]
+  icon?: React.ReactNode
+  link?: string
 }
 
-export const VideoRow = ({ title, videos }: Props) => {
-  const { lang } = useLang()
+export const VideoRow = ({ title, videos, icon, link }: Props) => {
   const ref = useRef<HTMLDivElement>(null)
   
   const onLeft = () => ref.current?.scrollBy({ left: -window.innerWidth * 0.8, behavior: 'smooth' })
@@ -20,32 +20,21 @@ export const VideoRow = ({ title, videos }: Props) => {
 
   return (
     <section className="group relative py-8">
-      <div className="mb-6 flex items-end justify-between px-4 lg:px-12">
-        <div className="space-y-1">
-          <motion.h2 
-            initial={{ opacity: 0, x: -20 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            className="text-2xl font-black tracking-tight text-white md:text-3xl"
-          >
-            {title}
-          </motion.h2>
-          <div className="h-1 w-12 rounded-full bg-primary" />
-        </div>
-        
-        <button className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-zinc-500 transition-colors hover:text-primary group/link">
-          {lang === 'ar' ? 'عرض الكل' : 'View All'}
-          <ArrowRight size={14} className="transition-transform group-hover/link:translate-x-1" />
-        </button>
+      <div className="px-4 lg:px-12">
+        <SectionHeader 
+          title={title} 
+          icon={icon || <Play />} 
+          link={link} 
+        />
       </div>
 
       <div className="relative">
         <div
           ref={ref}
-          className="scrollbar-hide no-scrollbar flex snap-x snap-mandatory flex-row flex-nowrap gap-5 overflow-x-auto overflow-y-hidden scroll-smooth px-4 lg:px-12 pb-6"
+          className="scrollbar-hide no-scrollbar flex snap-x snap-mandatory flex-row flex-nowrap gap-2 overflow-x-auto overflow-y-hidden scroll-smooth px-4 lg:px-12 pb-2"
         >
           {videos.map((v, idx) => (
-            <div key={v.id} className="snap-start w-[260px] xs:w-[280px] sm:w-[300px] md:w-[340px] xl:w-[380px] 2xl:w-[420px] 3xl:w-[480px] shrink-0">
+            <div key={v.id} className="snap-start w-[200px] xs:w-[220px] sm:w-[240px] md:w-[260px] xl:w-[280px] 2xl:w-[300px] 3xl:w-[320px] shrink-0">
               <VideoCard video={v} index={idx} />
             </div>
           ))}

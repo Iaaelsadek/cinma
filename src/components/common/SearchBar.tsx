@@ -10,9 +10,10 @@ type SearchBarProps = Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size'> 
   className?: string
   size?: InputSize
   onQueryChange?: (value: string) => void
+  onSearch?: () => void
 }
 
-export const SearchBar = ({ placeholder, className, size = 'md', onQueryChange, ...props }: SearchBarProps) => {
+export const SearchBar = ({ placeholder, className, size = 'md', onQueryChange, onSearch, ...props }: SearchBarProps) => {
   const [q, setQ] = useState('')
   const [isListening, setIsListening] = useState(false)
   const navigate = useNavigate()
@@ -30,6 +31,7 @@ export const SearchBar = ({ placeholder, className, size = 'md', onQueryChange, 
   const handleSearch = () => {
     if (q.trim().length > 0) {
       onQueryChange?.(q.trim())
+      onSearch?.()
       const url = `/search?q=${encodeURIComponent(q.trim())}`
       navigate(url, { replace: false })
     }

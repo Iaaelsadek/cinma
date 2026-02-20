@@ -9,3 +9,6 @@ schedule
 google-generativeai
 fuzzywuzzy
 python-levenshtein
+websockets>=11,<16
+sqlalchemy
+psycopg2-binary

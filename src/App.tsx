@@ -1,7 +1,7 @@
 import { Route, Routes, useNavigate, Navigate, useParams } from 'react-router-dom'
 import { Suspense, lazy } from 'react'
 import { useAuth } from './hooks/useAuth'
-import { AdsManager } from './components/common/AdsManager'
+import { AdsManager } from './components/features/system/AdsManager'
 import { supabase } from './lib/supabase'
 import { MainLayout } from './components/layout/MainLayout'
 import { Toaster } from 'sonner'
@@ -13,10 +13,13 @@ import { useInitAuth } from './hooks/useInitAuth'
 import { QuranPlayerProvider } from './context/QuranPlayerContext'
 import { PwaProvider } from './context/PwaContext'
 import { PageLoader } from './components/common/PageLoader'
+import { ScrollToTop } from './components/utils/ScrollToTop'
+import { NetworkStatus } from './components/features/system/NetworkStatus'
 
 // --- Pages ---
 // Home
 const Home = lazy(() => import('./pages/Home').then(m => ({ default: m.Home })))
+const TopWatched = lazy(() => import('./pages/discovery/TopWatched').then(m => ({ default: m.TopWatched })))
 
 const Auth = lazy(() => import('./pages/Auth').then(m => ({ default: m.default })))
 const AdminLogin = lazy(() => import('./pages/auth/AdminLogin').then(m => ({ default: m.AdminLogin })))
@@ -64,7 +67,11 @@ const AdminUsersPage = lazy(() => import('./pages/admin/users').then(m => ({ def
 const AdminSettingsPage = lazy(() => import('./pages/admin/settings').then(m => ({ default: m.default })))
 const AdminAdsPage = lazy(() => import('./pages/admin/ads').then(m => ({ default: m.default })))
 const AdminBackupPage = lazy(() => import('./pages/admin/backup').then(m => ({ default: m.default })))
+const AdminSystemControl = lazy(() => import('./pages/admin/system').then(m => ({ default: m.default })))
 const AddMovie = lazy(() => import('./pages/admin/AddMovie').then(m => ({ default: m.AddMovie })))
+const MoviesManage = lazy(() => import('./pages/admin/MoviesManage').then(m => ({ default: m.MoviesManage })))
+
+import { SeriesRouteHandler } from './components/routing/SeriesRouteHandler'
 
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
   const { user, loading } = useAuth()
@@ -73,7 +80,32 @@ const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
   return children
 }
 
+const SetupAdmin = lazy(() => import('./pages/admin/SetupAdmin').then(m => ({ default: m.SetupAdmin })))
+
 const ProtectedAdmin = ({ children }: { children: JSX.Element }) => {
+  const { user, loading } = useAuth()
+  const [allowed, setAllowed] = useState<boolean | null>(null)
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      if (loading) return
+      if (!user) {
+        setAllowed(false)
+        return
+      }
+      const p = await getProfile(user.id)
+      if (cancelled) return
+      // Allow both admin and supervisor to access the dashboard area
+      setAllowed(p?.role === 'admin' || p?.role === 'supervisor')
+    })()
+    return () => { cancelled = true }
+  }, [user, loading])
+  if (loading || allowed === null) return <PageLoader />
+  if (!allowed) return <Navigate to="/" replace />
+  return children
+}
+
+const ProtectedSuperAdmin = ({ children }: { children: JSX.Element }) => {
   const { user, loading } = useAuth()
   const [allowed, setAllowed] = useState<boolean | null>(null)
   useEffect(() => {
@@ -90,8 +122,8 @@ const ProtectedAdmin = ({ children }: { children: JSX.Element }) => {
     })()
     return () => { cancelled = true }
   }, [user, loading])
-  if (loading || allowed === null) return null
-  if (!allowed) return <Navigate to="/" replace />
+  if (loading || allowed === null) return <PageLoader />
+  if (!allowed) return <Navigate to="/admin/dashboard" replace />
   return children
 }
 
@@ -114,6 +146,8 @@ const App = () => {
     <PwaProvider>
       <QuranPlayerProvider>
         <MainLayout>
+          <ScrollToTop />
+          <NetworkStatus />
           <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route path="/" element={<Home />} />
@@ -131,8 +165,15 @@ const App = () => {
             <Route path="/watch/video/:id" element={<WatchVideo />} />
             <Route path="/watch/:id" element={<Watch />} />
             <Route path="/watch/:type/:id" element={<Watch />} />
-            <Route path="/series/:id" element={<SeriesDetails />} />
             <Route path="/series/:id/season/:s/episode/:e" element={<WatchFromSeries />} />
+            
+            {/* 
+              Conflict Handler: /series/:id vs /series/:category 
+              If :id is numeric -> SeriesDetails
+              If :id is string  -> CategoryHub
+            */}
+            <Route path="/series/:id" element={<SeriesRouteHandler />} />
+
             <Route path="/cinematic/:type/:id" element={<CinematicDetails />} />
             <Route path="/cinematic/:id" element={<CinematicDetails />} />
             <Route path="/demo/details" element={<CinematicDetails />} />
@@ -146,7 +187,8 @@ const App = () => {
             <Route path="/movies/:category" element={<CategoryHub type="movie" />} />
             <Route path="/series/:category/:year/:genre" element={<CategoryHub type="tv" />} />
             <Route path="/series/:category/:year" element={<CategoryHub type="tv" />} />
-            <Route path="/series/:category" element={<CategoryHub type="tv" />} />
+            {/* Handled by SeriesRouteHandler */}
+            {/* <Route path="/series/:category" element={<CategoryHub type="tv" />} /> */}
 
             <Route path="/rating/:rating" element={<CategoryHub />} />
             <Route path="/year/:year" element={<CategoryHub />} />
@@ -183,7 +225,8 @@ const App = () => {
 
             {/* Content Redirects */}
             <Route path="/movies" element={<MoviesPage />} />
-            <Route path="/series" element={<SeriesPage />} />
+        <Route path="/top-watched" element={<TopWatched />} />
+        <Route path="/series" element={<SeriesPage />} />
             <Route path="/movies/year/:year" element={<MoviesByYear />} />
             <Route path="/movies/genre/:id" element={<MoviesByGenre />} />
             <Route path="/series/year/:year" element={<SeriesByYear />} />
@@ -193,6 +236,7 @@ const App = () => {
             <Route path="/auth" element={<Auth />} />
             <Route path="/login" element={<Auth />} />
             <Route path="/register" element={<Auth />} />
+            <Route path="/auth/callback" element={<Navigate to="/" replace />} />
             
             {/* User Routes */}
             <Route path="/profile" element={
@@ -212,6 +256,7 @@ const App = () => {
             <Route path="/privacy" element={<Privacy />} />
 
             {/* Admin — غرفة القيادة */}
+            <Route path="/admin/setup" element={<SetupAdmin />} />
             <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route
@@ -223,16 +268,18 @@ const App = () => {
               <Route path="series" element={<AdminSeriesList />} />
               <Route path="series/:id" element={<SeriesManage />} />
               <Route path="series/:id/season/:seasonId" element={<SeasonManage />} />
+              <Route path="movies" element={<MoviesManage />} />
               <Route path="add-movie" element={<AddMovie />} />
-              <Route path="users" element={<AdminUsersPage />} />
-              <Route path="settings" element={<AdminSettingsPage />} />
-              <Route path="ads" element={<AdminAdsPage />} />
-              <Route path="backup" element={<AdminBackupPage />} />
+              <Route path="users" element={<ProtectedSuperAdmin><AdminUsersPage /></ProtectedSuperAdmin>} />
+              <Route path="settings" element={<ProtectedSuperAdmin><AdminSettingsPage /></ProtectedSuperAdmin>} />
+              <Route path="ads" element={<ProtectedSuperAdmin><AdminAdsPage /></ProtectedSuperAdmin>} />
+              <Route path="backup" element={<ProtectedSuperAdmin><AdminBackupPage /></ProtectedSuperAdmin>} />
+              <Route path="system" element={<ProtectedSuperAdmin><AdminSystemControl /></ProtectedSuperAdmin>} />
             </Route>
           </Routes>
         </Suspense>
         <AdsManager type="popunder" position="global" />
-        <Toaster richColors position="top-center" />
+        <Toaster richColors position="top-center" toastOptions={{ style: { zIndex: 999999 } }} />
         </MainLayout>
       </QuranPlayerProvider>
     </PwaProvider>

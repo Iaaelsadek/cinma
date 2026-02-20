@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: cinema-online-api
+    runtime: docker
+    plan: free
+    region: ohio
+    envVars:
+      - key: PYTHON_BIN
+        value: /opt/venv/bin/python
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false

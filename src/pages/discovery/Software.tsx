@@ -68,17 +68,16 @@ export const Software = () => {
   const heroItems = topRated.slice(0, 5)
 
   return (
-    <div className="min-h-screen bg-black text-white pb-24">
+    <div className="min-h-screen text-white pb-4 max-w-[2400px] mx-auto px-4 md:px-12 w-full">
       <Helmet>
         <title>{lang === 'ar' ? 'البرمجيات - سينما أونلاين' : 'Software - Cinema Online'}</title>
       </Helmet>
 
-      {/* Hero Section */}
       <QuantumHero items={heroItems} />
 
-      <div className="space-y-8 -mt-20 relative z-10">
+      <div className="space-y-2 pt-4 relative z-10">
         <QuantumTrain 
-          items={topRated} 
+          items={topRated}  
           title={lang === 'ar' ? 'أفضل البرامج' : 'Top Software'} 
           link="/search?types=software&sort=top_rated"
         />

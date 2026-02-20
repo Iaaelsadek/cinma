@@ -8,6 +8,7 @@ import { Helmet } from 'react-helmet-async'
 import { useLang } from '../../state/useLang'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../../hooks/useAuth'
+import { errorLogger } from '../../services/errorLogging'
 
 type VideoData = {
   id: string
@@ -21,6 +22,8 @@ type VideoData = {
   created_at?: string
   year?: number
   tmdb_id?: number // Added for subtitle search
+  intro_start?: number
+  intro_end?: number
 }
 
 export const WatchVideo = () => {
@@ -101,7 +104,12 @@ export const WatchVideo = () => {
         if (error) throw error
         if (mounted) setVideo(data)
       } catch (err) {
-        console.error(err)
+        errorLogger.logError({
+          message: 'Error loading video',
+          severity: 'high',
+          category: 'database',
+          context: { error: err, id, slug }
+        })
         if (mounted) setError(true)
       } finally {
         if (mounted) setLoading(false)
@@ -170,31 +178,31 @@ export const WatchVideo = () => {
 
       <div className={`relative z-50 transition-all duration-500 flex ${isChatOpen ? 'mr-0 lg:mr-80' : ''}`}>
         <div className="flex-1">
-          <div className={`mx-auto max-w-7xl px-4 py-6 ${isCinemaMode ? 'lg:py-12' : 'py-6'}`}>
-            <div className="flex items-center justify-between mb-6">
-              <Link to="/" className={`inline-flex items-center gap-2 transition-colors ${isCinemaMode ? 'text-zinc-600 hover:text-zinc-400' : 'text-zinc-400 hover:text-white'}`}>
-                <ChevronLeft size={20} className={lang === 'ar' ? 'rotate-180' : ''} />
+          <div className={`mx-auto max-w-7xl px-4 py-4 ${isCinemaMode ? 'lg:py-6' : 'py-4'}`}>
+            <div className="flex items-center justify-between mb-3">
+              <Link to="/" className={`inline-flex items-center gap-2 transition-colors text-sm ${isCinemaMode ? 'text-zinc-600 hover:text-zinc-400' : 'text-zinc-400 hover:text-white'}`}>
+                <ChevronLeft size={16} className={lang === 'ar' ? 'rotate-180' : ''} />
                 {lang === 'ar' ? 'العودة للرئيسية' : 'Back to Home'}
               </Link>
 
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
                 <button 
                   onClick={() => setIsCinemaMode(!isCinemaMode)}
-                  className={`flex items-center gap-2 px-4 h-11 rounded-full border transition-all duration-300 ${
+                  className={`flex items-center gap-2 px-3 h-8 rounded-full border transition-all duration-300 ${
                     isCinemaMode 
                       ? 'bg-primary text-white border-primary shadow-[0_0_20px_rgba(225,29,72,0.4)]' 
                       : 'bg-white/5 text-zinc-400 border-white/10 hover:border-white/20'
                   }`}
                 >
-                  <Sparkles size={16} />
-                  <span className="text-xs font-bold uppercase tracking-widest hidden md:block">
+                  <Sparkles size={14} />
+                  <span className="text-[10px] font-bold uppercase tracking-widest hidden md:block">
                     {lang === 'ar' ? 'وضع السينما' : 'Cinema Mode'}
                   </span>
                 </button>
 
                 <button 
                   onClick={() => setIsChatOpen(!isChatOpen)}
-                  className={`flex items-center gap-2 px-4 h-11 rounded-full border transition-all duration-300 ${
+                  className={`flex items-center gap-2 px-3 h-8 rounded-full border transition-all duration-300 ${
                     isChatOpen 
                       ? 'bg-luxury-purple text-white border-luxury-purple shadow-[0_0_20px_rgba(168,85,247,0.4)]' 
                       : 'bg-white/5 text-zinc-400 border-white/10 hover:border-white/20'
@@ -214,7 +222,12 @@ export const WatchVideo = () => {
               
               <div className={`relative overflow-hidden rounded-2xl bg-black shadow-2xl transition-all duration-700 ${isCinemaMode ? 'scale-[1.02] ring-4 ring-primary/20 shadow-primary/20' : 'ring-1 ring-white/10'}`}>
                 <div className="aspect-video w-full">
-                  <VideoPlayer url={effectiveVideo.url} subtitles={subtitles} />
+                  <VideoPlayer 
+                    url={effectiveVideo.url} 
+                    subtitles={subtitles} 
+                    introStart={effectiveVideo.intro_start}
+                    introEnd={effectiveVideo.intro_end}
+                  />
                 </div>
               </div>
             </div>
@@ -232,32 +245,32 @@ export const WatchVideo = () => {
 
             <motion.div 
               layout
-              className={`mt-8 space-y-6 transition-opacity duration-500 ${isCinemaMode ? 'opacity-40 hover:opacity-100' : 'opacity-100'}`}
+              className={`mt-6 space-y-4 transition-opacity duration-500 ${isCinemaMode ? 'opacity-40 hover:opacity-100' : 'opacity-100'}`}
             >
               <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-                <div className="space-y-2">
-                  <h1 className="text-3xl font-black text-white md:text-4xl tracking-tight" dir="auto">
+                <div className="space-y-1.5">
+                  <h1 className="text-2xl font-black text-white md:text-3xl tracking-tight" dir="auto">
                     {effectiveVideo.title}
                   </h1>
-                  <div className="flex flex-wrap items-center gap-4 text-sm text-zinc-500 font-medium">
+                  <div className="flex flex-wrap items-center gap-3 text-sm text-zinc-500 font-medium">
                     {effectiveVideo.category && (
-                      <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-bold text-primary uppercase tracking-widest">
+                      <span className="px-2.5 py-0.5 rounded-full bg-white/5 border border-white/10 text-[10px] font-bold text-primary uppercase tracking-widest">
                         {effectiveVideo.category}
                       </span>
                     )}
-                    <div className="flex items-center gap-2">
-                      <Eye size={16} />
+                    <div className="flex items-center gap-1.5 text-xs">
+                      <Eye size={14} />
                       <span>{effectiveVideo.views?.toLocaleString() || 0} {lang === 'ar' ? 'مشاهدة' : 'views'}</span>
                     </div>
                     {effectiveVideo.duration && (
-                      <div className="flex items-center gap-2">
-                        <Clock size={16} />
+                      <div className="flex items-center gap-1.5 text-xs">
+                        <Clock size={14} />
                         <span>{Math.floor(effectiveVideo.duration / 60)} {lang === 'ar' ? 'دقيقة' : 'min'}</span>
                       </div>
                     )}
                     {effectiveVideo.year && (
-                      <div className="flex items-center gap-2">
-                        <Calendar size={16} />
+                      <div className="flex items-center gap-1.5 text-xs">
+                        <Calendar size={14} />
                         <span>{effectiveVideo.year}</span>
                       </div>
                     )}
@@ -267,7 +280,7 @@ export const WatchVideo = () => {
 
               <div className="h-px w-full bg-gradient-to-r from-white/10 via-white/5 to-transparent" />
               
-              <p className="text-zinc-400 leading-relaxed max-w-4xl text-lg">
+              <p className="text-zinc-400 leading-relaxed max-w-4xl text-base">
                 {effectiveVideo.description || (lang === 'ar' ? 'لا يوجد وصف متاح لهذا الفيديو.' : 'No description available for this video.')}
               </p>
             </motion.div>

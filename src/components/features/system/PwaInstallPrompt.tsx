@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { X, Smartphone, Download } from 'lucide-react'
-import { useLang } from '../../state/useLang'
+import { useLang } from '../../../state/useLang'
 
 type BeforeInstallPromptEvent = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }> }
 

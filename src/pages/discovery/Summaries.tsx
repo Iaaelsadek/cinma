@@ -1,8 +1,9 @@
-import { Helmet } from 'react-helmet'
+import { Helmet } from 'react-helmet-async'
 import { useParams } from 'react-router-dom'
 import { useLang } from '../../state/useLang'
 import { QuantumHero } from '../../components/features/hero/QuantumHero'
 import { QuantumTrain } from '../../components/features/media/QuantumTrain'
+import { VideoCard } from '../../components/features/media/VideoCard'
 import { useCategoryVideos } from '../../hooks/useFetchContent'
 import { PageLoader } from '../../components/common/PageLoader'
 
@@ -110,12 +111,11 @@ export const SummariesPage = () => {
   const isFiltered = !!genre
 
   return (
-    <div className="min-h-screen text-white pb-24 max-w-[2400px] mx-auto px-4 md:px-12 w-full">
+    <div className="min-h-screen text-white pb-4 max-w-[2400px] mx-auto px-4 md:px-12 w-full">
       <Helmet>
         <title>{lang === 'ar' ? 'ملخصات الأفلام - سينما أونلاين' : 'Movie Summaries - Cinema Online'}</title>
       </Helmet>
 
-      {/* Hero Section */}
       {heroItems.length > 0 ? (
         <QuantumHero items={heroItems} type="video" />
       ) : (
@@ -126,16 +126,16 @@ export const SummariesPage = () => {
         )
       )}
 
-      <div className={`space-y-8 relative z-10 ${heroItems.length > 0 ? '-mt-20' : 'pt-24'}`}>
+      <div className={`space-y-2 relative z-10 pt-4`}>
         {isFiltered ? (
-           <div className="px-4 md:px-12">
-              <h2 className="text-3xl font-bold mb-8 capitalize">{genre}</h2>
+           <div>
+              <h2 className="text-xl font-bold mb-4 capitalize">{genre}</h2>
               {displayItems.length > 0 ? (
-                <QuantumTrain 
-                  items={displayItems} 
-                  title={lang === 'ar' ? 'نتائج' : 'Results'} 
-                  type="video"
-                />
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+                  {displayItems.map((item, idx) => (
+                    <VideoCard key={item.id} video={item} index={idx} />
+                  ))}
+                </div>
               ) : (
                 <div className="text-center text-zinc-500 py-12">
                   {lang === 'ar' ? 'لا توجد نتائج' : 'No results found'}

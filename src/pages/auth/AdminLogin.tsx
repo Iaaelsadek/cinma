@@ -40,30 +40,30 @@ export const AdminLogin = () => {
   }
 
   return (
-    <div className="mx-auto max-w-sm rounded-lg border border-zinc-800 p-6">
-      <h1 className="mb-4 text-xl font-bold">تسجيل دخول المشرف</h1>
-      <form onSubmit={onSubmit} className="space-y-3">
+    <div className="mx-auto max-w-xs rounded-lg border border-zinc-800 p-5 mt-10">
+      <h1 className="mb-3 text-lg font-bold">تسجيل دخول المشرف</h1>
+      <form onSubmit={onSubmit} className="space-y-2">
         <div className="space-y-1">
-          <label className="text-sm text-zinc-300">البريد الإلكتروني</label>
+          <label className="text-xs text-zinc-300">البريد الإلكتروني</label>
           <input
             type="email"
-            className="w-full rounded-md border border-zinc-700 bg-zinc-900 p-2 outline-none"
+            className="w-full rounded-md border border-zinc-700 bg-zinc-900 p-1.5 text-sm outline-none"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
         </div>
         <div className="space-y-1">
-          <label className="text-sm text-zinc-300">كلمة المرور</label>
+          <label className="text-xs text-zinc-300">كلمة المرور</label>
           <input
             type="password"
-            className="w-full rounded-md border border-zinc-700 bg-zinc-900 p-2 outline-none"
+            className="w-full rounded-md border border-zinc-700 bg-zinc-900 p-1.5 text-sm outline-none"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
         </div>
-        {error && <div className="text-sm text-red-400">{error}</div>}
+        {error && <div className="text-xs text-red-400">{error}</div>}
         <button
-          className="w-full rounded-md bg-primary p-2 text-white disabled:opacity-50"
+          className="w-full rounded-md bg-primary p-1.5 text-sm text-white disabled:opacity-50"
           disabled={loading}
         >
           {loading ? 'جاري الدخول...' : 'دخول'}

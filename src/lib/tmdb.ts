@@ -2,7 +2,7 @@ import axios from 'axios'
 import { CONFIG } from './constants'
 
 export const tmdb = axios.create({
-  baseURL: 'https://api.themoviedb.org/3',
+  baseURL: '/api/tmdb',
   params: { api_key: CONFIG.TMDB_API_KEY, language: 'ar-SA' }
 })
 
@@ -60,7 +60,10 @@ export type AdvancedSearchParams = {
   ratingFrom?: number
   ratingTo?: number
   rating_color?: Array<'green' | 'yellow' | 'red'>
+  sort_by?: string
   page?: number
+  with_original_language?: string
+  with_keywords?: string
 }
 
 type TmdbSearchItem = {
@@ -96,7 +99,10 @@ export async function advancedSearch(params: AdvancedSearchParams) {
     ratingFrom,
     ratingTo,
     rating_color,
-    page = 1
+    sort_by,
+    page = 1,
+    with_original_language,
+    with_keywords
   } = params
   const doMovie = types.includes('movie')
   const doTv = types.includes('tv')
@@ -114,6 +120,7 @@ export async function advancedSearch(params: AdvancedSearchParams) {
           if (yearTo) res = res.filter((x: TmdbSearchItem) => (x.release_date || '0').slice(0, 4) <= String(yearTo))
           if (ratingFrom != null) res = res.filter((x: TmdbSearchItem) => (x.vote_average || 0) >= ratingFrom)
           if (ratingTo != null) res = res.filter((x: TmdbSearchItem) => (x.vote_average || 0) <= ratingTo)
+          if (with_original_language) res = res.filter((x: TmdbSearchItem) => (x as any).original_language === with_original_language)
           return { ...r.data, results: res } as TmdbListResponse
         })
       promises.push(p)
@@ -124,7 +131,10 @@ export async function advancedSearch(params: AdvancedSearchParams) {
         'primary_release_date.lte': yearTo ? `${yearTo}-12-31` : undefined,
         'vote_average.gte': ratingFrom,
         'vote_average.lte': ratingTo,
+        with_original_language,
+        with_keywords,
         include_adult: false,
+        sort_by: sort_by || 'popularity.desc',
         page
       }
       if (cert) {
@@ -145,6 +155,7 @@ export async function advancedSearch(params: AdvancedSearchParams) {
           if (yearTo) res = res.filter((x: TmdbSearchItem) => (x.first_air_date || '0').slice(0, 4) <= String(yearTo))
           if (ratingFrom != null) res = res.filter((x: TmdbSearchItem) => (x.vote_average || 0) >= ratingFrom)
           if (ratingTo != null) res = res.filter((x: TmdbSearchItem) => (x.vote_average || 0) <= ratingTo)
+          if (with_original_language) res = res.filter((x: TmdbSearchItem) => (x as any).original_language === with_original_language)
           return { ...r.data, results: res } as TmdbListResponse
         })
       promises.push(p)
@@ -155,7 +166,10 @@ export async function advancedSearch(params: AdvancedSearchParams) {
         'first_air_date.lte': yearTo ? `${yearTo}-12-31` : undefined,
         'vote_average.gte': ratingFrom,
         'vote_average.lte': ratingTo,
+        with_original_language,
+        with_keywords,
         include_adult: false,
+        sort_by: sort_by || 'popularity.desc',
         page
       }
       const p = tmdb.get('/discover/tv', { params: tp }).then(r => ({ ...r.data, results: (r.data.results || []).map((x: TmdbSearchItem) => ({ ...x, media_type: 'tv' as const })) }) as TmdbListResponse)

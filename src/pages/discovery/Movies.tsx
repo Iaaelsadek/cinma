@@ -52,15 +52,15 @@ export const MoviesPage = () => {
   const heroItems = trending.data?.slice(0, 10) || []
 
   return (
-    <div className="min-h-screen text-white pb-24 max-w-[2400px] mx-auto px-4 md:px-12 w-full">
+    <div className="min-h-screen text-white pb-4 max-w-[2400px] mx-auto px-4 md:px-12 w-full">
       <Helmet>
         <title>{lang === 'ar' ? 'الأفلام - سينما أونلاين' : 'Movies - Cinema Online'}</title>
       </Helmet>
 
-      {/* Hero Section */}
-      <QuantumHero items={heroItems} />
+      {/* Hero Section (REMOVED) */}
+      {/* <QuantumHero items={heroItems} /> */}
 
-      <div className="space-y-8 -mt-20 relative z-10">
+      <div className="space-y-2 pt-4 relative z-10">
         <QuantumTrain 
           items={trending.data || []} 
           title={lang === 'ar' ? 'الرائج هذا الأسبوع' : 'Trending This Week'} 
@@ -70,7 +70,7 @@ export const MoviesPage = () => {
         <QuantumTrain 
           items={topRated.data || []} 
           title={lang === 'ar' ? 'الأعلى تقييماً' : 'Top Rated'} 
-          link="/search?types=movie&sort=top_rated"
+          link="/search?types=movie&sort=vote_average.desc"
         />
 
         <QuantumTrain 

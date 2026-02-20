@@ -49,20 +49,29 @@ export default defineConfig({
       generateRobotsTxt: false,
       dynamicRoutes: [
         '/',
+        '/movies',
+        '/series',
+        '/ramadan',
+        '/plays',
+        '/top-watched',
         '/search',
         '/login',
         '/profile',
-        '/admin',
-        '/movie/550',
-        '/movie/299534',
-        '/series/1399'
+        '/admin'
       ]
     })
   ],
   server: {
     port: 5173,
     host: true,
-    strictPort: false
+    strictPort: false,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        secure: false
+      }
+    }
   },
   build: {
     target: 'esnext',

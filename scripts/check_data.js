@@ -51,6 +51,37 @@ async function check() {
     console.log(`Plays Count: ${playsCount}`)
   }
 
+  // Check Videos Distribution
+  const { data: videos, error: vError } = await supabase.from('videos').select('category')
+  if (vError) {
+    console.log('Videos Error:', vError.message)
+  } else {
+    const counts = {}
+    videos.forEach(v => {
+      const c = v.category || 'null'
+      counts[c] = (counts[c] || 0) + 1
+    })
+    console.log('Videos Categories:', JSON.stringify(counts, null, 2))
+  }
+
+  // Check Anime
+  const { count: animeCount, error: aError } = await supabase.from('anime').select('*', { count: 'exact', head: true })
+  if (aError) console.log('Anime Error:', aError.message)
+  else console.log(`Anime Count: ${animeCount}`)
+
+  // Check Quran Reciters
+  const { count: quranCount, error: qError } = await supabase.from('quran_reciters').select('*', { count: 'exact', head: true })
+  if (qError) console.log('Quran Reciters Error:', qError.message)
+  else console.log(`Quran Reciters Count: ${quranCount}`)
+
+  // Check Quran Image URL format
+  const { data: quranItem } = await supabase.from('quran_reciters').select('image').limit(1).single()
+  if (quranItem) console.log('Quran Image Example:', quranItem.image)
+
+  // Check Anime Image URL format
+  const { data: animeItem } = await supabase.from('anime').select('image_url').limit(1).single()
+  if (animeItem) console.log('Anime Image Example:', animeItem.image_url)
+
   console.log('--------------------------------')
 }
 
