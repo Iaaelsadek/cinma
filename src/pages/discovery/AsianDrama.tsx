@@ -6,7 +6,7 @@ import { useLang } from '../../state/useLang'
 import { Helmet } from 'react-helmet-async'
 import { slugify } from '../../lib/utils'
 import { useTranslatedContent } from '../../hooks/useTranslatedContent'
-import { SkeletonGrid } from '../../components/common/SkeletonGrid'
+import { SkeletonGrid } from '../../components/common/Skeletons'
 import { SectionHeader } from '../../components/common/SectionHeader'
 import { Tv, Film } from 'lucide-react'
 
