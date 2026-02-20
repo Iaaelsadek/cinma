@@ -163,6 +163,12 @@ def run_cycle():
     # from db_automator import init_db
     from embed_builder import build_embed_for_all
     from rank_servers import rank_servers
+    # Import extra fetchers
+    from fetch_anime import main as fetch_anime
+    from fetch_games import main as fetch_games
+    from fetch_quran import main as fetch_quran
+    from fetch_software import main as fetch_software
+
     started_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     _safe_print(f"[ENGINE] بدء دورة التحديث: {started_at}")
     before_counts = _get_counts()
@@ -175,6 +181,33 @@ def run_cycle():
         total_items = int(os.environ.get("ENGINE_BATCH_TOTAL", "20"))
         _run_tmdb_batches(fetcher, "movie", total_items, batch_size)
         _run_tmdb_batches(fetcher, "tv", total_items, batch_size)
+        
+        # Add Extras to the cycle
+        _safe_print("[EXTRAS] بدء تحديث الأنمي، الألعاب، البرامج والقرآن...")
+        try:
+            fetch_anime()
+            _safe_print("✓ تم تحديث الأنمي")
+        except Exception as e:
+            _safe_print(f"✗ فشل تحديث الأنمي: {e}")
+            
+        try:
+            fetch_games()
+            _safe_print("✓ تم تحديث الألعاب")
+        except Exception as e:
+            _safe_print(f"✗ فشل تحديث الألعاب: {e}")
+
+        try:
+            fetch_software()
+            _safe_print("✓ تم تحديث البرامج")
+        except Exception as e:
+            _safe_print(f"✗ فشل تحديث البرامج: {e}")
+
+        try:
+            fetch_quran()
+            _safe_print("✓ تم تحديث القرّاء")
+        except Exception as e:
+            _safe_print(f"✗ فشل تحديث القرّاء: {e}")
+
         _safe_print("[EMBED] بناء روابط التضمين...")
         build_embed_for_all()
         _safe_print("[LINKS] فحص الروابط (Delta)...")
