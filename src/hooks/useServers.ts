@@ -15,6 +15,8 @@ export type Server = {
 // ------------------------------------------------------------------
 const PROVIDERS = [
   { id: 'vidsrc', name: 'VidSrc (Primary)', base: 'https://vidsrc.to/embed' },
+  { id: 'vidsrc_vip', name: 'VidSrc VIP', base: 'https://vidsrc.vip/embed' },
+  { id: 'vidsrc_xyz', name: 'VidSrc XYZ', base: 'https://vidsrc.xyz/embed' },
   { id: 'vidsrc_me', name: 'VidSrc Me', base: 'https://vidsrc.me/embed' },
   { id: 'vidsrc_pro', name: 'VidSrc Pro', base: 'https://vidsrc.pro/embed' },
   { id: 'vidsrc_cc', name: 'VidSrc CC', base: 'https://vidsrc.cc/v2/embed' },
@@ -70,8 +72,8 @@ export const useServers = (tmdbId: number, type: 'movie' | 'tv', season?: number
       const generatedServers: Server[] = PROVIDERS.map((p, idx) => {
         let url = ''
         
-        // Vidsrc.to / Pro / In-house
-        if (p.id === 'vidsrc' || p.id === 'vidsrc_pro') {
+        // Vidsrc.to / Pro / VIP / XYZ / In-house
+        if (['vidsrc', 'vidsrc_pro', 'vidsrc_vip', 'vidsrc_xyz'].includes(p.id)) {
           url = type === 'movie' 
             ? (imdbId ? `${p.base}/movie/${imdbId}` : `${p.base}/movie/${tmdbId}`)
             : (imdbId ? `${p.base}/tv/${imdbId}/${season}/${episode}` : `${p.base}/tv/${tmdbId}/${season}/${episode}`)

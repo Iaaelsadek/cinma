@@ -1,4 +1,4 @@
-import { Signal, Lightbulb, WifiOff, Wifi, SkipForward, AlertTriangle, Loader2 } from 'lucide-react'
+import { Signal, Lightbulb, WifiOff, Wifi, SkipForward, AlertTriangle, Loader2, ExternalLink, Search } from 'lucide-react'
 import { Server } from '../../../hooks/useServers'
 
 type Props = {
@@ -22,20 +22,33 @@ export const EmbedPlayer = ({ server, cinemaMode, toggleCinemaMode, loading, onN
 
   return (
     <div className="space-y-2">
-      {/* Header: Secure Stream & Cinema Mode */}
+      {/* Header: Secure Stream & Controls */}
       <div className="flex justify-between items-center px-1">
         <div className="flex items-center gap-2 text-xs font-bold text-emerald-400">
           <Signal size={12} />
           <span>Secure Stream</span>
         </div>
         
-        <button 
-          onClick={toggleCinemaMode}
-          className={`flex items-center gap-2 text-xs font-bold transition-colors ${cinemaMode ? 'text-[#f5c518] animate-pulse' : 'text-zinc-400 hover:text-white'}`}
-        >
-          <Lightbulb size={14} className={cinemaMode ? 'fill-[#f5c518]' : ''} />
-          <span>{cinemaMode ? 'Cinema ON' : 'Cinema Mode'}</span>
-        </button>
+        <div className="flex items-center gap-2">
+          {server && (
+            <a 
+              href={server.url} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 text-xs font-bold text-zinc-400 hover:text-white transition-colors bg-white/5 hover:bg-white/10 px-2 py-1 rounded-lg"
+            >
+              <ExternalLink size={12} />
+              <span>Open External</span>
+            </a>
+          )}
+          <button 
+            onClick={toggleCinemaMode}
+            className={`flex items-center gap-2 text-xs font-bold transition-colors ${cinemaMode ? 'text-[#f5c518] animate-pulse' : 'text-zinc-400 hover:text-white'}`}
+          >
+            <Lightbulb size={14} className={cinemaMode ? 'fill-[#f5c518]' : ''} />
+            <span>{cinemaMode ? 'Cinema ON' : 'Cinema Mode'}</span>
+          </button>
+        </div>
       </div>
 
       {/* Video Player Container */}
