@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion'
 import { Play, Info, Plus, Check } from 'lucide-react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useLang } from '../../../state/useLang'
 import { useEffect, useState, type MouseEvent } from 'react'
 import { useAuth } from '../../../hooks/useAuth'
@@ -64,16 +64,9 @@ export const VideoCard = ({ video, index = 0 }: { video: VideoItem; index?: numb
   }, [video.thumbnail])
 
   const handleImageError = () => {
-    if (!imageSrc) return
-
-    // Fallback logic for YouTube thumbnails
-    if (imageSrc.includes('hqdefault')) {
-      // Try mqdefault (Medium Quality)
-      setImageSrc(imageSrc.replace('hqdefault', 'mqdefault'))
-    } else {
-      // Give up and show placeholder
-      setImageSrc('') 
-    }
+    // If image fails, don't try fallback chains to avoid console spam.
+    // hqdefault should exist for 99% of videos. If not, just show placeholder.
+    setImageSrc('')
   }
 
   const duration = video.duration ? formatDuration(video.duration) : ''
@@ -124,11 +117,22 @@ export const VideoCard = ({ video, index = 0 }: { video: VideoItem; index?: numb
       transition={{ duration: 0.5, delay: index * 0.05 }}
       className="relative z-0"
     >
-      <Link 
-        to={`/watch/yt/${video.id}`}
+      <div 
+        onClick={(e) => {
+          // Allow default behavior for buttons/interactive elements
+          if ((e.target as HTMLElement).closest('button')) return
+          navigate(`/watch/yt/${video.id}`)
+        }}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        className="group/card block relative"
+        className="group/card block relative cursor-pointer"
+        role="link"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            navigate(`/watch/yt/${video.id}`)
+          }
+        }}
       >
         <div className="relative overflow-hidden rounded-xl bg-luxury-charcoal border border-white/5 transition-all duration-500 transform-gpu glass-smooth hover:scale-[1.05] hover:shadow-glass hover:border-primary/50">
           {/* Thumbnail Container */}
@@ -220,7 +224,7 @@ export const VideoCard = ({ video, index = 0 }: { video: VideoItem; index?: numb
             </div>
           </div>
         </div>
-      </Link>
+      </div>
     </motion.div>
   )
 }

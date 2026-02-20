@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Play, Info, Volume2, VolumeX, ChevronRight, Star, Calendar, Film } from 'lucide-react'
+import { Play, Volume2, VolumeX, Star, Calendar, Film } from 'lucide-react'
 import { PrefetchLink } from '../../common/PrefetchLink'
 import { TmdbImage } from '../../common/TmdbImage'
 import { useLang } from '../../../state/useLang'

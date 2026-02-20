@@ -5,7 +5,7 @@ import { addHistory, getProgress, supabase, upsertProgress } from '../../lib/sup
 import { AdsManager } from '../../components/features/system/AdsManager'
 import { tmdb } from '../../lib/tmdb'
 import { SeoHead } from '../../components/common/SeoHead'
-import { Calendar, Clock, Star } from 'lucide-react'
+import { Calendar, Clock, Star, AlertTriangle, X } from 'lucide-react'
 import { ShareButton } from '../../components/common/ShareButton'
 import { NotFound } from '../NotFound'
 import { SkeletonGrid } from '../../components/common/Skeletons'
@@ -72,6 +72,7 @@ export const Watch = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
   const [cinemaMode, setCinemaMode] = useState(false)
+  const [showDisclaimer, setShowDisclaimer] = useState(true)
 
   // Determine effective ID
   const id = resolvedId || idParam
@@ -457,6 +458,8 @@ export const Watch = () => {
 
       <div className="mx-auto max-w-7xl px-4 py-6 space-y-6">
         
+
+
         {/* NEW LAYOUT: Grid with Side Panel */}
         <section id="player" className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             
@@ -488,6 +491,23 @@ export const Watch = () => {
                         title={details?.title || details?.name}
                     />
                     </div>
+                )}
+
+                {/* Disclaimer Banner */}
+                {showDisclaimer && (
+                  <div className="relative mb-6 flex items-start gap-3 rounded-lg bg-red-900/90 p-4 text-white shadow-lg backdrop-blur-sm border border-red-500/30">
+                    <AlertTriangle className="shrink-0 text-yellow-400" size={20} />
+                    <p className="text-xs font-medium leading-relaxed md:text-sm">
+                      ⚠️ إخلاء مسؤولية أمام الله ثم أمامكم : هذا المحتوي المعروض مضاف تلقائياً لذلك نحن نبرأ إلى الله سبحانه وتعالي من أي مشاهد او إعلانات خادشة للحياء أو مخالفة للشرع قد تظهر إجبارياً من سيرفرات العرض الخارجية. نحن لا نملك السيطرة على هذه الإعلانات ولم نشاهد المحتوي المعروض ، لذا نرجو إغلاق أي نافذة منبثقة او محتوي مخالف فوراً .
+                    </p>
+                    <button 
+                      onClick={() => setShowDisclaimer(false)}
+                      className="absolute left-2 top-2 rounded-full p-1 hover:bg-white/10 transition-colors"
+                      aria-label="Close disclaimer"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
                 )}
 
                 <div className="flex flex-col items-center gap-3 mt-4">
