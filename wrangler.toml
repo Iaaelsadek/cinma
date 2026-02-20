@@ -1,0 +1,11 @@
+name = "cinema-online"
+pages_build_output_dir = "dist"
+compatibility_date = "2024-02-20"
+
+[site]
+bucket = "./dist"
+
+[vars]
+# These are placeholders. Set actual values in Cloudflare Dashboard for security.
+# VITE_SUPABASE_URL = ""
+# VITE_SUPABASE_ANON_KEY = ""
