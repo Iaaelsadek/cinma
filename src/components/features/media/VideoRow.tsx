@@ -33,8 +33,8 @@ export const VideoRow = ({ title, videos, icon, link }: Props) => {
           ref={ref}
           className="scrollbar-hide no-scrollbar flex snap-x snap-mandatory flex-row flex-nowrap gap-2 overflow-x-auto overflow-y-hidden scroll-smooth px-4 lg:px-12 pb-2"
         >
-          {videos.map((v, idx) => (
-            <div key={v.id} className="snap-start w-[200px] xs:w-[220px] sm:w-[240px] md:w-[260px] xl:w-[280px] 2xl:w-[300px] 3xl:w-[320px] shrink-0">
+          {videos.filter(v => v.id).map((v, idx) => (
+            <div key={v.id || idx} className="snap-start w-[200px] xs:w-[220px] sm:w-[240px] md:w-[260px] xl:w-[280px] 2xl:w-[300px] 3xl:w-[320px] shrink-0">
               <VideoCard video={v} index={idx} />
             </div>
           ))}
