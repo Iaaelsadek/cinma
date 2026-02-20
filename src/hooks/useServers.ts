@@ -14,18 +14,20 @@ export type Server = {
 // STAGE 2: ZERO-FAILURE STREAMING ARCHITECTURE
 // ------------------------------------------------------------------
 const PROVIDERS = [
-  { id: 'vidsrc', name: 'VidSrc (Primary)', base: 'https://vidsrc.to/embed' },
+  { id: 'autoembed', name: 'AutoEmbed', base: 'https://autoembed.co' },
+  { id: 'embed_su', name: 'Embed.su', base: 'https://embed.su/embed' },
+  { id: 'vidsrc_cc', name: 'VidSrc CC', base: 'https://vidsrc.cc/v2/embed' },
   { id: 'vidsrc_vip', name: 'VidSrc VIP', base: 'https://vidsrc.vip/embed' },
   { id: 'vidsrc_xyz', name: 'VidSrc XYZ', base: 'https://vidsrc.xyz/embed' },
-  { id: 'vidsrc_me', name: 'VidSrc Me', base: 'https://vidsrc.me/embed' },
   { id: 'vidsrc_pro', name: 'VidSrc Pro', base: 'https://vidsrc.pro/embed' },
-  { id: 'vidsrc_cc', name: 'VidSrc CC', base: 'https://vidsrc.cc/v2/embed' },
+  { id: 'vidsrc_icu', name: 'VidSrc ICU', base: 'https://vidsrc.icu/embed' },
   { id: 'vidlink', name: 'VidLink', base: 'https://vidlink.pro' },
+  { id: 'vidsrc', name: 'VidSrc (Primary)', base: 'https://vidsrc.to/embed' },
+  { id: 'vidsrc_me', name: 'VidSrc Me', base: 'https://vidsrc.me/embed' },
   { id: 'superembed', name: 'SuperEmbed', base: 'https://superembed.stream' },
-  { id: 'autoembed', name: 'AutoEmbed', base: 'https://autoembed.co' },
   { id: 'smashystream', name: 'SmashyStream', base: 'https://embed.smashystream.com/playere.php' },
   { id: 'multiembed', name: 'MultiEmbed', base: 'https://multiembed.mov' },
-  { id: 'embed_su', name: 'Embed.su', base: 'https://embed.su/embed' },
+  { id: '2embed', name: '2Embed', base: 'https://www.2embed.cc/embed' },
 ]
 
 export const useServers = (tmdbId: number, type: 'movie' | 'tv', season?: number, episode?: number, imdbId?: string) => {
@@ -72,59 +74,65 @@ export const useServers = (tmdbId: number, type: 'movie' | 'tv', season?: number
       const generatedServers: Server[] = PROVIDERS.map((p, idx) => {
         let url = ''
         
-        // Vidsrc.to / Pro / VIP / XYZ / In-house
-        if (['vidsrc', 'vidsrc_pro', 'vidsrc_vip', 'vidsrc_xyz'].includes(p.id)) {
+        // Vidsrc.to / Pro / VIP / XYZ / ICU / In-house
+        if (['vidsrc', 'vidsrc_pro', 'vidsrc_vip', 'vidsrc_xyz', 'vidsrc_icu'].includes(p.id)) {
           url = type === 'movie' 
-            ? (imdbId ? `${p.base}/movie/${imdbId}` : `${p.base}/movie/${tmdbId}`)
-            : (imdbId ? `${p.base}/tv/${imdbId}/${season}/${episode}` : `${p.base}/tv/${tmdbId}/${season}/${episode}`)
+            ? (imdbId ? `${p.base}/movie/${imdbId}?sub.lang=ar` : `${p.base}/movie/${tmdbId}?sub.lang=ar`)
+            : (imdbId ? `${p.base}/tv/${imdbId}/${season}/${episode}?sub.lang=ar` : `${p.base}/tv/${tmdbId}/${season}/${episode}?sub.lang=ar`)
         } 
         // Vidsrc.me (Supports IMDb)
         else if (p.id === 'vidsrc_me') {
           url = type === 'movie'
-             ? (imdbId ? `${p.base}/movie?imdb=${imdbId}` : `${p.base}/movie?tmdb=${tmdbId}`)
-             : (imdbId ? `${p.base}/tv?imdb=${imdbId}&season=${season}&episode=${episode}` : `${p.base}/tv?tmdb=${tmdbId}&season=${season}&episode=${episode}`)
+             ? (imdbId ? `${p.base}/movie?imdb=${imdbId}&sub.lang=ar` : `${p.base}/movie?tmdb=${tmdbId}&sub.lang=ar`)
+             : (imdbId ? `${p.base}/tv?imdb=${imdbId}&season=${season}&episode=${episode}&sub.lang=ar` : `${p.base}/tv?tmdb=${tmdbId}&season=${season}&episode=${episode}&sub.lang=ar`)
         }
         // Vidsrc.cc
         else if (p.id === 'vidsrc_cc') {
           url = type === 'movie'
-            ? `${p.base}/movie/${tmdbId}`
-            : `${p.base}/tv/${tmdbId}/${season}/${episode}`
+            ? `${p.base}/movie/${tmdbId}?lang=ar`
+            : `${p.base}/tv/${tmdbId}/${season}/${episode}?lang=ar`
         }
         // VidLink (New)
         else if (p.id === 'vidlink') {
           url = type === 'movie'
-            ? `${p.base}/movie/${tmdbId}`
-            : `${p.base}/tv/${tmdbId}/${season}/${episode}`
+            ? `${p.base}/movie/${tmdbId}?multiLang=true`
+            : `${p.base}/tv/${tmdbId}/${season}/${episode}?multiLang=true`
         }
         // SuperEmbed
         else if (p.id === 'superembed') {
            url = type === 'movie'
-            ? `${p.base}/movie/${tmdbId}`
-            : `${p.base}/tv/${tmdbId}/${season}/${episode}`
+            ? `${p.base}/movie/${tmdbId}?lang=ar`
+            : `${p.base}/tv/${tmdbId}/${season}/${episode}?lang=ar`
         }
         // AutoEmbed
         else if (p.id === 'autoembed') {
           url = type === 'movie'
-            ? `${p.base}/movie/tmdb/${tmdbId}`
-            : `${p.base}/tv/tmdb/${tmdbId}-${season}-${episode}`
+            ? `${p.base}/movie/tmdb/${tmdbId}?caption=ar`
+            : `${p.base}/tv/tmdb/${tmdbId}-${season}-${episode}?caption=ar`
         }
         // SmashyStream
         else if (p.id === 'smashystream') {
           url = type === 'movie'
-            ? `${p.base}?tmdb=${tmdbId}`
-            : `${p.base}?tmdb=${tmdbId}&season=${season}&episode=${episode}`
+            ? `${p.base}?tmdb=${tmdbId}&sub=ar`
+            : `${p.base}?tmdb=${tmdbId}&season=${season}&episode=${episode}&sub=ar`
         }
         // MultiEmbed
         else if (p.id === 'multiembed') {
            url = type === 'movie'
-            ? `${p.base}/directstream.php?video_id=${tmdbId}&tmdb=1`
-            : `${p.base}/directstream.php?video_id=${tmdbId}&tmdb=1&s=${season}&e=${episode}`
+            ? `${p.base}/directstream.php?video_id=${tmdbId}&tmdb=1&sub_lang=ar`
+            : `${p.base}/directstream.php?video_id=${tmdbId}&tmdb=1&s=${season}&e=${episode}&sub_lang=ar`
         }
         // Embed.su
         else if (p.id === 'embed_su') {
           url = type === 'movie'
-            ? `${p.base}/movie/${tmdbId}`
-            : `${p.base}/tv/${tmdbId}/${season}/${episode}`
+            ? `${p.base}/movie/${tmdbId}?language=ar`
+            : `${p.base}/tv/${tmdbId}/${season}/${episode}?language=ar`
+        }
+        // 2Embed
+        else if (p.id === '2embed') {
+           url = type === 'movie'
+            ? `${p.base}/${tmdbId}?lang=ar`
+            : `${p.base}/${tmdbId}?s=${season}&e=${episode}&lang=ar`
         }
         // Default Pattern (Generic)
         else {

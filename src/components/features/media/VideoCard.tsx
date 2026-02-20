@@ -44,7 +44,38 @@ export const VideoCard = ({ video, index = 0 }: { video: VideoItem; index?: numb
   const [busy, setBusy] = useState(false)
   const { user } = useAuth()
   const navigate = useNavigate()
-  const img = video.thumbnail || ''
+  const [imageSrc, setImageSrc] = useState(() => {
+    const raw = video.thumbnail || ''
+    // Default to hqdefault (safe) instead of maxresdefault (often missing)
+    if (raw.includes('maxresdefault')) {
+      return raw.replace('maxresdefault', 'hqdefault').replace('vi_webp', 'vi').replace('.webp', '.jpg')
+    }
+    return raw
+  })
+  
+  // Handle image updates when prop changes
+  useEffect(() => {
+    const raw = video.thumbnail || ''
+    if (raw.includes('maxresdefault')) {
+      setImageSrc(raw.replace('maxresdefault', 'hqdefault').replace('vi_webp', 'vi').replace('.webp', '.jpg'))
+    } else {
+      setImageSrc(raw)
+    }
+  }, [video.thumbnail])
+
+  const handleImageError = () => {
+    if (!imageSrc) return
+
+    // Fallback logic for YouTube thumbnails
+    if (imageSrc.includes('hqdefault')) {
+      // Try mqdefault (Medium Quality)
+      setImageSrc(imageSrc.replace('hqdefault', 'mqdefault'))
+    } else {
+      // Give up and show placeholder
+      setImageSrc('') 
+    }
+  }
+
   const duration = video.duration ? formatDuration(video.duration) : ''
   const contentId = Number(video.id)
   const canToggle = Number.isFinite(contentId)
@@ -102,9 +133,10 @@ export const VideoCard = ({ video, index = 0 }: { video: VideoItem; index?: numb
         <div className="relative overflow-hidden rounded-xl bg-luxury-charcoal border border-white/5 transition-all duration-500 transform-gpu glass-smooth hover:scale-[1.05] hover:shadow-glass hover:border-primary/50">
           {/* Thumbnail Container */}
           <div className="aspect-video w-full relative overflow-hidden bg-zinc-900">
-            {img ? (
+            {imageSrc ? (
               <img 
-                src={img} 
+                src={imageSrc} 
+                onError={handleImageError}
                 alt={video.title} 
                 className={`h-full w-full object-cover transition-transform duration-700 ${isHovered ? 'scale-110 blur-[2px]' : 'scale-100'}`}
                 loading="lazy" 

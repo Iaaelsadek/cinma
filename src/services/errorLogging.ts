@@ -168,17 +168,21 @@ class ErrorLoggingService {
         })));
       
       if (error) {
-        console.error('Failed to log errors to database:', error);
-        // Re-add failed items to queue
-        this.queue.unshift(...batch);
+        // Silent failure to avoid console spam
+        // console.warn('Failed to log errors to database:', error.message);
+        
+        // Do not re-add failed items to queue to prevent infinite loops
+        // this.queue.unshift(...batch); 
         this.saveQueue();
       } else {
         this.saveQueue();
       }
     } catch (error) {
-      console.error('Error processing error queue:', error);
-      // Re-add failed items to queue
-      this.queue.unshift(...batch);
+      // Silent failure
+      // console.warn('Error processing error queue:', error);
+      
+      // Do not re-add failed items
+      // this.queue.unshift(...batch);
       this.saveQueue();
     } finally {
       this.isProcessing = false;
