@@ -15,17 +15,18 @@ export type Server = {
 // ------------------------------------------------------------------
 const PROVIDERS = [
   { id: 'vidsrc', name: 'VidSrc (Primary)', base: 'https://vidsrc.to/embed' },
-  { id: 'vidsrc_vip', name: 'VidSrc VIP', base: 'https://vidsrc.vip/embed' },
-  { id: 'autoembed', name: 'AutoEmbed', base: 'https://autoembed.to' },
+  { id: 'vidsrc_me', name: 'VidSrc Me', base: 'https://vidsrc.me/embed' },
   { id: 'vidsrc_pro', name: 'VidSrc Pro', base: 'https://vidsrc.pro/embed' },
-  { id: '2embed', name: '2Embed', base: 'https://www.2embed.cc/embed' },
-  { id: 'smashystream', name: 'SmashyStream', base: 'https://player.smashy.stream' },
-  { id: 'aniwave', name: 'AniWave (Backup)', base: 'https://aniwave.to/embed' },
+  { id: 'vidsrc_cc', name: 'VidSrc CC', base: 'https://vidsrc.cc/v2/embed' },
+  { id: 'vidlink', name: 'VidLink', base: 'https://vidlink.pro' },
   { id: 'superembed', name: 'SuperEmbed', base: 'https://superembed.stream' },
+  { id: 'autoembed', name: 'AutoEmbed', base: 'https://autoembed.co' },
+  { id: 'smashystream', name: 'SmashyStream', base: 'https://embed.smashystream.com/playere.php' },
   { id: 'multiembed', name: 'MultiEmbed', base: 'https://multiembed.mov' },
+  { id: 'embed_su', name: 'Embed.su', base: 'https://embed.su/embed' },
 ]
 
-export const useServers = (tmdbId: number, type: 'movie' | 'tv', season?: number, episode?: number) => {
+export const useServers = (tmdbId: number, type: 'movie' | 'tv', season?: number, episode?: number, imdbId?: string) => {
   const [servers, setServers] = useState<Server[]>([])
   const [active, setActive] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -35,6 +36,12 @@ export const useServers = (tmdbId: number, type: 'movie' | 'tv', season?: number
     let mounted = true
     
     const init = async () => {
+      if (!tmdbId || isNaN(tmdbId) || tmdbId <= 0) {
+        setServers([])
+        setLoading(false)
+        return
+      }
+
       setLoading(true)
       
       // 1. Fetch Custom DB Links (Highest Priority)
@@ -62,29 +69,72 @@ export const useServers = (tmdbId: number, type: 'movie' | 'tv', season?: number
       // 2. Generate Fallback Links
       const generatedServers: Server[] = PROVIDERS.map((p, idx) => {
         let url = ''
-        if (p.id === 'vidsrc' || p.id === 'vidsrc_pro' || p.id === 'vidsrc_vip') {
+        
+        // Vidsrc.to / Pro / In-house
+        if (p.id === 'vidsrc' || p.id === 'vidsrc_pro') {
           url = type === 'movie' 
-            ? `${p.base}/movie/${tmdbId}` 
-            : `${p.base}/tv/${tmdbId}/${season}/${episode}`
-        } else if (p.id === '2embed') {
-          url = type === 'movie' 
-            ? `${p.base}/${tmdbId}` 
-            : `${p.base}/tv/${tmdbId}&s=${season}&e=${episode}`
-        } else if (p.id === 'embed_su') {
+            ? (imdbId ? `${p.base}/movie/${imdbId}` : `${p.base}/movie/${tmdbId}`)
+            : (imdbId ? `${p.base}/tv/${imdbId}/${season}/${episode}` : `${p.base}/tv/${tmdbId}/${season}/${episode}`)
+        } 
+        // Vidsrc.me (Supports IMDb)
+        else if (p.id === 'vidsrc_me') {
+          url = type === 'movie'
+             ? (imdbId ? `${p.base}/movie?imdb=${imdbId}` : `${p.base}/movie?tmdb=${tmdbId}`)
+             : (imdbId ? `${p.base}/tv?imdb=${imdbId}&season=${season}&episode=${episode}` : `${p.base}/tv?tmdb=${tmdbId}&season=${season}&episode=${episode}`)
+        }
+        // Vidsrc.cc
+        else if (p.id === 'vidsrc_cc') {
           url = type === 'movie'
             ? `${p.base}/movie/${tmdbId}`
             : `${p.base}/tv/${tmdbId}/${season}/${episode}`
-        } else if (p.id === 'autoembed') {
+        }
+        // VidLink (New)
+        else if (p.id === 'vidlink') {
+          url = type === 'movie'
+            ? `${p.base}/movie/${tmdbId}`
+            : `${p.base}/tv/${tmdbId}/${season}/${episode}`
+        }
+        // SuperEmbed
+        else if (p.id === 'superembed') {
+           url = type === 'movie'
+            ? `${p.base}/movie/${tmdbId}`
+            : `${p.base}/tv/${tmdbId}/${season}/${episode}`
+        }
+        // AutoEmbed
+        else if (p.id === 'autoembed') {
           url = type === 'movie'
             ? `${p.base}/movie/tmdb/${tmdbId}`
-            : `${p.base}/tv/tmdb/${tmdbId}-${season}x${episode}`
-        } else {
+            : `${p.base}/tv/tmdb/${tmdbId}-${season}-${episode}`
+        }
+        // SmashyStream
+        else if (p.id === 'smashystream') {
+          url = type === 'movie'
+            ? `${p.base}?tmdb=${tmdbId}`
+            : `${p.base}?tmdb=${tmdbId}&season=${season}&episode=${episode}`
+        }
+        // MultiEmbed
+        else if (p.id === 'multiembed') {
+           url = type === 'movie'
+            ? `${p.base}/directstream.php?video_id=${tmdbId}&tmdb=1`
+            : `${p.base}/directstream.php?video_id=${tmdbId}&tmdb=1&s=${season}&e=${episode}`
+        }
+        // Embed.su
+        else if (p.id === 'embed_su') {
+          url = type === 'movie'
+            ? `${p.base}/movie/${tmdbId}`
+            : `${p.base}/tv/${tmdbId}/${season}/${episode}`
+        }
+        // Default Pattern (Generic)
+        else {
           url = type === 'movie'
             ? `${p.base}/movie/${tmdbId}`
             : `${p.base}/tv/${tmdbId}/${season}/${episode}`
         }
 
+        // Override with DB link if exists
         if (dbLinks[p.id]) url = dbLinks[p.id]
+
+        if (!url) return null
 
         return {
           name: p.name,
@@ -93,28 +143,21 @@ export const useServers = (tmdbId: number, type: 'movie' | 'tv', season?: number
           status: 'unknown',
           responseTime: undefined
         }
-      })
+      }).filter(Boolean) as Server[]
 
       if (mounted) {
         setServers(generatedServers)
-        setActive(0)
+        setActive(0) 
         setLoading(false)
         
         // 3. Silent Watcher Simulation
-        generatedServers.forEach((_, i) => {
-          setTimeout(() => {
-            if (!mounted) return
-            setServers(prev => prev.map((s, idx) => 
-              idx === i ? { ...s, status: 'online', responseTime: Math.floor(Math.random() * 200) + 50 } : s
-            ))
-          }, i * 300)
-        })
+        setServers(prev => prev.map(s => ({ ...s, status: 'online' })))
       }
     }
 
     init()
     return () => { mounted = false }
-  }, [tmdbId, type, season, episode])
+  }, [tmdbId, type, season, episode, imdbId])
 
   const reportBroken = async () => {
     setReporting(true)
@@ -130,10 +173,11 @@ export const useServers = (tmdbId: number, type: 'movie' | 'tv', season?: number
       })
     } catch {}
     
+    // Auto-switch to next server
     if (active < servers.length - 1) {
       setActive(prev => prev + 1)
     } else {
-      setActive(0)
+      setActive(0) // Loop back to start
     }
     setReporting(false)
   }

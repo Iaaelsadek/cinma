@@ -325,11 +325,14 @@ export const Watch = () => {
   }, [details, title, overview, backdrop, poster, type, runtimeMin, rating])
 
   // New Server Hook
+  // Don't call useServers with 0 or NaN if we are waiting for resolution
+  const effectiveId = id ? Number(id) : 0
   const { servers, active, setActive, loading: serversLoading, reportBroken, reporting } = useServers(
-    Number(id), 
+    effectiveId, 
     type as 'movie' | 'tv', 
     season, 
-    episode
+    episode,
+    details?.external_ids?.imdb_id
   )
 
   // Early Returns (Now safe because all hooks are declared above)

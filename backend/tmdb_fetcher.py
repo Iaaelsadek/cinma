@@ -230,6 +230,70 @@ class TMDBFetcher:
             except Exception as e:
                 print(f"✗ Error saving {media_type} {data['title']}: {e}")
 
+    def fetch_discover(self, media_type: str, params: Dict, pages: int = 5, start_page: int = 1):
+        """Fetch content using discovery endpoint."""
+        print(f"Starting discovery fetch for {media_type} with params {params}...")
+        
+        for page in range(start_page, start_page + pages):
+            url = f"{self.base_url}/discover/{media_type}"
+            query_params = {
+                'api_key': self.api_key,
+                'language': 'ar-SA',
+                'page': page,
+                'include_adult': 'false',
+                'include_video': 'false',
+                'sort_by': 'popularity.desc',
+                **params
+            }
+            
+            try:
+                resp = requests.get(url, params=query_params)
+                if resp.status_code == 200:
+                    results = resp.json().get('results', [])
+                    print(f"Page {page}: Found {len(results)} items")
+                    
+                    for item in results:
+                        self.process_item(item, media_type)
+                        time.sleep(0.1)
+                else:
+                    print(f"Error fetching page {page}: {resp.status_code}")
+                    
+            except Exception as e:
+                print(f"Error in fetch loop: {e}")
+            
+            time.sleep(1)
+
+    def fetch_search(self, media_type: str, query: str, pages: int = 1):
+        """Fetch content using search endpoint."""
+        print(f"Starting search fetch for {media_type} with query '{query}'...")
+        
+        for page in range(1, pages + 1):
+            url = f"{self.base_url}/search/{media_type}"
+            params = {
+                'api_key': self.api_key,
+                'query': query,
+                'language': 'ar-SA',
+                'page': page,
+                'include_adult': 'false'
+            }
+            
+            try:
+                resp = requests.get(url, params=params)
+                if resp.status_code == 200:
+                    results = resp.json().get('results', [])
+                    print(f"Page {page}: Found {len(results)} items")
+                    
+                    for item in results:
+                        self.process_item(item, media_type)
+                        time.sleep(0.1)
+                else:
+                    print(f"Error fetching page {page}: {resp.status_code}")
+                    
+            except Exception as e:
+                print(f"Error in fetch loop: {e}")
+            
+            time.sleep(1)
+
     def fetch_trending(self, media_type: str = 'movie', pages: int = 5, start_page: int = 1, limit_per_page: Optional[int] = None):
         """Fetch trending content."""
         print(f"Starting fetch for trending {media_type}s...")

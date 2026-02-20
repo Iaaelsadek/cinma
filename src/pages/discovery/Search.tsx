@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Star } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Link, useSearchParams } from 'react-router-dom'
-import { useQuery, keepPreviousData } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import InfiniteScroll from 'react-infinite-scroll-component'
 import { advancedSearch, fetchGenres } from '../../lib/tmdb'
 import { MovieCard } from '../../components/features/media/MovieCard'
@@ -65,8 +65,7 @@ export const Search = () => {
         .limit(20)
       return fallback || []
     },
-    enabled: q.length >= 2,
-    placeholderData: keepPreviousData
+    enabled: q.length >= 2
   })
 
   const gamesQuery = useQuery<GameRow[]>({
@@ -86,8 +85,7 @@ export const Search = () => {
       const { data } = await query.limit(20)
       return (data as GameRow[]) || []
     },
-    enabled: (q.length >= 2) || (types.includes('game') && (keywords.length > 0 || rawGenres.length > 0)),
-    placeholderData: keepPreviousData
+    enabled: (q.length >= 2) || (types.includes('game') && (keywords.length > 0 || rawGenres.length > 0))
   })
 
   const softwareQuery = useQuery<SoftwareRow[]>({
@@ -107,8 +105,7 @@ export const Search = () => {
       const { data } = await query.limit(20)
       return (data as SoftwareRow[]) || []
     },
-    enabled: (q.length >= 2) || (types.includes('software') && (keywords.length > 0 || rawGenres.length > 0)),
-    placeholderData: keepPreviousData
+    enabled: (q.length >= 2) || (types.includes('software') && (keywords.length > 0 || rawGenres.length > 0))
   })
 
   const animeQuery = useQuery<AnimeRow[]>({
@@ -128,8 +125,7 @@ export const Search = () => {
       const { data } = await query.limit(20)
       return (data as AnimeRow[]) || []
     },
-    enabled: (q.length >= 2) || (types.includes('anime') && (keywords.length > 0 || rawGenres.length > 0)),
-    placeholderData: keepPreviousData
+    enabled: (q.length >= 2) || (types.includes('anime') && (keywords.length > 0 || rawGenres.length > 0))
   })
 
   const recitersQuery = useQuery<ReciterRow[]>({
@@ -158,7 +154,6 @@ export const Search = () => {
       return (data as ReciterRow[]) || []
     },
     enabled: (q.length >= 2) || (types.includes('quran') && keywords.length > 0),
-    placeholderData: keepPreviousData
   })
 
   useEffect(() => {
@@ -189,8 +184,7 @@ export const Search = () => {
       })
       return res as PageRes
     },
-    enabled: !!CONFIG.TMDB_API_KEY && (q.trim().length > 0 || genres.length > 0 || !!yfrom || !!yto || !!rfrom || !!rto || rcolor.length > 0 || !!sort || !!filterLang || !!keywords),
-    placeholderData: keepPreviousData
+    enabled: !!CONFIG.TMDB_API_KEY && (q.trim().length > 0 || genres.length > 0 || !!yfrom || !!yto || !!rfrom || !!rto || rcolor.length > 0 || !!sort || !!filterLang || !!keywords)
   })
   const gq = useQuery<GenreItem[]>({
     queryKey: ['genres', types.join(',')],
@@ -211,16 +205,30 @@ export const Search = () => {
  
   const [searchText, setSearchText] = useState(q)
   const debouncedQuery = useDebounce(searchText, 400)
-  useEffect(() => setSearchText(q), [q])
+  
+  // Only sync q to searchText if the change didn't originate from our own debounce
+  useEffect(() => {
+    if (q !== debouncedQuery) {
+      setSearchText(q)
+    }
+  }, [q])
+
   useEffect(() => {
     const value = debouncedQuery
+    if (value === q) return // Prevent loop
+    
+    // If the URL (q) just changed to something that searchText ALSO matches,
+    // but debouncedQuery hasn't caught up yet, we should NOT revert URL to debouncedQuery.
+    // So: only update URL if debouncedQuery === searchText (debounce settled).
+    if (value !== searchText) return 
+
     setSp(prev => {
       const p = new URLSearchParams(prev)
       if (value) p.set('q', value); else p.delete('q')
       p.set('page', '1')
       return p
     })
-  }, [debouncedQuery, setSp])
+  }, [debouncedQuery, setSp, q, searchText])
   const [showFilters, setShowFilters] = useState(true)
   const years = useMemo(() => {
     const arr: number[] = []
@@ -281,7 +289,13 @@ export const Search = () => {
                           key={t}
                           onClick={() => {
                             const next = checked ? types.filter(x => x !== t) : Array.from(new Set([...types, t]))
-                            setParam('types', next.join(',') || 'movie')
+                            setSp(prev => {
+                              const p = new URLSearchParams(prev)
+                              p.set('types', next.join(',') || 'movie')
+                              p.delete('genres') // Clear genres when type changes to avoid invalid IDs
+                              p.set('page', '1')
+                              return p
+                            })
                           }}
                           className={`h-9 rounded-lg border px-3 text-xs font-bold uppercase tracking-widest transition-all ${checked ? 'bg-primary border-primary text-black' : 'bg-black/40 border-white/10 text-zinc-400 hover:text-white'}`}
                         >
@@ -290,9 +304,9 @@ export const Search = () => {
                       )
                     })}
 
-                    <div className="h-6 w-px bg-white/10" />
+                    <div className="h-6 w-px bg-white/10 hidden sm:block" />
 
-                    <div className="flex items-center gap-1">
+                    <div className="flex flex-wrap items-center gap-1">
                       {Array.from({ length: 10 }).map((_, i) => {
                         const active = (rfrom || 0) >= (i + 1)
                         return (
