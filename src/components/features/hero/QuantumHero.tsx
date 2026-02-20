@@ -1,14 +1,35 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Play, Info, Volume2, VolumeX, ChevronRight } from 'lucide-react'
+import { Play, Info, Volume2, VolumeX, ChevronRight, Star, Calendar, Film } from 'lucide-react'
 import { PrefetchLink } from '../../common/PrefetchLink'
 import { TmdbImage } from '../../common/TmdbImage'
 import { useLang } from '../../../state/useLang'
 import { tmdb } from '../../../lib/tmdb'
+import { getGenreName } from '../../../lib/genres'
 import ReactPlayer from 'react-player/youtube'
 import { Swiper, SwiperSlide } from 'swiper/react'
 import { Autoplay } from 'swiper/modules'
 import 'swiper/css'
+
+const getLocalizedType = (type: string, lang: string) => {
+  if (lang !== 'ar') return type === 'tv' ? 'Series' : 'Movie'
+  return type === 'tv' ? 'مسلسل' : 'فيلم'
+}
+
+const getLocalizedOrigin = (origin: string, lang: string) => {
+  if (lang !== 'ar') return origin.toUpperCase()
+  const map: Record<string, string> = {
+    'en': 'أجنبي',
+    'ar': 'عربي',
+    'ko': 'كوري',
+    'zh': 'صيني',
+    'tr': 'تركي',
+    'ja': 'ياباني',
+    'hi': 'هندي',
+    'es': 'إسباني'
+  }
+  return map[origin] || 'عالمي'
+}
 
 /**
  * QUANTUM HERO - DIVERSE CAROUSEL
@@ -135,18 +156,39 @@ export const QuantumHero = ({ items, type }: { items: any[], type?: string }) =>
                   <div className="space-y-3 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
                     {/* Category Label */}
                     <div className="inline-flex items-center px-2 py-1 rounded bg-lumen-gold/20 text-lumen-gold text-xs font-bold uppercase tracking-wider backdrop-blur-sm border border-lumen-gold/20">
-                      {item.original_language === 'ar' ? 'Arabic' : 
-                       item.original_language === 'ko' ? 'Korean' : 
-                       item.original_language === 'zh' ? 'Chinese' : 
-                       item.original_language === 'tr' ? 'Turkish' : 'International'}
+                      {getLocalizedOrigin(item.original_language, lang)}
                       <span className="mx-1">•</span>
-                      {item.media_type === 'tv' ? 'Series' : 'Movie'}
+                      {getLocalizedType(item.media_type || 'movie', lang)}
                     </div>
 
                     {/* Title */}
-                    <h2 className="font-syne font-black text-white leading-tight text-2xl lg:text-3xl line-clamp-2 drop-shadow-lg">
+                    <h2 className="font-syne font-black text-white leading-tight text-2xl lg:text-3xl line-clamp-2 drop-shadow-lg" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
                       {item.title || item.name}
                     </h2>
+
+                    {/* Metadata Row */}
+                    <div className="flex items-center gap-3 text-xs text-zinc-300 font-medium">
+                       {item.vote_average > 0 && (
+                         <div className="flex items-center gap-1 text-yellow-400">
+                           <Star size={12} fill="currentColor" />
+                           <span>{item.vote_average.toFixed(1)}</span>
+                         </div>
+                       )}
+                       
+                       {(item.release_date || item.first_air_date) && (
+                         <div className="flex items-center gap-1">
+                           <Calendar size={12} />
+                           <span>{(item.release_date || item.first_air_date).substring(0, 4)}</span>
+                         </div>
+                       )}
+                       
+                       {item.genre_ids?.[0] && (
+                         <div className="flex items-center gap-1 text-lumen-blue">
+                           <Film size={12} />
+                           <span>{getGenreName(item.genre_ids[0], lang)}</span>
+                         </div>
+                       )}
+                    </div>
 
                     {/* Expanded Content (Hover) */}
                     <div className="max-h-0 overflow-hidden group-hover:max-h-[300px] transition-all duration-500 ease-in-out opacity-0 group-hover:opacity-100">
