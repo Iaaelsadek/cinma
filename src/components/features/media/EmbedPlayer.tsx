@@ -48,17 +48,23 @@ export const EmbedPlayer = ({ server, cinemaMode, toggleCinemaMode, loading, onN
           <iframe
             key={server.url}
             src={server.url}
-            className="h-full w-full"
+            className="h-full w-full bg-black"
             allowFullScreen
             scrolling="no"
+            referrerPolicy="origin"
+            sandbox="allow-forms allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-presentation"
             style={{ border: 'none', overflow: 'hidden' }}
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
             title={`Stream ${server.name}`}
+            onError={() => onNextServer()}
           />
         ) : (
-          <div className="flex h-full flex-col items-center justify-center text-zinc-500 gap-4">
+          <div className="flex h-full flex-col items-center justify-center text-zinc-500 gap-4 bg-zinc-900/50">
             <WifiOff size={48} className="opacity-50" />
-            <span className="text-lg font-medium">No servers available</span>
+            <div className="text-center space-y-2">
+              <span className="block text-lg font-medium text-zinc-300">No working servers found</span>
+              <span className="block text-sm text-zinc-500">Try switching servers below or use the external link</span>
+            </div>
           </div>
         )}
         
@@ -88,6 +94,18 @@ export const EmbedPlayer = ({ server, cinemaMode, toggleCinemaMode, loading, onN
             <SkipForward size={12} />
             <span>Next Server</span>
           </button>
+          
+          {server && (
+            <a
+              href={server.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 rounded-xl border border-white/5 bg-emerald-500/10 px-3 h-8 text-xs font-bold text-emerald-400 hover:bg-emerald-500/20 transition-all"
+            >
+              <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span>Direct Link</span>
+            </a>
+          )}
           
           <button
             onClick={onReport}

@@ -43,6 +43,7 @@ const MoviesPage = lazy(() => import('./pages/discovery/Movies').then(m => ({ de
 const SeriesPage = lazy(() => import('./pages/discovery/Series').then(m => ({ default: m.SeriesPage })))
 const AnimePage = lazy(() => import('./pages/discovery/Anime').then(m => ({ default: m.AnimePage })))
 const AsianDramaPage = lazy(() => import('./pages/discovery/AsianDrama').then(m => ({ default: m.AsianDramaPage })))
+const DynamicContentPage = lazy(() => import('./pages/discovery/DynamicContent').then(m => ({ default: m.DynamicContentPage })))
 const PlaysPage = lazy(() => import('./pages/discovery/Plays').then(m => ({ default: m.PlaysPage })))
 const ClassicsPage = lazy(() => import('./pages/discovery/Classics').then(m => ({ default: m.ClassicsPage })))
 const SummariesPage = lazy(() => import('./pages/discovery/Summaries').then(m => ({ default: m.SummariesPage })))
@@ -197,6 +198,22 @@ const App = () => {
             <Route path="/category/:category" element={<CategoryPage />} />
             <Route path="/kids" element={<CategoryPage />} />
             
+            {/* Dynamic Content Routes */}
+            <Route path="/disney" element={<DynamicContentPage preset="disney" />} />
+            <Route path="/spacetoon" element={<DynamicContentPage preset="spacetoon" />} />
+            <Route path="/cartoons" element={<DynamicContentPage preset="cartoons" />} />
+            <Route path="/animation" element={<DynamicContentPage preset="cartoons" />} />
+            
+            <Route path="/arabic-movies" element={<DynamicContentPage preset="arabic" type="movie" />} />
+            <Route path="/arabic-series" element={<DynamicContentPage preset="arabic" type="tv" />} />
+            
+            <Route path="/foreign-movies" element={<DynamicContentPage preset="foreign" type="movie" />} />
+            <Route path="/foreign-series" element={<DynamicContentPage preset="foreign" type="tv" />} />
+            
+            <Route path="/indian" element={<DynamicContentPage preset="indian" />} />
+            <Route path="/ramadan" element={<DynamicContentPage preset="ramadan" />} />
+            <Route path="/religious" element={<DynamicContentPage preset="religious" />} />
+
             {/* Anime Routes with Filters */}
             <Route path="/anime" element={<AnimePage />} />
             <Route path="/anime/:genre" element={<AnimePage />} />
@@ -236,7 +253,6 @@ const App = () => {
             <Route path="/game/:id" element={<GameDetails />} />
             <Route path="/software" element={<Software />} />
             <Route path="/software/:id" element={<SoftwareDetails />} />
-            <Route path="/ramadan" element={<RamadanPage />} />
             <Route path="/quran" element={<QuranPage />} />
             <Route path="/quran/reciter/:id" element={<ReciterDetails />} />
 
