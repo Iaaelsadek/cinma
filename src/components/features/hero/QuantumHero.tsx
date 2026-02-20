@@ -85,14 +85,7 @@ export const QuantumHero = ({ items, type }: { items: any[], type?: string }) =>
             {/* Background Image */}
             <div className="absolute inset-0 z-0">
                <TmdbImage
-                path={item.poster_path} // Use poster for vertical slice? Or backdrop? Backdrop covers better.
-                // Actually, for narrow columns, poster might be better? 
-                // But backdrop is high res landscape. 
-                // Let's use backdrop with object-cover.
-                // Wait, standard hero uses backdrop. 
-                // Let's try backdrop but center it.
-                // Actually, for mobile stack, backdrop is good.
-                // For desktop narrow column, center-cropped backdrop works.
+                path={item.backdrop_path || item.poster_path}
                 alt={item.title || item.name}
                 size="original"
                 className="w-full h-full"
