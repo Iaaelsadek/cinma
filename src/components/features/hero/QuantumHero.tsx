@@ -1,12 +1,13 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Play, Info } from 'lucide-react'
+import { Play, Info, Volume2, VolumeX } from 'lucide-react'
 import { PrefetchLink } from '../../common/PrefetchLink'
 import { TmdbImage } from '../../common/TmdbImage'
 import { useLang } from '../../../state/useLang'
 import { useLocation } from 'react-router-dom'
 import { tmdb } from '../../../lib/tmdb'
 import { useDualTitles } from '../../../hooks/useDualTitles'
+import ReactPlayer from 'react-player/youtube'
 
 /**
  * LUMEN Hero — full-viewport, cinematic.
@@ -17,17 +18,54 @@ export const QuantumHero = ({ items, type }: { items: any[], type?: string }) =>
   const { pathname } = useLocation()
   const isHome = pathname === '/'
   const [index, setIndex] = useState(0)
+  const [videoKey, setVideoKey] = useState<string | null>(null)
+  const [showVideo, setShowVideo] = useState(false)
+  const [isMuted, setIsMuted] = useState(true)
+  const containerRef = useRef<HTMLDivElement>(null)
   
+  const current = items[index]
+  const titles = useDualTitles(current)
+
+  // Auto-rotation logic
   useEffect(() => {
-    if (items.length <= 1) return
+    if (items.length <= 1 || showVideo) return
     const timer = setInterval(() => {
       setIndex((prev) => (prev + 1) % items.length)
     }, 8000)
     return () => clearInterval(timer)
-  }, [items.length])
+  }, [items.length, showVideo])
 
-  const current = items[index]
-  const titles = useDualTitles(current)
+  // Fetch trailer when current item changes
+  useEffect(() => {
+    if (!current || !isHome) return
+
+    let mounted = true
+    setShowVideo(false)
+    setVideoKey(null)
+
+    const fetchTrailer = async () => {
+      try {
+        const type = current.media_type || 'movie'
+        const { data } = await tmdb.get(`/${type}/${current.id}/videos`)
+        const trailer = data.results?.find(
+          (v: any) => v.site === 'YouTube' && (v.type === 'Trailer' || v.type === 'Teaser')
+        )
+        
+        if (mounted && trailer?.key) {
+          setVideoKey(trailer.key)
+          // Delay showing video to let image load first (Netflix style)
+          setTimeout(() => {
+            if (mounted) setShowVideo(true)
+          }, 2000)
+        }
+      } catch (err) {
+        console.error('Failed to fetch trailer', err)
+      }
+    }
+
+    fetchTrailer()
+    return () => { mounted = false }
+  }, [current?.id, isHome])
 
   if (!items.length || !current) return null
 
@@ -40,37 +78,79 @@ export const QuantumHero = ({ items, type }: { items: any[], type?: string }) =>
   const watchHref = `/watch/${current.media_type || 'movie'}/${current.id}`
 
   return (
-    <div className="relative h-[45vh] md:h-[50vh] w-full overflow-hidden">
+    <div ref={containerRef} className="relative h-[55vh] md:h-[85vh] w-full overflow-hidden bg-black">
       {isHome ? (
         <AnimatePresence mode="wait">
           <motion.div
             key={current.id}
-            initial={{ opacity: 0, scale: 1.08 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 1.05 }}
-            transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.8 }}
             className="absolute inset-0"
           >
-            {/* Backdrop — single layer, no animation for performance */}
-            <TmdbImage
-              path={current.backdrop_path}
-              alt={title || 'Backdrop'}
-              size="original"
-              priority={true}
-              className="absolute inset-0 h-full w-full"
-              imgClassName="object-cover object-center"
-            />
-            {/* LUMEN vignette — warm pull to bottom */}
-            <div className="lumen-vignette" />
-            {/* Optional: very subtle gradient for text legibility */}
-            <div
-              className="absolute inset-0 pointer-events-none"
+            {/* Background Video Layer */}
+            {showVideo && videoKey ? (
+              <div className="absolute inset-0 w-full h-full overflow-hidden">
+                 <div className="absolute top-[-50%] left-[-50%] w-[200%] h-[200%] pointer-events-none">
+                  <ReactPlayer
+                    url={`https://www.youtube.com/watch?v=${videoKey}`}
+                    playing={true}
+                    loop={true}
+                    muted={isMuted}
+                    controls={false}
+                    width="100%"
+                    height="100%"
+                    config={{
+                      youtube: {
+                        playerVars: { 
+                          showinfo: 0, 
+                          controls: 0, 
+                          disablekb: 1, 
+                          fs: 0, 
+                          iv_load_policy: 3, 
+                          modestbranding: 1,
+                          rel: 0
+                        }
+                      }
+                    }}
+                    style={{ pointerEvents: 'none' }}
+                  />
+                </div>
+              </div>
+            ) : (
+              /* Backdrop Image Fallback */
+              <TmdbImage
+                path={current.backdrop_path}
+                alt={title || 'Backdrop'}
+                size="original"
+                priority={true}
+                className="absolute inset-0 h-full w-full"
+                imgClassName="object-cover object-center"
+              />
+            )}
+
+            {/* LUMEN Vignette & Gradient Overlay */}
+            <div 
+              className="absolute inset-0 pointer-events-none z-10"
               style={{
-                background: 'linear-gradient(to top, rgba(8,8,12,0.92) 0%, rgba(8,8,12,0.4) 40%, transparent 70%)',
+                background: `
+                  linear-gradient(to top, 
+                    rgba(0,0,0,1) 0%, 
+                    rgba(0,0,0,0.8) 20%, 
+                    rgba(0,0,0,0.4) 50%, 
+                    transparent 80%
+                  ),
+                  linear-gradient(to right, 
+                    rgba(0,0,0,0.8) 0%, 
+                    transparent 50%
+                  )
+                `
               }}
             />
+            
             {/* Film grain */}
-            <div className="lumen-grain" aria-hidden />
+            <div className="lumen-grain z-10" aria-hidden />
           </motion.div>
         </AnimatePresence>
       ) : (
@@ -83,19 +163,12 @@ export const QuantumHero = ({ items, type }: { items: any[], type?: string }) =>
               background: 'radial-gradient(ellipse 80% 50% at 50% 100%, rgba(201,169,98,0.08) 0%, transparent 60%)',
             }}
           />
-          <div
-            className="absolute inset-0 opacity-[0.02]"
-            style={{
-              backgroundImage: 'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)',
-              backgroundSize: '48px 48px',
-            }}
-          />
         </div>
       )}
 
-      {/* Content — bottom, max-width for readability on TV */}
-      <div className="absolute bottom-0 left-0 right-0 z-20 pb-8 md:pb-10">
-        <div className="max-w-[2400px] mx-auto px-6 md:px-12 lg:px-16">
+      {/* Content Layer */}
+      <div className="absolute bottom-0 left-0 right-0 z-20 pb-16 md:pb-24 pl-4 md:pl-16">
+        <div className="max-w-[2400px] w-full flex flex-col md:flex-row items-end justify-between px-6 md:px-12 lg:px-16">
           <motion.div
             key={`hero-text-${current.id}`}
             initial={{ y: 32, opacity: 0 }}
@@ -166,6 +239,19 @@ export const QuantumHero = ({ items, type }: { items: any[], type?: string }) =>
               </PrefetchLink>
             </div>
           </motion.div>
+
+          {/* Volume Control (Desktop) */}
+          {showVideo && videoKey && (
+            <div className="hidden md:flex flex-col gap-4 items-end mb-6 z-30">
+              <button
+                onClick={() => setIsMuted(!isMuted)}
+                className="p-3 rounded-full border border-white/20 bg-black/30 backdrop-blur-sm text-white/80 hover:text-white hover:bg-white/10 transition-all active:scale-95"
+                aria-label={isMuted ? "Unmute" : "Mute"}
+              >
+                {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
