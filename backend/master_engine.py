@@ -224,6 +224,9 @@ if __name__ == "__main__":
     if "--once" in sys.argv or "--full-sync" in sys.argv:
         _run_full_sync()
         raise SystemExit(0)
+    if "--run-cycle" in sys.argv:
+        run_cycle()
+        raise SystemExit(0)
     interval_hours = int(os.environ.get("ENGINE_INTERVAL_HOURS", "6"))
     schedule.every(interval_hours).hours.do(run_cycle)
     extras_enabled = os.environ.get("EXTRAS_FETCH_ENABLED", "1") not in ("0", "false", "False")
