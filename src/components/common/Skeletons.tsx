@@ -33,7 +33,7 @@ export const SkeletonPosterCard = memo(() => {
 export const SkeletonHero = memo(() => {
   return (
     <div className="relative h-[85vh] w-full bg-black flex flex-col md:flex-row overflow-hidden">
-      {[1, 2, 3].map((i) => (
+      {[1, 2, 3, 4, 5].map((i) => (
         <div 
           key={i} 
           className={`

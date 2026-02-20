@@ -21,8 +21,8 @@ export const QuantumHero = ({ items, type }: { items: any[], type?: string }) =>
   const [trailers, setTrailers] = useState<Record<number, string>>({})
   const [isMuted, setIsMuted] = useState(true)
   
-  // Take top 3 items only
-  const heroItems = items.slice(0, 3)
+  // Take top 5 items only
+  const heroItems = items.slice(0, 5)
   
   // Default active item is the first one if none selected (optional)
   // But for "Split Grid", usually they start equal or first expanded.

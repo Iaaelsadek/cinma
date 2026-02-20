@@ -203,7 +203,7 @@ export const Home = () => {
       />
 
       {/* 1. QUANTUM HERO PORTAL */}
-      <section className="relative z-10 w-full pt-16 md:pt-20">
+      <section className="relative z-10 w-full">
          {popularMovies.isLoading ? <SkeletonHero /> : <QuantumHero items={heroItems} />}
       </section>
 
