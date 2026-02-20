@@ -2,7 +2,7 @@ import { ChevronLeft, ChevronRight, Zap } from 'lucide-react'
 import { useLang } from '../../state/useLang'
 import { PrefetchLink } from './PrefetchLink'
 
-type SectionTheme = 'cyan' | 'purple' | 'red' | 'gold' | 'pink'
+type SectionTheme = 'cyan' | 'purple' | 'red' | 'gold' | 'pink' | 'blue' | 'green' | 'indigo' | 'orange'
 
 const THEMES: Record<SectionTheme, {
   iconBox: string
@@ -33,6 +33,66 @@ const THEMES: Record<SectionTheme, {
     actionIconBg: 'group-hover/btn:bg-cyan-500/20',
     actionIcon: 'group-hover/btn:text-cyan-400',
     circuitColor: 'rgba(6,182,212,0.1)'
+  },
+  blue: {
+    iconBox: 'bg-blue-500/10 border-blue-500/20 text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.1)] group-hover/header:shadow-[0_0_25px_rgba(59,130,246,0.25)]',
+    iconGlow: 'bg-blue-400/20',
+    titleHover: 'group-hover/header:text-blue-50',
+    arteryPulse: 'via-blue-500/50',
+    badgeDot: 'bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.8)]',
+    badgeLine: 'from-blue-500',
+    badgeBox: 'border-blue-500/30 text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.3)]',
+    badgeIconFill: 'fill-blue-400',
+    actionBtn: 'hover:border-blue-500/50 hover:bg-blue-950/20',
+    actionText: 'group-hover/btn:text-blue-400',
+    actionIconBg: 'group-hover/btn:bg-blue-500/20',
+    actionIcon: 'group-hover/btn:text-blue-400',
+    circuitColor: 'rgba(59,130,246,0.1)'
+  },
+  green: {
+    iconBox: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.1)] group-hover/header:shadow-[0_0_25px_rgba(16,185,129,0.25)]',
+    iconGlow: 'bg-emerald-400/20',
+    titleHover: 'group-hover/header:text-emerald-50',
+    arteryPulse: 'via-emerald-500/50',
+    badgeDot: 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.8)]',
+    badgeLine: 'from-emerald-500',
+    badgeBox: 'border-emerald-500/30 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.3)]',
+    badgeIconFill: 'fill-emerald-400',
+    actionBtn: 'hover:border-emerald-500/50 hover:bg-emerald-950/20',
+    actionText: 'group-hover/btn:text-emerald-400',
+    actionIconBg: 'group-hover/btn:bg-emerald-500/20',
+    actionIcon: 'group-hover/btn:text-emerald-400',
+    circuitColor: 'rgba(16,185,129,0.1)'
+  },
+  indigo: {
+    iconBox: 'bg-indigo-500/10 border-indigo-500/20 text-indigo-400 shadow-[0_0_15px_rgba(99,102,241,0.1)] group-hover/header:shadow-[0_0_25px_rgba(99,102,241,0.25)]',
+    iconGlow: 'bg-indigo-400/20',
+    titleHover: 'group-hover/header:text-indigo-50',
+    arteryPulse: 'via-indigo-500/50',
+    badgeDot: 'bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.8)]',
+    badgeLine: 'from-indigo-500',
+    badgeBox: 'border-indigo-500/30 text-indigo-400 shadow-[0_0_15px_rgba(99,102,241,0.3)]',
+    badgeIconFill: 'fill-indigo-400',
+    actionBtn: 'hover:border-indigo-500/50 hover:bg-indigo-950/20',
+    actionText: 'group-hover/btn:text-indigo-400',
+    actionIconBg: 'group-hover/btn:bg-indigo-500/20',
+    actionIcon: 'group-hover/btn:text-indigo-400',
+    circuitColor: 'rgba(99,102,241,0.1)'
+  },
+  orange: {
+    iconBox: 'bg-orange-500/10 border-orange-500/20 text-orange-400 shadow-[0_0_15px_rgba(249,115,22,0.1)] group-hover/header:shadow-[0_0_25px_rgba(249,115,22,0.25)]',
+    iconGlow: 'bg-orange-400/20',
+    titleHover: 'group-hover/header:text-orange-50',
+    arteryPulse: 'via-orange-500/50',
+    badgeDot: 'bg-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.8)]',
+    badgeLine: 'from-orange-500',
+    badgeBox: 'border-orange-500/30 text-orange-400 shadow-[0_0_15px_rgba(249,115,22,0.3)]',
+    badgeIconFill: 'fill-orange-400',
+    actionBtn: 'hover:border-orange-500/50 hover:bg-orange-950/20',
+    actionText: 'group-hover/btn:text-orange-400',
+    actionIconBg: 'group-hover/btn:bg-orange-500/20',
+    actionIcon: 'group-hover/btn:text-orange-400',
+    circuitColor: 'rgba(249,115,22,0.1)'
   },
   purple: {
     iconBox: 'bg-purple-500/10 border-purple-500/20 text-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.1)] group-hover/header:shadow-[0_0_25px_rgba(168,85,247,0.25)]',

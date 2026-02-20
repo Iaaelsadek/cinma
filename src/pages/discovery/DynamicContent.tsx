@@ -8,7 +8,7 @@ import { slugify } from '../../lib/utils'
 import { SkeletonGrid } from '../../components/common/Skeletons'
 import { SectionHeader } from '../../components/common/SectionHeader'
 import { Tv, Film, Clapperboard, Globe, Moon, BookOpen, Baby, Sparkles } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 export type ContentPreset = 
   | 'disney' 
@@ -214,7 +214,7 @@ export const DynamicContentPage = ({ preset, type: propType }: Props) => {
           <>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mt-8">
               {contentList.map((item: any) => (
-                <MovieCard key={item.id} item={item} />
+                <MovieCard key={item.id} movie={item} />
               ))}
             </div>
             
