@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Play, Info, Volume2, VolumeX, ChevronRight } from 'lucide-react'
 import { PrefetchLink } from '../../common/PrefetchLink'
@@ -6,14 +6,17 @@ import { TmdbImage } from '../../common/TmdbImage'
 import { useLang } from '../../../state/useLang'
 import { tmdb } from '../../../lib/tmdb'
 import ReactPlayer from 'react-player/youtube'
+import { Swiper, SwiperSlide } from 'swiper/react'
+import { Autoplay } from 'swiper/modules'
+import 'swiper/css'
 
 /**
- * INTERACTIVE SPLIT-GRID HERO
+ * QUANTUM HERO - DIVERSE CAROUSEL
  * Features:
- * - 3-Column Split Layout (Desktop) / Vertical Stack (Mobile)
- * - Hover-to-Expand Interaction
- * - Instant Trailer Playback on Expand
- * - Framer Motion Smooth Transitions
+ * - 5 Visible Columns
+ * - Continuous Smooth Scrolling (Marquee-like)
+ * - Diverse Content (Movies/Series from various regions)
+ * - Auto-play Trailers on Active/Hover (Optional, simplified for marquee)
  */
 export const QuantumHero = ({ items, type }: { items: any[], type?: string }) => {
   const { lang } = useLang()
@@ -21,17 +24,9 @@ export const QuantumHero = ({ items, type }: { items: any[], type?: string }) =>
   const [trailers, setTrailers] = useState<Record<number, string>>({})
   const [isMuted, setIsMuted] = useState(true)
   
-  // Take top 5 items only
-  const heroItems = items.slice(0, 5)
-  
-  // Default active item is the first one if none selected (optional)
-  // But for "Split Grid", usually they start equal or first expanded.
-  // Let's make the first one expanded by default on mount? 
-  // User said "Expand on hover". So default: equal or first?
-  // Let's default to the first one being active on mobile, but on desktop maybe equal until hover?
-  // "Display 3 leading movies ... on hover, expand". Implies they are equal or compressed initially.
-  // I'll make them equal initially (flex: 1) and expand to flex: 3 on hover.
-  
+  // Use all items provided by the diverse fetcher
+  const heroItems = items
+
   useEffect(() => {
     if (!heroItems.length) return
 
@@ -62,145 +57,132 @@ export const QuantumHero = ({ items, type }: { items: any[], type?: string }) =>
   if (!heroItems.length) return null
 
   return (
-    <div className="relative h-[85vh] w-full bg-black overflow-hidden flex flex-col md:flex-row">
-      {heroItems.map((item, index) => {
-        const isActive = activeId === item.id
-        const trailerKey = trailers[item.id]
-        
-        return (
-          <motion.div
-            key={item.id}
-            layout
-            onHoverStart={() => setActiveId(item.id)}
-            onHoverEnd={() => setActiveId(null)}
-            onClick={() => setActiveId(isActive ? null : item.id)} // Tap to toggle on mobile
-            initial={{ flex: 1 }}
-            animate={{ 
-              flex: isActive ? 3 : 1,
-              filter: activeId && !isActive ? 'brightness(0.5)' : 'brightness(1)'
-            }}
-            transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            className="relative h-full border-b md:border-b-0 md:border-r border-white/10 overflow-hidden cursor-pointer group min-h-[150px]"
-          >
-            {/* Background Image */}
-            <div className="absolute inset-0 z-0">
-               <TmdbImage
-                path={item.backdrop_path || item.poster_path}
-                alt={item.title || item.name}
-                size="original"
-                className="w-full h-full"
-                imgClassName="object-cover object-center transition-transform duration-700 group-hover:scale-110"
-              />
-              <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors duration-500" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent opacity-90" />
-            </div>
-
-            {/* Video Player (Only if active & has trailer) */}
-            <AnimatePresence>
-              {isActive && trailerKey && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.5 }}
-                  className="absolute inset-0 z-10 bg-black"
-                >
-                   <div className="absolute top-[-50%] left-[-50%] w-[200%] h-[200%] pointer-events-none opacity-60">
-                    <ReactPlayer
-                      url={`https://www.youtube.com/watch?v=${trailerKey}`}
-                      playing={true}
-                      loop={true}
-                      muted={isMuted}
-                      controls={false}
-                      width="100%"
-                      height="100%"
-                      config={{
-                        playerVars: { showinfo: 0, controls: 0, disablekb: 1, fs: 0, iv_load_policy: 3, modestbranding: 1, rel: 0 }
-                      }}
-                    />
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* Content Layer */}
-            <div className="absolute inset-0 z-20 flex flex-col justify-end p-6 md:p-10">
-              <motion.div 
-                layout="position"
-                className="space-y-2 md:space-y-4"
+    <div className="relative h-[85vh] w-full bg-black overflow-hidden">
+      <Swiper
+        modules={[Autoplay]}
+        spaceBetween={0}
+        slidesPerView={1}
+        loop={true}
+        speed={1000} // Smooth transition speed
+        autoplay={{
+          delay: 5000,
+          disableOnInteraction: false,
+          pauseOnMouseEnter: true
+        }}
+        breakpoints={{
+          640: { slidesPerView: 2 },
+          768: { slidesPerView: 3 },
+          1024: { slidesPerView: 4 },
+          1280: { slidesPerView: 5 },
+        }}
+        className="h-full w-full"
+      >
+        {heroItems.map((item) => {
+          const trailerKey = trailers[item.id]
+          const isHovered = activeId === item.id
+          
+          return (
+            <SwiperSlide key={item.id} className="h-full">
+              <div 
+                className="relative h-full w-full border-r border-white/10 overflow-hidden group"
+                onMouseEnter={() => setActiveId(item.id)}
+                onMouseLeave={() => setActiveId(null)}
               >
-                {/* Title */}
-                <motion.h2 
-                  layout="position"
-                  className={`font-syne font-black text-white leading-tight ${
-                    isActive 
-                      ? 'text-2xl md:text-4xl lg:text-5xl' 
-                      : 'text-lg md:text-xl opacity-90'
-                  }`}
-                >
-                  {item.title || item.name}
-                </motion.h2>
+                {/* Background Image */}
+                <div className="absolute inset-0 z-0">
+                  <TmdbImage
+                    path={item.poster_path}
+                    alt={item.title || item.name}
+                    size="original"
+                    className="w-full h-full"
+                    imgClassName="object-cover object-center transition-transform duration-1000 group-hover:scale-110"
+                  />
+                  <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors duration-500" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent opacity-90" />
+                </div>
 
-                {/* Expanded Content */}
+                {/* Video Player (On Hover) */}
                 <AnimatePresence>
-                  {isActive && (
+                  {isHovered && trailerKey && (
                     <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
-                      className="overflow-hidden"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.5 }}
+                      className="absolute inset-0 z-10 bg-black"
                     >
-                      <p className="text-zinc-300 text-sm md:text-base line-clamp-3 md:line-clamp-4 max-w-xl mb-6">
+                      <div className="absolute top-[-50%] left-[-50%] w-[200%] h-[200%] pointer-events-none opacity-60">
+                        <ReactPlayer
+                          url={`https://www.youtube.com/watch?v=${trailerKey}`}
+                          playing={true}
+                          loop={true}
+                          muted={isMuted}
+                          controls={false}
+                          width="100%"
+                          height="100%"
+                          config={{
+                            playerVars: { showinfo: 0, controls: 0, disablekb: 1, fs: 0, iv_load_policy: 3, modestbranding: 1, rel: 0 }
+                          }}
+                        />
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Content Layer */}
+                <div className="absolute inset-0 z-20 flex flex-col justify-end p-6 transition-all duration-500 group-hover:pb-12">
+                  <div className="space-y-3 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
+                    {/* Category Label */}
+                    <div className="inline-flex items-center px-2 py-1 rounded bg-lumen-gold/20 text-lumen-gold text-xs font-bold uppercase tracking-wider backdrop-blur-sm border border-lumen-gold/20">
+                      {item.original_language === 'ar' ? 'Arabic' : 
+                       item.original_language === 'ko' ? 'Korean' : 
+                       item.original_language === 'zh' ? 'Chinese' : 
+                       item.original_language === 'tr' ? 'Turkish' : 'International'}
+                      <span className="mx-1">•</span>
+                      {item.media_type === 'tv' ? 'Series' : 'Movie'}
+                    </div>
+
+                    {/* Title */}
+                    <h2 className="font-syne font-black text-white leading-tight text-2xl lg:text-3xl line-clamp-2 drop-shadow-lg">
+                      {item.title || item.name}
+                    </h2>
+
+                    {/* Expanded Content (Hover) */}
+                    <div className="max-h-0 overflow-hidden group-hover:max-h-[300px] transition-all duration-500 ease-in-out opacity-0 group-hover:opacity-100">
+                      <p className="text-zinc-300 text-sm line-clamp-3 mb-4 pt-2">
                         {item.overview}
                       </p>
 
-                      <div className="flex flex-wrap gap-3">
+                      <div className="flex flex-wrap gap-2">
                         <PrefetchLink
                           to={`/watch/${item.media_type || 'movie'}/${item.id}`}
-                          className="flex items-center gap-2 bg-lumen-gold text-black px-5 py-2.5 rounded-lg font-bold text-sm hover:bg-yellow-400 transition-colors"
+                          className="flex items-center gap-2 bg-lumen-gold text-black px-4 py-2 rounded-lg font-bold text-xs hover:bg-yellow-400 transition-colors"
                           onClick={(e) => e.stopPropagation()}
                         >
-                          <Play size={18} fill="currentColor" />
+                          <Play size={14} fill="currentColor" />
                           <span>{lang === 'ar' ? 'مشاهدة' : 'Watch'}</span>
                         </PrefetchLink>
                         
-                        <PrefetchLink
-                          to={`/${item.media_type === 'tv' ? 'series' : 'movie'}/${item.id}`}
-                          className="flex items-center gap-2 bg-white/10 text-white border border-white/10 px-5 py-2.5 rounded-lg font-medium text-sm hover:bg-white/20 transition-colors backdrop-blur-sm"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <Info size={18} />
-                          <span>{lang === 'ar' ? 'تفاصيل' : 'Details'}</span>
-                        </PrefetchLink>
-
                         {trailerKey && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation()
                               setIsMuted(!isMuted)
                             }}
-                            className="p-2.5 rounded-lg bg-white/10 border border-white/10 text-white hover:bg-white/20 transition-colors"
+                            className="p-2 rounded-lg bg-white/10 border border-white/10 text-white hover:bg-white/20 transition-colors"
                           >
-                            {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
+                            {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
                           </button>
                         )}
                       </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                {/* Collapsed State Indicator (Desktop) */}
-                {!isActive && (
-                   <div className="hidden md:flex items-center gap-2 text-lumen-gold/80 text-sm font-medium uppercase tracking-wider mt-2">
-                     <span>{lang === 'ar' ? 'اكتشف المزيد' : 'Discover'}</span>
-                     <ChevronRight size={16} className={lang === 'ar' ? 'rotate-180' : ''} />
-                   </div>
-                )}
-              </motion.div>
-            </div>
-          </motion.div>
-        )
-      })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </SwiperSlide>
+          )
+        })}
+      </Swiper>
     </div>
   )
 }
