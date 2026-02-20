@@ -54,7 +54,7 @@ export function useClassicVideos(options: UseCategoryOptions = {}) {
       const { data } = await supabase
         .from('videos')
         .select('*')
-        .or('category.eq.play,year.lt.2000')
+        .or('category.eq.plays,year.lt.2000')
         .order(orderBy, { ascending })
         .limit(limit)
       return (data || []) as VideoItem[]
