@@ -59,6 +59,8 @@ import { Autoplay, FreeMode } from 'swiper/modules'
 import 'swiper/css'
 import 'swiper/css/free-mode'
 
+import { isCJK } from '../lib/utils'
+
 export const Home = () => {
   const { user } = useAuth()
   const { lang } = useLang()
@@ -80,18 +82,42 @@ export const Home = () => {
         { type: 'tv', lang: 'tr' },    // Turkish Series
       ] as const
 
-      const promises = endpoints.map(ep => 
-        tmdb.get(`/discover/${ep.type}`, { 
-          params: { 
-            with_original_language: ep.lang,
-            sort_by: 'popularity.desc',
-            page: 1
+      const promises = endpoints.map(async ep => {
+        try {
+          const res = await tmdb.get(`/discover/${ep.type}`, { 
+            params: { 
+              with_original_language: ep.lang,
+              sort_by: 'popularity.desc',
+              page: 1,
+              language: 'ar-SA'
+            }
+          })
+          
+          let item = res.data.results?.[0]
+          if (!item) return null
+          
+          // Check for CJK characters in title/name
+          const title = item.title || item.name || ''
+          if (isCJK(title)) {
+             // Fallback to English
+             try {
+               const enRes = await tmdb.get(`/${ep.type}/${item.id}`, {
+                 params: { language: 'en-US' }
+               })
+               if (enRes.data) {
+                 item = { ...item, ...enRes.data }
+               }
+             } catch (e) {
+               console.warn(`Failed to fetch English fallback for ${item.id}`)
+             }
           }
-        }).then(res => {
-          const item = res.data.results[0]
-          return item ? { ...item, media_type: ep.type } : null
-        })
-      )
+
+          return { ...item, media_type: ep.type }
+        } catch (e) {
+          console.error('Diverse hero fetch error:', e)
+          return null
+        }
+      })
 
       const results = await Promise.all(promises)
       return { results: results.filter((i): i is TmdbMedia => !!i) }

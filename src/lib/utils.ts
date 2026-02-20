@@ -84,3 +84,9 @@ export const parseWatchPath = (slug: string) => {
   const id = parts[parts.length - 1]
   return /^\d+$/.test(id) ? parseInt(id) : null
 }
+
+export const isCJK = (text: string) => {
+  if (!text) return false
+  // Range covers Chinese, Japanese, Korean characters
+  return /[\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uff00-\uff9f\u4e00-\u9faf\u3400-\u4dbf]/.test(text)
+}
