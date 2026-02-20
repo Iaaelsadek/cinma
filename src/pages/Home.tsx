@@ -411,7 +411,12 @@ const BentoBox = ({ title, icon, items, color }: { title: string, icon: any, ite
         {items.slice(0, 4).map((item, i) => (
           <HolographicCard key={item.id} className={`aspect-video ${i === 0 ? 'col-span-2 row-span-2 aspect-video' : ''}`}>
              <PrefetchLink to={`/watch/yt/${item.id}`} className="block h-full relative group">
-                <img src={item.thumbnail} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" alt={item.title} />
+                <img 
+                  src={item.thumbnail} 
+                  className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" 
+                  alt={item.title}
+                  loading="lazy"
+                />
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
                 <div className="absolute bottom-4 left-4 right-4">
                    <h4 className="font-bold text-white leading-tight line-clamp-2 text-sm md:text-lg">{item.title}</h4>
@@ -438,7 +443,12 @@ const AIRecommended = ({ userId }: { userId: string }) => {
       {q.data.slice(0, 5).map(m => (
         <HolographicCard key={m.id} className="aspect-[2/3]">
            <PrefetchLink to={`/watch/movie/${m.id}`}>
-             <img src={`https://image.tmdb.org/t/p/w300${m.poster_path}`} className="w-full h-full object-cover" alt={m.title} />
+             <img 
+               src={`https://image.tmdb.org/t/p/w300${m.poster_path}`} 
+               className="w-full h-full object-cover" 
+               alt={m.title}
+               loading="lazy" 
+             />
            </PrefetchLink>
         </HolographicCard>
       ))}
