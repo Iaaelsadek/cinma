@@ -107,7 +107,7 @@ export const Home = () => {
 
   // Other Content
   const classics = useClassicVideos({ limit: 20 })
-  const plays = useCategoryVideos('play', { limit: 20 }) // plays (99 items)
+  const plays = useCategoryVideos('plays', { limit: 20 }) // plays (99 items)
   const goldenEra = useCategoryVideos('golden_era', { limit: 20 }) // golden_era (97 items)
   const recaps = useCategoryVideos('recaps', { limit: 20 }) // recaps (34 items)
   
