@@ -8,7 +8,7 @@ import { CONFIG } from '../lib/constants'
 import { useLang } from '../state/useLang'
 import { getRecommendations, RecommendationItem } from '../services/recommendations'
 import { useRecommendations } from '../hooks/useRecommendations'
-import { BrainCircuit, Play, Plus, Zap, Cpu, Gamepad2, Tv, Film, Drama, BookOpen, Sparkles } from 'lucide-react'
+import { BrainCircuit, Play, Plus, Zap, Cpu, Gamepad2, Tv, Film, Drama, BookOpen, Sparkles, Globe, Smile, FileText, Clapperboard } from 'lucide-react'
 import { MovieRow } from '../components/features/media/MovieRow'
 import { MovieCard } from '../components/features/media/MovieCard'
 import { VideoRow } from '../components/features/media/VideoRow'
@@ -111,6 +111,72 @@ export const Home = () => {
         } 
       })
       return { results: data.results.map((i: any) => ({ ...i, media_type: 'tv' })) }
+    },
+    enabled: !!CONFIG.TMDB_API_KEY,
+    staleTime: 300000
+  })
+
+  // 3. DIVERSE SECTIONS (Bollywood, K-Drama, Kids, Docs)
+  const bollywoodMovies = useQuery<{ results: TmdbMedia[] }>({
+    queryKey: ['home', 'bollywood'],
+    queryFn: async () => {
+      const { data } = await tmdb.get('/discover/movie', { 
+        params: { 
+          with_original_language: 'hi', 
+          sort_by: 'popularity.desc', 
+          page: 1,
+          region: 'IN'
+        } 
+      })
+      return data
+    },
+    enabled: !!CONFIG.TMDB_API_KEY,
+    staleTime: 300000
+  })
+
+  const koreanSeries = useQuery<{ results: TmdbMedia[] }>({
+    queryKey: ['home', 'k-drama'],
+    queryFn: async () => {
+      const { data } = await tmdb.get('/discover/tv', { 
+        params: { 
+          with_original_language: 'ko', 
+          sort_by: 'popularity.desc', 
+          page: 1 
+        } 
+      })
+      return data
+    },
+    enabled: !!CONFIG.TMDB_API_KEY,
+    staleTime: 300000
+  })
+
+  const kidsContent = useQuery<{ results: TmdbMedia[] }>({
+    queryKey: ['home', 'kids'],
+    queryFn: async () => {
+      const { data } = await tmdb.get('/discover/movie', { 
+        params: { 
+          with_genres: '16,10751', 
+          sort_by: 'popularity.desc', 
+          page: 1 
+        } 
+      })
+      return data
+    },
+    enabled: !!CONFIG.TMDB_API_KEY,
+    staleTime: 300000
+  })
+
+  const documentaries = useQuery<{ results: TmdbMedia[] }>({
+    queryKey: ['home', 'docs'],
+    queryFn: async () => {
+      const { data } = await tmdb.get('/discover/movie', { 
+        params: { 
+          with_genres: '99', 
+          sort_by: 'popularity.desc', 
+          page: 1 
+        } 
+      })
+      return data
     },
     enabled: !!CONFIG.TMDB_API_KEY,
     staleTime: 300000
@@ -332,6 +398,23 @@ export const Home = () => {
           )}
         </section>
 
+        {/* Section: Kids & Family */}
+        <section>
+          {kidsContent.isLoading ? (
+            <>
+              <SectionHeader title={lang === 'ar' ? 'أطفال وعائلة' : 'Kids & Family'} icon={<Smile />} link="/kids" />
+              <SkeletonGrid count={6} variant="poster" />
+            </>
+          ) : (
+            <QuantumTrain 
+              items={kidsContent.data?.results || []} 
+              title={lang === 'ar' ? 'أطفال وعائلة' : 'Kids & Family'} 
+              icon={<Smile />} 
+              link="/kids" 
+            />
+          )}
+        </section>
+
         {/* Section: Chinese Dramas */}
         <section>
           {chineseSeries.isLoading ? (
@@ -345,6 +428,23 @@ export const Home = () => {
               title={lang === 'ar' ? 'مسلسلات صينية (C-Dramas)' : 'Chinese Dramas'} 
               icon={<Tv />} 
               link="/chinese" 
+            />
+          )}
+        </section>
+
+        {/* Section: Korean Dramas */}
+        <section>
+          {koreanSeries.isLoading ? (
+            <>
+              <SectionHeader title={lang === 'ar' ? 'الدراما الكورية' : 'K-Drama Kingdom'} icon={<Tv />} link="/k-drama" />
+              <SkeletonGrid count={6} variant="poster" />
+            </>
+          ) : (
+            <QuantumTrain 
+              items={koreanSeries.data?.results || []} 
+              title={lang === 'ar' ? 'الدراما الكورية' : 'K-Drama Kingdom'} 
+              icon={<Tv />} 
+              link="/k-drama" 
             />
           )}
         </section>
@@ -384,6 +484,23 @@ export const Home = () => {
           )}
         </section>
 
+        {/* Section: Bollywood */}
+        <section>
+          {bollywoodMovies.isLoading ? (
+            <>
+              <SectionHeader title={lang === 'ar' ? 'أفلام هندية وبوليوود' : 'Bollywood Bonanza'} icon={<Globe />} link="/bollywood" />
+              <SkeletonGrid count={6} variant="poster" />
+            </>
+          ) : (
+            <QuantumTrain 
+              items={bollywoodMovies.data?.results || []} 
+              title={lang === 'ar' ? 'أفلام هندية وبوليوود' : 'Bollywood Bonanza'} 
+              icon={<Globe />} 
+              link="/bollywood" 
+            />
+          )}
+        </section>
+
         {/* Section: Global Trending */}
         <section>
           <SectionHeader title={lang === 'ar' ? 'الرائج عالمياً' : 'Global Trending'} icon={<Zap />} link="/top-watched" />
@@ -393,6 +510,23 @@ export const Home = () => {
                  <MovieCard key={movie.id} movie={movie} index={idx} />
               ))}
             </div>
+          )}
+        </section>
+
+        {/* Section: Documentaries */}
+        <section>
+          {documentaries.isLoading ? (
+            <>
+              <SectionHeader title={lang === 'ar' ? 'وثائقيات وواقع' : 'Documentaries'} icon={<FileText />} link="/docs" />
+              <SkeletonGrid count={6} variant="poster" />
+            </>
+          ) : (
+            <QuantumTrain 
+              items={documentaries.data?.results || []} 
+              title={lang === 'ar' ? 'وثائقيات وواقع' : 'Documentaries'} 
+              icon={<FileText />} 
+              link="/docs" 
+            />
           )}
         </section>
 
