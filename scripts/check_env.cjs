@@ -1,5 +1,6 @@
 
 const fs = require('fs');
+require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') });
 console.log('Checking environment variables...');
 const keys = [
   'SUPABASE_SERVICE_ROLE',
