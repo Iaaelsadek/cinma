@@ -108,7 +108,7 @@ export const AsianDramaPage = ({ type }: Props) => {
 
         return tmdbItems
       } catch (error) {
-        console.error(`Error fetching ${type} content:`, error)
+        // Silently fail
         return []
       }
     },
