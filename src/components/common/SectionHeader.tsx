@@ -2,7 +2,7 @@ import { ChevronLeft, ChevronRight, Zap } from 'lucide-react'
 import { useLang } from '../../state/useLang'
 import { PrefetchLink } from './PrefetchLink'
 
-type SectionTheme = 'cyan' | 'purple' | 'red' | 'gold'
+type SectionTheme = 'cyan' | 'purple' | 'red' | 'gold' | 'pink'
 
 const THEMES: Record<SectionTheme, {
   iconBox: string
@@ -78,6 +78,21 @@ const THEMES: Record<SectionTheme, {
     actionIconBg: 'group-hover/btn:bg-yellow-500/20',
     actionIcon: 'group-hover/btn:text-yellow-400',
     circuitColor: 'rgba(234,179,8,0.1)'
+  },
+  pink: {
+    iconBox: 'bg-pink-500/10 border-pink-500/20 text-pink-400 shadow-[0_0_15px_rgba(236,72,153,0.1)] group-hover/header:shadow-[0_0_25px_rgba(236,72,153,0.25)]',
+    iconGlow: 'bg-pink-400/20',
+    titleHover: 'group-hover/header:text-pink-50',
+    arteryPulse: 'via-pink-500/50',
+    badgeDot: 'bg-pink-500 shadow-[0_0_10px_rgba(236,72,153,0.8)]',
+    badgeLine: 'from-pink-500',
+    badgeBox: 'border-pink-500/30 text-pink-400 shadow-[0_0_15px_rgba(236,72,153,0.3)]',
+    badgeIconFill: 'fill-pink-400',
+    actionBtn: 'hover:border-pink-500/50 hover:bg-pink-950/20',
+    actionText: 'group-hover/btn:text-pink-400',
+    actionIconBg: 'group-hover/btn:bg-pink-500/20',
+    actionIcon: 'group-hover/btn:text-pink-400',
+    circuitColor: 'rgba(236,72,153,0.1)'
   }
 }
 

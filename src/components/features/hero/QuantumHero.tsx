@@ -65,7 +65,7 @@ export const QuantumHero = ({ items, type }: { items: any[], type?: string }) =>
             newTrailers[item.id] = trailer.key
           }
         } catch (e) {
-          console.error(`Failed to fetch trailer for ${item.id}`, e)
+          // Trailer fetch failed, silently ignore
         }
       }))
       

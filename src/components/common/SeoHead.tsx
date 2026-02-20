@@ -16,7 +16,7 @@ interface SeoHeadProps {
 export const SeoHead = ({ 
   title, 
   description = 'أكبر منصة عربية لمشاهدة الأفلام والمسلسلات الأجنبية والعربية بجودة عالية. مكتبة ضخمة، سيرفرات سريعة، وبدون إعلانات مزعجة.',
-  image = '/og-image.jpg',
+  image = 'https://placehold.co/1200x630/000000/FFFFFF/png?text=Online+Cinema',
   type = 'website',
   rating,
   duration,
