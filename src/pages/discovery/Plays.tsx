@@ -139,7 +139,7 @@ export const PlaysPage = () => {
   const { genre, year, rating } = useParams()
 
   // YouTube Content
-  const { data: ytPlays, isLoading: ytLoading } = useCategoryVideos('play', { limit: 20 })
+  const { data: ytPlays, isLoading: ytLoading } = useCategoryVideos('plays', { limit: 20 })
   const ytPlaysMapped = (ytPlays || []).map(item => ({
     id: item.id,
     title: item.title,
