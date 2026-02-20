@@ -94,6 +94,7 @@ export const QuantumHero = ({ items, type }: { items: any[], type?: string }) =>
                     path={item.poster_path}
                     alt={item.title || item.name}
                     size="original"
+                    priority={true} // Improve LCP
                     className="w-full h-full"
                     imgClassName="object-cover object-center transition-transform duration-1000 group-hover:scale-110"
                   />
