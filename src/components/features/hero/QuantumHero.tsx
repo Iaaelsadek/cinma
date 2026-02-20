@@ -141,8 +141,8 @@ export const QuantumHero = ({ items, type }: { items: any[], type?: string }) =>
                   layout="position"
                   className={`font-syne font-black text-white leading-tight ${
                     isActive 
-                      ? 'text-3xl md:text-5xl lg:text-6xl' 
-                      : 'text-xl md:text-2xl opacity-90'
+                      ? 'text-2xl md:text-4xl lg:text-5xl' 
+                      : 'text-lg md:text-xl opacity-90'
                   }`}
                 >
                   {item.title || item.name}
