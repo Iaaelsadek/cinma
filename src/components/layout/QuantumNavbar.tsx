@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { PrefetchLink } from '../common/PrefetchLink'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useQuery } from '@tanstack/react-query'
@@ -7,15 +7,32 @@ import { useLang } from '../../state/useLang'
 import { useAuth } from '../../hooks/useAuth'
 import { usePwa } from '../../context/PwaContext'
 import { getContinueWatching } from '../../lib/supabase'
-import { useEffect, useState } from 'react'
-import { Home, Film, Tv, Gamepad2, Zap, User, Search, Menu, X, Clock, ChevronDown, BookOpen, History, Smile, Drama, Radio, ListVideo, Moon, Download, MapPin } from 'lucide-react'
+import { useEffect, useState, useRef } from 'react'
+import { Home, Film, Tv, Gamepad2, Zap, User, Search, Menu, X, Clock, ChevronDown, BookOpen, History, Smile, Drama, Radio, ListVideo, Moon, Download, MapPin, Star, Mic, Loader2 } from 'lucide-react'
 
 
 export const QuantumNavbar = () => {
-  const { user } = useAuth()
+  const { user, loading, profile } = useAuth()
   const { lang, toggle } = useLang()
   const { isSupported, isInstalled, install } = usePwa()
   
+  const leaveTimeout = useRef<any>(null)
+
+  const handleMouseEnter = (label: string) => {
+    if (leaveTimeout.current) {
+      clearTimeout(leaveTimeout.current)
+      leaveTimeout.current = null
+    }
+    setHoveredLink(label)
+  }
+
+  const handleMouseLeave = () => {
+    leaveTimeout.current = setTimeout(() => {
+      setHoveredLink(null)
+      leaveTimeout.current = null
+    }, 300)
+  }
+
   const navLinks = [
     { 
       to: '/', 
@@ -23,6 +40,20 @@ export const QuantumNavbar = () => {
       icon: Home, 
       color: '#00ffcc',
       hasMega: false
+    },
+    { 
+      to: '/top-watched', 
+      label: lang === 'ar' ? 'الأكثر مشاهدة' : 'Top Watched', 
+      icon: Zap, 
+      color: '#ff4400',
+      hasMega: true,
+      subLinks: [
+        { to: '/top-watched', label: lang === 'ar' ? 'الكل' : 'All Trending', icon: Zap },
+        { to: '/movies/popular', label: lang === 'ar' ? 'أفلام رائجة' : 'Popular Movies', icon: Film },
+        { to: '/series/popular', label: lang === 'ar' ? 'مسلسلات رائجة' : 'Popular Series', icon: Tv },
+        { to: '/movies/top_rated', label: lang === 'ar' ? 'أعلى الأفلام تقييماً' : 'Top Rated Movies', icon: Star },
+        { to: '/series/top_rated', label: lang === 'ar' ? 'أعلى المسلسلات تقييماً' : 'Top Rated Series', icon: Star }
+      ]
     },
     { 
       to: '/ramadan', 
@@ -60,6 +91,7 @@ export const QuantumNavbar = () => {
         { to: '/search?types=tv&lang=tr', label: lang === 'ar' ? 'تركي (مدبلج/مترجم)' : 'Turkish', icon: Film },
         { to: '/search?types=tv&lang=ar', label: lang === 'ar' ? 'عربي (مصري/شامي)' : 'Arabic', icon: Tv },
         { to: '/search?types=tv&lang=en', label: lang === 'ar' ? 'أجنبي' : 'Foreign', icon: Zap },
+        { to: '/search?types=tv&lang=ko', label: lang === 'ar' ? 'دراما كورية' : 'Korean Drama', icon: Film },
       ],
       categories: [
         { id: 'Drama', label: { en: 'Drama', ar: 'دراما' } },
@@ -97,7 +129,9 @@ export const QuantumNavbar = () => {
       hasMega: true,
       subLinks: [
         { to: '/search?types=movie&genres=16', label: lang === 'ar' ? 'ديزني' : 'Disney', icon: Zap },
-        { to: '/anime', label: lang === 'ar' ? 'أنمي' : 'Anime', icon: Gamepad2 }
+        { to: '/anime', label: lang === 'ar' ? 'أنمي' : 'Anime', icon: Gamepad2 },
+        { to: '/search?types=tv&keywords=spacetoon', label: lang === 'ar' ? 'سبيستون' : 'Spacetoon', icon: Smile },
+        { to: '/search?types=movie&genres=16', label: lang === 'ar' ? 'أفلام كرتون' : 'Animation', icon: Film }
       ]
     }
   ]
@@ -114,6 +148,43 @@ export const QuantumNavbar = () => {
   })
   const continueCount = cwQuery.data?.length ?? 0
 
+  const navigate = useNavigate()
+  const [query, setQuery] = useState('')
+  const [isListening, setIsListening] = useState(false)
+
+  const handleSearch = () => {
+    if (query.trim()) {
+      navigate(`/search?q=${encodeURIComponent(query.trim())}`)
+      setQuery('')
+    }
+  }
+
+  const startListening = () => {
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+      const recognition = new SpeechRecognition();
+      recognition.lang = lang === 'ar' ? 'ar-SA' : 'en-US';
+      recognition.continuous = false;
+      recognition.interimResults = false;
+
+      recognition.onstart = () => setIsListening(true);
+      recognition.onend = () => setIsListening(false);
+      recognition.onerror = () => setIsListening(false);
+
+      recognition.onresult = (event: any) => {
+        const text = event.results[0][0].transcript;
+        setQuery(text);
+        // Automatically search or just fill input?
+        // User asked to type in the box, so just fill it seems fine, or maybe auto-search.
+        // Let's just fill it for now as per "write in the same box".
+      };
+
+      recognition.start();
+    } else {
+      alert(lang === 'ar' ? 'البحث الصوتي غير مدعوم' : 'Voice search not supported');
+    }
+  }
+
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 50)
     window.addEventListener('scroll', handleScroll)
@@ -121,17 +192,16 @@ export const QuantumNavbar = () => {
   }, [])
 
   return (
-    <>
+    <div className="w-full flex justify-center">
       <nav
-        className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-300 ${
-          scrolled ? 'bg-black/95 backdrop-blur-xl py-2 shadow-2xl' : 'bg-gradient-to-b from-black/90 to-black/0 py-4'
+        className={`transition-all duration-300 w-full ${
+          scrolled ? 'bg-black/95 backdrop-blur-xl py-2 shadow-2xl border-x border-b border-white/10 rounded-b-2xl' : 'bg-gradient-to-b from-black/90 to-black/0 py-2'
         }`}
-        onMouseLeave={() => setHoveredLink(null)}
       >
-        <div className="w-full px-4 md:px-12 flex items-center justify-between transition-all duration-300">
+        <div className="w-full mx-auto px-4 md:px-8 flex items-center justify-between transition-all duration-300 h-16">
             
             {/* Logo */}
-            <PrefetchLink to="/" className="group flex items-center gap-3">
+            <PrefetchLink to="/" target="_self" className="group flex items-center gap-2 shrink-0">
               <div className="relative flex items-center justify-center">
                 <div className="relative z-10 font-black text-3xl tracking-tighter uppercase group-hover:scale-105 transition-transform duration-300 flex items-center gap-1">
                   <span 
@@ -140,7 +210,7 @@ export const QuantumNavbar = () => {
                   >
                     Cinema
                   </span>
-                  <span className="text-red-600 animate-pulse text-4xl mb-2 leading-[0] drop-shadow-[0_0_8px_rgba(220,38,38,0.8)]">.</span>
+                  <span className="text-red-600 animate-pulse text-4xl mb-1 leading-[0] drop-shadow-[0_0_8px_rgba(220,38,38,0.8)]">.</span>
                   <div className="flex" dir="ltr">
                     <span className="text-cyan-400 animate-neon-flicker-cyan drop-shadow-[0_0_10px_rgba(34,211,238,0.8)]">
                       On
@@ -160,144 +230,188 @@ export const QuantumNavbar = () => {
               </div>
             </PrefetchLink>
 
-            {/* Desktop Nav */}
-            <div className="hidden lg:flex items-center gap-1">
-              {navLinks.map((link) => (
-                <div 
-                  key={link.to} 
-                  className="relative group"
-                  onMouseEnter={() => setHoveredLink(link.label)}
-                >
-                  <PrefetchLink
-                    to={link.to}
-                    className="flex items-center gap-1 px-2.5 py-3 text-lg font-bold text-zinc-400 hover:text-white transition-colors"
+            {/* Combined Nav & Actions Group for maximum separation */}
+            <div className="flex items-center gap-4 flex-1 justify-between">
+              {/* Desktop Nav - Hidden on smaller screens to prevent overlap */}
+              <div className="hidden xl:flex items-center gap-3 mx-auto">
+                {navLinks.map((link) => (
+                  <div 
+                    key={link.to} 
+                    className="relative group h-full flex items-center"
+                    onMouseEnter={() => handleMouseEnter(link.label)}
+                    onMouseLeave={handleMouseLeave}
                   >
-                    <link.icon size={21} style={{ color: link.color }} />
-                    {link.label}
-                    {link.hasMega && <ChevronDown size={17} className={`transition-transform duration-200 ${hoveredLink === link.label ? 'rotate-180' : ''}`} />}
-                  </PrefetchLink>
-                  
-                  {/* Mega Menu Dropdown */}
-      <AnimatePresence>
-        {link.hasMega && hoveredLink === link.label && (
-          <div
-            className="fixed top-[70px] left-1/2 -translate-x-1/2 w-full max-w-xl z-50 pointer-events-none group-hover:pointer-events-auto px-4"
-          >
-            <div className="bg-[#0a0a0a]/95 border border-white/10 rounded-2xl shadow-xl overflow-hidden p-6 backdrop-blur-sm transition-all duration-200 opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0">
-               <div className="w-full flex flex-col gap-6">
-                  {/* SubLinks Section */}
-                  {link.subLinks && (
-                    <div>
-                      <h3 className="text-white font-bold mb-3 flex items-center gap-2 border-b border-white/10 pb-2">
-                        {lang === 'ar' ? 'الأقسام' : 'Sections'}
-                      </h3>
-                      <ul className="grid grid-cols-1 gap-2">
-                        {link.subLinks.map(sub => (
-                          <li key={sub.to}>
-                            <PrefetchLink to={sub.to} className="flex items-center gap-3 text-zinc-300 hover:text-cyan-400 transition-colors py-1 group/sub">
-                              {sub.icon && <sub.icon size={18} className="text-zinc-500 group-hover/sub:text-cyan-400 transition-colors" />}
-                              <span className="font-medium">{sub.label}</span>
-                            </PrefetchLink>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {/* Categories Section */}
-                  {link.categories && (
-                    <div>
-                      <h3 className="text-white font-bold mb-4 flex items-center gap-2">
-                        <link.icon size={18} style={{ color: link.color }} />
-                        {lang === 'ar' ? 'التصنيفات' : 'Categories'}
-                      </h3>
-                      <ul className="grid grid-cols-2 gap-2">
-                        {link.categories.map(cat => (
-                          <li key={cat.id}>
-                            <PrefetchLink to={`${link.to}?cat=${cat.id.toLowerCase()}`} className="text-zinc-400 hover:text-cyan-400 text-sm transition-colors block py-1">
-                              {lang === 'ar' ? cat.label.ar : cat.label.en}
-                            </PrefetchLink>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-               </div>
-            </div>
-          </div>
-        )}
-      </AnimatePresence>
-                </div>
-              ))}
-            </div>
-
-            {/* Actions */}
-            <div className="flex items-center gap-2">
-              <button 
-                onClick={() => setSearchOpen(!searchOpen)}
-                className="p-1.5 rounded-full hover:bg-white/10 text-zinc-400 hover:text-white transition-colors"
+                    <PrefetchLink
+                      to={link.to}
+                      target="_self"
+                      className="flex flex-col items-center justify-center gap-1 px-2 py-1 text-xs font-bold text-zinc-400 group-hover:text-white transition-all duration-300 relative"
+                    >
+                      <div className="relative p-1.5 rounded-xl group-hover:bg-white/5 transition-colors duration-300">
+                        <link.icon size={18} style={{ color: link.color }} className="group-hover:scale-110 transition-transform duration-300" />
+                        {link.hasMega && (
+                          <div className={`absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-current opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${hoveredLink === link.label ? 'opacity-100' : ''}`} />
+                        )}
+                      </div>
+                      <span className="uppercase tracking-wider group-hover:tracking-widest transition-all duration-300">{link.label}</span>
+                    </PrefetchLink>
+                    
+                    {/* Mega Menu Dropdown */}
+        <AnimatePresence>
+          {link.hasMega && hoveredLink === link.label && (
+            <motion.div
+              initial={{ opacity: 0, y: 10, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 10, scale: 0.95 }}
+              transition={{ duration: 0.2 }}
+              className="absolute top-full left-1/2 -translate-x-1/2 w-max z-50 pt-4"
+              onMouseEnter={() => handleMouseEnter(link.label)}
+              onMouseLeave={handleMouseLeave}
+            >
+              <div 
+                className="bg-[#0a0a0a]/95 border border-white/10 rounded-2xl shadow-xl overflow-hidden p-6 backdrop-blur-sm min-w-[280px]"
               >
-                <Search size={25} />
-              </button>
+                 <div className="w-full flex flex-col gap-6">
+                    {/* SubLinks Section */}
+                    {link.subLinks && (
+                      <div>
+                        <h3 className="text-white font-bold mb-3 flex items-center gap-2 border-b border-white/10 pb-2">
+                          {lang === 'ar' ? 'الأقسام' : 'Sections'}
+                        </h3>
+                        <ul className="grid grid-cols-1 gap-2">
+                          {link.subLinks.map(sub => (
+                            <li key={sub.to}>
+                              <PrefetchLink to={sub.to} target="_self" className="flex items-center gap-3 text-zinc-300 hover:text-cyan-400 transition-colors py-1 group/sub">
+                                {sub.icon && <sub.icon size={18} className="text-zinc-500 group-hover/sub:text-cyan-400 transition-colors" />}
+                                <span className="font-medium">{sub.label}</span>
+                              </PrefetchLink>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Categories Section */}
+                    {link.categories && (
+                      <div>
+                        <h3 className="text-white font-bold mb-4 flex items-center gap-2">
+                          <link.icon size={18} style={{ color: link.color }} />
+                          {lang === 'ar' ? 'التصنيفات' : 'Categories'}
+                        </h3>
+                        <ul className="grid grid-cols-2 gap-2">
+                          {link.categories.map(cat => (
+                            <li key={cat.id}>
+                              <PrefetchLink to={`${link.to}?cat=${cat.id.toLowerCase()}`} target="_self" className="text-zinc-400 hover:text-cyan-400 text-sm transition-colors block py-1">
+                                {lang === 'ar' ? cat.label.ar : cat.label.en}
+                              </PrefetchLink>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                 </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+                  </div>
+                ))}
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center gap-2 shrink-0">
+              {/* Desktop Search */}
+              <div className="hidden md:flex items-center gap-4 relative">
+                <div className="relative group">
+                   <input 
+                    type="text" 
+                    value={query || ''}
+                    onChange={(e) => setQuery(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                    placeholder={isListening ? (lang === 'ar' ? 'تحدث الآن...' : 'Listening...') : (lang === 'ar' ? 'بحث...' : 'Search...')}
+                    className="bg-zinc-900 border border-white/10 rounded-full py-2 pl-10 pr-10 text-sm text-zinc-300 w-36 lg:w-48 hover:bg-zinc-800 hover:border-cyan-500/30 transition-all focus:outline-none focus:border-cyan-500/50 placeholder:text-zinc-600"
+                  />
+                  <button 
+                    onClick={handleSearch}
+                    className={`absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 group-hover:text-cyan-400 transition-colors ${lang === 'ar' ? 'right-auto left-3' : 'left-3 right-auto'}`}
+                  >
+                    <Search className="w-4 h-4" />
+                  </button>
+                  <button 
+                    onClick={startListening}
+                    className={`absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-cyan-400 transition-colors ${isListening ? 'text-red-500 animate-pulse' : ''}`}
+                  >
+                    {isListening ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mic className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
 
               {isSupported && !isInstalled && (
                 <button
                   onClick={install}
-                  className="hidden sm:inline-flex items-center gap-1 px-2 py-1.5 rounded-full border border-lumen-gold/50 text-lumen-gold/90 hover:bg-lumen-gold/10 text-base font-bold transition-colors"
+                  className="hidden sm:inline-flex items-center gap-1 px-2 py-1.5 rounded-full border border-lumen-gold/50 text-lumen-gold/90 hover:bg-lumen-gold/10 text-xs font-bold transition-colors"
                   title={lang === 'ar' ? 'تثبيت التطبيق' : 'Install App'}
                 >
-                  <Download size={19} />
+                  <Download size={14} />
                   {lang === 'ar' ? 'تثبيت التطبيق' : 'Install App'}
                 </button>
               )}
 
               <button 
                 onClick={toggle}
-                className="w-[48px] h-[48px] rounded-full border border-white/10 flex items-center justify-center text-[13px] font-black hover:border-cyan-400/50 hover:text-cyan-400 transition-colors"
+                className="w-9 h-9 rounded-full border border-white/10 flex items-center justify-center text-[10px] font-black hover:border-cyan-400/50 hover:text-cyan-400 transition-colors"
               >
                 {lang === 'ar' ? 'EN' : 'AR'}
               </button>
 
               {user && continueCount > 0 && (
-                <PrefetchLink to="/" className="relative p-1.5 rounded-full hover:bg-white/10 text-zinc-400 hover:text-cyan-400 transition-colors" title={lang === 'ar' ? 'تابع المشاهدة' : 'Continue Watching'}>
-                  <Clock size={25} />
-                  <span className="absolute -top-1 -right-1 min-w-[24px] h-[24px] rounded-full bg-cyan-500 text-[13px] font-black text-black flex items-center justify-center px-1">
+                <PrefetchLink to="/" target="_self" className="relative p-1.5 rounded-full hover:bg-white/10 text-zinc-400 hover:text-cyan-400 transition-colors" title={lang === 'ar' ? 'تابع المشاهدة' : 'Continue Watching'}>
+                  <Clock size={20} />
+                  <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] rounded-full bg-cyan-500 text-[10px] font-black text-black flex items-center justify-center px-0.5">
                     {continueCount > 9 ? '9+' : continueCount}
                   </span>
                 </PrefetchLink>
               )}
 
-              {user ? (
-                <PrefetchLink to="/profile">
-                  <div className="w-[48px] h-[48px] rounded-full bg-gradient-to-tr from-purple-500 to-cyan-500 p-[2px]">
+            {user || loading ? ( // Show user icon (or skeleton) if logged in OR loading to prevent flicker
+                <PrefetchLink to={user ? "/profile" : "#"} target="_self">
+                  <div className={`w-9 h-9 rounded-full p-[1.5px] ${loading ? 'bg-white/10 animate-pulse' : 'bg-gradient-to-tr from-purple-500 to-cyan-500'}`}>
                     <div className="w-full h-full rounded-full bg-black flex items-center justify-center overflow-hidden">
-                      {useAuth.getState().profile?.avatar_url ? (
+                      {profile?.avatar_url ? (
                         <img 
-                          src={useAuth.getState().profile!.avatar_url!} 
+                          src={profile.avatar_url} 
                           alt="User" 
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <User size={23} className="text-white" />
+                        <User size={18} className="text-white" />
                       )}
                     </div>
                   </div>
                 </PrefetchLink>
               ) : (
-                <PrefetchLink to="/login" className="hidden md:block">
-                  <button className="px-6 py-3 rounded-full bg-white text-black text-base font-black uppercase tracking-widest hover:scale-105 transition-transform border border-white/10">
-                    {lang === 'ar' ? 'دخول' : 'Login'}
-                  </button>
-                </PrefetchLink>
-              )}
+            <>
+              <PrefetchLink to="/login" target="_self" className="hidden md:block">
+                <button className="px-4 py-2 rounded-full bg-white text-black text-xs font-black uppercase tracking-widest hover:scale-105 transition-transform border border-white/10">
+                  {lang === 'ar' ? 'دخول' : 'Login'}
+                </button>
+              </PrefetchLink>
+              <PrefetchLink to="/login" target="_self" className="md:hidden">
+                <div className="w-9 h-9 rounded-full bg-zinc-900 border border-white/10 flex items-center justify-center hover:border-cyan-400/50 transition-colors">
+                  <User size={16} className="text-zinc-400" />
+                </div>
+              </PrefetchLink>
+            </>
+          )}
 
+              {/* Hamburger - Visible when Desktop Nav is hidden */}
               <button 
-                className="lg:hidden p-1.5 text-white"
+                className="xl:hidden p-1.5 text-white"
                 onClick={() => setMenuOpen(!menuOpen)}
               >
-                {menuOpen ? <X size={30} /> : <Menu size={30} />}
+                {menuOpen ? <X size={24} /> : <Menu size={24} />}
               </button>
             </div>
+          </div>
         </div>
 
         {/* Mobile Menu */}
@@ -308,13 +422,14 @@ export const QuantumNavbar = () => {
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              className="lg:hidden bg-black/95 backdrop-blur-md border-t border-white/10 overflow-hidden"
+              className="xl:hidden bg-black/95 backdrop-blur-md border-t border-white/10 overflow-hidden"
             >
               <div className="flex flex-col p-4 space-y-2">
                 {navLinks.map((link) => (
                   <div key={link.to} className="flex flex-col">
                     <PrefetchLink
                       to={link.to}
+                      target="_self"
                       onClick={() => setMenuOpen(false)}
                       className="flex items-center gap-4 p-4 rounded-xl hover:bg-white/10 text-zinc-400 hover:text-white transition-colors"
                     >
@@ -327,6 +442,7 @@ export const QuantumNavbar = () => {
                           <PrefetchLink
                             key={sub.to}
                             to={sub.to}
+                            target="_self"
                             onClick={() => setMenuOpen(false)}
                             className="flex items-center gap-3 p-3 rounded-lg text-zinc-400 hover:text-cyan-400 hover:bg-white/5 transition-colors"
                           >
@@ -352,35 +468,6 @@ export const QuantumNavbar = () => {
           )}
         </AnimatePresence>
       </nav>
-
-      {/* Search Overlay */}
-      <AnimatePresence>
-        {searchOpen && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setSearchOpen(false)}
-              className="fixed inset-0 z-[89] bg-black/50 backdrop-blur-sm"
-            />
-            <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="fixed top-24 left-0 right-0 mx-auto w-full max-w-3xl px-4 z-[90]"
-            >
-              <div className="glass-card p-4 rounded-2xl border border-cyan-500/30 shadow-[0_0_50px_rgba(0,255,204,0.1)] bg-black/90">
-                <SearchBar 
-                  placeholder={lang === 'ar' ? 'ابحث عن فيلمك المفضل...' : 'Initialize search protocol...'}
-                  className="w-full bg-transparent border-none text-xl font-light text-white placeholder:text-white/20 focus:ring-0"
-                  autoFocus
-                />
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-    </>
+    </div>
   )
 }

@@ -3,6 +3,8 @@ import { PrefetchLink } from '../../common/PrefetchLink'
 import { getContinueWatching } from '../../../lib/supabase'
 import { tmdb } from '../../../lib/tmdb'
 import { Clock } from 'lucide-react'
+import { SectionHeader } from '../../common/SectionHeader'
+import { useLang } from '../../../state/useLang'
 
 type CwItem = {
   content_id: number
@@ -22,6 +24,7 @@ type EnrichedCwItem = CwItem & {
 }
 
 export const ContinueWatchingRow = ({ userId }: { userId: string }) => {
+  const { lang } = useLang()
   const cwQuery = useQuery<CwItem[]>({
     queryKey: ['continue', userId],
     queryFn: () => getContinueWatching(userId),
@@ -51,8 +54,8 @@ export const ContinueWatchingRow = ({ userId }: { userId: string }) => {
   if (!cwQuery.data?.length) return null
   if (cwQuery.isPending) {
     return (
-      <section className="space-y-6">
-        <div className="h-8 w-48 animate-pulse rounded bg-white/10" />
+      <section>
+        <SectionHeader title={lang === 'ar' ? 'تابع المشاهدة' : 'Continue Watching'} icon={<Clock />} />
         <div className="flex gap-6 overflow-hidden">
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="shrink-0 w-[160px] aspect-[2/3] animate-pulse rounded-2xl bg-white/10" />
@@ -63,16 +66,9 @@ export const ContinueWatchingRow = ({ userId }: { userId: string }) => {
   }
 
   return (
-    <section className="space-y-6">
-      <div className="flex items-center gap-3">
-        <div className="p-2 rounded-xl bg-cyan-500/20 border border-cyan-500/30">
-          <Clock size={24} className="text-cyan-400" />
-        </div>
-        <h2 className="text-2xl md:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-zinc-400">
-          تابع المشاهدة
-        </h2>
-      </div>
-      <div className="flex gap-6 overflow-x-auto pb-6 snap-x scrollbar-none -mx-4 px-4 md:mx-0 md:px-0">
+    <section>
+      <SectionHeader title={lang === 'ar' ? 'تابع المشاهدة' : 'Continue Watching'} icon={<Clock />} />
+      <div className="flex gap-4 overflow-x-auto pb-6 snap-x scrollbar-none -mx-4 px-4 md:mx-0 md:px-0">
         {data.map((r, i) => {
           const href = r.content_type === 'movie'
             ? `/watch/movie/${r.content_id}`
@@ -93,7 +89,7 @@ export const ContinueWatchingRow = ({ userId }: { userId: string }) => {
             <PrefetchLink
               key={`${r.content_type}-${r.content_id}`}
               to={href}
-              className="snap-center shrink-0 w-[160px] md:w-[180px] group"
+              className="snap-center shrink-0 w-[120px] md:w-[140px] group"
             >
               <div className="relative rounded-2xl overflow-hidden border border-white/10 bg-white/5 backdrop-blur-md transition-transform duration-300 hover:scale-105 hover:shadow-[0_0_30px_rgba(0,255,204,0.3)]">
                 <div className="aspect-[2/3] bg-zinc-900">

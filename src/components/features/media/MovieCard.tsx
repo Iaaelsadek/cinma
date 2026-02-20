@@ -9,24 +9,24 @@ import { getGenreName } from '../../../lib/genres'
 import { generateWatchPath } from '../../../lib/utils'
 import { useLang } from '../../../state/useLang'
 import { useDualTitles } from '../../../hooks/useDualTitles'
+import { TmdbImage } from '../../common/TmdbImage'
 
-type Movie = {
+export type Movie = {
   id: number
-  title?: string
-  name?: string
+  title?: string | null
+  name?: string | null
   release_date?: string
   first_air_date?: string
   poster_path?: string | null
   backdrop_path?: string | null
   vote_average?: number
   overview?: string
-  media_type?: 'movie' | 'tv'
+  media_type?: 'movie' | 'tv' | 'game' | 'software' | string
   genre_ids?: number[]
   original_language?: string
+  category?: string
 }
 
-const IMG = (path?: string | null, size = 'w342') =>
-  path ? `https://image.tmdb.org/t/p/${size}${path}` : ''
 
 export const MovieCard = ({ movie, index = 0 }: { movie: Movie; index?: number }) => {
   const [isHovered, setIsHovered] = useState(false)
@@ -39,10 +39,26 @@ export const MovieCard = ({ movie, index = 0 }: { movie: Movie; index?: number }
   const title = movie.title || movie.name || 'Untitled'
   const date = movie.release_date || movie.first_air_date || ''
   const year = date ? new Date(date).getFullYear() : ''
+  
   const isTv = movie.media_type === 'tv' || (!!movie.name && !movie.title)
-  const watchUrl = generateWatchPath({ ...movie, media_type: isTv ? 'tv' : 'movie' })
+  const isGame = movie.media_type === 'game'
+  const isSoftware = movie.media_type === 'software'
+  const isAnime = movie.media_type === 'anime'
+  const isQuran = movie.media_type === 'quran'
+  
+  const getMediaType = () => {
+    if (isGame) return 'game'
+    if (isSoftware) return 'software'
+    if (isAnime) return 'anime'
+    if (isQuran) return 'quran'
+    if (isTv) return 'tv'
+    return 'movie'
+  }
+  
+  const mediaType = getMediaType()
+  const watchUrl = generateWatchPath({ ...movie, media_type: mediaType })
   const href = watchUrl
-  const contentType = isTv ? 'tv' : 'movie'
+  const contentType = mediaType
   const rating = typeof movie.vote_average === 'number' ? Math.round(movie.vote_average * 10) / 10 : null
   
   const genre = getGenreName(movie.genre_ids?.[0], lang) || (movie as any).category
@@ -67,12 +83,12 @@ export const MovieCard = ({ movie, index = 0 }: { movie: Movie; index?: number }
     }
     setListBusy(true)
     try {
-      const current = await isInWatchlist(user.id, movie.id, contentType)
+      const current = await isInWatchlist(user.id, movie.id, contentType as any)
       if (current) {
-        await removeFromWatchlist(user.id, movie.id, contentType)
+        await removeFromWatchlist(user.id, movie.id, contentType as any)
         setInList(false)
       } else {
-        await addToWatchlist(user.id, movie.id, contentType)
+        await addToWatchlist(user.id, movie.id, contentType as any)
         setInList(true)
       }
     } finally {
@@ -103,19 +119,18 @@ export const MovieCard = ({ movie, index = 0 }: { movie: Movie; index?: number }
         <div className="lumen-card h-full flex flex-col transition-transform duration-300 ease-lumen hover:scale-[1.03] focus-within:scale-[1.02]">
           {/* Poster */}
           <div className="relative aspect-[2/3] w-full overflow-hidden bg-lumen-muted">
-            {movie.poster_path ? (
-              <img
-                src={IMG(movie.poster_path)}
-                alt={title}
-                className={`h-full w-full object-cover transition-all duration-500 ease-lumen ${isHovered ? 'scale-105 brightness-75' : 'scale-100'}`}
-                loading="lazy"
-                decoding="async"
-              />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center bg-lumen-muted text-lumen-silver">
-                <Play size={40} className="opacity-30" />
-              </div>
-            )}
+            <TmdbImage
+              path={movie.poster_path}
+              alt={title}
+              size="w342"
+              className="h-full w-full"
+              imgClassName={`transition-all duration-500 ease-lumen ${isHovered ? 'scale-105 brightness-75' : 'scale-100'}`}
+              fallback={
+                <div className="flex h-full w-full items-center justify-center bg-lumen-muted text-lumen-silver">
+                  <Play size={40} className="opacity-30" />
+                </div>
+              }
+            />
 
             {/* LUMEN grain overlay (subtle) */}
             <div className="lumen-grain rounded-2xl" aria-hidden />
@@ -135,7 +150,7 @@ export const MovieCard = ({ movie, index = 0 }: { movie: Movie; index?: number }
                   whileHover={{ scale: 1.08 }}
                   whileTap={{ scale: 0.96 }}
                 >
-                  <Play size={20} fill="currentColor" className="ml-0.5" />
+                  <Play size={24} fill="currentColor" className="ml-0.5" />
                 </motion.button>
                 <motion.button
                   type="button"
@@ -165,7 +180,7 @@ export const MovieCard = ({ movie, index = 0 }: { movie: Movie; index?: number }
                  {titles.sub}
                </p>
             )}
-            <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[10px] font-medium uppercase tracking-wider text-lumen-silver">
+            <div className="mt-1 flex flex-wrap items-center gap-1 text-[9px] font-medium uppercase tracking-wider text-lumen-silver">
                {/* Rating */}
                {rating != null && (
                  <span className="flex items-center gap-0.5 text-lumen-gold">
@@ -194,7 +209,14 @@ export const MovieCard = ({ movie, index = 0 }: { movie: Movie; index?: number }
 
                {/* Type */}
                <span className="w-0.5 h-0.5 rounded-full bg-lumen-silver/50" />
-               <span>{isTv ? (lang === 'ar' ? 'مسلسل' : 'Series') : (lang === 'ar' ? 'فيلم' : 'Movie')}</span>
+               <span>
+                  {isGame ? (lang === 'ar' ? 'لعبة' : 'Game') :
+                    isSoftware ? (lang === 'ar' ? 'برنامج' : 'Software') :
+                    isAnime ? (lang === 'ar' ? 'أنمي' : 'Anime') :
+                    isQuran ? (lang === 'ar' ? 'قارئ' : 'Reciter') :
+                    isTv ? (lang === 'ar' ? 'مسلسل' : 'Series') :
+                    (lang === 'ar' ? 'فيلم' : 'Movie')}
+                </span>
             </div>
           </div>
         </div>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { errorLogger } from '../services/errorLogging'
 
 export type Server = {
   name: string
@@ -50,7 +51,12 @@ export const useServers = (tmdbId: number, type: 'movie' | 'tv', season?: number
           }
         }
       } catch (err) {
-        console.warn('DB Link fetch failed, falling back to auto-generation', err)
+        errorLogger.logError({
+          message: 'DB Link fetch failed, falling back to auto-generation',
+          severity: 'low',
+          category: 'media',
+          context: { error: err, tmdbId, type }
+        })
       }
 
       // 2. Generate Fallback Links

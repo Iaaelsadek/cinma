@@ -2,18 +2,19 @@ import { useMemo } from 'react'
 import { PrefetchLink } from '../components/common/PrefetchLink'
 import { useQuery, keepPreviousData } from '@tanstack/react-query'
 import { tmdb } from '../lib/tmdb'
-import { AdsManager } from '../components/common/AdsManager'
+import { AdsManager } from '../components/features/system/AdsManager'
 import { useAuth } from '../hooks/useAuth'
 import { CONFIG } from '../lib/constants'
 import { useLang } from '../state/useLang'
 import { getRecommendations, RecommendationItem } from '../services/recommendations'
-import { BrainCircuit, Play, Plus, Zap, Cpu, Gamepad2, Tv, Film, Drama } from 'lucide-react'
+import { useRecommendations } from '../hooks/useRecommendations'
+import { BrainCircuit, Play, Plus, Zap, Cpu, Gamepad2, Tv, Film, Drama, BookOpen, Sparkles } from 'lucide-react'
 import { MovieRow } from '../components/features/media/MovieRow'
 import { MovieCard } from '../components/features/media/MovieCard'
 import { VideoRow } from '../components/features/media/VideoRow'
 import { motion } from 'framer-motion'
 import { useCategoryVideos, useClassicVideos } from '../hooks/useFetchContent'
-import { SkeletonGrid } from '../components/common/Skeletons'
+import { SkeletonGrid, SkeletonHero } from '../components/common/Skeletons'
 import { supabase, getContinueWatching } from '../lib/supabase'
 import { SeoHead } from '../components/common/SeoHead'
 import { useQuranPlayer } from '../context/QuranPlayerContext'
@@ -21,6 +22,7 @@ import { QuantumHero } from '../components/features/hero/QuantumHero'
 import { QuantumTrain } from '../components/features/media/QuantumTrain'
 import { ContinueWatchingRow } from '../components/features/media/ContinueWatchingRow'
 import { HolographicCard } from '../components/effects/HolographicCard'
+import { SectionHeader } from '../components/common/SectionHeader'
 
 // Types (kept from original)
 type TmdbMedia = {
@@ -60,6 +62,7 @@ import 'swiper/css/free-mode'
 export const Home = () => {
   const { user } = useAuth()
   const { lang } = useLang()
+  const { data: recommendations, isLoading: recommendationsLoading } = useRecommendations()
 
   // --- DATA FETCHING (Optimized & Parallelized) ---
   const popularMovies = useQuery<{ results: TmdbMedia[] }>({
@@ -103,29 +106,36 @@ export const Home = () => {
   }, [trendingMovies.data, popularMovies.data])
 
   // Other Content
-  const trendingVideos = useCategoryVideos('trending', { limit: 20 })
-  const latestMovies = useCategoryVideos('movie', { limit: 20 })
-  const tvSeries = useCategoryVideos('series', { limit: 20 })
-  const gaming = useCategoryVideos('gaming', { limit: 20 })
-  const programming = useCategoryVideos('programming', { limit: 20 })
   const classics = useClassicVideos({ limit: 20 })
-  const plays = useCategoryVideos('play', { limit: 20 })
-  const others = useCategoryVideos('others', { limit: 20 })
+  const plays = useCategoryVideos('play', { limit: 20 }) // plays (99 items)
+  const goldenEra = useCategoryVideos('golden_era', { limit: 20 }) // golden_era (97 items)
+  const recaps = useCategoryVideos('recaps', { limit: 20 }) // recaps (34 items)
   
-  const animeHub = useQuery<AnimeRow[]>({
+  const animeHub = useQuery<any[]>({
     queryKey: ['home-anime'],
     queryFn: async () => {
       const { data } = await supabase.from('anime').select('id,title,category,image_url').order('id', { ascending: false }).limit(12)
-      return data as AnimeRow[]
+      return (data || []).map(item => ({
+        ...item,
+        poster_path: item.image_url,
+        media_type: 'tv',
+        original_language: 'ja'
+      }))
     },
     staleTime: 300000
   })
 
-  const quranHub = useQuery<QuranRow[]>({
+  const quranHub = useQuery<any[]>({
     queryKey: ['home-quran'],
     queryFn: async () => {
       const { data } = await supabase.from('quran_reciters').select('id,name,category,image,rewaya,server').order('id', { ascending: false }).limit(10)
-      return data as QuranRow[]
+      return (data || []).map(item => ({
+        ...item,
+        title: item.name,
+        poster_path: item.image,
+        media_type: 'quran',
+        overview: item.rewaya
+      }))
     },
     staleTime: 300000
   })
@@ -194,53 +204,122 @@ export const Home = () => {
 
       {/* 1. QUANTUM HERO PORTAL */}
       <section className="relative z-10 w-full">
-         <QuantumHero items={heroItems} />
+         {popularMovies.isLoading ? <SkeletonHero /> : <QuantumHero items={heroItems} />}
       </section>
 
       <AdsManager type="banner" position="home-top" />
 
-      <div className="max-w-[2400px] mx-auto px-4 md:px-12 w-full">
+      <div className="max-w-[2400px] mx-auto px-4 md:px-6 w-full">
         {/* Continue Watching - for logged-in users */}
         {user && (
-          <section className="relative z-20 pt-8 pb-4">
+          <section className="relative z-20 pt-6 pb-2">
             <ContinueWatchingRow userId={user.id} />
           </section>
         )}
+
+        {/* Section: Picked for You (Auth only) - Recommendation System */}
+        {user && recommendations && recommendations.length > 0 && (
+          <section className="relative overflow-hidden rounded-3xl border border-violet-500/20 bg-violet-950/10 mb-6">
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-violet-500/20 via-transparent to-transparent opacity-50 blur-3xl pointer-events-none" />
+            <div className="relative z-10">
+               <QuantumTrain 
+                 items={recommendations} 
+                 title={lang === 'ar' ? 'مقترح لك' : 'Picked for You'}
+                 icon={<Sparkles className="text-amber-400 animate-pulse" />}
+                 badge={lang === 'ar' ? 'ذكاء اصطناعي' : 'AI Powered'}
+                 color="purple"
+                 className="!py-8"
+               />
+            </div>
+          </section>
+        )}
+
         {/* 2. THE INFINITE TRAIN */}
-        <section className="relative z-20 -mt-10 w-full overflow-hidden pb-12 rounded-3xl">
-          <QuantumTrain items={popularMovies.data?.results || []} />
+        <section className="relative z-20 -mt-12 w-full overflow-hidden pb-4 rounded-3xl">
+          {popularMovies.isLoading ? (
+            <div className="flex gap-4 overflow-hidden px-4">
+              <SkeletonGrid count={6} variant="poster" />
+            </div>
+          ) : (
+            <QuantumTrain items={popularMovies.data?.results || []} />
+          )}
         </section>
 
         {/* 3. MASONRY GRID & CONTENT */}
-        <div className="relative z-30 space-y-32 pb-40">
+        <div className="relative z-30 space-y-2 pb-4">
         
         {/* Section: Trending Egypt (Aflam) */}
         <section>
-          <SectionHeader title={lang === 'ar' ? 'الأعلى مشاهدة في مصر' : 'Top Trending in Egypt'} icon={<Zap />} />
-          <QuantumTrain items={popularAr.data?.results || []} />
+          {popularAr.isLoading ? (
+            <>
+              <SectionHeader title={lang === 'ar' ? 'الأعلى مشاهدة في مصر' : 'Top Trending in Egypt'} icon={<Zap />} link="/movies" />
+              <SkeletonGrid count={6} variant="poster" />
+            </>
+          ) : (
+            <QuantumTrain 
+              items={popularAr.data?.results || []} 
+              title={lang === 'ar' ? 'الأعلى مشاهدة في مصر' : 'Top Trending in Egypt'} 
+              icon={<Zap />} 
+              link="/movies" 
+            />
+          )}
         </section>
 
         {/* Section: Ramadan & Arabic Series */}
         <section>
-          <SectionHeader title={lang === 'ar' ? 'مسلسلات عربية ورمضانية' : 'Arabic & Ramadan Series'} icon={<Tv />} />
-          <QuantumTrain items={arabicSeries.data?.results || []} />
+          {arabicSeries.isLoading ? (
+            <>
+              <SectionHeader title={lang === 'ar' ? 'مسلسلات عربية ورمضانية' : 'Arabic & Ramadan Series'} icon={<Tv />} link="/ramadan" />
+              <SkeletonGrid count={6} variant="poster" />
+            </>
+          ) : (
+            <QuantumTrain 
+              items={arabicSeries.data?.results || []} 
+              title={lang === 'ar' ? 'مسلسلات عربية ورمضانية' : 'Arabic & Ramadan Series'} 
+              icon={<Tv />} 
+              link="/ramadan" 
+            />
+          )}
         </section>
 
         {/* Section: Masrahiyat (Plays) */}
         <section>
-          <SectionHeader title={lang === 'ar' ? 'مسرحيات وكلاسيكيات' : 'Plays & Classics'} icon={<Drama />} />
-          <QuantumTrain items={plays.data || []} />
+          {plays.isLoading ? (
+            <>
+              <SectionHeader title={lang === 'ar' ? 'مسرحيات وكلاسيكيات' : 'Plays & Classics'} icon={<Drama />} link="/plays" />
+              <SkeletonGrid count={6} variant="poster" />
+            </>
+          ) : (
+            <QuantumTrain 
+              items={plays.data || []} 
+              title={lang === 'ar' ? 'مسرحيات وكلاسيكيات' : 'Plays & Classics'} 
+              icon={<Drama />} 
+              link="/plays" 
+              type="video"
+            />
+          )}
         </section>
 
         {/* Section: Turkish Drama */}
         <section>
-          <SectionHeader title={lang === 'ar' ? 'الدراما التركية' : 'Turkish Drama'} icon={<Film />} />
-          <QuantumTrain items={turkishSeries.data?.results || []} />
+          {turkishSeries.isLoading ? (
+            <>
+              <SectionHeader title={lang === 'ar' ? 'الدراما التركية' : 'Turkish Drama'} icon={<Film />} link="/series" />
+              <SkeletonGrid count={6} variant="poster" />
+            </>
+          ) : (
+            <QuantumTrain 
+              items={turkishSeries.data?.results || []} 
+              title={lang === 'ar' ? 'الدراما التركية' : 'Turkish Drama'} 
+              icon={<Film />} 
+              link="/series" 
+            />
+          )}
         </section>
 
         {/* Section: Global Trending */}
         <section>
-          <SectionHeader title={lang === 'ar' ? 'الرائج عالمياً' : 'Global Trending'} icon={<Zap />} />
+          <SectionHeader title={lang === 'ar' ? 'الرائج عالمياً' : 'Global Trending'} icon={<Zap />} link="/top-watched" />
           {popularAr.isPending ? <SkeletonGrid count={10} variant="poster" /> : (
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6 perspective-1000">
               {popularAr.data?.results?.slice(0, 12).map((movie, idx) => (
@@ -250,28 +329,49 @@ export const Home = () => {
           )}
         </section>
 
-        {/* Section: Tech & Gaming (Bento Style) */}
-        <section className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+        {/* Section: Golden Era & Recaps (Bento Style) */}
+        <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
            <BentoBox 
-             title={lang === 'ar' ? 'منطقة الألعاب' : 'Gaming Zone'} 
-             icon={<Gamepad2 />} 
-             items={gaming.data || []}
-             color="purple"
+             title={lang === 'ar' ? 'العصر الذهبي' : 'Golden Era'} 
+             icon={<Film />} 
+             items={goldenEra.data || []}
+             color="gold"
            />
            <BentoBox 
-             title={lang === 'ar' ? 'البرمجيات' : 'Software Core'} 
-             icon={<Cpu />} 
-             items={programming.data || []}
+             title={lang === 'ar' ? 'ملخصات الأفلام' : 'Movie Recaps'} 
+             icon={<Zap />} 
+             items={recaps.data || []}
              color="cyan"
            />
         </section>
 
+        {/* Section: Anime */}
+        <section>
+          <SectionHeader title={lang === 'ar' ? 'أنمي مترجم' : 'Anime'} icon={<Tv />} link="/anime" />
+          {animeHub.isLoading ? <SkeletonGrid count={6} variant="poster" /> : (
+             <QuantumTrain items={animeHub.data || []} />
+          )}
+        </section>
+
+        {/* Section: Quran */}
+        <section>
+          <SectionHeader title={lang === 'ar' ? 'القرآن الكريم' : 'Holy Quran'} icon={<BookOpen />} link="/quran" />
+          {quranHub.isLoading ? <SkeletonGrid count={6} variant="poster" /> : (
+             <QuantumTrain items={quranHub.data || []} />
+          )}
+        </section>
+
         {/* Section: Top Rated (Horizontal Scroll) */}
         <section>
-           <SectionHeader title={lang === 'ar' ? 'الأعلى تقييماً' : 'Top Rated'} icon={<Film />} />
-           <div className="flex gap-6 overflow-x-auto pb-8 snap-x scrollbar-none">
+           <SectionHeader 
+             title={lang === 'ar' ? 'الأعلى تقييماً' : 'Top Rated'} 
+             icon={<Film />} 
+             link="/movies" 
+             badge="⭐ 9.0+"
+           />
+           <div className="flex gap-3 overflow-x-auto pb-4 snap-x scrollbar-none">
               {topRatedMovies.data?.results?.slice(0, 10).map((movie, idx) => (
-                <div key={movie.id} className="snap-center shrink-0 w-[200px]">
+                <div key={movie.id} className="snap-center shrink-0 w-[120px] md:w-[140px]">
                    <MovieCard movie={movie} index={idx} />
                 </div>
               ))}
@@ -280,13 +380,14 @@ export const Home = () => {
 
         {/* AI Discovery */}
         {user && (
-          <section className="relative p-12 rounded-3xl overflow-hidden border border-white/10 bg-white/5 backdrop-blur-3xl">
+          <section className="relative p-6 rounded-2xl overflow-hidden border border-white/10 bg-white/5 backdrop-blur-3xl">
             <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 to-purple-500/10" />
             <div className="relative z-10">
-               <div className="flex items-center gap-4 mb-8">
-                 <BrainCircuit className="text-cyan-400 w-10 h-10 animate-pulse" />
-                 <h2 className="text-4xl font-black tracking-tighter uppercase">{lang === 'ar' ? 'اكتشافات الذكاء الاصطناعي' : 'AI Discovery Protocol'}</h2>
-               </div>
+               <SectionHeader 
+                 title={lang === 'ar' ? 'اكتشافات الذكاء الاصطناعي' : 'AI Discovery Protocol'} 
+                 icon={<BrainCircuit />} 
+                 color="cyan"
+               />
                <AIRecommended userId={user.id} />
             </div>
           </section>
@@ -300,29 +401,13 @@ export const Home = () => {
 
 // --- SUB COMPONENTS ---
 
-const SectionHeader = ({ title, icon }: { title: string, icon: any }) => (
-  <div className="flex items-center gap-4 mb-12">
-    <div className="p-3 rounded-xl bg-white/5 border border-white/10 text-cyan-400 shadow-[0_0_20px_rgba(0,255,204,0.1)]">
-      {icon}
-    </div>
-    <h2 className="text-4xl md:text-5xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-white to-white/50">
-      {title}
-    </h2>
-    <div className="h-[1px] flex-1 bg-gradient-to-r from-cyan-500/50 to-transparent ml-8" />
-  </div>
-)
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 
-const BentoBox = ({ title, icon, items, color }: { title: string, icon: any, items: any[], color: 'cyan' | 'purple' }) => {
-  const accent = color === 'cyan' ? 'text-cyan-400' : 'text-purple-400'
-  const border = color === 'cyan' ? 'group-hover:border-cyan-500/50' : 'group-hover:border-purple-500/50'
-  
+const BentoBox = ({ title, icon, items, color }: { title: string, icon: any, items: any[], color: 'cyan' | 'purple' | 'gold' }) => {
   return (
-    <div className="space-y-8">
-      <div className="flex items-center gap-3">
-        {icon}
-        <h3 className={`text-2xl font-black uppercase tracking-widest ${accent}`}>{title}</h3>
-      </div>
-      <div className="grid grid-cols-2 gap-4">
+    <div>
+      <SectionHeader title={title} icon={icon} color={color} />
+      <div className="grid grid-cols-2 gap-3">
         {items.slice(0, 4).map((item, i) => (
           <HolographicCard key={item.id} className={`aspect-video ${i === 0 ? 'col-span-2 row-span-2 aspect-video' : ''}`}>
              <PrefetchLink to={`/watch/yt/${item.id}`} className="block h-full relative group">

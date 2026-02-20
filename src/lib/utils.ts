@@ -33,6 +33,17 @@ export const generateWatchPath = (item: any) => {
     return `/watch/arabic/video/${category}/${category}/${title}-${item.id}`
   }
 
+  // Handle Game/Software content
+  if (item.media_type === 'game') {
+    return `/game/${item.id}`
+  }
+  if (item.media_type === 'software') {
+    return `/software/${item.id}`
+  }
+  if (item.media_type === 'quran') {
+    return `/quran/reciter/${item.id}`
+  }
+
   // Determine Type
   let type = 'movies'
   if (item.media_type === 'tv' || item.media_type === 'anime') type = 'series'

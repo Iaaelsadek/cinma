@@ -2,6 +2,8 @@ import { useQuery } from '@tanstack/react-query'
 import { useParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { tmdb, fetchGenres } from '../../lib/tmdb'
+import { errorLogger } from '../../services/errorLogging'
+import { MovieCard } from '../../components/features/media/MovieCard'
 import { QuantumHero } from '../../components/features/hero/QuantumHero'
 import { QuantumTrain } from '../../components/features/media/QuantumTrain'
 import { useLang } from '../../state/useLang'
@@ -39,7 +41,7 @@ export const AnimePage = () => {
         poster_path: item.image_url,
         vote_average: item.rating || 9.0, 
         release_date: item.created_at?.split('T')[0] || '2024',
-        media_type: 'anime',
+        media_type: 'tv',
         original_language: 'ja',
         category: item.category
       }))
@@ -100,7 +102,12 @@ export const AnimePage = () => {
         
         return tmdbItems
       } catch (e) {
-        console.error('TMDB fetch failed', e)
+        errorLogger.logError({
+          message: 'TMDB fetch failed',
+          severity: 'low',
+          category: 'network',
+          context: { error: e, params: { genre: paramGenre, year: paramYear, rating: paramRating } }
+        })
         // Fallback Mock Data
         return [
           { id: 101, title: 'One Piece', poster_path: 'https://media.themoviedb.org/t/p/w220_and_h330_face/cMD9Ygz11zjJzAovURpO75Pg738.jpg', vote_average: 8.9, media_type: 'tv', category: 'Action' },
@@ -125,31 +132,21 @@ export const AnimePage = () => {
   const heroItems = displayItems.slice(0, 10)
 
   return (
-    <div className="min-h-screen text-white pb-24 max-w-[2400px] mx-auto px-4 md:px-12 w-full">
+    <div className="min-h-screen text-white pb-4 max-w-[2400px] mx-auto px-4 md:px-12 w-full">
       <Helmet>
         <title>{lang === 'ar' ? 'أنمي - سينما أونلاين' : 'Anime - Cinema Online'}</title>
       </Helmet>
 
-      {/* Hero Section */}
       <QuantumHero items={heroItems} />
 
-      <div className="space-y-8 relative z-10 -mt-20 px-4 md:px-0">
+      <div className="space-y-2 relative z-10 pt-4">
         {isFiltered ? (
            <div className="px-4 md:px-12">
-              <h2 className="text-3xl font-bold mb-8 capitalize">{paramGenre || 'Anime'} {paramYear}</h2>
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
-                {/* We need a grid component or reuse QuantumTrain in a grid mode? 
-                    Actually, let's just use QuantumTrain for the single filtered row if items are few, 
-                    or map MovieCard directly.
-                */}
-                {/* For simplicity, let's use a wrapped list since we don't have a grid component handy 
-                    that matches QuantumTrain style perfectly without copy-paste. 
-                    Let's use a single QuantumTrain for now or create a grid.
-                */}
-                 <QuantumTrain 
-                    items={displayItems} 
-                    title={paramGenre || (lang === 'ar' ? 'نتائج البحث' : 'Search Results')}
-                  />
+              <h2 className="text-xl font-bold mb-4 capitalize">{paramGenre || 'Anime'} {paramYear}</h2>
+              <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
+                {displayItems.map((item: any, idx: number) => (
+                  <MovieCard key={item.id} movie={item} index={idx} />
+                ))}
               </div>
            </div>
         ) : (

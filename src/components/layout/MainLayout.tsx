@@ -6,7 +6,8 @@ import { Footer } from './Footer'
 import { useLocation } from 'react-router-dom'
 import { useLang } from '../../state/useLang'
 import { QuranPlayerBar } from '../../context/QuranPlayerContext'
-import { PwaInstallPrompt } from '../common/PwaInstallPrompt'
+import { PwaInstallPrompt } from '../features/system/PwaInstallPrompt'
+import { ErrorBoundary } from '../common/ErrorBoundary'
 
 interface MainLayoutProps {
   children: ReactNode
@@ -21,20 +22,26 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
       {/* THE LIVING ORGANISM CORE */}
       <AuroraBackground />
 
-      <QuantumNavbar />
+      <div className="relative z-10 w-[96%] md:w-[95%] xl:w-[90%] max-w-[1920px] mx-auto border-x border-lumen-muted/50 min-h-screen bg-lumen-void/60 backdrop-blur-sm transition-all duration-300 shadow-2xl">
+        <div className="sticky top-0 z-[100] w-full">
+          <QuantumNavbar />
+        </div>
       
-      <AnimatePresence mode="wait">
-        <motion.main
-          key={location.pathname}
-          initial={{ opacity: 0, scale: 0.98, filter: 'blur(10px)' }}
-          animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
-          exit={{ opacity: 0, scale: 1.02, filter: 'blur(10px)' }}
-          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-          className="relative z-10 pb-24 pt-0 w-[96%] md:w-[95%] xl:w-[90%] max-w-[1920px] mx-auto border-x border-lumen-muted/50 min-h-screen bg-lumen-void/60 backdrop-blur-sm transition-all duration-300 overflow-x-hidden"
-        >
-          {children}
-        </motion.main>
-      </AnimatePresence>
+        <AnimatePresence mode="wait">
+          <ErrorBoundary>
+            <motion.main
+              key={location.pathname}
+              initial={{ opacity: 0, scale: 0.98, filter: 'blur(10px)' }}
+              animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+              exit={{ opacity: 0, scale: 1.02, filter: 'blur(10px)' }}
+              transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+              className="w-full relative z-10 overflow-x-hidden"
+            >
+              {children}
+            </motion.main>
+          </ErrorBoundary>
+        </AnimatePresence>
+      </div>
 
       <Footer />
       <QuranPlayerBar />

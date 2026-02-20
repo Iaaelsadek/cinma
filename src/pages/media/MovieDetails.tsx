@@ -14,12 +14,13 @@ import { useForm } from 'react-hook-form'
 import { addComment, deleteComment, getComments, updateComment } from '../../lib/supabase'
 import { Helmet } from 'react-helmet-async'
 import { motion } from 'framer-motion'
-import { Star, Eye, Heart as HeartIcon } from 'lucide-react'
+import { Star, Eye, Heart as HeartIcon, Play, Download, Sparkles, MessageSquare } from 'lucide-react'
 import { ShareButton } from '../../components/common/ShareButton'
 import { useLang } from '../../state/useLang'
 import ReactPlayer from 'react-player'
 import { SeoHead } from '../../components/common/SeoHead'
 import { useDualTitles } from '../../hooks/useDualTitles'
+import { SectionHeader } from '../../components/common/SectionHeader'
 
 type TmdbGenre = { id: number; name: string }
 type TmdbCrewMember = { id: number; job?: string; name?: string }
@@ -54,6 +55,8 @@ type TmdbSimilarItem = {
   first_air_date?: string
   media_type?: 'movie' | 'tv'
 }
+
+import { SkeletonDetails } from '../../components/common/Skeletons'
 
 export const MovieDetails = () => {
   const { id } = useParams()
@@ -228,17 +231,6 @@ export const MovieDetails = () => {
     }
   })
 
-  const Skeleton = () => (
-    <div className="flex flex-col gap-6 md:flex-row">
-      <div className="aspect-[2/3] w-60 animate-pulse rounded-lg bg-zinc-800" />
-      <div className="flex-1 space-y-3">
-        <div className="h-7 w-1/2 animate-pulse rounded bg-zinc-800" />
-        <div className="h-4 w-1/3 animate-pulse rounded bg-zinc-800" />
-        <div className="h-24 w-full animate-pulse rounded bg-zinc-800" />
-      </div>
-    </div>
-  )
-
   const { lang } = useLang()
   const t = (ar: string, en: string) => (lang === 'ar' ? ar : en)
   const quality = '1080p'
@@ -291,8 +283,17 @@ export const MovieDetails = () => {
       video
     }
   }, [rating, data, trailerUrl, title, poster, backdrop, aiSummary, overview, genres, director, runtimeMin, id])
+
+  if (isLoading) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 pt-24 pb-12">
+        <SkeletonDetails />
+      </div>
+    )
+  }
+
   return (
-    <div className="relative space-y-6">
+    <div className="relative space-y-3">
       <SeoHead
         title={`${title} | ${quality}`}
         description={aiSummary || overview || ''}
@@ -302,144 +303,128 @@ export const MovieDetails = () => {
       />
       {/* Cinematic background */}
       {backdrop && (
-        <div className="pointer-events-none fixed inset-0 -z-10">
-          <img src={backdrop} alt={title} className="h-full w-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/60 to-[#0f0f0f]" />
+        <div className="absolute top-0 left-0 right-0 h-[35vh] -z-10 overflow-hidden">
+          <img src={backdrop} alt={title} className="h-full w-full object-cover opacity-50" />
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#050505]/60 to-[#050505]" />
         </div>
       )}
       {isLoading ? (
-        <Skeleton />
+        <SkeletonDetails />
       ) : (
-        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="grid grid-cols-1 gap-6 md:grid-cols-[1fr_320px]">
+        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="grid grid-cols-1 gap-2 md:grid-cols-[1fr_200px]">
           {/* Left: Info hub */}
-          <div className="space-y-4 order-2 md:order-1">
-            <div className="rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
-              <nav className="text-xs text-zinc-400">
+          <div className="space-y-2">
+            <div className="rounded-xl border border-white/10 bg-white/5 p-3 backdrop-blur-md">
+              <nav className="text-xs text-zinc-400 mb-2">
                 <Link to="/" className="hover:text-white">{t('الرئيسية', 'Home')}</Link>
-                <span className="mx-1 text-lg text-zinc-200">›</span>
+                <span className="mx-1 text-zinc-600">/</span>
                 <Link to="/movies" className="hover:text-white">{t('أفلام', 'Movies')}</Link>
-                {year ? (
-                  <>
-                    <span className="mx-1 text-lg text-zinc-200">›</span>
-                    <Link to={`/movies/year/${year}`} className="hover:text-white">{year}</Link>
-                  </>
-                ) : null}
-                <span className="mx-1 text-lg text-zinc-200">›</span>
+                <span className="mx-1 text-zinc-600">/</span>
                 <span className="text-white">{title}</span>
               </nav>
-              <div className="mt-2 flex items-center justify-between">
-                <div>
-                  <h1 className="text-2xl font-extrabold tracking-tight">{title}</h1>
-                  {arabicTitle && <h2 className="text-lg text-cyan-400 font-arabic opacity-90">{arabicTitle}</h2>}
-                </div>
+              
+              <div className="flex flex-col gap-2">
+                <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white">{title}</h1>
+                {arabicTitle && <h2 className="text-lg text-primary font-arabic opacity-90">{arabicTitle}</h2>}
               </div>
-              <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-zinc-200">
-                <Link to={`/movies`} className="rounded-md border border-white/10 bg-white/10 px-2 py-0.5">
-                  {t('أفلام', 'Movies')}
+
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-zinc-300">
+                <span className="rounded bg-white/10 px-2 py-0.5 text-white font-bold">{quality}</span>
+                <span className="rounded bg-white/10 px-2 py-0.5 text-yellow-400 font-bold">★ {rating ?? '—'}</span>
+                {year && <span className="rounded bg-white/10 px-2 py-0.5">{year}</span>}
+                {runtime && <span className="rounded bg-white/10 px-2 py-0.5">{runtime}</span>}
+                <TrafficLightBadge cert={usCert} />
+              </div>
+
+              {/* Action Buttons - Moved here for immediate visibility */}
+              <div className="mt-4 flex flex-wrap gap-3 items-center">
+                <Link
+                  to={`/watch/movie/${id}#player`}
+                  onClick={() => {
+                    if (Number.isFinite(movieId)) incrementClicks('movies', movieId).catch(() => undefined)
+                  }}
+                  className="rounded-lg bg-[#e50914] px-6 h-10 flex items-center justify-center text-white font-bold shadow-md hover:brightness-110"
+                >
+                  <Play className="w-4 h-4 mr-2" fill="currentColor" />
+                  {t('شاهد الآن', 'Watch Now')}
                 </Link>
-                {year ? (
-                  <Link
-                    to={`/movies/year/${year}`}
-                    className="rounded-md border border-white/10 bg-white/10 px-2 py-0.5"
-                  >
-                    {year}
-                  </Link>
-                ) : null}
-                <span className="rounded-md border border-white/10 bg-white/10 px-2 py-0.5">IMDb {rating ?? '—'}</span>
-                <span className="rounded-md border border-white/10 bg-white/10 px-2 py-0.5">{quality}</span>
-                {runtime ? <span className="rounded-md border border-white/10 bg-white/10 px-2 py-0.5">{runtime}</span> : null}
-                <span className="rounded-md border border-white/10 bg-white/10 px-2 py-0.5"><TrafficLightBadge cert={usCert} /></span>
+                <Link
+                  to={`/watch/movie/${id}#downloads`}
+                  onClick={() => {
+                    if (Number.isFinite(movieId)) incrementClicks('movies', movieId).catch(() => undefined)
+                  }}
+                  className="rounded-lg bg-emerald-600 px-6 h-10 flex items-center justify-center text-white font-bold shadow-md hover:brightness-110"
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  {t('تحميل', 'Download')}
+                </Link>
+                <ShareButton title={title} text={overview?.slice(0, 100)} />
+                <button onClick={() => toggleHeart.mutate()} className={`p-2 rounded-lg border border-white/10 ${heart ? 'bg-red-500/20 text-red-500' : 'bg-white/5 text-zinc-400'}`}>
+                   <HeartIcon className={`w-5 h-5 ${heart ? 'fill-current' : ''}`} />
+                </button>
               </div>
+
               {!!genres.length && (
-                <div className="mt-3 flex flex-wrap gap-2">
+                <div className="mt-4 flex flex-wrap gap-2">
                   {genres.map((g) => (
                     <Link
                       key={g.id}
                       to={`/movies/genre/${g.id}`}
-                      className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs text-white/90 hover:bg-white/20"
+                      className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] text-zinc-300 hover:bg-white/10"
                     >
                       {g.name}
                     </Link>
                   ))}
                 </div>
               )}
-              <p className="mt-3 text-zinc-200">{overview}</p>
-              {director && <div className="mt-2 text-sm text-zinc-300">{t('المخرج', 'Director')}: <span className="font-medium text-white">{director}</span></div>}
+              
+              <p className="mt-4 text-sm leading-relaxed text-zinc-300 max-w-3xl">{overview}</p>
+              
+              {director && <div className="mt-3 text-xs text-zinc-400">{t('المخرج', 'Director')}: <span className="text-white">{director}</span></div>}
             </div>
+
             {!!cast.length && (
-              <div className="rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
-                <div className="mb-2 text-sm font-semibold text-zinc-200">{t('طاقم العمل', 'Cast & Crew')}</div>
-                <div className="no-scrollbar flex gap-3 overflow-x-auto">
+              <div className="rounded-xl border border-white/10 bg-white/5 p-3 backdrop-blur-md">
+                <div className="mb-2 text-xs font-semibold text-zinc-400 uppercase tracking-wider">{t('طاقم العمل', 'Cast')}</div>
+                <div className="no-scrollbar flex gap-2 overflow-x-auto pb-2">
                   {cast.map((p) => {
                     const img = p.profile_path ? `https://image.tmdb.org/t/p/w185${p.profile_path}` : ''
                     return (
-                      <div key={p.id} className="w-24 shrink-0 text-center">
-                        <div className="mx-auto h-20 w-20 overflow-hidden rounded-full bg-zinc-800">
+                      <div key={p.id} className="w-16 shrink-0 text-center">
+                        <div className="mx-auto h-16 w-16 overflow-hidden rounded-full bg-zinc-800 border border-white/5">
                           {img && <img src={img} alt={p.name} className="h-full w-full object-cover" />}
                         </div>
-                        <div className="mt-1 truncate text-xs text-white">{p.name}</div>
-                        <div className="truncate text-[10px] text-zinc-400">{p.character || ''}</div>
+                        <div className="mt-1 truncate text-[10px] text-zinc-300">{p.name}</div>
                       </div>
                     )
                   })}
                 </div>
               </div>
             )}
-            <div className="flex flex-wrap gap-3 items-center">
-              <ShareButton title={title} text={overview?.slice(0, 100)} />
-              <Link
-                to={`/watch/movie/${id}#player`}
-                onClick={() => {
-                  if (Number.isFinite(movieId)) incrementClicks('movies', movieId).catch(() => undefined)
-                }}
-                className="rounded-xl bg-[#e50914] px-6 h-12 flex items-center justify-center text-white font-bold shadow-md hover:brightness-110"
-              >
-                {t('شاهد الآن', 'Watch Now')}
-              </Link>
-              <Link
-                to={`/watch/movie/${id}#downloads`}
-                onClick={() => {
-                  if (Number.isFinite(movieId)) incrementClicks('movies', movieId).catch(() => undefined)
-                }}
-                className="rounded-xl bg-emerald-600 px-6 h-12 flex items-center justify-center text-white font-bold shadow-md hover:brightness-110"
-              >
-                {t('تحميل الآن', 'Download Now')}
-              </Link>
-            </div>
           </div>
-          {/* Right: Poster + trailer */}
-          <div className="space-y-3 order-1 md:order-2">
-            <div className="relative overflow-hidden rounded-xl border border-white/10 bg-white/5 shadow-2xl backdrop-blur-md">
-              <div className="aspect-[2/3] w-full bg-zinc-900/40">
+          
+          {/* Right: Poster + Trailer */}
+          <div className="space-y-3">
+            <div className="relative overflow-hidden rounded-xl border border-white/10 bg-zinc-900 shadow-2xl">
+              <div className="aspect-[2/3] w-full">
                 {poster && <img src={poster} alt={title} className="h-full w-full object-cover" />}
               </div>
-              <div className="absolute top-3 left-3 rounded-md bg-black/80 px-2 py-1 text-xs font-bold text-[#f5c518] border border-white/10">
-                {quality}
-              </div>
             </div>
-            <div className="overflow-hidden rounded-xl border border-white/10 bg-black/60 p-2 backdrop-blur-md">
-              <div className="aspect-video w-full overflow-hidden rounded-md">
-                {trailerUrl ? (
-                  <ReactPlayer
-                    url={trailerUrl}
-                    width="100%"
-                    height="100%"
-                    playing
-                    muted
-                    controls
-                  />
-                ) : (
-                  <div className="flex h-full items-center justify-center text-sm text-zinc-400">لا يوجد تريلر</div>
-                )}
+            
+            {trailerUrl && (
+              <div className="overflow-hidden rounded-xl border border-white/10 bg-black/60 backdrop-blur-md">
+                 <div className="aspect-video w-full">
+                    <ReactPlayer url={trailerUrl} width="100%" height="100%" light controls playIcon={<div className="bg-red-600 rounded-full p-3"><Play className="w-6 h-6 text-white fill-current" /></div>} />
+                 </div>
               </div>
-            </div>
+            )}
           </div>
         </motion.div>
       )}
       {!!(similar?.results?.length) && (
-        <section className="space-y-3">
-          <h2 className="text-lg font-semibold">{t('مشابهة حسب التصنيف', 'Similar by Rating')}</h2>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-5">
+        <section>
+          <SectionHeader title={t('مشابهة حسب التصنيف', 'Similar by Rating')} icon={<Sparkles />} />
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
             {similar!.results.slice(0, 10).map((m) => (
               <MovieCard key={m.id} movie={m} />
             ))}
@@ -447,8 +432,8 @@ export const MovieDetails = () => {
         </section>
       )}
       {downloadLinks.length > 0 && (
-        <section className="space-y-3">
-          <h2 className="text-lg font-semibold">{t('روابط التحميل', 'Download Links')}</h2>
+        <section>
+          <SectionHeader title={t('روابط التحميل', 'Download Links')} icon={<Download />} />
           <div className="flex flex-wrap gap-2">
             {downloadLinks.map((d, i) => (
               <a
@@ -467,10 +452,10 @@ export const MovieDetails = () => {
           </div>
         </section>
       )}
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold">{t('التعليقات', 'Comments')}</h2>
+      <section>
+        <SectionHeader title={t('التعليقات', 'Comments')} icon={<MessageSquare />} />
         {user ? (
-          <form onSubmit={handleSubmit(onAddComment)} className="grid gap-2">
+          <form onSubmit={handleSubmit(onAddComment)} className="grid gap-2 mb-4">
             <textarea
               {...register('text', { required: true, minLength: 1 })}
               placeholder="أضف تعليقاً"
@@ -482,7 +467,7 @@ export const MovieDetails = () => {
             </div>
           </form>
         ) : (
-          <div className="text-sm text-zinc-400">سجل الدخول لإضافة تعليق</div>
+          <div className="text-sm text-zinc-400 mb-4">سجل الدخول لإضافة تعليق</div>
         )}
         <div className="space-y-2">
           {(comments.data || []).map((c) => (

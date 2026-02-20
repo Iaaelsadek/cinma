@@ -64,18 +64,18 @@ const AdminBackupPage = () => {
     }
   }
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-bold">النسخ الاحتياطي</h1>
-      <div className="rounded-lg border border-zinc-800 p-4">
-        <button onClick={onExport} disabled={busy || serverOnly} className="rounded-md bg-primary px-4 h-11 text-white disabled:opacity-50">
+    <div className="space-y-3">
+      <h1 className="text-xl font-bold">النسخ الاحتياطي</h1>
+      <div className="rounded-lg border border-zinc-800 p-3">
+        <button onClick={onExport} disabled={busy || serverOnly} className="rounded-md bg-primary px-4 h-9 text-white disabled:opacity-50 text-sm">
           {busy ? 'جارٍ التصدير...' : 'تصدير قاعدة البيانات'}
         </button>
-        <label className={`ml-3 inline-flex items-center rounded-md border border-zinc-700 px-4 h-11 ${serverOnly ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}>
+        <label className={`ml-3 inline-flex items-center rounded-md border border-zinc-700 px-4 h-9 text-sm ${serverOnly ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}>
           استيراد قاعدة البيانات
           <input type="file" accept="application/json" onChange={onImport} className="hidden" disabled={serverOnly} />
         </label>
       </div>
-      <div className="text-sm text-zinc-400">هذه الميزة يجب تنفيذها على السيرفر مع صلاحيات مقيدة وRLS</div>
+      <div className="text-xs text-zinc-400">هذه الميزة يجب تنفيذها على السيرفر مع صلاحيات مقيدة وRLS</div>
     </div>
   )
 }

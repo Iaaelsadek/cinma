@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { errorLogger } from '../services/errorLogging'
 
 const OS_API_KEY = import.meta.env.VITE_OPENSUBTITLES_KEY || ''
 const BASE_URL = 'https://api.opensubtitles.com/api/v1'
@@ -64,7 +65,12 @@ export async function fetchSubtitles(tmdbId: number | string, imdbId?: string, l
         }
       }
     } catch (e) {
-      console.error('Failed to fetch subtitles:', e)
+      errorLogger.logError({
+        message: 'Failed to fetch subtitles',
+        severity: 'low',
+        category: 'network',
+        context: { error: e, tmdbId, imdbId }
+      })
     }
   }
 

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { fetchSubtitles, SubtitleTrack } from '../../../lib/subtitles'
 import { Search, Download, Check, Loader2, FileText, Globe } from 'lucide-react'
+import { errorLogger } from '../../../services/errorLogging'
 
 type Props = {
   tmdbId: number | string
@@ -31,7 +32,12 @@ export const SubtitleManager = ({ tmdbId, imdbId, title, onSelect, currentLangua
             }
         }
       } catch (err) {
-        console.error(err)
+        errorLogger.logError({
+          message: 'Error fetching subtitles',
+          severity: 'medium',
+          category: 'network',
+          context: { error: err, tmdbId, imdbId }
+        })
         if (mounted) setError(true)
       } finally {
         if (mounted) setLoading(false)
@@ -43,7 +49,7 @@ export const SubtitleManager = ({ tmdbId, imdbId, title, onSelect, currentLangua
 
   const handleManualSearch = async () => {
       // Implement manual search logic if needed, or redirect to OpenSubtitles
-      window.open(`https://www.opensubtitles.org/en/search/sublanguageid-${currentLanguage}/moviename-${title || query || imdbId}`, '_blank')
+      window.open(`https://www.opensubtitles.org/en/search/sublanguageid-${currentLanguage}/moviename-${title || query || imdbId}`, '_blank', 'noopener,noreferrer')
   }
 
   return (

@@ -6,7 +6,8 @@ from typing import Dict, List, Optional
 from datetime import datetime
 from supabase import create_client, Client
 from dotenv import load_dotenv
-import google.generativeai as genai
+# import google.generativeai as genai
+genai = None
 
 load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
 
@@ -22,7 +23,7 @@ SUPABASE_KEY = (
     or os.environ.get("VITE_SUPABASE_ANON_KEY")
 )
 
-if GEMINI_API_KEY:
+if GEMINI_API_KEY and genai:
     genai.configure(api_key=GEMINI_API_KEY)
 
 class TMDBFetcher:
@@ -48,6 +49,9 @@ class TMDBFetcher:
             return self._fallback_slug(title, item_id)
             
         try:
+            if not genai:
+                 return self._fallback_slug(title, item_id)
+
             model = genai.GenerativeModel('gemini-pro')
             prompt = f"Create a clean, SEO-friendly URL slug for the movie/series title '{title}'. Return ONLY the slug (e.g., 'the-dark-knight'). No explanation."
             response = model.generate_content(prompt)
@@ -78,7 +82,10 @@ class TMDBFetcher:
                 return
             
             # Create if not exists
-            slug = re.sub(r'[^a-zA-Z0-9\s-]', '', category_name).strip().lower().replace(' ', '-')
+            # For Arabic categories, don't strip everything
+            slug = re.sub(r'[\s]+', '-', category_name.strip().lower())
+            if not slug:
+                 slug = str(time.time()) # Fallback
             self.supabase.table('categories').insert({
                 'name': category_name,
                 'slug': slug

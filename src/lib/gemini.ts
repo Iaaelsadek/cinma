@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { errorLogger } from '../services/errorLogging';
 
 // Use Vite environment variable
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
@@ -42,7 +43,12 @@ export const correctSearchTerm = async (query: string): Promise<string> => {
     
     return text;
   } catch (error) {
-    console.warn("Gemini search correction failed, using original query:", error);
+    errorLogger.logError({
+      message: "Gemini search correction failed",
+      severity: 'low',
+      category: 'api',
+      context: { error, query }
+    });
     return query;
   }
 };
@@ -77,7 +83,12 @@ export const generateArabicSummary = async (title: string, originalOverview?: st
     if (text.length === 0) return originalOverview || "";
     return text;
   } catch (error) {
-    console.warn("Gemini summary generation failed:", error);
+    errorLogger.logError({
+      message: "Gemini summary generation failed",
+      severity: 'low',
+      category: 'api',
+      context: { error, title }
+    });
     return originalOverview || "";
   }
 };
@@ -128,7 +139,12 @@ export const translateTitleToArabic = async (title: string): Promise<string> => 
         finalTranslation = text;
       }
     } catch (error) {
-      console.warn("Gemini title translation failed:", error);
+      errorLogger.logError({
+        message: "Gemini title translation failed",
+        severity: 'low',
+        category: 'api',
+        context: { error, title }
+      });
     }
   }
 
@@ -146,7 +162,12 @@ export const translateTitleToArabic = async (title: string): Promise<string> => 
           }
       }
     } catch (e) {
-      console.warn("MyMemory translation fallback failed:", e);
+      errorLogger.logError({
+        message: "MyMemory translation fallback failed",
+        severity: 'low',
+        category: 'api',
+        context: { error: e, title }
+      });
     }
   }
 

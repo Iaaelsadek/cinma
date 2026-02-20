@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../../lib/supabase';
+import { errorLogger } from '../../../services/errorLogging';
 import { Server as ServerIcon, AlertTriangle, Loader2 } from 'lucide-react';
 
 interface Server {
@@ -127,7 +128,12 @@ const ServerSwitcher = ({
         setServers(newServers);
         setCurrentServer(0);
     } catch (e) {
-        console.error(e);
+        errorLogger.logError({
+            message: 'Failed to report broken link',
+            severity: 'medium',
+            category: 'network',
+            context: { error: e, tmdbId, type, server: server.name }
+        });
     }
     setReporting(false);
   };

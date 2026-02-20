@@ -44,7 +44,7 @@ export const CinemaTrain = ({ items }: { items: MovieMeta[] }) => {
       <div className="relative group">
         <Swiper
           modules={[Navigation, Autoplay]}
-          spaceBetween={20}
+          spaceBetween={10}
           slidesPerView="auto"
           loop={true}
           speed={1000}

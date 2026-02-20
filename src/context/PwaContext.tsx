@@ -32,7 +32,6 @@ export const PwaProvider = ({ children }: { children: ReactNode }) => {
     // Listen for install prompt
     const handler = (e: Event) => {
       e.preventDefault()
-      console.log('PWA Install Prompt Captured')
       setDeferredPrompt(e as BeforeInstallPromptEvent)
     }
 

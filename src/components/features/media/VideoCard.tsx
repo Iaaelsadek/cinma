@@ -135,25 +135,25 @@ export const VideoCard = ({ video, index = 0 }: { video: VideoItem; index?: numb
                 <motion.button 
                   initial={{ scale: 0 }}
                   animate={{ scale: isHovered ? 1 : 0 }}
-                  className="rounded-full bg-primary text-white shadow-[0_0_15px_rgba(225,29,72,0.5)] h-11 w-11 flex items-center justify-center"
+                  className="rounded-full bg-primary text-white shadow-[0_0_15px_rgba(225,29,72,0.5)] h-8 w-8 flex items-center justify-center"
                   type="button"
                   onClick={() => navigate(`/watch/yt/${video.id}`)}
                   aria-label="watch"
                 >
-                  <Play size={16} fill="currentColor" />
+                  <Play size={12} fill="currentColor" />
                 </motion.button>
-                <div className="flex gap-1.5">
+                <div className="flex gap-1">
                   <button
-                    className="rounded-full bg-white/10 hover:bg-white/20 transition-colors border border-white/10 backdrop-blur-md h-11 w-11 flex items-center justify-center"
+                    className="rounded-full bg-white/10 hover:bg-white/20 transition-colors border border-white/10 backdrop-blur-md h-8 w-8 flex items-center justify-center"
                     onClick={toggleList}
                     disabled={busy || !canToggle}
                     type="button"
                     aria-label="my-list"
                   >
-                    {inList ? <Check size={14} className="text-white" /> : <Plus size={14} className="text-white" />}
+                    {inList ? <Check size={10} className="text-white" /> : <Plus size={10} className="text-white" />}
                   </button>
-                  <button className="rounded-full bg-white/10 hover:bg-white/20 transition-colors border border-white/10 backdrop-blur-md h-11 w-11 flex items-center justify-center">
-                    <Info size={14} className="text-white" />
+                  <button className="rounded-full bg-white/10 hover:bg-white/20 transition-colors border border-white/10 backdrop-blur-md h-8 w-8 flex items-center justify-center">
+                    <Info size={10} className="text-white" />
                   </button>
                 </div>
               </div>
@@ -166,7 +166,7 @@ export const VideoCard = ({ video, index = 0 }: { video: VideoItem; index?: numb
           {/* Static Info (Visible when not hovered or small screens) */}
           <div className="p-3">
             <div className="flex flex-col items-end">
-              <h3 className="line-clamp-1 text-sm font-bold text-zinc-100 group-hover/card:text-primary transition-colors text-right w-full">
+              <h3 className="line-clamp-1 text-xs font-bold text-zinc-100 group-hover/card:text-primary transition-colors text-right w-full">
                 {titles.main}
               </h3>
               {titles.sub && (
@@ -175,7 +175,7 @@ export const VideoCard = ({ video, index = 0 }: { video: VideoItem; index?: numb
                 </p>
               )}
             </div>
-            <div className="mt-1.5 flex items-center justify-between text-[10px] font-medium uppercase tracking-wider text-zinc-500 w-full">
+            <div className="mt-1 flex items-center justify-between text-[9px] font-medium uppercase tracking-wider text-zinc-500 w-full">
               <span className="flex items-center gap-1.5">
                 <span className="h-1 w-1 rounded-full bg-primary" />
                 {video.category || (lang === 'ar' ? 'فيديو' : 'Video')}

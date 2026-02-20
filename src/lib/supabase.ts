@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { CONFIG } from './constants'
+import { errorLogger } from '../services/errorLogging'
 
 // Fallback to prevent crash if env vars are missing
 const sbUrl = CONFIG.SUPABASE_URL || 'https://placeholder.supabase.co'
@@ -7,14 +8,66 @@ const sbKey = CONFIG.SUPABASE_ANON_KEY || 'placeholder'
 
 export const supabase = createClient(sbUrl, sbKey)
 
+interface FetchOptions extends RequestInit {
+  timeout?: number;
+}
+
+async function fetchWithTimeout(resource: string, options: FetchOptions = {}) {
+  const { timeout = 5000 } = options;
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeout);
+  const response = await fetch(resource, {
+    ...options,
+    signal: controller.signal
+  });
+  clearTimeout(id);
+  return response;
+}
+
 export async function getProfile(userId: string) {
   const { data, error } = await supabase
     .from('profiles')
     .select('id, username, avatar_url, role')
     .eq('id', userId)
     .maybeSingle()
-  if (error) throw error
-  return data as { id: string; username: string; avatar_url: string | null; role: 'user' | 'admin' } | null
+  
+  if (data && !error) {
+    return data as { id: string; username: string; avatar_url: string | null; role: 'user' | 'admin' | 'supervisor' } | null
+  }
+
+  // If error (RLS/Network) OR no data (RLS silent failure), try proxy
+  if (error || !data) {
+    try {
+      // Use relative path by default to leverage Vite proxy in dev, or API_BASE if set
+      const apiBase = CONFIG.API_BASE || ''
+      const url = apiBase ? `${apiBase}/api/profile/${userId}` : `/api/profile/${userId}`
+      const res = await fetchWithTimeout(url, { timeout: 3000 })
+      if (res.ok) {
+        const proxyData = await res.json()
+        if (proxyData) {
+          return proxyData as { id: string; username: string; avatar_url: string | null; role: 'user' | 'admin' | 'supervisor' } | null
+        }
+      }
+    } catch (e) {
+      // Only log proxy errors if we also had a direct error, to avoid noise on simple "not found"
+      if (error) {
+        errorLogger.logError({
+          message: 'Proxy fetch failed after direct fetch error',
+          severity: 'medium',
+          category: 'network',
+          context: { error: e, originalError: error }
+        })
+      }
+    }
+    
+    // If direct fetch had an error and proxy failed, throw original error
+    if (error) throw error
+    
+    // If direct fetch was null (silent RLS or not found) and proxy failed/null, return null
+    return null
+  }
+  
+  return null
 }
 
 export async function ensureProfile(userId: string, email?: string | null) {
@@ -26,13 +79,35 @@ export async function ensureProfile(userId: string, email?: string | null) {
     .insert({ id: userId, username, role: 'user' })
     .select('id, username, avatar_url, role')
     .single()
-  if (error) throw error
+    
+  if (error) {
+    // If profile already exists (race condition or trigger), try fetching it again
+    if (error.code === '23505') {
+      const retry = await getProfile(userId)
+      if (retry) return retry
+    }
+    throw error
+  }
   return data
 }
 
 export async function updateUsername(userId: string, username: string) {
   const { error } = await supabase.from('profiles').update({ username }).eq('id', userId)
-  if (error) throw error
+  if (error) {
+    errorLogger.logError({
+      message: 'Direct username update failed, trying proxy',
+      severity: 'low',
+      category: 'database',
+      context: { error, userId }
+    })
+    const apiBase = CONFIG.API_BASE || 'http://localhost:3001'
+    const res = await fetch(`${apiBase}/api/profile/${userId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username })
+    })
+    if (!res.ok) throw error
+  }
 }
 
 export async function uploadAvatar(file: File, userId: string) {
@@ -46,8 +121,23 @@ export async function uploadAvatar(file: File, userId: string) {
   if (upErr) throw upErr
   const { data: pub } = supabase.storage.from('avatars').getPublicUrl(path)
   const publicUrl = pub.publicUrl
+  
   const { error: updErr } = await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', userId)
-  if (updErr) throw updErr
+  if (updErr) {
+    errorLogger.logError({
+      message: 'Direct avatar update failed, trying proxy',
+      severity: 'low',
+      category: 'database',
+      context: { error: updErr, userId }
+    })
+    const apiBase = CONFIG.API_BASE || 'http://localhost:3001'
+    const res = await fetch(`${apiBase}/api/profile/${userId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ avatar_url: publicUrl })
+    })
+    if (!res.ok) throw updErr
+  }
   return publicUrl
 }
 
@@ -260,4 +350,52 @@ export async function incrementClicks(table: 'movies' | 'games' | 'software', id
   const next = (data?.clicks || 0) + 1
   const { error: upd } = await supabase.from(table).update({ clicks: next }).eq('id', id)
   if (upd) throw upd
+}
+
+// ------------------------------------------------------------------
+// Recommendation System Data Collector
+// ------------------------------------------------------------------
+
+export type UserPreferenceData = {
+  history: Array<{ content_id: number; content_type: 'movie' | 'tv' }>
+  watchlist: Array<{ content_id: number; content_type: 'movie' | 'tv' }>
+}
+
+export async function getUserPreferences(userId: string): Promise<UserPreferenceData> {
+  // Fetch history (limit to last 50 items to keep it relevant)
+  const { data: history, error: historyError } = await supabase
+    .from('history')
+    .select('content_id, content_type')
+    .eq('user_id', userId)
+    .order('watched_at', { ascending: false })
+    .limit(50)
+  
+  if (historyError) {
+    errorLogger.logError({
+      message: 'Failed to fetch user history for recommendations',
+      severity: 'low',
+      category: 'database',
+      context: { error: historyError, userId }
+    })
+  }
+
+  // Fetch watchlist
+  const { data: watchlist, error: watchlistError } = await supabase
+    .from('watchlist')
+    .select('content_id, content_type')
+    .eq('user_id', userId)
+  
+  if (watchlistError) {
+    errorLogger.logError({
+      message: 'Failed to fetch user watchlist for recommendations',
+      severity: 'low',
+      category: 'database',
+      context: { error: watchlistError, userId }
+    })
+  }
+
+  return {
+    history: (history || []) as any[],
+    watchlist: (watchlist || []) as any[]
+  }
 }

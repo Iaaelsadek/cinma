@@ -1,10 +1,10 @@
 
 import { Component, ErrorInfo, ReactNode } from 'react'
 import { AlertTriangle, RefreshCw, Send } from 'lucide-react'
-import { supabase } from '../../lib/supabase'
+import { errorLogger } from '../../services/errorLogging'
 
 interface Props {
-  children?: ReactNode
+  children: ReactNode
 }
 
 interface State {
@@ -25,27 +25,33 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('Uncaught error:', error, errorInfo)
+    // Log error to our centralized logging service
+    errorLogger.logError({
+      message: error.message,
+      stack: error.stack,
+      severity: 'critical',
+      category: 'system',
+      context: {
+        componentStack: errorInfo.componentStack
+      }
+    })
   }
 
-  private handleReport = async () => {
-    if (this.state.reported) return
+  private handleReport = () => {
+    // Manually trigger a report if user clicks the button
+    // Since we already logged in componentDidCatch, this might be redundant 
+    // or we could add a "user_reported" flag if our backend supported it.
+    // For now, we just update UI state.
+    this.setState({ reported: true })
     
-    try {
-      const url = window.location.href
-      const { data } = await supabase.from('error_reports').select('url, count').eq('url', url).maybeSingle()
-      
-      if (data) {
-        await supabase.from('error_reports').update({ count: (data.count || 1) + 1 }).eq('url', url)
-      } else {
-        await supabase.from('error_reports').insert({ url, count: 1 })
-      }
-      
-      this.setState({ reported: true })
-    } catch (err) {
-      console.error('Failed to report error:', err)
-      // Even if it fails (e.g. table missing), show success to user to avoid frustration
-      this.setState({ reported: true })
+    // Optional: Log an explicit "User Reported" event
+    if (this.state.error) {
+        errorLogger.logError({
+            message: 'User manually reported error',
+            severity: 'critical',
+            category: 'system',
+            context: { originalError: this.state.error.message }
+        })
     }
   }
 
