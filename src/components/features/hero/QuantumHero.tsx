@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Play, Info, Volume2, VolumeX, ChevronRight, Star, Calendar, Film } from 'lucide-react'
 import { PrefetchLink } from '../../common/PrefetchLink'
@@ -40,6 +41,7 @@ const getLocalizedOrigin = (origin: string, lang: string) => {
  * - Auto-play Trailers on Active/Hover (Optional, simplified for marquee)
  */
 export const QuantumHero = ({ items, type }: { items: any[], type?: string }) => {
+  const navigate = useNavigate()
   const { lang } = useLang()
   const [activeId, setActiveId] = useState<number | null>(null)
   const [trailers, setTrailers] = useState<Record<number, string>>({})
@@ -55,6 +57,8 @@ export const QuantumHero = ({ items, type }: { items: any[], type?: string }) =>
       const newTrailers: Record<number, string> = {}
       
       await Promise.all(heroItems.map(async (item) => {
+        if (!item?.id) return
+
         try {
           const type = item.media_type || 'movie'
           const { data } = await tmdb.get(`/${type}/${item.id}/videos`)
@@ -65,7 +69,7 @@ export const QuantumHero = ({ items, type }: { items: any[], type?: string }) =>
             newTrailers[item.id] = trailer.key
           }
         } catch (e) {
-          // Trailer fetch failed, silently ignore
+          // Trailer fetch failed, silently ignore to avoid console clutter
         }
       }))
       
@@ -105,9 +109,10 @@ export const QuantumHero = ({ items, type }: { items: any[], type?: string }) =>
           return (
             <SwiperSlide key={item.id} className="h-full">
               <div 
-                className="relative h-full w-full border-r border-white/10 overflow-hidden group"
+                className="relative h-full w-full border-r border-white/10 overflow-hidden group cursor-pointer"
                 onMouseEnter={() => setActiveId(item.id)}
                 onMouseLeave={() => setActiveId(null)}
+                onClick={() => navigate(`/watch/${item.media_type || 'movie'}/${item.id}`)}
               >
                 {/* Background Image */}
                 <div className="absolute inset-0 z-0">

@@ -1,5 +1,6 @@
-import { Signal, Lightbulb, WifiOff, Wifi, SkipForward, AlertTriangle, Loader2, ExternalLink, Search } from 'lucide-react'
+import { Signal, Lightbulb, WifiOff, Wifi, SkipForward, AlertTriangle, Loader2, ExternalLink, Search, X } from 'lucide-react'
 import { Server } from '../../../hooks/useServers'
+import { useState } from 'react'
 
 type Props = {
   server: Server | undefined
@@ -12,6 +13,8 @@ type Props = {
 }
 
 export const EmbedPlayer = ({ server, cinemaMode, toggleCinemaMode, loading, onNextServer, onReport, reporting }: Props) => {
+  const [showDisclaimer, setShowDisclaimer] = useState(true)
+
   if (loading) {
     return (
       <div className="aspect-video w-full rounded-3xl border border-white/5 bg-luxury-charcoal animate-pulse flex items-center justify-center">
@@ -22,6 +25,23 @@ export const EmbedPlayer = ({ server, cinemaMode, toggleCinemaMode, loading, onN
 
   return (
     <div className="space-y-2">
+      {/* Disclaimer Banner */}
+      {showDisclaimer && (
+        <div className="relative mb-2 flex items-start gap-3 rounded-lg bg-red-900/90 p-4 text-white shadow-lg backdrop-blur-sm border border-red-500/30">
+          <AlertTriangle className="shrink-0 text-yellow-400" size={20} />
+          <p className="text-xs font-medium leading-relaxed md:text-sm">
+            ⚠️ إخلاء مسؤولية أمام الله ثم أمامكم : هذا المحتوي المعروض مضاف تلقائياً لذلك نحن نبرأ إلى الله سبحانه وتعالي من أي مشاهد او إعلانات خادشة للحياء أو مخالفة للشرع قد تظهر إجبارياً من سيرفرات العرض الخارجية. نحن لا نملك السيطرة على هذه الإعلانات ولم نشاهد المحتوي المعروض ، لذا نرجو إغلاق أي نافذة منبثقة او محتوي مخالف فوراً .
+          </p>
+          <button 
+            onClick={() => setShowDisclaimer(false)}
+            className="absolute left-2 top-2 rounded-full p-1 hover:bg-white/10 transition-colors"
+            aria-label="Close disclaimer"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
+
       {/* Header: Secure Stream & Controls */}
       <div className="flex justify-between items-center px-1">
         <div className="flex items-center gap-2 text-xs font-bold text-emerald-400">
@@ -64,8 +84,7 @@ export const EmbedPlayer = ({ server, cinemaMode, toggleCinemaMode, loading, onN
             className="h-full w-full bg-black"
             allowFullScreen
             scrolling="no"
-            referrerPolicy="origin"
-            sandbox="allow-forms allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-presentation"
+            referrerPolicy="no-referrer"
             style={{ border: 'none', overflow: 'hidden' }}
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
             title={`Stream ${server.name}`}
