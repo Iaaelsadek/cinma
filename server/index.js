@@ -43,7 +43,10 @@ app.use(cors({
   maxAge: 86400
 }));
 app.use(express.json({ limit: '50mb' })); // Increased limit for file saves
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false,
+}));
 
 function isPrivateHost(hostname) {
   if (!hostname) return true;

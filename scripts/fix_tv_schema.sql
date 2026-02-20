@@ -1,0 +1,6 @@
+
+ALTER TABLE tv_series ADD COLUMN IF NOT EXISTS release_date DATE;
+ALTER TABLE tv_series ADD COLUMN IF NOT EXISTS seo_title TEXT;
+ALTER TABLE tv_series ADD COLUMN IF NOT EXISTS meta_description TEXT;
+ALTER TABLE tv_series ADD COLUMN IF NOT EXISTS trailer_url TEXT;
+ALTER TABLE movies ADD COLUMN IF NOT EXISTS trailer_url TEXT;

@@ -2,7 +2,7 @@ import axios from 'axios'
 import { CONFIG } from './constants'
 
 export const tmdb = axios.create({
-  baseURL: '/api/tmdb',
+  baseURL: 'https://api.themoviedb.org/3',
   params: { api_key: CONFIG.TMDB_API_KEY, language: 'ar-SA' }
 })
 

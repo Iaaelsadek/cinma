@@ -123,7 +123,7 @@ def _run_tmdb_batches(fetcher, media_type: str, total_items: int, batch_size: in
 def _run_full_sync():
     # Lazy imports to ensure importing this module is fast and side-effect free
     from tmdb_fetcher import TMDBFetcher
-    from db_automator import init_db
+    # from db_automator import init_db
     from fetch_anime import main as fetch_anime
     from fetch_games import main as fetch_games
     from fetch_quran import main as fetch_quran
@@ -131,9 +131,9 @@ def _run_full_sync():
     _safe_print(f"[ENGINE] بدء المزامنة الكاملة: {started_at}")
     before_counts = _get_counts()
     try:
-        _safe_print("[DEBUG] Initializing DB...")
-        init_db()
-        _safe_print("[DEBUG] DB Initialized.")
+        _safe_print("[DEBUG] Initializing DB (Skipped)...")
+        # init_db()
+        _safe_print("[DEBUG] DB Initialized (Skipped).")
         _safe_print("[DEBUG] Initializing TMDBFetcher...")
         fetcher = TMDBFetcher()
         _safe_print("[DEBUG] TMDBFetcher Initialized.")
@@ -160,15 +160,15 @@ def _run_full_sync():
 
 def run_cycle():
     from tmdb_fetcher import TMDBFetcher
-    from db_automator import init_db
+    # from db_automator import init_db
     from embed_builder import build_embed_for_all
     from rank_servers import rank_servers
     started_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     _safe_print(f"[ENGINE] بدء دورة التحديث: {started_at}")
     before_counts = _get_counts()
     try:
-        _safe_print("[DB] التحقق من المخطط (Schema) وتهيئته تلقائياً...")
-        init_db()
+        _safe_print("[DB] التحقق من المخطط (Schema) وتهيئته تلقائياً (Skipped)...")
+        # init_db()
         _safe_print("[FETCH] جلب أحدث المحتوى من TMDB...")
         fetcher = TMDBFetcher()
         batch_size = int(os.environ.get("ENGINE_BATCH_SIZE", "10"))
@@ -230,6 +230,8 @@ if __name__ == "__main__":
     extras_days = int(os.environ.get("EXTRAS_INTERVAL_DAYS", "7"))
     if extras_enabled:
         def _run_extras_wrapper():
+            from fill_extras import run as run_extras
+            from email_notifier import send_admin_email
             _safe_print("[EXTRAS] بدء مزامنة الألعاب والبرامج")
             try:
                 run_extras()

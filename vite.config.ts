@@ -42,7 +42,7 @@ export default defineConfig({
           }
         ]
       },
-      devOptions: { enabled: true }
+      devOptions: { enabled: false }
     }),
     sitemap({
       hostname: 'https://cinma.online',
