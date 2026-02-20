@@ -42,6 +42,7 @@ const Software = lazy(() => import('./pages/discovery/Software').then(m => ({ de
 const MoviesPage = lazy(() => import('./pages/discovery/Movies').then(m => ({ default: m.MoviesPage })))
 const SeriesPage = lazy(() => import('./pages/discovery/Series').then(m => ({ default: m.SeriesPage })))
 const AnimePage = lazy(() => import('./pages/discovery/Anime').then(m => ({ default: m.AnimePage })))
+const AsianDramaPage = lazy(() => import('./pages/discovery/AsianDrama').then(m => ({ default: m.AsianDramaPage })))
 const PlaysPage = lazy(() => import('./pages/discovery/Plays').then(m => ({ default: m.PlaysPage })))
 const ClassicsPage = lazy(() => import('./pages/discovery/Classics').then(m => ({ default: m.ClassicsPage })))
 const SummariesPage = lazy(() => import('./pages/discovery/Summaries').then(m => ({ default: m.SummariesPage })))
@@ -201,6 +202,22 @@ const App = () => {
             <Route path="/anime/:genre" element={<AnimePage />} />
             <Route path="/anime/:genre/:year" element={<AnimePage />} />
             <Route path="/anime/:genre/:year/:rating" element={<AnimePage />} />
+
+            {/* Asian Drama Routes */}
+            <Route path="/chinese" element={<AsianDramaPage type="chinese" />} />
+            <Route path="/chinese/:genre" element={<AsianDramaPage type="chinese" />} />
+            <Route path="/chinese/:genre/:year" element={<AsianDramaPage type="chinese" />} />
+            <Route path="/chinese/:genre/:year/:rating" element={<AsianDramaPage type="chinese" />} />
+            
+            <Route path="/k-drama" element={<AsianDramaPage type="korean" />} />
+            <Route path="/k-drama/:genre" element={<AsianDramaPage type="korean" />} />
+            <Route path="/k-drama/:genre/:year" element={<AsianDramaPage type="korean" />} />
+            <Route path="/k-drama/:genre/:year/:rating" element={<AsianDramaPage type="korean" />} />
+            
+            <Route path="/bollywood" element={<AsianDramaPage type="bollywood" />} />
+            <Route path="/bollywood/:genre" element={<AsianDramaPage type="bollywood" />} />
+            <Route path="/bollywood/:genre/:year" element={<AsianDramaPage type="bollywood" />} />
+            <Route path="/bollywood/:genre/:year/:rating" element={<AsianDramaPage type="bollywood" />} />
 
             {/* Plays Routes with Filters */}
             <Route path="/plays" element={<PlaysPage />} />

@@ -60,6 +60,8 @@ import 'swiper/css'
 import 'swiper/css/free-mode'
 
 import { isCJK } from '../lib/utils'
+import { useTranslatedContent } from '../hooks/useTranslatedContent'
+import { useDailyMotion } from '../hooks/useDailyMotion'
 
 export const Home = () => {
   const { user } = useAuth()
@@ -334,6 +336,40 @@ export const Home = () => {
     staleTime: 300000
   })
 
+  // --- CJK & Fallback Processing ---
+  
+  // Apply translations
+  const translatedKorean = useTranslatedContent(koreanSeries.data?.results)
+  const translatedTurkish = useTranslatedContent(turkishSeries.data?.results)
+  const translatedChinese = useTranslatedContent(chineseSeries.data?.results)
+  
+  // Fallbacks for empty sections
+  const tmdbAnime = useQuery<any[]>({
+    queryKey: ['home-anime-fallback'],
+    queryFn: async () => {
+      const { data } = await tmdb.get('/discover/tv', {
+        params: { with_genres: '16', with_original_language: 'ja', sort_by: 'popularity.desc' }
+      })
+      return data.results
+    },
+    enabled: !!CONFIG.TMDB_API_KEY,
+    staleTime: 300000
+  })
+
+  const tmdbClassics = useQuery<any[]>({
+    queryKey: ['home-classics-fallback'],
+    queryFn: async () => {
+      const { data } = await tmdb.get('/discover/movie', {
+        params: { 'release_date.lte': '1980-01-01', sort_by: 'popularity.desc' }
+      })
+      return data.results
+    },
+    enabled: !!CONFIG.TMDB_API_KEY,
+    staleTime: 300000
+  })
+
+  const dmTrending = useDailyMotion()
+
   const canonicalUrl = typeof window !== 'undefined' ? `${location.origin}${location.pathname}` : ''
   const description = lang === 'ar' ? 'منصة أونلاين سينما - تجربة المستقبل' : 'Online Cinema - The Future Experience'
 
@@ -441,40 +477,58 @@ export const Home = () => {
           )}
         </section>
 
-        {/* Section: Chinese Dramas */}
+        {/* Section: Korean & Chinese Series (K-Drama & C-Drama) */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <section>
+            {koreanSeries.isLoading ? (
+              <>
+                <SectionHeader title={lang === 'ar' ? 'الدراما الكورية' : 'K-Drama'} icon={<Film />} link="/k-drama" />
+                <SkeletonGrid count={3} variant="poster" />
+              </>
+            ) : (
+              <QuantumTrain 
+                items={translatedKorean.data || koreanSeries.data?.results || []} 
+                title={lang === 'ar' ? 'الدراما الكورية' : 'K-Drama'} 
+                icon={<Film />} 
+                link="/k-drama" 
+                color="pink"
+              />
+            )}
+          </section>
+          <section>
+             {chineseSeries.isLoading ? (
+              <>
+                <SectionHeader title={lang === 'ar' ? 'مسلسلات صينية قصيرة' : 'Chinese Shorts'} icon={<Tv />} link="/chinese" />
+                <SkeletonGrid count={3} variant="poster" />
+              </>
+            ) : (
+              <QuantumTrain 
+                items={translatedChinese.data || chineseSeries.data?.results || []} 
+                title={lang === 'ar' ? 'مسلسلات صينية قصيرة' : 'Chinese Shorts'} 
+                icon={<Tv />} 
+                link="/chinese" 
+                color="red"
+              />
+            )}
+          </section>
+        </div>
+
+        {/* Section: Turkish Drama */}
         <section>
-          {chineseSeries.isLoading ? (
+          {turkishSeries.isLoading ? (
             <>
-              <SectionHeader title={lang === 'ar' ? 'مسلسلات صينية (C-Dramas)' : 'Chinese Dramas'} icon={<Tv />} link="/chinese" />
+              <SectionHeader title={lang === 'ar' ? 'الدراما التركية' : 'Turkish Drama'} icon={<Film />} link="/series" />
               <SkeletonGrid count={6} variant="poster" />
             </>
           ) : (
             <QuantumTrain 
-              items={chineseSeries.data?.results || []} 
-              title={lang === 'ar' ? 'مسلسلات صينية (C-Dramas)' : 'Chinese Dramas'} 
-              icon={<Tv />} 
-              link="/chinese" 
+              items={translatedTurkish.data || turkishSeries.data?.results || []} 
+              title={lang === 'ar' ? 'الدراما التركية' : 'Turkish Drama'} 
+              icon={<Film />} 
+              link="/series" 
             />
           )}
         </section>
-
-        {/* Section: Korean Dramas */}
-        <section>
-          {koreanSeries.isLoading ? (
-            <>
-              <SectionHeader title={lang === 'ar' ? 'الدراما الكورية' : 'K-Drama Kingdom'} icon={<Tv />} link="/k-drama" />
-              <SkeletonGrid count={6} variant="poster" />
-            </>
-          ) : (
-            <QuantumTrain 
-              items={koreanSeries.data?.results || []} 
-              title={lang === 'ar' ? 'الدراما الكورية' : 'K-Drama Kingdom'} 
-              icon={<Tv />} 
-              link="/k-drama" 
-            />
-          )}
-        </section>
-
         {/* Section: Masrahiyat (Plays) */}
         <section>
           {plays.isLoading ? (
@@ -489,23 +543,6 @@ export const Home = () => {
               icon={<Drama />} 
               link="/plays" 
               type="video"
-            />
-          )}
-        </section>
-
-        {/* Section: Turkish Drama */}
-        <section>
-          {turkishSeries.isLoading ? (
-            <>
-              <SectionHeader title={lang === 'ar' ? 'الدراما التركية' : 'Turkish Drama'} icon={<Film />} link="/series" />
-              <SkeletonGrid count={6} variant="poster" />
-            </>
-          ) : (
-            <QuantumTrain 
-              items={turkishSeries.data?.results || []} 
-              title={lang === 'ar' ? 'الدراما التركية' : 'Turkish Drama'} 
-              icon={<Film />} 
-              link="/series" 
             />
           )}
         </section>
@@ -561,7 +598,7 @@ export const Home = () => {
            <BentoBox 
              title={lang === 'ar' ? 'العصر الذهبي' : 'Golden Era'} 
              icon={<Film />} 
-             items={goldenEra.data || []}
+             items={goldenEra.data && goldenEra.data.length > 0 ? goldenEra.data : (tmdbClassics.data || [])}
              color="gold"
            />
            <BentoBox 
@@ -572,21 +609,61 @@ export const Home = () => {
            />
         </section>
 
+        {/* Section: DailyMotion Trending (New Diverse Source) */}
+        {dmTrending.data && dmTrending.data.length > 0 && (
+          <section>
+            <SectionHeader 
+              title={lang === 'ar' ? 'الرائج على ديلي موشن' : 'Trending on DailyMotion'} 
+              icon={<Play />} 
+              badge="DailyMotion"
+              color="purple"
+            />
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+               {dmTrending.data.map((item, i) => (
+                 <HolographicCard key={item.id} className="aspect-video group relative overflow-hidden rounded-xl border border-white/10 bg-black/40">
+                    <a href={item.url} target="_blank" rel="noopener noreferrer" className="block h-full w-full">
+                       <img 
+                         src={item.thumbnail_720_url} 
+                         alt={item.title}
+                         className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110 opacity-80 group-hover:opacity-100"
+                         loading="lazy"
+                       />
+                       <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
+                       <div className="absolute bottom-0 left-0 right-0 p-3">
+                          <h3 className="text-xs font-bold text-white line-clamp-2 mb-1">{item.title}</h3>
+                          <div className="flex items-center justify-between text-[10px] text-zinc-400">
+                             <span>{Math.floor(item.duration / 60)}:{(item.duration % 60).toString().padStart(2, '0')}</span>
+                             <span>{item.owner}</span>
+                          </div>
+                       </div>
+                       <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-md px-1.5 py-0.5 rounded text-[10px] font-mono text-white flex items-center gap-1">
+                          <Play size={8} fill="currentColor" />
+                          DM
+                       </div>
+                    </a>
+                 </HolographicCard>
+               ))}
+            </div>
+          </section>
+        )}
+
         {/* Section: Anime */}
         <section>
           <SectionHeader title={lang === 'ar' ? 'أنمي مترجم' : 'Anime'} icon={<Tv />} link="/anime" />
-          {animeHub.isLoading ? <SkeletonGrid count={6} variant="poster" /> : (
-             <QuantumTrain items={animeHub.data || []} />
+          {animeHub.isLoading && tmdbAnime.isLoading ? <SkeletonGrid count={6} variant="poster" /> : (
+             <QuantumTrain items={(animeHub.data && animeHub.data.length > 0 ? animeHub.data : tmdbAnime.data) || []} />
           )}
         </section>
 
-        {/* Section: Quran */}
-        <section>
-          <SectionHeader title={lang === 'ar' ? 'القرآن الكريم' : 'Holy Quran'} icon={<BookOpen />} link="/quran" />
-          {quranHub.isLoading ? <SkeletonGrid count={6} variant="poster" /> : (
-             <QuantumTrain items={quranHub.data || []} />
-          )}
-        </section>
+        {/* Section: Quran (Hidden if empty) */}
+        {quranHub.data && quranHub.data.length > 0 && (
+          <section>
+            <SectionHeader title={lang === 'ar' ? 'القرآن الكريم' : 'Holy Quran'} icon={<BookOpen />} link="/quran" />
+            {quranHub.isLoading ? <SkeletonGrid count={6} variant="poster" /> : (
+               <QuantumTrain items={quranHub.data || []} />
+            )}
+          </section>
+        )}
 
         {/* Section: Top Rated (Horizontal Scroll) */}
         <section>
@@ -635,22 +712,30 @@ const BentoBox = ({ title, icon, items, color }: { title: string, icon: any, ite
     <div>
       <SectionHeader title={title} icon={icon} color={color} />
       <div className="grid grid-cols-2 gap-3">
-        {items.slice(0, 4).map((item, i) => (
-          <HolographicCard key={item.id} className={`aspect-video ${i === 0 ? 'col-span-2 row-span-2 aspect-video' : ''}`}>
-             <PrefetchLink to={`/watch/yt/${item.id}`} className="block h-full relative group">
-                <img 
-                  src={item.thumbnail} 
-                  className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" 
-                  alt={item.title}
-                  loading="lazy"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
-                <div className="absolute bottom-4 left-4 right-4">
-                   <h4 className="font-bold text-white leading-tight line-clamp-2 text-sm md:text-lg">{item.title}</h4>
-                </div>
-             </PrefetchLink>
-          </HolographicCard>
-        ))}
+        {items.slice(0, 4).map((item, i) => {
+          const isTmdb = !!item.poster_path || !!item.backdrop_path
+          const img = item.thumbnail || (item.backdrop_path ? `https://image.tmdb.org/t/p/w500${item.backdrop_path}` : `https://image.tmdb.org/t/p/w500${item.poster_path}`)
+          const link = isTmdb 
+            ? `/watch/${item.media_type === 'tv' ? 'tv' : 'movie'}/${item.id}` 
+            : `/watch/yt/${item.id}`
+            
+          return (
+            <HolographicCard key={item.id} className={`aspect-video ${i === 0 ? 'col-span-2 row-span-2 aspect-video' : ''}`}>
+               <PrefetchLink to={link} className="block h-full relative group">
+                  <img 
+                    src={img} 
+                    className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" 
+                    alt={item.title || item.name}
+                    loading="lazy"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
+                  <div className="absolute bottom-4 left-4 right-4">
+                     <h4 className="font-bold text-white leading-tight line-clamp-2 text-sm md:text-lg">{item.title || item.name}</h4>
+                  </div>
+               </PrefetchLink>
+            </HolographicCard>
+          )
+        })}
       </div>
     </div>
   )

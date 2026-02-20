@@ -59,10 +59,10 @@ export const Footer = () => {
             {lang === 'ar' ? 'المساعدة' : 'Support'}
           </h4>
           <nav className="flex flex-col gap-2 text-zinc-400">
-            <PrefetchLink to="/dmca" className="hover:text-cyan-400 transition-colors w-fit">DMCA</PrefetchLink>
+            <PrefetchLink to="/terms" className="hover:text-cyan-400 transition-colors w-fit">DMCA</PrefetchLink>
             <PrefetchLink to="/terms" className="hover:text-cyan-400 transition-colors w-fit">{lang === 'ar' ? 'الشروط والأحكام' : 'Terms of Service'}</PrefetchLink>
             <PrefetchLink to="/privacy" className="hover:text-cyan-400 transition-colors w-fit">{lang === 'ar' ? 'سياسة الخصوصية' : 'Privacy Policy'}</PrefetchLink>
-            <PrefetchLink to="/contact" className="hover:text-cyan-400 transition-colors w-fit">{lang === 'ar' ? 'اتصل بنا' : 'Contact Us'}</PrefetchLink>
+            <PrefetchLink to="/request" className="hover:text-cyan-400 transition-colors w-fit">{lang === 'ar' ? 'اتصل بنا' : 'Contact Us'}</PrefetchLink>
           </nav>
         </div>
 
