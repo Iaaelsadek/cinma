@@ -77,6 +77,29 @@ async function verifySupabase() {
 
   if (moviesPlayError) console.error('❌ Error checking movies (is_play):', moviesPlayError.message);
   else console.log(`✅ Movies (is_play=true): ${moviesPlayCount} items`);
+
+  // Check Ramadan Series
+  const { count: ramadanCount, error: ramadanError } = await supabase
+    .from('tv_series')
+    .select('*', { count: 'exact', head: true })
+    .eq('is_ramadan', true);
+
+  if (ramadanError) console.error('❌ Error checking Ramadan series:', ramadanError.message);
+  else {
+    console.log(`✅ Ramadan Series (is_ramadan=true): ${ramadanCount} items`);
+    // Check year distribution
+    const { data: ramadanItems } = await supabase
+      .from('tv_series')
+      .select('first_air_date')
+      .eq('is_ramadan', true);
+    
+    if (ramadanItems) {
+      const years = ramadanItems.map(item => item.first_air_date ? item.first_air_date.substring(0, 4) : 'Unknown');
+      const counts = {};
+      years.forEach(y => counts[y] = (counts[y] || 0) + 1);
+      console.log('📅 Ramadan Series Year Distribution:', counts);
+    }
+  }
 }
 
 async function verifyTmdb() {
