@@ -22,7 +22,7 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
       {/* THE LIVING ORGANISM CORE */}
       <AuroraBackground />
 
-      <div className="relative z-10 w-[96%] md:w-[95%] xl:w-[90%] max-w-[1920px] mx-auto border-x border-lumen-muted/50 min-h-screen bg-lumen-void/60 backdrop-blur-sm transition-all duration-300 shadow-2xl">
+      <div className="relative z-10 w-full min-h-screen bg-lumen-void/60 backdrop-blur-sm transition-all duration-300">
         <div className="sticky top-0 z-[100] w-full">
           <QuantumNavbar />
         </div>
