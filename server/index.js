@@ -93,11 +93,31 @@ function runPythonScript(scriptPath) {
 
 // --- GOD MODE ENDPOINTS ---
 
-// 1. System Shell Execution (Dangerous)
+// 1. System Shell Execution (SECURED)
 app.post('/api/admin/exec', apiLimiter, async (req, res) => {
   if (!ensureAdminToken(req, res)) return;
   const { command, cwd } = req.body;
   if (!command) return res.status(400).json({ error: 'Command required' });
+
+  // Security: Only allow specific commands (Whitelist)
+  // We allow the importer to run with arguments if needed, but we should be careful.
+  // For now, we strictly allow the defined script in package.json or the direct python call.
+  
+  const ALLOWED_COMMANDS = [
+    'npm run import:content',
+    'npm run import:content --', // allow args
+    'python backend/mass_content_importer.py',
+    '.\\.venv\\Scripts\\python.exe backend\\mass_content_importer.py'
+  ];
+
+  const isAllowed = ALLOWED_COMMANDS.some(allowed => 
+    command === allowed || command.startsWith(allowed + ' ')
+  );
+
+  if (!isAllowed) {
+    console.warn(`[BLOCKED] Attempted to run unauthorized command: ${command}`);
+    return res.status(403).json({ error: 'Command not allowed for security reasons.' });
+  }
 
   console.log(`[EXEC] ${command}`);
   
