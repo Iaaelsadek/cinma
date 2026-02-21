@@ -4,7 +4,7 @@ import { HolographicCard } from '../../effects/HolographicCard'
 import { Star, Calendar, Film, ChevronLeft, ChevronRight, Zap } from 'lucide-react'
 import { PrefetchLink } from '../../common/PrefetchLink'
 import { Swiper, SwiperSlide } from 'swiper/react'
-import { Autoplay, FreeMode, Navigation, Virtual } from 'swiper/modules'
+import { Autoplay, FreeMode, Navigation } from 'swiper/modules'
 import { VideoCard } from './VideoCard'
 import { MovieCard } from './MovieCard'
 import { useLang } from '../../../state/useLang'
@@ -13,7 +13,6 @@ import { SectionHeader } from '../../common/SectionHeader'
 import 'swiper/css'
 import 'swiper/css/free-mode'
 import 'swiper/css/navigation'
-import 'swiper/css/virtual'
 
 export const QuantumTrain = ({ 
   items, 
@@ -69,11 +68,10 @@ export const QuantumTrain = ({
       
       <div className="relative z-10 w-full">
         <Swiper
-          modules={[FreeMode, Navigation, Virtual]}
+          modules={[FreeMode, Navigation]}
           spaceBetween={10}
           slidesPerView="auto"
           freeMode={true}
-          virtual={true}
           navigation={{
             prevEl,
             nextEl,
@@ -84,7 +82,6 @@ export const QuantumTrain = ({
             return (
             <SwiperSlide 
               key={`${movie.id}-${index}`} 
-              virtualIndex={index}
               className={isVideo 
                 ? "!h-auto !w-auto !min-w-[200px] !max-w-[280px] md:!min-w-[240px] md:!max-w-[320px]"
                 : "!h-auto !w-auto !min-w-[100px] !max-w-[140px] md:!min-w-[120px] md:!max-w-[160px]"
