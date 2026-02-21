@@ -173,14 +173,26 @@ def fetch_tmdb_movies(pages=5, list_type="popular"):
 
                 tmdb_id = movie["id"]
                 
-                # 1. Check existence first to save quotas
+                # 1. Check existence first
                 try:
-                    existing = supabase.table("movies").select("id").eq("id", tmdb_id).maybe_single().execute()
+                    existing = supabase.table("movies").select("id, embed_links").eq("id", tmdb_id).maybe_single().execute()
                     if existing and existing.data:
-                        print(f"⏩ Skipping {movie.get('title')} (Already exists)")
+                        # Update embed links if they are outdated (simple check: count keys)
+                        current_links = existing.data.get('embed_links') or {}
+                        new_links = build_embed_urls(tmdb_id, 'movie')
+                        
+                        # If we have significantly more new links, update the record
+                        if len(new_links) > len(current_links):
+                            print(f"🔄 Updating links for {movie.get('title')} ({len(current_links)} -> {len(new_links)} providers)")
+                            supabase.table("movies").update({"embed_links": new_links}).eq("id", tmdb_id).execute()
+                        else:
+                            print(f"⏩ Skipping {movie.get('title')} (Already exists & up-to-date)")
                         continue
                 except Exception as e:
                     print(f"⚠️ Supabase check failed for {tmdb_id}: {e}")
+                    # If check fails, we might as well try to continue and upsert, or skip.
+                    # Safest is to skip to avoid crashing, but we want to be robust.
+                    pass
 
                 # Fetch Details for Rating & Release Dates
                 detail_url = f"https://api.themoviedb.org/3/movie/{tmdb_id}"
@@ -253,12 +265,21 @@ def fetch_tmdb_series(pages=5, list_type="popular"):
                 
                 # 1. Check existence first
                 try:
-                    existing = supabase.table("tv_series").select("id").eq("id", tmdb_id).maybe_single().execute()
+                    existing = supabase.table("tv_series").select("id, embed_links").eq("id", tmdb_id).maybe_single().execute()
                     if existing and existing.data:
-                        print(f"⏩ Skipping {series.get('name')} (Already exists)")
+                        # Update embed links
+                        current_links = existing.data.get('embed_links') or {}
+                        new_links = build_embed_urls(tmdb_id, 'tv')
+                        
+                        if len(new_links) > len(current_links):
+                            print(f"🔄 Updating links for {series.get('name')} ({len(current_links)} -> {len(new_links)} providers)")
+                            supabase.table("tv_series").update({"embed_links": new_links}).eq("id", tmdb_id).execute()
+                        else:
+                            print(f"⏩ Skipping {series.get('name')} (Already exists & up-to-date)")
                         continue
                 except Exception as e:
                     print(f"⚠️ Supabase check failed for {tmdb_id}: {e}")
+                    pass
                     # Continue to try upsert even if check failed, or skip? 
                     # Safer to skip to avoid duplicates if check failed, but maybe we should try to upsert.
                     # Let's try to upsert.
