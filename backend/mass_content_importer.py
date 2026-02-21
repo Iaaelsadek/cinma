@@ -34,7 +34,7 @@ MAX_DAILY_ITEMS = 50  # Default safe limit for free tiers
 def check_limit():
     global PROCESSED_COUNT
     if PROCESSED_COUNT >= MAX_DAILY_ITEMS:
-        print(f"🛑 Daily limit of {MAX_DAILY_ITEMS} items reached. Stopping script to protect quotas.")
+        print(f"🛑 Daily limit of {MAX_DAILY_ITEMS} items reached. Stopping script to protect quotas.", flush=True)
         return True
     return False
 
@@ -283,7 +283,7 @@ def fetch_tmdb_series(pages=5, list_type="popular"):
                 except Exception as e:
                     print(f"❌ Failed to upsert series {tmdb_id}: {e}")
                 
-                time.sleep(2) # Strict 2s sleep
+                time.sleep(4) # Sleep 4s to respect Gemini Free Tier 15 RPM limit
 
         except Exception as e:
             print(f"Error on page {page}: {e}")
@@ -296,7 +296,7 @@ if __name__ == "__main__":
 
     MAX_DAILY_ITEMS = args.limit
     
-    print(f"🚀 Starting Mass Content Import (Limit: {MAX_DAILY_ITEMS} items/run)...")
+    print(f"🚀 Starting Mass Content Import (Limit: {MAX_DAILY_ITEMS} items/run)...", flush=True)
     
     fetch_tmdb_movies(pages=args.pages, list_type="popular")
     if not check_limit():
