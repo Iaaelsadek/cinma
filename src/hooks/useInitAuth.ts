@@ -21,7 +21,7 @@ export function useInitAuth() {
         // Ignore AbortError and other non-critical errors during init
         if (mounted) {
           if (e?.name !== 'AbortError') {
-             console.debug('Auth initialization silent fail:', e)
+             // console.debug('Auth initialization silent fail:', e)
           }
           // Ensure we stop loading state if timeout occurs or any error happens
           useAuth.getState().setLoading(false)

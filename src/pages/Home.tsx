@@ -116,7 +116,8 @@ export const Home = () => {
 
           return { ...item, media_type: ep.type }
         } catch (e) {
-          console.error('Diverse hero fetch error:', e)
+          // Silent fail for hero section
+          // console.error('Diverse hero fetch error:', e)
           return null
         }
       })
