@@ -22,7 +22,7 @@ RUN pip install --no-cache-dir -r backend/requirements.txt
 
 # Install Node.js dependencies
 COPY package*.json ./
-RUN npm install --omit=dev
+RUN npm install --omit=dev --legacy-peer-deps
 
 # Copy the rest of the application source code
 COPY . .

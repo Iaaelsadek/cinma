@@ -518,7 +518,7 @@ app.post('/api/gemini-recommendations', apiLimiter, async (req, res) => {
   ].join('\n');
   try {
     const response = await axios.post(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-pro:generateContent?key=${apiKey}`,
       { contents: [{ role: 'user', parts: [{ text: prompt }] }] },
       { timeout: 15000 }
     );
