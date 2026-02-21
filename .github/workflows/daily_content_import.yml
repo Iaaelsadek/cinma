@@ -9,11 +9,11 @@ on:
       limit:
         description: 'Number of items to import'
         required: false
-        default: '50'
+        default: '200'
       pages:
         description: 'Number of pages to scan'
         required: false
-        default: '5'
+        default: '10'
 
 jobs:
   import-content:
@@ -43,6 +43,13 @@ jobs:
           TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
-          # Limit to 50 items per day to stay within Free Tier limits
-          # 50 items * 30 days = 1500 new items per month
-          python backend/mass_content_importer.py --limit 50 --pages 5
+          # Limit to 200 items per run (4x daily = 800 items/day)
+          # Uses Gemini Flash for efficiency
+          LIMIT="${{ github.event.inputs.limit }}"
+          PAGES="${{ github.event.inputs.pages }}"
+          
+          if [ -z "$LIMIT" ]; then LIMIT=200; fi
+          if [ -z "$PAGES" ]; then PAGES=10; fi
+          
+          echo "Running with LIMIT=$LIMIT and PAGES=$PAGES"
+          python backend/mass_content_importer.py --limit $LIMIT --pages $PAGES

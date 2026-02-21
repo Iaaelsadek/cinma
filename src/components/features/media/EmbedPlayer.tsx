@@ -91,42 +91,36 @@ export const EmbedPlayer = ({ server, cinemaMode, toggleCinemaMode, loading, onN
       </div>
 
       {/* Footer: Report & Auto-Switch */}
-      <div className="flex justify-between items-center px-1">
-        <div className="text-[10px] text-zinc-500 font-medium uppercase tracking-widest flex items-center gap-2">
-           <Wifi size={12} />
-           <span>Protocol v2.0 • {server?.name}</span>
-        </div>
+      <div className="flex flex-col gap-2 px-1">
+        <div className="flex justify-between items-center">
+          <div className="text-[10px] text-zinc-500 font-medium uppercase tracking-widest flex items-center gap-2">
+             <Wifi size={12} />
+             <span>Protocol v2.0 • {server?.name}</span>
+          </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            onClick={onNextServer}
-            disabled={reporting}
-            className="flex items-center gap-2 rounded-xl border border-white/5 bg-white/5 px-3 h-8 text-xs font-bold text-zinc-400 hover:bg-white/10 transition-all hover:text-white"
-          >
-            <SkipForward size={12} />
-            <span>Next Server</span>
-          </button>
-          
-          {server && (
-            <a
-              href={server.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 rounded-xl border border-white/5 bg-emerald-500/10 px-3 h-8 text-xs font-bold text-emerald-400 hover:bg-emerald-500/20 transition-all"
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={onReport}
+              disabled={reporting}
+              className="text-[10px] font-bold text-red-500/80 hover:text-red-400 flex items-center gap-1.5 px-2 py-1 rounded-lg hover:bg-red-500/10 transition-colors disabled:opacity-50"
             >
-              <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>Direct Link</span>
-            </a>
-          )}
-          
-          <button
-            onClick={onReport}
-            disabled={reporting}
-            className="flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-3 h-8 text-xs font-bold uppercase tracking-widest text-red-400 hover:bg-red-500/20 transition-all"
-          >
-            {reporting ? <Loader2 size={12} className="animate-spin" /> : <AlertTriangle size={12} />}
-            <span>Report</span>
-          </button>
+              <AlertTriangle size={12} />
+              <span>{reporting ? 'Reporting...' : 'Report Broken'}</span>
+            </button>
+            
+            <button 
+              onClick={onNextServer}
+              className="text-[10px] font-bold text-zinc-400 hover:text-white flex items-center gap-1.5 px-2 py-1 rounded-lg hover:bg-white/10 transition-colors"
+            >
+              <span>Next Server</span>
+              <SkipForward size={12} />
+            </button>
+          </div>
+        </div>
+        
+        {/* Helper Tip */}
+        <div className="text-[10px] text-zinc-600 text-center">
+          If the video is unavailable or slow, please try switching servers using the buttons above.
         </div>
       </div>
     </div>
