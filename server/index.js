@@ -142,6 +142,19 @@ app.get('/api/profile/:id', async (req, res) => {
   const { id } = req.params;
   if (!supabase) return res.status(500).json({ error: 'Supabase not configured' });
   
+  // SECURITY FIX: Require valid Bearer token before fetching user data
+  const authHeader = req.headers.authorization;
+  if (!authHeader) {
+    return res.status(401).json({ error: 'No token provided' });
+  }
+
+  const token = authHeader.replace('Bearer ', '');
+  const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+  
+  if (authError || !user) {
+    return res.status(401).json({ error: 'Invalid token' });
+  }
+
   try {
     // Use service_role key (supabase client here is admin) to bypass RLS
     const { data, error } = await supabase

@@ -41,7 +41,16 @@ export async function getProfile(userId: string) {
       // Use relative path by default to leverage Vite proxy in dev, or API_BASE if set
       const apiBase = CONFIG.API_BASE || ''
       const url = apiBase ? `${apiBase}/api/profile/${userId}` : `/api/profile/${userId}`
-      const res = await fetchWithTimeout(url, { timeout: 3000 })
+      
+      // Get current session token for authentication
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token
+      const headers: Record<string, string> = {}
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`
+      }
+
+      const res = await fetchWithTimeout(url, { headers, timeout: 3000 })
       if (res.ok) {
         const proxyData = await res.json()
         if (proxyData) {
