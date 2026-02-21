@@ -95,6 +95,18 @@ export default defineConfig({
             if (id.includes('lucide-react')) {
               return 'vendor-icons';
             }
+            if (id.includes('react-player')) {
+              return 'vendor-player';
+            }
+            if (id.includes('recharts')) {
+              return 'vendor-charts';
+            }
+            if (id.includes('@supabase') || id.includes('axios')) {
+              return 'vendor-api';
+            }
+            if (id.includes('@tanstack') || id.includes('zod') || id.includes('zustand')) {
+              return 'vendor-utils';
+            }
             return 'vendor';
           }
         }
