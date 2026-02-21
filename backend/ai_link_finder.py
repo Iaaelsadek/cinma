@@ -12,7 +12,7 @@ class AILinkFinder:
     def __init__(self):
         if GEMINI_API_KEY:
             genai.configure(api_key=GEMINI_API_KEY)
-            self.model = genai.GenerativeModel('gemini-pro')
+            self.model = genai.GenerativeModel('gemini-3.1-pro')
         else:
             self.model = None
             print("Warning: Gemini API Key missing")

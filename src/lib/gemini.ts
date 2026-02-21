@@ -20,7 +20,7 @@ export const correctSearchTerm = async (query: string): Promise<string> => {
   if (!genAI || !query || query.trim().length < 3) return query;
 
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+    const model = genAI.getGenerativeModel({ model: "gemini-3.1-pro" });
     const prompt = `
     You are a search query corrector for an Arabic/English movie database.
     Input: "${query}"
@@ -64,7 +64,7 @@ export const generateArabicSummary = async (title: string, originalOverview?: st
   if (!genAI || !title) return originalOverview || "لا يوجد وصف متاح";
 
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+    const model = genAI.getGenerativeModel({ model: "gemini-3.1-pro" });
     const prompt = `
     Summarize the plot of the movie/show "${title}" in Arabic.
     Context: ${originalOverview || "No overview provided, use general knowledge about this title."}
@@ -119,7 +119,7 @@ export const translateTitleToArabic = async (title: string): Promise<string> => 
   // 2. Try Gemini if configured
   if (genAI) {
     try {
-      const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+      const model = genAI.getGenerativeModel({ model: "gemini-3.1-pro" });
       const prompt = `
       You are an expert translator for movie and TV show titles for an Arab audience.
       Task: Translate "${title}" to Arabic.

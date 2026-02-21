@@ -52,7 +52,7 @@ class TMDBFetcher:
             if not genai:
                  return self._fallback_slug(title, item_id)
 
-            model = genai.GenerativeModel('gemini-pro')
+            model = genai.GenerativeModel('gemini-3.1-pro')
             prompt = f"Create a clean, SEO-friendly URL slug for the movie/series title '{title}'. Return ONLY the slug (e.g., 'the-dark-knight'). No explanation."
             response = model.generate_content(prompt)
             slug = response.text.strip().lower().replace(' ', '-')

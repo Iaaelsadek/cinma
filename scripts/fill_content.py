@@ -35,13 +35,32 @@ def get_rating_color(release_dates):
 def gemini_sum(text):
     if not GEMINI_API_KEY:
         return None
+    
+    # Fallback Mechanism for Gemini API
     try:
-        model = genai.GenerativeModel("gemini-pro")
+        # 1. Primary Model (Latest)
+        model = genai.GenerativeModel("gemini-3.1-pro")
         prompt = "لخص النص التالي في 3 جمل عربية قصيرة:\n\n" + text
         resp = model.generate_content(prompt)
         return getattr(resp, "text", None)
-    except Exception:
-        return None
+    except Exception as e:
+        # 2. Check for Resource Exhaustion or Rate Limits
+        error_str = str(e)
+        if "ResourceExhausted" in error_str or "429" in error_str or "Quota" in error_str:
+            print(f"[LOG] Warning: Primary model exhausted or rate limited. Switching to fallback model... Error: {e}")
+            try:
+                # 3. Fallback Model (Older/Cheaper)
+                model = genai.GenerativeModel("gemini-pro")
+                prompt = "لخص النص التالي في 3 جمل عربية قصيرة:\n\n" + text
+                resp = model.generate_content(prompt)
+                return getattr(resp, "text", None)
+            except Exception as e2:
+                print(f"[LOG] Error in fallback model: {e2}")
+                return None
+        else:
+            # 4. Catch unexpected errors
+            print(f"[LOG] Unexpected Gemini Error: {e}")
+            return None
 
 def sync_movies(pages=1):
     page = 1
