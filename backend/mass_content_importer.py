@@ -127,7 +127,7 @@ def generate_seo_content(title, original_overview, content_type='movie'):
     try:
         # 1. Primary Model (Flash - Efficient & High Limit)
         # Trying specific version tag which is often more stable
-        model = genai.GenerativeModel("gemini-1.5-flash-001")
+        model = genai.GenerativeModel("gemini-flash-latest")
         response = model.generate_content(prompt)
         data = process_response(response)
         if data: return data
@@ -136,7 +136,7 @@ def generate_seo_content(title, original_overview, content_type='movie'):
         print(f"[Gemini] Primary model failed: {e}. Switching to Fallback...")
         try:
             # 2. Fallback Model (Standard Pro)
-            model = genai.GenerativeModel("gemini-pro")
+            model = genai.GenerativeModel("gemini-pro-latest")
             response = model.generate_content(prompt)
             data = process_response(response)
             if data: return data

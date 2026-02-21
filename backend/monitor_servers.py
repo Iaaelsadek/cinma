@@ -11,7 +11,8 @@ load_dotenv()
 # Supabase setup
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 # Use Service Role Key for write access to the database
-SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_KEY")
+# Check multiple potential env var names for compatibility
+SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_SERVICE_ROLE") or os.getenv("SUPABASE_KEY")
 
 if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
     print("[ERROR] Missing Supabase credentials")
@@ -38,30 +39,40 @@ PROVIDERS = [
   { "id": '2embed', "name": '2Embed', "base": 'https://www.2embed.cc' },
 ]
 
+import argparse
+
 def check_server(provider):
-    """Checks the health of a server by making a HEAD request."""
+    """Checks the health of a server by making a request."""
     url = provider['base']
     start_time = time.time()
     try:
         # Some servers block HEAD, so we use GET with stream=True to just get headers
+        # Timeout set to 5 seconds
         response = requests.get(url, timeout=5, stream=True)
         latency = int((time.time() - start_time) * 1000)
         
-        if response.status_code < 500:
+        # Consider 2xx and 3xx as online
+        if response.status_code < 400:
+            return "online", latency
+        elif response.status_code < 500:
+            # 4xx might mean the base URL is not a page, but server is up.
+            # For now, let's treat it as online but maybe log it.
             return "online", latency
         else:
             return "degraded", latency
+    except requests.exceptions.Timeout:
+        return "degraded", 5000
     except Exception as e:
-        print(f"Error checking {provider['name']}: {e}")
+        # print(f"Error checking {provider['name']}: {e}")
         return "offline", None
 
 def update_status():
     """Loops through providers and updates their status in Supabase."""
-    print("Starting server health check...")
+    print(f"[{time.strftime('%H:%M:%S')}] Starting server health check...")
     
     for provider in PROVIDERS:
         status, latency = check_server(provider)
-        print(f"[{provider['name']}] Status: {status}, Latency: {latency}ms")
+        print(f"  • {provider['name']}: {status.upper()} ({latency or 'N/A'}ms)")
         
         data = {
             "server_id": provider['id'],
@@ -74,10 +85,29 @@ def update_status():
         
         try:
             # Upsert into server_status table
-            # We use on_conflict='server_id' to update existing records
             supabase.table("server_status").upsert(data, on_conflict="server_id").execute()
         except Exception as e:
+            err_msg = str(e)
+            if "relation \"public.server_status\" does not exist" in err_msg or "Could not find the table" in err_msg:
+                print(f"\n[CRITICAL ERROR] Table 'server_status' does not exist in Supabase.")
+                print("Please run the migration script 'backend/migrations/01_server_status.sql' in your Supabase SQL Editor.\n")
+                return False
             print(f"[ERROR] Failed to update DB for {provider['name']}: {e}")
+    return True
 
 if __name__ == "__main__":
-    update_status()
+    parser = argparse.ArgumentParser(description='Monitor Server Health')
+    parser.add_argument('--loop', action='store_true', help='Run in a continuous loop')
+    parser.add_argument('--interval', type=int, default=300, help='Interval in seconds (default: 300)')
+    args = parser.parse_args()
+
+    if args.loop:
+        print(f"🚀 Starting Server Health Monitor (Interval: {args.interval}s)")
+        while True:
+            success = update_status()
+            if not success:
+                print("Exiting due to critical error (missing table).")
+                break
+            time.sleep(args.interval)
+    else:
+        update_status()
