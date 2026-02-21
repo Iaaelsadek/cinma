@@ -17,16 +17,21 @@ export const ServerSelector = ({ servers, active, onSelect }: Props) => {
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
         {servers.map((s, idx) => {
           const isActive = idx === active
+          const isOffline = s.status === 'offline'
+          const isDegraded = s.status === 'degraded'
           const isOnline = s.status === 'online'
           
           return (
             <button
               key={`${s.name}-${idx}`}
-              onClick={() => onSelect(idx)}
+              onClick={() => !isOffline && onSelect(idx)}
+              disabled={isOffline}
               className={`group relative flex items-center gap-2 rounded-lg border p-2 text-xs font-bold transition-all duration-300 overflow-hidden
                 ${isActive
                   ? 'bg-gradient-to-br from-primary to-purple-600 border-primary text-white shadow-[0_0_15px_rgba(124,58,237,0.4)] z-10'
-                  : 'bg-black/40 border-white/5 text-zinc-400 hover:bg-white/10 hover:border-white/20 hover:text-white'}`}
+                  : isOffline 
+                    ? 'bg-red-900/10 border-red-900/20 text-red-700 opacity-50 cursor-not-allowed grayscale'
+                    : 'bg-black/40 border-white/5 text-zinc-400 hover:bg-white/10 hover:border-white/20 hover:text-white'}`}
             >
               <div className={`relative z-10 flex items-center justify-center h-6 w-6 rounded-md ${isActive ? 'bg-black/20' : 'bg-black/40'}`}>
                  <ServerIcon size={12} className={isActive ? 'text-white' : 'text-zinc-500'} />
@@ -35,9 +40,9 @@ export const ServerSelector = ({ servers, active, onSelect }: Props) => {
               <div className="relative z-10 flex flex-col items-start min-w-0 w-full">
                 <span className="truncate w-full text-[10px]">{s.name}</span>
                 <div className="flex items-center gap-1 mt-0.5">
-                  <div className={`h-1 w-1 rounded-full ${isOnline ? 'bg-emerald-400 shadow-[0_0_4px_#34d399]' : 'bg-zinc-600'}`} />
-                  <span className={`text-[8px] uppercase tracking-wider ${isOnline ? 'text-emerald-400' : 'text-zinc-600'}`}>
-                    {isOnline ? 'Online' : 'Checking'}
+                  <div className={`h-1 w-1 rounded-full ${isOnline ? 'bg-emerald-400 shadow-[0_0_4px_#34d399]' : isDegraded ? 'bg-yellow-400' : isOffline ? 'bg-red-500' : 'bg-zinc-600'}`} />
+                  <span className={`text-[8px] uppercase tracking-wider ${isOnline ? 'text-emerald-400' : isDegraded ? 'text-yellow-400' : isOffline ? 'text-red-500' : 'text-zinc-600'}`}>
+                    {isOnline ? 'Online' : isDegraded ? 'Slow' : isOffline ? 'Offline' : 'Checking'}
                   </span>
                 </div>
               </div>

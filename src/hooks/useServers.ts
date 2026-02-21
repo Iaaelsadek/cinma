@@ -6,7 +6,7 @@ export type Server = {
   name: string
   url: string
   priority: number
-  status: 'unknown' | 'online' | 'offline'
+  status: 'unknown' | 'online' | 'offline' | 'degraded'
   responseTime?: number
 }
 
@@ -35,6 +35,44 @@ export const useServers = (tmdbId: number, type: 'movie' | 'tv', season?: number
   const [active, setActive] = useState(0)
   const [loading, setLoading] = useState(true)
   const [reporting, setReporting] = useState(false)
+  const [statuses, setStatuses] = useState<Record<string, Server['status']>>({})
+
+  // Fetch server statuses on mount
+  useEffect(() => {
+    const fetchStatuses = async () => {
+      try {
+        const { data } = await supabase.from('server_status').select('server_id, status')
+        if (data) {
+          const statusMap = data.reduce((acc, row) => ({
+            ...acc,
+            [row.server_id]: row.status as Server['status']
+          }), {})
+          setStatuses(statusMap)
+        }
+      } catch (e) {
+        console.error('Failed to fetch server statuses', e)
+      }
+    }
+
+    fetchStatuses()
+    
+    // Realtime subscription for status updates
+    const channel = supabase
+      .channel('server_status_changes')
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'server_status' },
+        (payload) => {
+          const { server_id, status } = payload.new as { server_id: string, status: Server['status'] }
+          setStatuses(prev => ({ ...prev, [server_id]: status }))
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [])
 
   useEffect(() => {
     let mounted = true
@@ -150,24 +188,21 @@ export const useServers = (tmdbId: number, type: 'movie' | 'tv', season?: number
           name: p.name,
           url,
           priority: 10 - idx,
-          status: 'unknown',
+          status: statuses[p.id] || 'unknown',
           responseTime: undefined
         }
       }).filter(Boolean) as Server[]
 
       if (mounted) {
         setServers(generatedServers)
-        setActive(0) 
+        if (active >= generatedServers.length) setActive(0)
         setLoading(false)
-        
-        // 3. Silent Watcher Simulation
-        setServers(prev => prev.map(s => ({ ...s, status: 'online' })))
       }
     }
 
     init()
     return () => { mounted = false }
-  }, [tmdbId, type, season, episode, imdbId])
+  }, [tmdbId, type, season, episode, imdbId, statuses])
 
   const reportBroken = async () => {
     setReporting(true)
