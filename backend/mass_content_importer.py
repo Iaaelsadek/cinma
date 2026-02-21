@@ -3,6 +3,7 @@ import time
 import requests
 import json
 import re
+import argparse
 from supabase import create_client, Client
 from dotenv import load_dotenv
 import google.generativeai as genai
@@ -25,6 +26,17 @@ if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
 else:
     print("Warning: GEMINI_API_KEY missing. SEO content generation will be skipped/limited.")
+
+# Global Counters for Daily Limits
+PROCESSED_COUNT = 0
+MAX_DAILY_ITEMS = 50  # Default safe limit for free tiers
+
+def check_limit():
+    global PROCESSED_COUNT
+    if PROCESSED_COUNT >= MAX_DAILY_ITEMS:
+        print(f"🛑 Daily limit of {MAX_DAILY_ITEMS} items reached. Stopping script to protect quotas.")
+        return True
+    return False
 
 def get_rating_color(release_dates):
     """Determine rating color based on US certification."""
@@ -51,7 +63,6 @@ def build_embed_urls(tmdb_id: int, content_type: str = 'movie'):
             "vidsrcme": f"https://vidsrc.me/embed/{tmdb_id}",
         }
     elif content_type == 'tv':
-        # Base URL for series, usually requires season/episode selection in player
         return {
             "vidsrc": f"https://vidsrc.to/embed/tv/{tmdb_id}",
             "2embed": f"https://www.2embed.cc/embed/{tmdb_id}",
@@ -88,7 +99,6 @@ def generate_seo_content(title, original_overview, content_type='movie'):
     def process_response(response):
         try:
             text = response.text
-            # Extract JSON from markdown if present
             json_match = re.search(r'\{.*\}', text, re.DOTALL)
             if json_match:
                 return json.loads(json_match.group(0))
@@ -118,14 +128,16 @@ def generate_seo_content(title, original_overview, content_type='movie'):
         else:
             print(f"[Gemini] Error: {e}")
 
-    # Fallback to original if AI fails
     return {"arabic_title": title, "ai_summary": original_overview}
 
 def fetch_tmdb_movies(pages=5, list_type="popular"):
     """Fetch movies from TMDB and insert into Supabase."""
+    global PROCESSED_COUNT
     print(f"--- Starting Movie Import ({list_type}, {pages} pages) ---")
     
     for page in range(1, pages + 1):
+        if check_limit(): return
+
         print(f"Fetching {list_type} movies page {page}/{pages}...")
         url = f"https://api.themoviedb.org/3/movie/{list_type}"
         params = {"api_key": TMDB_API_KEY, "language": "ar-SA", "page": page}
@@ -139,13 +151,15 @@ def fetch_tmdb_movies(pages=5, list_type="popular"):
             movies = resp.json().get("results", [])
             
             for movie in movies:
+                if check_limit(): return
+
                 tmdb_id = movie["id"]
                 
-                # Check if exists to avoid unnecessary AI calls (optional, but saves quota)
-                # existing = supabase.table("movies").select("id").eq("id", tmdb_id).execute()
-                # if existing.data:
-                #     print(f"Skipping {movie.get('title')} (Already exists)")
-                #     continue
+                # 1. Check existence first to save quotas
+                existing = supabase.table("movies").select("id").eq("id", tmdb_id).maybe_single().execute()
+                if existing.data:
+                    print(f"⏩ Skipping {movie.get('title')} (Already exists)")
+                    continue
 
                 # Fetch Details for Rating & Release Dates
                 detail_url = f"https://api.themoviedb.org/3/movie/{tmdb_id}"
@@ -182,19 +196,23 @@ def fetch_tmdb_movies(pages=5, list_type="popular"):
                 try:
                     supabase.table("movies").upsert(movie_data, on_conflict="id").execute()
                     print(f"✅ Imported Movie: {movie_data['arabic_title']}")
+                    PROCESSED_COUNT += 1
                 except Exception as e:
                     print(f"❌ Failed to upsert movie {tmdb_id}: {e}")
                 
-                time.sleep(0.5) # Rate limiting for TMDB/Gemini
+                time.sleep(2) # Strict 2s sleep to be safe with Free Tier APIs
 
         except Exception as e:
             print(f"Error on page {page}: {e}")
 
 def fetch_tmdb_series(pages=5, list_type="popular"):
     """Fetch TV Series from TMDB and insert into Supabase."""
+    global PROCESSED_COUNT
     print(f"--- Starting TV Series Import ({list_type}, {pages} pages) ---")
     
     for page in range(1, pages + 1):
+        if check_limit(): return
+
         print(f"Fetching {list_type} series page {page}/{pages}...")
         url = f"https://api.themoviedb.org/3/tv/{list_type}"
         params = {"api_key": TMDB_API_KEY, "language": "ar-SA", "page": page}
@@ -208,8 +226,16 @@ def fetch_tmdb_series(pages=5, list_type="popular"):
             series_list = resp.json().get("results", [])
             
             for series in series_list:
+                if check_limit(): return
+
                 tmdb_id = series["id"]
                 
+                # 1. Check existence first
+                existing = supabase.table("tv_series").select("id").eq("id", tmdb_id).maybe_single().execute()
+                if existing.data:
+                    print(f"⏩ Skipping {series.get('name')} (Already exists)")
+                    continue
+
                 # Fetch Details
                 detail_url = f"https://api.themoviedb.org/3/tv/{tmdb_id}"
                 detail_params = {
@@ -221,8 +247,8 @@ def fetch_tmdb_series(pages=5, list_type="popular"):
                 if detail_resp.status_code != 200: continue
                 detail = detail_resp.json()
 
-                # Determine Rating (simplified for TV)
-                rating = "yellow" # Default
+                # Determine Rating
+                rating = "yellow"
                 ratings = (detail.get("content_ratings") or {}).get("results", [])
                 for r in ratings:
                     if r.get("iso_3166_1") == "US":
@@ -253,25 +279,32 @@ def fetch_tmdb_series(pages=5, list_type="popular"):
                 try:
                     supabase.table("tv_series").upsert(series_data, on_conflict="id").execute()
                     print(f"✅ Imported Series: {series_data['arabic_title']}")
+                    PROCESSED_COUNT += 1
                 except Exception as e:
                     print(f"❌ Failed to upsert series {tmdb_id}: {e}")
                 
-                time.sleep(0.5)
+                time.sleep(2) # Strict 2s sleep
 
         except Exception as e:
             print(f"Error on page {page}: {e}")
 
 if __name__ == "__main__":
-    print("🚀 Starting Mass Content Import for SEO...")
+    parser = argparse.ArgumentParser(description="Mass Content Importer with Free Tier Limits")
+    parser.add_argument("--limit", type=int, default=50, help="Daily import limit (default: 50)")
+    parser.add_argument("--pages", type=int, default=2, help="Pages per list type (default: 2)")
+    args = parser.parse_args()
+
+    MAX_DAILY_ITEMS = args.limit
     
-    # Customize import volume here
-    MOVIE_PAGES = 3  # ~60 movies
-    SERIES_PAGES = 3 # ~60 series
+    print(f"🚀 Starting Mass Content Import (Limit: {MAX_DAILY_ITEMS} items/run)...")
     
-    fetch_tmdb_movies(pages=MOVIE_PAGES, list_type="popular")
-    fetch_tmdb_movies(pages=MOVIE_PAGES, list_type="top_rated")
+    fetch_tmdb_movies(pages=args.pages, list_type="popular")
+    if not check_limit():
+        fetch_tmdb_movies(pages=args.pages, list_type="top_rated")
     
-    fetch_tmdb_series(pages=SERIES_PAGES, list_type="popular")
-    fetch_tmdb_series(pages=SERIES_PAGES, list_type="top_rated")
+    if not check_limit():
+        fetch_tmdb_series(pages=args.pages, list_type="popular")
+    if not check_limit():
+        fetch_tmdb_series(pages=args.pages, list_type="top_rated")
     
-    print("🎉 Mass Import Completed!")
+    print(f"🎉 Import Session Completed. Processed: {PROCESSED_COUNT} items.")
