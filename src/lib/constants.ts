@@ -10,7 +10,7 @@ export const CONFIG = {
 
 // Log warning if keys are missing (visible in browser console)
 if (!CONFIG.SUPABASE_URL || !CONFIG.SUPABASE_ANON_KEY) {
-  console.warn('⚠️ Supabase keys are missing! Check your environment variables.')
+  // console.warn('⚠️ Supabase keys are missing! Check your environment variables.')
 }
 
 export const FLAGS = {

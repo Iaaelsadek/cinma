@@ -148,7 +148,7 @@ export function useRecommendations() {
         const tvResults = tv.results?.map((t: any) => ({ ...t, media_type: 'tv' })) || []
         recommendations.push(...tvResults)
       } catch (e) {
-        console.error('Error fetching tv recommendations', e)
+        // console.error('Error fetching tv recommendations', e)
       }
 
       // 4. Filter out watched/watchlist items

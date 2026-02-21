@@ -216,11 +216,11 @@ class ErrorLoggingService {
 
     // Log to console in development
     if (typeof process !== 'undefined' && process?.env?.NODE_ENV === 'development') {
-      console.group(`🚨 Error [${enrichedError.severity}] - ${enrichedError.category}`);
-      console.error('Message:', enrichedError.message);
-      console.error('Stack:', enrichedError.stack);
-      console.error('Context:', enrichedError.context);
-      console.groupEnd();
+      // console.group(`🚨 Error [${enrichedError.severity}] - ${enrichedError.category}`);
+      // console.error('Message:', enrichedError.message);
+      // console.error('Stack:', enrichedError.stack);
+      // console.error('Context:', enrichedError.context);
+      // console.groupEnd();
     }
   }
 
