@@ -84,7 +84,8 @@ def classify_content_gemini(title: str, description: str) -> str:
         return 'unknown'
     try:
         genai.configure(api_key=os.getenv('GEMINI_API_KEY'))
-        model = genai.GenerativeModel('gemini-3.1-pro')
+        # Use gemini-1.5-flash for efficiency
+        model = genai.GenerativeModel('gemini-1.5-flash')
         prompt = f"""
         Analyze the following video title and description and categorize it into EXACTLY one of these tags: ['movie', 'play', 'gaming', 'programming', 'trending', 'music'].
         
@@ -93,8 +94,19 @@ def classify_content_gemini(title: str, description: str) -> str:
         
         Return ONLY the tag name. If it doesn't fit, return 'other'.
         """
-        response = model.generate_content(prompt)
-        tag = response.text.strip().lower()
+        try:
+            response = model.generate_content(prompt)
+            tag = response.text.strip().lower()
+            # Sleep to respect rate limits (15 RPM -> 4s)
+            time.sleep(4)
+        except Exception:
+            # Fallback to Pro if Flash fails
+            model = genai.GenerativeModel('gemini-1.5-pro')
+            response = model.generate_content(prompt)
+            tag = response.text.strip().lower()
+            # Sleep longer for Pro (2 RPM -> 30s)
+            time.sleep(30)
+
         valid_tags = ['movie', 'play', 'gaming', 'programming', 'trending', 'music']
         if tag in valid_tags:
             return tag
@@ -121,10 +133,12 @@ def ai_clean_title_year(title: str) -> Tuple[str, int | None]:
     if genai:
         try:
             genai.configure(api_key=os.getenv('GEMINI_API_KEY'))
-            model = genai.GenerativeModel('gemini-pro')
+            model = genai.GenerativeModel('gemini-1.5-flash')
             prompt = f"Extract real Arabic/English title and 4-digit year if present from: {title}. Return as JSON with keys title and year."
             resp = model.generate_content(prompt)
             txt = resp.text.strip()
+            # Sleep for rate limit
+            time.sleep(4)
             # extract json from text if needed (sometimes gemini adds backticks)
             if '```json' in txt:
                 txt = txt.split('```json')[1].split('```')[0]

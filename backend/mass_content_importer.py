@@ -126,8 +126,8 @@ def generate_seo_content(title, original_overview, content_type='movie'):
 
     try:
         # 1. Primary Model (Flash - Efficient & High Limit)
-        # Trying specific version tag which is often more stable
-        model = genai.GenerativeModel("gemini-flash-latest")
+        # Using gemini-1.5-flash for better performance and limits
+        model = genai.GenerativeModel("gemini-1.5-flash")
         response = model.generate_content(prompt)
         data = process_response(response)
         if data: return data
@@ -136,10 +136,16 @@ def generate_seo_content(title, original_overview, content_type='movie'):
         print(f"[Gemini] Primary model failed: {e}. Switching to Fallback...")
         try:
             # 2. Fallback Model (Standard Pro)
-            model = genai.GenerativeModel("gemini-pro-latest")
+            # Using gemini-1.5-pro or gemini-pro
+            model = genai.GenerativeModel("gemini-1.5-pro")
             response = model.generate_content(prompt)
             data = process_response(response)
-            if data: return data
+            if data: 
+                # If fallback is used (Pro model), we must respect the 2 RPM limit (30s delay)
+                # We sleep here to ensure we don't hit the limit in the next iteration immediately
+                print("⏳ Fallback model used. Sleeping 30s to respect rate limits...")
+                time.sleep(30)
+                return data
         except Exception as fallback_e:
             print(f"[Gemini] Fallback failed: {fallback_e}")
 
