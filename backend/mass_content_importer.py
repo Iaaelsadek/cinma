@@ -57,18 +57,36 @@ def build_embed_urls(tmdb_id: int, content_type: str = 'movie'):
     if content_type == 'movie':
         return {
             "vidsrc": f"https://vidsrc.to/embed/movie/{tmdb_id}",
-            "2embed": f"https://www.2embed.cc/embed/{tmdb_id}",
-            "autoembed": f"https://autoembed.to/movie/tmdb/{tmdb_id}",
+            "vidsrc_me": f"https://vidsrc.me/embed/{tmdb_id}",
             "embed_su": f"https://embed.su/embed/movie/{tmdb_id}",
-            "vidsrcme": f"https://vidsrc.me/embed/{tmdb_id}",
+            "vidsrc_pro": f"https://vidsrc.pro/embed/movie/{tmdb_id}",
+            "vidsrc_vip": f"https://vidsrc.vip/embed/movie/{tmdb_id}",
+            "vidsrc_xyz": f"https://vidsrc.xyz/embed/movie/{tmdb_id}",
+            "vidsrc_icu": f"https://vidsrc.icu/embed/movie/{tmdb_id}",
+            "autoembed": f"https://autoembed.to/movie/tmdb/{tmdb_id}",
+            "vidsrc_cc": f"https://vidsrc.cc/v2/embed/movie/{tmdb_id}",
+            "vidlink": f"https://vidlink.pro/movie/{tmdb_id}",
+            "superembed": f"https://superembed.stream/movie/{tmdb_id}",
+            "smashystream": f"https://embed.smashystream.com/playere.php?tmdb={tmdb_id}",
+            "multiembed": f"https://multiembed.mov/directstream.php?video_id={tmdb_id}&tmdb=1",
+            "2embed": f"https://www.2embed.cc/embed/{tmdb_id}",
         }
     elif content_type == 'tv':
         return {
             "vidsrc": f"https://vidsrc.to/embed/tv/{tmdb_id}",
-            "2embed": f"https://www.2embed.cc/embed/{tmdb_id}",
-            "autoembed": f"https://autoembed.to/tv/tmdb/{tmdb_id}",
+            "vidsrc_me": f"https://vidsrc.me/embed/{tmdb_id}",
             "embed_su": f"https://embed.su/embed/tv/{tmdb_id}",
-            "vidsrcme": f"https://vidsrc.me/embed/{tmdb_id}",
+            "vidsrc_pro": f"https://vidsrc.pro/embed/tv/{tmdb_id}",
+            "vidsrc_vip": f"https://vidsrc.vip/embed/tv/{tmdb_id}",
+            "vidsrc_xyz": f"https://vidsrc.xyz/embed/tv/{tmdb_id}",
+            "vidsrc_icu": f"https://vidsrc.icu/embed/tv/{tmdb_id}",
+            "autoembed": f"https://autoembed.to/tv/tmdb/{tmdb_id}",
+            "vidsrc_cc": f"https://vidsrc.cc/v2/embed/tv/{tmdb_id}",
+            "vidlink": f"https://vidlink.pro/tv/{tmdb_id}",
+            "superembed": f"https://superembed.stream/tv/{tmdb_id}",
+            "smashystream": f"https://embed.smashystream.com/playere.php?tmdb={tmdb_id}",
+            "multiembed": f"https://multiembed.mov/directstream.php?video_id={tmdb_id}&tmdb=1",
+            "2embed": f"https://www.2embed.cc/embed/{tmdb_id}",
         }
     return {}
 
@@ -107,8 +125,8 @@ def generate_seo_content(title, original_overview, content_type='movie'):
         return None
 
     try:
-        # 1. Primary Model
-        model = genai.GenerativeModel("gemini-3.1-pro")
+        # 1. Primary Model (Flash - Efficient & High Limit)
+        model = genai.GenerativeModel("gemini-1.5-flash")
         response = model.generate_content(prompt)
         data = process_response(response)
         if data: return data
@@ -118,8 +136,8 @@ def generate_seo_content(title, original_overview, content_type='movie'):
         if "ResourceExhausted" in error_str or "429" in error_str:
             print(f"[Gemini] Primary model exhausted. Switching to Fallback...")
             try:
-                # 2. Fallback Model
-                model = genai.GenerativeModel("gemini-1.5-flash")
+                # 2. Fallback Model (Pro)
+                model = genai.GenerativeModel("gemini-1.5-pro")
                 response = model.generate_content(prompt)
                 data = process_response(response)
                 if data: return data
