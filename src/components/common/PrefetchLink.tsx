@@ -1,5 +1,5 @@
 import { Link, type LinkProps } from 'react-router-dom'
-import { useCallback } from 'react'
+import React, { useCallback } from 'react'
 import { prefetchRoute } from '../../lib/prefetch'
 
 /** Link that prefetches route chunk on hover for instant navigation */
@@ -11,5 +11,5 @@ export const PrefetchLink = (props: LinkProps) => {
     },
     [props.to, props.onMouseEnter]
   )
-  return <Link {...props} onMouseEnter={handler} /> as JSX.Element
+  return <Link {...props} onMouseEnter={handler} /> as React.JSX.Element
 }

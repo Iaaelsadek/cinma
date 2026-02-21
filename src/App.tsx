@@ -1,11 +1,10 @@
 import { Route, Routes, useNavigate, Navigate, useParams } from 'react-router-dom'
-import { Suspense, lazy } from 'react'
+import React, { Suspense, lazy, useEffect, useState } from 'react'
 import { useAuth } from './hooks/useAuth'
 import { AdsManager } from './components/features/system/AdsManager'
 import { supabase } from './lib/supabase'
 import { MainLayout } from './components/layout/MainLayout'
 import { Toaster } from 'sonner'
-import { useEffect, useState } from 'react'
 import { getProfile } from './lib/supabase'
 import { useLang } from './state/useLang'
 import { setTmdbLanguage } from './lib/tmdb'
@@ -75,7 +74,7 @@ const MoviesManage = lazy(() => import('./pages/admin/MoviesManage').then(m => (
 
 import { SeriesRouteHandler } from './components/routing/SeriesRouteHandler'
 
-const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
+const ProtectedRoute = ({ children }: { children: React.JSX.Element }) => {
   const { user, loading } = useAuth()
   if (loading) return null
   if (!user) return <Navigate to="/login" replace />
@@ -84,7 +83,7 @@ const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
 
 const SetupAdmin = lazy(() => import('./pages/admin/SetupAdmin').then(m => ({ default: m.SetupAdmin })))
 
-const ProtectedAdmin = ({ children }: { children: JSX.Element }) => {
+const ProtectedAdmin = ({ children }: { children: React.JSX.Element }) => {
   const { user, loading } = useAuth()
   const [allowed, setAllowed] = useState<boolean | null>(null)
   useEffect(() => {
@@ -107,7 +106,7 @@ const ProtectedAdmin = ({ children }: { children: JSX.Element }) => {
   return children
 }
 
-const ProtectedSuperAdmin = ({ children }: { children: JSX.Element }) => {
+const ProtectedSuperAdmin = ({ children }: { children: React.JSX.Element }) => {
   const { user, loading } = useAuth()
   const [allowed, setAllowed] = useState<boolean | null>(null)
   useEffect(() => {
