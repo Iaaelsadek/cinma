@@ -48,7 +48,10 @@ def check_server(provider):
     try:
         # Some servers block HEAD, so we use GET with stream=True to just get headers
         # Timeout set to 5 seconds
-        response = requests.get(url, timeout=5, stream=True)
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        }
+        response = requests.get(url, headers=headers, timeout=5, stream=True)
         latency = int((time.time() - start_time) * 1000)
         
         # Consider 2xx and 3xx as online
