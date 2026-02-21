@@ -63,9 +63,17 @@ function isPrivateHost(hostname) {
 }
 
 function ensureAdminToken(req, res) {
-  if (!adminToken) return true;
+  // CRITICAL FIX: Fail if token is not set in environment
+  if (!adminToken || adminToken.trim() === '') {
+    console.error('[SECURITY] ADMIN_SYNC_TOKEN is missing. Rejecting request.');
+    res.status(500).json({ error: 'Server security misconfiguration' });
+    return false;
+  }
+  
   const token = String(req.headers['x-admin-token'] || '');
   if (token && token === adminToken) return true;
+  
+  console.warn(`[SECURITY] Invalid admin token attempt from ${req.ip}`);
   res.status(401).json({ error: 'unauthorized' });
   return false;
 }

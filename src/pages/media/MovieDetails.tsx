@@ -79,6 +79,33 @@ export const MovieDetails = () => {
     enabled: Number.isFinite(movieId)
   })
 
+  // SEO Schema
+  const schemaData = useMemo(() => {
+    if (!data) return null;
+    return {
+      "@context": "https://schema.org",
+      "@type": "Movie",
+      "name": data.title || data.name,
+      "image": data.backdrop_path ? `https://image.tmdb.org/t/p/w780${data.backdrop_path}` : undefined,
+      "description": data.overview,
+      "dateCreated": data.release_date,
+      "director": data.credits?.crew?.find(c => c.job === 'Director')?.name ? {
+        "@type": "Person",
+        "name": data.credits.crew.find(c => c.job === 'Director')?.name
+      } : undefined,
+      "actor": data.credits?.cast?.slice(0, 5).map(actor => ({
+        "@type": "Person",
+        "name": actor.name
+      })),
+      "aggregateRating": data.vote_average ? {
+        "@type": "AggregateRating",
+        "ratingValue": data.vote_average,
+        "bestRating": "10",
+        "ratingCount": data.vote_count
+      } : undefined
+    }
+  }, [data])
+
   const dualTitles = useDualTitles(data || {})
 
   useEffect(() => {
@@ -294,6 +321,13 @@ export const MovieDetails = () => {
 
   return (
     <div className="relative space-y-3">
+      {schemaData && (
+        <Helmet>
+          <script type="application/ld+json">
+            {JSON.stringify(schemaData)}
+          </script>
+        </Helmet>
+      )}
       <SeoHead
         title={`${title} | ${quality}`}
         description={aiSummary || overview || ''}

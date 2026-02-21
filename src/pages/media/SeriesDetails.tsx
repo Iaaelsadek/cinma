@@ -90,6 +90,30 @@ const SeriesDetails = ({ id: propId }: SeriesDetailsProps = {}) => {
     enabled: Number.isFinite(tvId)
   })
 
+  // SEO Schema
+  const schemaData = useMemo(() => {
+    if (!remote.data) return null;
+    const s = remote.data
+    return {
+      "@context": "https://schema.org",
+      "@type": "TVSeries",
+      "name": s.name,
+      "image": s.backdrop_path ? `https://image.tmdb.org/t/p/w780${s.backdrop_path}` : undefined,
+      "description": s.overview,
+      "startDate": s.first_air_date,
+      "actor": s.aggregate_credits?.cast?.slice(0, 5).map((actor: any) => ({
+        "@type": "Person",
+        "name": actor.name
+      })),
+      "aggregateRating": s.vote_average ? {
+        "@type": "AggregateRating",
+        "ratingValue": s.vote_average,
+        "bestRating": "10",
+        "ratingCount": s.vote_count
+      } : undefined
+    }
+  }, [remote.data])
+
   const dualTitles = useDualTitles(series.data || {})
 
   const seasons = useQuery({
@@ -243,6 +267,13 @@ const SeriesDetails = ({ id: propId }: SeriesDetailsProps = {}) => {
   }, [vote, remote.data, title, poster, backdrop, overview, cast, genres, id])
   return (
     <div className="relative space-y-3">
+      {schemaData && (
+        <Helmet>
+          <script type="application/ld+json">
+            {JSON.stringify(schemaData)}
+          </script>
+        </Helmet>
+      )}
       <SeoHead
         title={`${title} | ${t('مسلسل', 'Series')}`}
         description={overview || ''}
