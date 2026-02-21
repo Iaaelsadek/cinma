@@ -9,4 +9,8 @@ coverage
 __pycache__/
 .venv/
 scripts/__pycache__/
-kids_content_engine/
+# kids_content_engine/ # Unignored to track code
+kids_content_engine/temp/
+kids_content_engine/output/
+kids_content_engine/.env
+kids_content_engine/__pycache__/
