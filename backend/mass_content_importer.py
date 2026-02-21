@@ -126,25 +126,22 @@ def generate_seo_content(title, original_overview, content_type='movie'):
 
     try:
         # 1. Primary Model (Flash - Efficient & High Limit)
-        model = genai.GenerativeModel("gemini-1.5-flash")
+        # Trying specific version tag which is often more stable
+        model = genai.GenerativeModel("gemini-1.5-flash-001")
         response = model.generate_content(prompt)
         data = process_response(response)
         if data: return data
         
     except Exception as e:
-        error_str = str(e)
-        if "ResourceExhausted" in error_str or "429" in error_str:
-            print(f"[Gemini] Primary model exhausted. Switching to Fallback...")
-            try:
-                # 2. Fallback Model (Pro)
-                model = genai.GenerativeModel("gemini-1.5-pro")
-                response = model.generate_content(prompt)
-                data = process_response(response)
-                if data: return data
-            except Exception as fallback_e:
-                print(f"[Gemini] Fallback failed: {fallback_e}")
-        else:
-            print(f"[Gemini] Error: {e}")
+        print(f"[Gemini] Primary model failed: {e}. Switching to Fallback...")
+        try:
+            # 2. Fallback Model (Standard Pro)
+            model = genai.GenerativeModel("gemini-pro")
+            response = model.generate_content(prompt)
+            data = process_response(response)
+            if data: return data
+        except Exception as fallback_e:
+            print(f"[Gemini] Fallback failed: {fallback_e}")
 
     return {"arabic_title": title, "ai_summary": original_overview}
 
