@@ -12,6 +12,54 @@ if (API_KEY) {
 }
 
 /**
+ * Helper function to call Gemini API with Fallback Mechanism.
+ * Tries the primary model (gemini-3.1-pro), then falls back to gemini-1.5-flash if needed.
+ */
+const callGeminiWithFallback = async (prompt: string, contextLabel: string): Promise<string | null> => {
+  if (!genAI) return null;
+
+  try {
+    // 1. Primary Model (Latest Stable)
+    const model = genAI.getGenerativeModel({ model: "gemini-3.1-pro" });
+    const result = await model.generateContent(prompt);
+    const response = result.response;
+    return response.text().trim();
+  } catch (error: any) {
+    // 2. Exception Handling & Fallback
+    const errorStr = String(error);
+    const isResourceError = errorStr.includes("ResourceExhausted") || errorStr.includes("429") || errorStr.includes("Quota");
+
+    if (isResourceError) {
+      console.warn(`[Gemini] Primary model exhausted for ${contextLabel}. Switching to Fallback Model...`);
+      try {
+        // 3. Fallback Model (Efficient/Free Tier friendly)
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const result = await model.generateContent(prompt);
+        const response = result.response;
+        return response.text().trim();
+      } catch (fallbackError) {
+        errorLogger.logError({
+          message: `Gemini Fallback failed for ${contextLabel}`,
+          severity: 'low',
+          category: 'api',
+          context: { error: fallbackError, prompt }
+        });
+        return null;
+      }
+    } else {
+      // 4. Catch unexpected errors
+      errorLogger.logError({
+        message: `Gemini Primary failed for ${contextLabel}`,
+        severity: 'low',
+        category: 'api',
+        context: { error, prompt }
+      });
+      return null;
+    }
+  }
+};
+
+/**
  * Uses Gemini to correct spelling, fix keyboard layout issues, and extract search intent.
  * @param query The raw search query from the user.
  * @returns The cleaned and corrected search term.
@@ -19,9 +67,7 @@ if (API_KEY) {
 export const correctSearchTerm = async (query: string): Promise<string> => {
   if (!genAI || !query || query.trim().length < 3) return query;
 
-  try {
-    const model = genAI.getGenerativeModel({ model: "gemini-3.1-pro" });
-    const prompt = `
+  const prompt = `
     You are a search query corrector for an Arabic/English movie database.
     Input: "${query}"
     
@@ -32,26 +78,15 @@ export const correctSearchTerm = async (query: string): Promise<string> => {
     4. If the input is already correct or simple, return it as is.
     5. Return ONLY the corrected search term string. Do not add quotes or explanations.
     `;
-    
-    const result = await model.generateContent(prompt);
-    const response = result.response;
-    const text = response.text().trim();
-    
-    // Safety check: if response is too long or empty, fallback to original
-    if (text.length > 50 || text.length === 0 || text.includes('\n')) {
-      return query;
-    }
-    
-    return text;
-  } catch (error) {
-    errorLogger.logError({
-      message: "Gemini search correction failed",
-      severity: 'low',
-      category: 'api',
-      context: { error, query }
-    });
+
+  const text = await callGeminiWithFallback(prompt, "search-correction");
+  
+  // Safety check: if response is too long or empty, fallback to original
+  if (!text || text.length > 50 || text.length === 0 || text.includes('\n')) {
     return query;
   }
+  
+  return text;
 };
 
 /**
@@ -63,9 +98,7 @@ export const correctSearchTerm = async (query: string): Promise<string> => {
 export const generateArabicSummary = async (title: string, originalOverview?: string): Promise<string> => {
   if (!genAI || !title) return originalOverview || "لا يوجد وصف متاح";
 
-  try {
-    const model = genAI.getGenerativeModel({ model: "gemini-3.1-pro" });
-    const prompt = `
+  const prompt = `
     Summarize the plot of the movie/show "${title}" in Arabic.
     Context: ${originalOverview || "No overview provided, use general knowledge about this title."}
     
@@ -77,21 +110,10 @@ export const generateArabicSummary = async (title: string, originalOverview?: st
     5. Return ONLY the Arabic summary text.
     `;
     
-    const result = await model.generateContent(prompt);
-    const response = result.response;
-    const text = response.text().trim();
-    
-    if (text.length === 0) return originalOverview || "";
-    return text;
-  } catch (error) {
-    errorLogger.logError({
-      message: "Gemini summary generation failed",
-      severity: 'low',
-      category: 'api',
-      context: { error, title }
-    });
-    return originalOverview || "";
-  }
+  const text = await callGeminiWithFallback(prompt, "arabic-summary");
+  
+  if (!text || text.length === 0) return originalOverview || "";
+  return text;
 };
 
 /**
