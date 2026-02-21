@@ -54,26 +54,42 @@ def generate_sitemap():
 
     # Fetch Movies
     try:
-        movies = supabase.table("movies").select("id, created_at").eq("is_active", True).execute()
+        movies = supabase.table("movies").select("id, title, created_at").eq("is_active", True).execute()
         for m in movies.data:
+            # Add Watch Page
             urls.append({
                 "loc": f"{BASE_URL}/watch/movie/{m['id']}",
                 "lastmod": m.get('created_at', datetime.now().isoformat())[:10],
                 "changefreq": "weekly",
                 "priority": "0.9"
             })
+            # Add Details Page (Optional, but good for structure)
+            urls.append({
+                "loc": f"{BASE_URL}/movie/{m['id']}",
+                "lastmod": m.get('created_at', datetime.now().isoformat())[:10],
+                "changefreq": "weekly",
+                "priority": "0.8"
+            })
     except Exception as e:
         print(f"Error fetching movies: {e}")
 
     # Fetch TV Series
     try:
-        series = supabase.table("tv_series").select("id, created_at").eq("is_active", True).execute()
+        series = supabase.table("tv_series").select("id, name, created_at").eq("is_active", True).execute()
         for s in series.data:
+            # Add Watch Page
             urls.append({
                 "loc": f"{BASE_URL}/watch/tv/{s['id']}",
                 "lastmod": s.get('created_at', datetime.now().isoformat())[:10],
                 "changefreq": "weekly",
                 "priority": "0.9"
+            })
+            # Add Details Page
+            urls.append({
+                "loc": f"{BASE_URL}/series/{s['id']}",
+                "lastmod": s.get('created_at', datetime.now().isoformat())[:10],
+                "changefreq": "weekly",
+                "priority": "0.8"
             })
     except Exception as e:
         print(f"Error fetching series: {e}")
