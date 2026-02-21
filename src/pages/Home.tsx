@@ -478,41 +478,40 @@ export const Home = () => {
           )}
         </section>
 
-        {/* Section: Korean & Chinese Series (K-Drama & C-Drama) */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <section>
-            {koreanSeries.isLoading ? (
-              <>
-                <SectionHeader title={lang === 'ar' ? 'الدراما الكورية' : 'K-Drama'} icon={<Film />} link="/k-drama" />
-                <SkeletonGrid count={3} variant="poster" />
-              </>
-            ) : (
-              <QuantumTrain 
-                items={translatedKorean.data || koreanSeries.data?.results || []} 
-                title={lang === 'ar' ? 'الدراما الكورية' : 'K-Drama'} 
-                icon={<Film />} 
-                link="/k-drama" 
-                color="pink"
-              />
-            )}
-          </section>
-          <section>
-             {chineseSeries.isLoading ? (
-              <>
-                <SectionHeader title={lang === 'ar' ? 'مسلسلات صينية قصيرة' : 'Chinese Shorts'} icon={<Tv />} link="/chinese" />
-                <SkeletonGrid count={3} variant="poster" />
-              </>
-            ) : (
-              <QuantumTrain 
-                items={translatedChinese.data || chineseSeries.data?.results || []} 
-                title={lang === 'ar' ? 'مسلسلات صينية قصيرة' : 'Chinese Shorts'} 
-                icon={<Tv />} 
-                link="/chinese" 
-                color="red"
-              />
-            )}
-          </section>
-        </div>
+        {/* Section: Korean & Chinese Series (K-Drama & C-Drama) - Stacked for better UX */}
+        <section>
+          {koreanSeries.isLoading ? (
+            <>
+              <SectionHeader title={lang === 'ar' ? 'الدراما الكورية' : 'K-Drama'} icon={<Film />} link="/k-drama" />
+              <SkeletonGrid count={6} variant="poster" />
+            </>
+          ) : (
+            <QuantumTrain 
+              items={translatedKorean.data || koreanSeries.data?.results || []} 
+              title={lang === 'ar' ? 'الدراما الكورية' : 'K-Drama'} 
+              icon={<Film />} 
+              link="/k-drama" 
+              color="pink"
+            />
+          )}
+        </section>
+
+        <section>
+           {chineseSeries.isLoading ? (
+            <>
+              <SectionHeader title={lang === 'ar' ? 'مسلسلات صينية قصيرة' : 'Chinese Short Series'} icon={<Tv />} link="/c-drama" />
+              <SkeletonGrid count={6} variant="poster" />
+            </>
+           ) : (
+            <QuantumTrain 
+              items={translatedChinese.data || chineseSeries.data?.results || []} 
+              title={lang === 'ar' ? 'مسلسلات صينية قصيرة' : 'Chinese Short Series'} 
+              icon={<Tv />} 
+              link="/c-drama" 
+              color="cyan"
+            />
+           )}
+        </section>
 
         {/* Section: Turkish Drama */}
         <section>

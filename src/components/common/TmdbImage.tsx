@@ -67,12 +67,14 @@ export const TmdbImage = ({
         srcSet={srcSet}
         sizes={sizes}
         alt={alt}
+        draggable={false}
         loading={priority ? 'eager' : 'lazy'}
         decoding={priority ? 'sync' : 'async'}
         fetchpriority={priority ? 'high' : 'low'}
-        className={`h-full w-full object-cover transition-all duration-500 ${status === 'loaded' ? 'opacity-100' : 'opacity-0'} ${imgClassName}`}
+        className={`h-full w-full object-cover transition-all duration-500 select-none ${status === 'loaded' ? 'opacity-100' : 'opacity-0'} ${imgClassName}`}
         onLoad={() => setStatus('loaded')}
         onError={() => setStatus('error')}
+        onDragStart={(e) => e.preventDefault()} 
       />
 
       {status === 'error' && (
