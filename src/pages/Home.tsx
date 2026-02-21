@@ -110,7 +110,7 @@ export const Home = () => {
                  item = { ...item, ...enRes.data }
                }
              } catch (e) {
-               console.warn(`Failed to fetch English fallback for ${item.id}`)
+               // console.warn(`Failed to fetch English fallback for ${item.id}`)
              }
           }
 

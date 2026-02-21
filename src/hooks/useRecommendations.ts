@@ -131,7 +131,7 @@ export function useRecommendations() {
             recommendations.push(...(castMovies.results?.map((m: any) => ({ ...m, media_type: 'movie' })) || []))
         }
       } catch (e) {
-        console.error('Error fetching movie recommendations', e)
+        // console.error('Error fetching movie recommendations', e)
       }
 
       // Fetch for top genre (TV)
