@@ -156,10 +156,13 @@ def fetch_tmdb_movies(pages=5, list_type="popular"):
                 tmdb_id = movie["id"]
                 
                 # 1. Check existence first to save quotas
-                existing = supabase.table("movies").select("id").eq("id", tmdb_id).maybe_single().execute()
-                if existing.data:
-                    print(f"⏩ Skipping {movie.get('title')} (Already exists)")
-                    continue
+                try:
+                    existing = supabase.table("movies").select("id").eq("id", tmdb_id).maybe_single().execute()
+                    if existing and existing.data:
+                        print(f"⏩ Skipping {movie.get('title')} (Already exists)")
+                        continue
+                except Exception as e:
+                    print(f"⚠️ Supabase check failed for {tmdb_id}: {e}")
 
                 # Fetch Details for Rating & Release Dates
                 detail_url = f"https://api.themoviedb.org/3/movie/{tmdb_id}"
@@ -231,10 +234,16 @@ def fetch_tmdb_series(pages=5, list_type="popular"):
                 tmdb_id = series["id"]
                 
                 # 1. Check existence first
-                existing = supabase.table("tv_series").select("id").eq("id", tmdb_id).maybe_single().execute()
-                if existing.data:
-                    print(f"⏩ Skipping {series.get('name')} (Already exists)")
-                    continue
+                try:
+                    existing = supabase.table("tv_series").select("id").eq("id", tmdb_id).maybe_single().execute()
+                    if existing and existing.data:
+                        print(f"⏩ Skipping {series.get('name')} (Already exists)")
+                        continue
+                except Exception as e:
+                    print(f"⚠️ Supabase check failed for {tmdb_id}: {e}")
+                    # Continue to try upsert even if check failed, or skip? 
+                    # Safer to skip to avoid duplicates if check failed, but maybe we should try to upsert.
+                    # Let's try to upsert.
 
                 # Fetch Details
                 detail_url = f"https://api.themoviedb.org/3/tv/{tmdb_id}"
