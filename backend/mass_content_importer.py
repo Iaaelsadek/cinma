@@ -203,7 +203,7 @@ def fetch_tmdb_movies(pages=5, list_type="popular"):
                 except Exception as e:
                     print(f"❌ Failed to upsert movie {tmdb_id}: {e}")
                 
-                time.sleep(2) # Strict 2s sleep to be safe with Free Tier APIs
+                time.sleep(4) # Sleep 4s to respect Gemini Free Tier 15 RPM limit
 
         except Exception as e:
             print(f"Error on page {page}: {e}")
