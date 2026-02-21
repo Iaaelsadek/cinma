@@ -356,3 +356,12 @@ if __name__ == "__main__":
         fetch_tmdb_series(pages=args.pages, list_type="top_rated")
     
     print(f"🎉 Import Session Completed. Processed: {PROCESSED_COUNT} items.")
+
+    # Generate Sitemap
+    try:
+        print("🗺️ Generating Sitemap...")
+        import sitemap_generator
+        sitemap_generator.generate_sitemap()
+        print("✅ Sitemap Updated Successfully.")
+    except Exception as e:
+        print(f"⚠️ Sitemap Generation Failed: {e}")
