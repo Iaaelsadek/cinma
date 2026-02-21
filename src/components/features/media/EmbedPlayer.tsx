@@ -20,13 +20,16 @@ export const EmbedPlayer = ({ server, cinemaMode, toggleCinemaMode, loading, onN
     )
   }
 
+  const isOffline = server?.status === 'offline'
+  const isDegraded = server?.status === 'degraded'
+
   return (
     <div className="space-y-2">
       {/* Header: Secure Stream & Controls */}
       <div className="flex justify-between items-center px-1">
-        <div className="flex items-center gap-2 text-xs font-bold text-emerald-400">
+        <div className={`flex items-center gap-2 text-xs font-bold ${isOffline ? 'text-red-500' : isDegraded ? 'text-yellow-500' : 'text-emerald-400'}`}>
           <Signal size={12} />
-          <span>Secure Stream</span>
+          <span>{isOffline ? 'Server Offline' : isDegraded ? 'Degraded Performance' : 'Secure Stream • Online'}</span>
         </div>
         
         <div className="flex items-center gap-2">
