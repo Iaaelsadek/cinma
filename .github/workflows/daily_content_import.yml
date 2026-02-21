@@ -2,9 +2,18 @@ name: Daily Mass Content Import
 
 on:
   schedule:
-    # Run at 00:00 UTC every day (Once a day)
-    - cron: '0 0 * * *'
+    # Run every 6 hours (4 times a day: 00:00, 06:00, 12:00, 18:00 UTC)
+    - cron: '0 */6 * * *'
   workflow_dispatch: # Allow manual trigger
+    inputs:
+      limit:
+        description: 'Number of items to import'
+        required: false
+        default: '50'
+      pages:
+        description: 'Number of pages to scan'
+        required: false
+        default: '5'
 
 jobs:
   import-content:
