@@ -91,7 +91,7 @@ class ErrorLoggingService {
         }
       }
     } catch (e) {
-      console.warn('Failed to load error queue', e);
+      // console.warn('Failed to load error queue', e);
     }
   }
 
@@ -358,7 +358,7 @@ let instance: ErrorLoggingService;
 try {
   instance = new ErrorLoggingService();
 } catch (error) {
-  console.error('Failed to initialize ErrorLoggingService:', error);
+  // console.error('Failed to initialize ErrorLoggingService:', error);
   // Fallback dummy service to prevent app crash
   instance = {
     logError: () => {},
