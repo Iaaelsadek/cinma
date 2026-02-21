@@ -1,0 +1,12 @@
+g4f
+edge-tts
+moviepy
+requests
+pillow
+python-dotenv
+arabic-reshaper
+python-bidi
+numpy
+aiohttp
+curl_cffi
+google-generativeai
