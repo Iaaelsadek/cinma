@@ -2,7 +2,7 @@ import { motion } from 'framer-motion'
 import { Play, Info, Plus, Check } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useLang } from '../../../state/useLang'
-import { useEffect, useState, type MouseEvent } from 'react'
+import { useEffect, useState, type MouseEvent, memo } from 'react'
 import { useAuth } from '../../../hooks/useAuth'
 import { addToWatchlist, isInWatchlist, removeFromWatchlist } from '../../../lib/supabase'
 
@@ -36,9 +36,10 @@ function formatViews(views: number): string {
   return views.toString()
 }
 
-export const VideoCard = ({ video, index = 0 }: { video: VideoItem; index?: number }) => {
+export const VideoCard = memo(({ video, index = 0 }: { video: VideoItem; index?: number }) => {
   const { lang } = useLang()
   const titles = useDualTitles(video)
+  const displayTitle = lang === 'ar' ? (titles.sub || titles.main) : titles.main
   const [isHovered, setIsHovered] = useState(false)
   const [inList, setInList] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -104,127 +105,90 @@ export const VideoCard = ({ video, index = 0 }: { video: VideoItem; index?: numb
         await addToWatchlist(user.id, contentId, contentType)
         setInList(true)
       }
+    } catch (error) {
+      console.error('Watchlist toggle error:', error)
     } finally {
       setBusy(false)
     }
   }
 
   return (
-    <motion.div
+    <motion.div 
       initial={{ opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.5, delay: index * 0.05 }}
-      className="relative z-0"
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.05 }}
+      className="relative group cursor-pointer"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      onClick={() => navigate(`/watch/${video.category === 'series' ? 'tv' : 'movie'}/${video.id}`)}
     >
-      <div 
-        onClick={(e) => {
-          // Allow default behavior for buttons/interactive elements
-          if ((e.target as HTMLElement).closest('button')) return
-          navigate(`/watch/yt/${video.id}`)
-        }}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
-        className="group/card block relative cursor-pointer"
-        role="link"
-        tabIndex={0}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            navigate(`/watch/yt/${video.id}`)
-          }
-        }}
-      >
-        <div className="relative overflow-hidden rounded-xl bg-luxury-charcoal border border-white/5 transition-all duration-500 transform-gpu glass-smooth hover:scale-[1.05] hover:shadow-glass hover:border-primary/50">
-          {/* Thumbnail Container */}
-          <div className="aspect-video w-full relative overflow-hidden bg-zinc-900">
-            {imageSrc ? (
-              <img 
-                src={imageSrc} 
-                onError={handleImageError}
-                alt={video.title} 
-                className={`h-full w-full object-cover transition-transform duration-700 ${isHovered ? 'scale-110 blur-[2px]' : 'scale-100'}`}
-                loading="lazy" 
-              />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center text-zinc-600">
-                <Play size={32} />
-              </div>
-            )}
-
-            {/* Quality Tag */}
-            {video.quality && (
-              <div className="absolute top-2 left-2 z-10 rounded-md bg-black/60 backdrop-blur-md border border-white/10 px-1.5 py-0.5 text-[10px] font-bold text-white uppercase tracking-wider">
-                {video.quality}
-              </div>
-            )}
-
-            {/* Duration Tag */}
-            {duration && (
-              <div className="absolute bottom-2 right-2 z-10 rounded bg-black/80 backdrop-blur-md px-1.5 py-0.5 text-[10px] font-bold text-white">
-                {duration}
-              </div>
-            )}
-
-            {/* Hover Overlay Content */}
-            <div className={`absolute inset-0 z-20 flex flex-col justify-end p-4 bg-gradient-to-t from-luxury-obsidian via-luxury-obsidian/40 to-transparent transition-opacity duration-300 ${isHovered ? 'opacity-100' : 'opacity-0'}`}>
-              <div className="flex items-center gap-2 mb-3">
-                <motion.button 
-                  initial={{ scale: 0 }}
-                  animate={{ scale: isHovered ? 1 : 0 }}
-                  className="rounded-full bg-primary text-white shadow-[0_0_15px_rgba(225,29,72,0.5)] h-8 w-8 flex items-center justify-center"
-                  type="button"
-                  onClick={() => navigate(`/watch/yt/${video.id}`)}
-                  aria-label="watch"
-                >
-                  <Play size={12} fill="currentColor" />
-                </motion.button>
-                <div className="flex gap-1">
-                  <button
-                    className="rounded-full bg-white/10 hover:bg-white/20 transition-colors border border-white/10 backdrop-blur-md h-8 w-8 flex items-center justify-center"
-                    onClick={toggleList}
-                    disabled={busy || !canToggle}
-                    type="button"
-                    aria-label="my-list"
-                  >
-                    {inList ? <Check size={10} className="text-white" /> : <Plus size={10} className="text-white" />}
-                  </button>
-                  <button className="rounded-full bg-white/10 hover:bg-white/20 transition-colors border border-white/10 backdrop-blur-md h-8 w-8 flex items-center justify-center">
-                    <Info size={10} className="text-white" />
-                  </button>
-                </div>
-              </div>
-              <p className="text-[11px] text-zinc-300 line-clamp-2 leading-relaxed">
-                {video.description || video.title}
-              </p>
-            </div>
+      <div className="aspect-video rounded-xl overflow-hidden bg-zinc-900 border border-white/5 relative">
+        {imageSrc ? (
+          <img 
+            src={imageSrc}
+            alt={displayTitle}
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+            onError={handleImageError}
+            loading="lazy"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-zinc-800">
+            <Play className="text-zinc-600" />
           </div>
-
-          {/* Static Info (Visible when not hovered or small screens) */}
-          <div className="p-3">
-            <div className="flex flex-col items-end">
-              <h3 className="line-clamp-1 text-xs font-bold text-zinc-100 group-hover/card:text-primary transition-colors text-right w-full">
-                {titles.main}
-              </h3>
-              {titles.sub && (
-                <p className="line-clamp-1 text-xs text-lumen-gold/80 font-arabic mt-0.5 text-right w-full">
-                  {titles.sub}
-                </p>
-              )}
-            </div>
-            <div className="mt-1 flex items-center justify-between text-[9px] font-medium uppercase tracking-wider text-zinc-500 w-full">
-              <span className="flex items-center gap-1.5">
-                <span className="h-1 w-1 rounded-full bg-primary" />
-                {video.category || (lang === 'ar' ? 'فيديو' : 'Video')}
-              </span>
-              {video.views ? (
-                <span className="flex items-center gap-1">
-                  {formatViews(video.views)} {lang === 'ar' ? 'مشاهدة' : 'views'}
-                </span>
-              ) : null}
-            </div>
+        )}
+        
+        {/* Overlay */}
+        <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors" />
+        
+        {/* Play Button */}
+        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="w-12 h-12 rounded-full bg-cyan-500/90 flex items-center justify-center backdrop-blur-sm shadow-lg shadow-cyan-500/20 transform scale-50 group-hover:scale-100 transition-transform">
+            <Play fill="white" className="text-white ml-1" size={20} />
           </div>
+        </div>
+
+        {/* Duration Badge */}
+        {duration && (
+          <div className="absolute bottom-2 right-2 px-1.5 py-0.5 rounded bg-black/80 text-[10px] font-medium text-white backdrop-blur-sm">
+            {duration}
+          </div>
+        )}
+
+        {/* Quality Badge */}
+        {video.quality && (
+          <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-cyan-500/80 text-[10px] font-bold text-white backdrop-blur-sm">
+            {video.quality}
+          </div>
+        )}
+      </div>
+
+      <div className="mt-3 space-y-1">
+        <h3 className="font-bold text-sm text-zinc-100 line-clamp-2 group-hover:text-cyan-400 transition-colors leading-snug">
+          {displayTitle}
+        </h3>
+        
+        <div className="flex items-center justify-between text-xs text-zinc-500">
+          <div className="flex items-center gap-2">
+            {video.year && <span>{video.year}</span>}
+            {video.views && (
+              <>
+                <span className="w-1 h-1 rounded-full bg-zinc-700" />
+                <span>{formatViews(video.views)}</span>
+              </>
+            )}
+          </div>
+          
+          <button 
+            onClick={toggleList}
+            disabled={busy || !canToggle}
+            className={`p-1.5 rounded-full hover:bg-white/10 transition-colors ${inList ? 'text-cyan-400' : 'text-zinc-500'}`}
+          >
+            {inList ? <Check size={14} /> : <Plus size={14} />}
+          </button>
         </div>
       </div>
     </motion.div>
   )
-}
+}, (prev, next) => {
+  return prev.video.id === next.video.id && prev.index === next.index
+})

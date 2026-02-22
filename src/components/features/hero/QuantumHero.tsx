@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, memo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Play, Volume2, VolumeX, Star, Calendar, Film } from 'lucide-react'
@@ -40,7 +40,7 @@ const getLocalizedOrigin = (origin: string, lang: string) => {
  * - Diverse Content (Movies/Series from various regions)
  * - Auto-play Trailers on Active/Hover (Optional, simplified for marquee)
  */
-export const QuantumHero = ({ items, type }: { items: any[], type?: string }) => {
+export const QuantumHero = memo(({ items, type }: { items: any[], type?: string }) => {
   const navigate = useNavigate()
   const { lang } = useLang()
   const [activeId, setActiveId] = useState<number | null>(null)
@@ -52,6 +52,7 @@ export const QuantumHero = ({ items, type }: { items: any[], type?: string }) =>
 
   useEffect(() => {
     if (!heroItems.length) return
+    let mounted = true
 
     const fetchTrailers = async () => {
       const newTrailers: Record<number, string> = {}
@@ -73,10 +74,13 @@ export const QuantumHero = ({ items, type }: { items: any[], type?: string }) =>
         }
       }))
       
-      setTrailers(newTrailers)
+      if (mounted) {
+        setTrailers(newTrailers)
+      }
     }
 
     fetchTrailers()
+    return () => { mounted = false }
   }, [heroItems.map(i => i.id).join(',')])
 
   if (!heroItems.length) return null
@@ -233,4 +237,11 @@ export const QuantumHero = ({ items, type }: { items: any[], type?: string }) =>
       </Swiper>
     </div>
   )
-}
+}, (prev, next) => {
+  // Deep comparison for items array length and first item ID
+  if (prev.items.length !== next.items.length) return false
+  if (prev.items.length > 0 && next.items.length > 0) {
+    if (prev.items[0].id !== next.items[0].id) return false
+  }
+  return true
+})
