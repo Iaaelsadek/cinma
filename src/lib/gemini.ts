@@ -19,8 +19,8 @@ const callGeminiWithFallback = async (prompt: string, contextLabel: string): Pro
   if (!genAI) return null;
 
   try {
-    // 1. Primary Model (Latest Stable)
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+    // 1. Primary Model (Latest Stable - Free Tier Friendly)
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     const result = await model.generateContent(prompt);
     const response = result.response;
     return response.text().trim();
@@ -141,7 +141,7 @@ export const translateTitleToArabic = async (title: string): Promise<string> => 
   // 2. Try Gemini if configured
   if (genAI) {
     try {
-      const model = genAI.getGenerativeModel({ model: "gemini-3.1-pro" });
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
       const prompt = `
       You are an expert translator for movie and TV show titles for an Arab audience.
       Task: Translate "${title}" to Arabic.
@@ -173,16 +173,28 @@ export const translateTitleToArabic = async (title: string): Promise<string> => 
 
   // 3. Fallback: MyMemory Translation API (Free, generally CORS-friendly)
   // Only use if Gemini failed or wasn't available AND we haven't found a translation yet (or it's same as original)
-  if (finalTranslation === title) {
+  // Added Circuit Breaker for 429 errors
+  const backoffKey = 'mymemory_backoff_until';
+  const backoffUntil = localStorage.getItem(backoffKey);
+  const isBackedOff = backoffUntil && Date.now() < parseInt(backoffUntil);
+
+  if (finalTranslation === title && !isBackedOff) {
     try {
       const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(title)}&langpair=en|ar`);
-      const data = await res.json();
-      if (data.responseData && data.responseData.translatedText) {
-          // Filter out errors or non-translation responses
-          const translated = data.responseData.translatedText;
-          if (!translated.includes('MYMEMORY') && !translated.includes('QUERY LENGTH LIMIT')) {
-              finalTranslation = translated;
-          }
+      
+      if (res.status === 429) {
+        // Rate limit hit: Back off for 1 hour to prevent console spam
+        console.warn('[Translation] MyMemory rate limit reached. Pausing requests for 1 hour.');
+        localStorage.setItem(backoffKey, (Date.now() + 3600000).toString());
+      } else {
+        const data = await res.json();
+        if (data.responseData && data.responseData.translatedText) {
+            // Filter out errors or non-translation responses
+            const translated = data.responseData.translatedText;
+            if (!translated.includes('MYMEMORY') && !translated.includes('QUERY LENGTH LIMIT')) {
+                finalTranslation = translated;
+            }
+        }
       }
     } catch (e) {
       errorLogger.logError({
