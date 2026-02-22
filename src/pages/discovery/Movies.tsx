@@ -118,6 +118,62 @@ export const MoviesPage = () => {
     return data.results.map((item: any) => ({ ...item, media_type: 'movie' }))
   }})
 
+  const warner = useQuery({ queryKey: ['movies-warner'], queryFn: async () => {
+    const { data } = await tmdb.get('/discover/movie', {
+      params: { with_companies: 174, sort_by: 'popularity.desc' }
+    })
+    return data.results.map((item: any) => ({ ...item, media_type: 'movie' }))
+  }})
+
+  const universal = useQuery({ queryKey: ['movies-universal'], queryFn: async () => {
+    const { data } = await tmdb.get('/discover/movie', {
+      params: { with_companies: 33, sort_by: 'popularity.desc' }
+    })
+    return data.results.map((item: any) => ({ ...item, media_type: 'movie' }))
+  }})
+
+  const sony = useQuery({ queryKey: ['movies-sony'], queryFn: async () => {
+    const { data } = await tmdb.get('/discover/movie', {
+      params: { with_companies: 5, sort_by: 'popularity.desc' }
+    })
+    return data.results.map((item: any) => ({ ...item, media_type: 'movie' }))
+  }})
+
+  const ghibli = useQuery({ queryKey: ['movies-ghibli'], queryFn: async () => {
+    const { data } = await tmdb.get('/discover/movie', {
+      params: { with_companies: 10342, sort_by: 'popularity.desc' }
+    })
+    return data.results.map((item: any) => ({ ...item, media_type: 'movie' }))
+  }})
+
+  const paramount = useQuery({ queryKey: ['movies-paramount'], queryFn: async () => {
+    const { data } = await tmdb.get('/discover/movie', {
+      params: { with_companies: 4, sort_by: 'popularity.desc' }
+    })
+    return data.results.map((item: any) => ({ ...item, media_type: 'movie' }))
+  }})
+
+  const lionsgate = useQuery({ queryKey: ['movies-lionsgate'], queryFn: async () => {
+    const { data } = await tmdb.get('/discover/movie', {
+      params: { with_companies: 35, sort_by: 'popularity.desc' }
+    })
+    return data.results.map((item: any) => ({ ...item, media_type: 'movie' }))
+  }})
+
+  const twentiethCentury = useQuery({ queryKey: ['movies-20th'], queryFn: async () => {
+    const { data } = await tmdb.get('/discover/movie', {
+      params: { with_companies: 25, sort_by: 'popularity.desc' }
+    })
+    return data.results.map((item: any) => ({ ...item, media_type: 'movie' }))
+  }})
+
+  const dreamworks = useQuery({ queryKey: ['movies-dreamworks'], queryFn: async () => {
+    const { data } = await tmdb.get('/discover/movie', {
+      params: { with_companies: 521, sort_by: 'popularity.desc' }
+    })
+    return data.results.map((item: any) => ({ ...item, media_type: 'movie' }))
+  }})
+
   const heroItems = trending.data?.slice(0, 10) || []
 
   return (
@@ -198,91 +254,85 @@ export const MoviesPage = () => {
         <QuantumTrain 
           items={disney.data || []} 
           title={lang === 'ar' ? 'ديزني' : 'Disney'} 
-          link="/search?types=movie&genres=16"
+          link="/search?types=movie&keywords=disney"
+          color="blue"
         />
 
         <QuantumTrain 
           items={pixar.data || []} 
           title={lang === 'ar' ? 'بيكسار' : 'Pixar'} 
-          link="/search?types=movie&genres=16"
+          link="/search?types=movie&keywords=pixar"
+          color="cyan"
         />
 
         <QuantumTrain 
-          items={animation.data || []} 
-          title={lang === 'ar' ? 'رسوم متحركة' : 'Animation'} 
-          link="/movies/genre/16"
+          items={warner.data || []} 
+          title={lang === 'ar' ? 'وارنر بروس' : 'Warner Bros'} 
+          link="/search?types=movie&keywords=warner"
+          color="gold"
         />
 
         <QuantumTrain 
-          items={comedy.data || []} 
-          title={lang === 'ar' ? 'كوميديا' : 'Comedy'} 
-          link="/movies/genre/35"
+          items={universal.data || []} 
+          title={lang === 'ar' ? 'يونيفرسال' : 'Universal Pictures'} 
+          link="/search?types=movie&keywords=universal"
+          color="indigo"
         />
 
         <QuantumTrain 
-          items={horror.data || []} 
-          title={lang === 'ar' ? 'رعب' : 'Horror'} 
-          link="/movies/genre/27"
+          items={sony.data || []} 
+          title={lang === 'ar' ? 'سوني بيكتشرز' : 'Sony Pictures'} 
+          link="/search?types=movie&keywords=sony"
+          color="red"
         />
 
         <QuantumTrain 
-          items={thriller.data || []} 
-          title={lang === 'ar' ? 'إثارة' : 'Thriller'} 
-          link="/movies/genre/53"
+          items={ghibli.data || []} 
+          title={lang === 'ar' ? 'استوديو غيبلي' : 'Studio Ghibli'} 
+          link="/search?types=movie&keywords=ghibli"
+          color="green"
         />
 
         <QuantumTrain 
-          items={drama.data || []} 
-          title={lang === 'ar' ? 'دراما' : 'Drama'} 
-          link="/movies/genre/18"
+          items={paramount.data || []} 
+          title={lang === 'ar' ? 'باراماونت' : 'Paramount Pictures'} 
+          link="/search?types=movie&keywords=paramount"
+          color="blue"
         />
 
         <QuantumTrain 
-          items={crime.data || []} 
-          title={lang === 'ar' ? 'جريمة' : 'Crime'} 
-          link="/movies/genre/80"
+          items={lionsgate.data || []} 
+          title={lang === 'ar' ? 'ليونزغيت' : 'Lionsgate'} 
+          link="/search?types=movie&keywords=lionsgate"
+          color="gold"
         />
 
         <QuantumTrain 
-          items={romance.data || []} 
-          title={lang === 'ar' ? 'رومانسي' : 'Romance'} 
-          link="/movies/genre/10749"
+          items={twentiethCentury.data || []} 
+          title={lang === 'ar' ? 'استوديوهات القرن العشرين' : '20th Century Studios'} 
+          link="/search?types=movie&keywords=20th"
+          color="red"
         />
 
         <QuantumTrain 
-          items={family.data || []} 
-          title={lang === 'ar' ? 'عائلي وأطفال' : 'Family & Kids'} 
-          link="/movies/genre/10751"
-        />
-
-        <QuantumTrain 
-          items={documentary.data || []} 
-          title={lang === 'ar' ? 'وثائقي' : 'Documentary'} 
-          link="/movies/genre/99"
-        />
-
-        <QuantumTrain 
-          items={history.data || []} 
-          title={lang === 'ar' ? 'تاريخي' : 'History'} 
-          link="/movies/genre/36"
-        />
-
-        <QuantumTrain 
-          items={war.data || []} 
-          title={lang === 'ar' ? 'حروب' : 'War'} 
-          link="/movies/genre/10752"
+          items={dreamworks.data || []} 
+          title={lang === 'ar' ? 'دريم ووركس أنيميشن' : 'DreamWorks Animation'} 
+          link="/search?types=movie&keywords=dreamworks"
+          color="blue"
         />
 
         <QuantumTrain 
           items={anime.data || []} 
-          title={lang === 'ar' ? 'أنمي ياباني' : 'Anime'} 
-          link="/search?types=movie&lang=ja&genres=16"
+          title={lang === 'ar' ? 'أفلام أنمي' : 'Anime Movies'} 
+          link="/search?types=movie&genres=16"
+          color="purple"
         />
 
         <QuantumTrain 
           items={bollywood.data || []} 
-          title={lang === 'ar' ? 'أفلام هندية' : 'Bollywood'} 
+          title={lang === 'ar' ? 'أفلام بوليوود' : 'Bollywood Movies'} 
           link="/search?types=movie&lang=hi"
+          color="gold"
         />
       </div>
     </div>

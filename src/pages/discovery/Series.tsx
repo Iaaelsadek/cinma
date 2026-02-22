@@ -119,6 +119,41 @@ export const SeriesPage = () => {
     return data.results.map((item: any) => ({ ...item, media_type: 'tv' }))
   }})
 
+  const disneyPlus = useQuery({ queryKey: ['series-disney'], queryFn: async () => {
+    const { data } = await tmdb.get('/discover/tv', {
+      params: { with_networks: 2739, sort_by: 'popularity.desc' }
+    })
+    return data.results.map((item: any) => ({ ...item, media_type: 'tv' }))
+  }})
+
+  const hulu = useQuery({ queryKey: ['series-hulu'], queryFn: async () => {
+    const { data } = await tmdb.get('/discover/tv', {
+      params: { with_networks: 453, sort_by: 'popularity.desc' }
+    })
+    return data.results.map((item: any) => ({ ...item, media_type: 'tv' }))
+  }})
+
+  const peacock = useQuery({ queryKey: ['series-peacock'], queryFn: async () => {
+    const { data } = await tmdb.get('/discover/tv', {
+      params: { with_networks: 3353, sort_by: 'popularity.desc' }
+    })
+    return data.results.map((item: any) => ({ ...item, media_type: 'tv' }))
+  }})
+
+  const amc = useQuery({ queryKey: ['series-amc'], queryFn: async () => {
+    const { data } = await tmdb.get('/discover/tv', {
+      params: { with_networks: 174, sort_by: 'popularity.desc' }
+    })
+    return data.results.map((item: any) => ({ ...item, media_type: 'tv' }))
+  }})
+
+  const showtime = useQuery({ queryKey: ['series-showtime'], queryFn: async () => {
+    const { data } = await tmdb.get('/discover/tv', {
+      params: { with_networks: 67, sort_by: 'popularity.desc' }
+    })
+    return data.results.map((item: any) => ({ ...item, media_type: 'tv' }))
+  }})
+
   const anime = useQuery({ queryKey: ['series-anime'], queryFn: async () => {
     const { data } = await tmdb.get('/discover/tv', {
       params: { with_genres: 16, with_original_language: 'ja', sort_by: 'popularity.desc' }
@@ -208,6 +243,41 @@ export const SeriesPage = () => {
           items={amazon.data || []} 
           title={lang === 'ar' ? 'أمازون برايم' : 'Amazon Prime'} 
           link="/search?types=tv&keywords=amazon"
+        />
+
+        <QuantumTrain 
+          items={disneyPlus.data || []} 
+          title={lang === 'ar' ? 'ديزني بلس' : 'Disney+'} 
+          link="/search?types=tv&keywords=disney"
+          color="blue"
+        />
+
+        <QuantumTrain 
+          items={hulu.data || []} 
+          title={lang === 'ar' ? 'هولو' : 'Hulu'} 
+          link="/search?types=tv&keywords=hulu"
+          color="green"
+        />
+
+        <QuantumTrain 
+          items={peacock.data || []} 
+          title={lang === 'ar' ? 'بيكوك' : 'Peacock'} 
+          link="/search?types=tv&keywords=peacock"
+          color="purple"
+        />
+
+        <QuantumTrain 
+          items={amc.data || []} 
+          title={lang === 'ar' ? 'أي إم سي (AMC)' : 'AMC'} 
+          link="/search?types=tv&keywords=amc"
+          color="gold"
+        />
+
+        <QuantumTrain 
+          items={showtime.data || []} 
+          title={lang === 'ar' ? 'شوتايم' : 'Showtime'} 
+          link="/search?types=tv&keywords=showtime"
+          color="red"
         />
 
         <QuantumTrain 

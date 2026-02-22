@@ -53,7 +53,7 @@ export async function fetchGenres(type: 'movie' | 'tv') {
 
 export type AdvancedSearchParams = {
   query?: string
-  types?: Array<'movie' | 'tv'>
+  types?: Array<'movie' | 'tv' | 'anime'>
   genres?: number[]
   yearFrom?: number
   yearTo?: number
@@ -104,8 +104,11 @@ export async function advancedSearch(params: AdvancedSearchParams) {
     with_original_language,
     with_keywords
   } = params
+  
+  const doAnime = types.includes('anime')
   const doMovie = types.includes('movie')
-  const doTv = types.includes('tv')
+  const doTv = types.includes('tv') || doAnime
+  
   const cert = colorToCertification(rating_color)
   const promises: Array<Promise<TmdbListResponse>> = []
   const hasQuery = query.trim().length > 0
@@ -151,6 +154,7 @@ export async function advancedSearch(params: AdvancedSearchParams) {
         .then(r => {
           let res = (r.data.results || []).map((x: TmdbSearchItem) => ({ ...x, media_type: 'tv' as const }))
           if (genres.length) res = res.filter((x: TmdbSearchItem) => (x.genre_ids || []).some((id: number) => genres.includes(id)))
+          if (doAnime) res = res.filter((x: TmdbSearchItem) => (x.genre_ids || []).includes(16) && ((x as any).original_language === 'ja'))
           if (yearFrom) res = res.filter((x: TmdbSearchItem) => (x.first_air_date || '0').slice(0, 4) >= String(yearFrom))
           if (yearTo) res = res.filter((x: TmdbSearchItem) => (x.first_air_date || '0').slice(0, 4) <= String(yearTo))
           if (ratingFrom != null) res = res.filter((x: TmdbSearchItem) => (x.vote_average || 0) >= ratingFrom)
@@ -166,11 +170,16 @@ export async function advancedSearch(params: AdvancedSearchParams) {
         'first_air_date.lte': yearTo ? `${yearTo}-12-31` : undefined,
         'vote_average.gte': ratingFrom,
         'vote_average.lte': ratingTo,
-        with_original_language,
+        with_original_language: doAnime ? 'ja' : with_original_language,
         with_keywords,
         include_adult: false,
         sort_by: sort_by || 'popularity.desc',
         page
+      }
+      if (doAnime) {
+        const currentGenres = tp.with_genres ? String(tp.with_genres).split(',') : []
+        if (!currentGenres.includes('16')) currentGenres.push('16')
+        tp.with_genres = currentGenres.join(',')
       }
       const p = tmdb.get('/discover/tv', { params: tp }).then(r => ({ ...r.data, results: (r.data.results || []).map((x: TmdbSearchItem) => ({ ...x, media_type: 'tv' as const })) }) as TmdbListResponse)
       promises.push(p)

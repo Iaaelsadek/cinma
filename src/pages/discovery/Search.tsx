@@ -235,7 +235,7 @@ export const Search = () => {
     for (let y = 2026; y >= 1980; y--) arr.push(y)
     return arr
   }, [])
-  const contentTypes: Array<'movie' | 'tv'> = ['movie', 'tv']
+  const contentTypes: Array<'movie' | 'tv' | 'anime'> = ['movie', 'tv', 'anime']
 
   const setParam = (key: string, value?: string) => {
     setSp(prev => {
@@ -299,7 +299,7 @@ export const Search = () => {
                           }}
                           className={`h-9 rounded-lg border px-3 text-xs font-bold uppercase tracking-widest transition-all ${checked ? 'bg-primary border-primary text-black' : 'bg-black/40 border-white/10 text-zinc-400 hover:text-white'}`}
                         >
-                          {t === 'movie' ? 'فيلم' : 'مسلسل'}
+                          {t === 'movie' ? 'فيلم' : t === 'anime' ? 'أنمي' : 'مسلسل'}
                         </button>
                       )
                     })}
