@@ -371,7 +371,7 @@ export const QuantumNavbar = memo(() => {
 
               <button 
                 onClick={toggle}
-                className="w-9 h-9 rounded-full border border-white/10 flex items-center justify-center text-[10px] font-black hover:border-cyan-400/50 hover:text-cyan-400 transition-colors"
+                className="hidden xl:flex w-9 h-9 rounded-full border border-white/10 items-center justify-center text-[10px] font-black hover:border-cyan-400/50 hover:text-cyan-400 transition-colors"
               >
                 {lang === 'ar' ? 'EN' : 'AR'}
               </button>
@@ -444,16 +444,24 @@ export const QuantumNavbar = memo(() => {
         {/* Mobile Search Overlay */}
         <AnimatePresence>
           {showMobileSearch && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="xl:hidden bg-black/95 backdrop-blur-md border-b border-white/10 overflow-hidden"
-            >
-              <div className="p-4">
-                <div className="relative group">
-                   <input 
-                    type="text" 
+            <>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setShowMobileSearch(false)}
+                className="xl:hidden fixed inset-0 top-[80px] z-30 bg-black/60 backdrop-blur-sm"
+              />
+              <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="xl:hidden absolute top-full left-0 right-0 z-40 bg-black/95 border-b border-white/10 shadow-2xl"
+              >
+                <div className="p-4">
+                  <div className="relative group">
+                     <input 
+                      type="text" 
                     value={query || ''}
                     onChange={(e) => setQuery(e.target.value)}
                     onKeyDown={(e) => {
@@ -475,6 +483,7 @@ export const QuantumNavbar = memo(() => {
                 </div>
               </div>
             </motion.div>
+            </>
           )}
         </AnimatePresence>
 
@@ -532,6 +541,15 @@ export const QuantumNavbar = memo(() => {
                     </button>
                   </div>
                 )}
+                
+                <div className="col-span-2 mt-2 mb-8">
+                  <button 
+                    onClick={() => { toggle(); setMenuOpen(false); }}
+                    className="w-full py-4 rounded-xl border border-white/10 flex items-center justify-center text-sm font-black hover:border-cyan-400/50 hover:text-cyan-400 hover:bg-white/5 transition-colors"
+                  >
+                    {lang === 'ar' ? 'English' : 'العربية'}
+                  </button>
+                </div>
               </div>
             </motion.div>
           )}
