@@ -7,7 +7,7 @@ import { useLang } from '../../state/useLang'
 import { useAuth } from '../../hooks/useAuth'
 import { usePwa } from '../../context/PwaContext'
 import { getContinueWatching } from '../../lib/supabase'
-import { useEffect, useState, useRef, useMemo, memo } from 'react'
+import { useEffect, useState, useRef, useMemo, memo, Fragment } from 'react'
 import { Home, Film, Tv, Gamepad2, Zap, User, Search, Menu, X, Clock, ChevronDown, BookOpen, History, Smile, Drama, Radio, ListVideo, Moon, Download, MapPin, Star, Mic, Loader2, Shuffle, Monitor, Smartphone, Apple, Terminal } from 'lucide-react'
 
 
@@ -402,18 +402,11 @@ export const QuantumNavbar = memo(() => {
                   </div>
                 </PrefetchLink>
               ) : (
-            <>
-              <PrefetchLink to="/login" target="_self" className="hidden md:block">
-                <button className="px-4 py-2 rounded-full bg-white text-black text-xs font-black uppercase tracking-widest hover:scale-105 transition-transform border border-white/10">
-                  {lang === 'ar' ? 'دخول' : 'Login'}
-                </button>
-              </PrefetchLink>
-              <PrefetchLink to="/login" target="_self" className="md:hidden">
-                <div className="w-9 h-9 rounded-full bg-zinc-900 border border-white/10 flex items-center justify-center hover:border-cyan-400/50 transition-colors">
-                  <User size={16} className="text-zinc-400" />
-                </div>
-              </PrefetchLink>
-            </>
+            <PrefetchLink to="/login" target="_self" className="hidden md:block">
+              <button className="px-4 py-2 rounded-full bg-white text-black text-xs font-black uppercase tracking-widest hover:scale-105 transition-transform border border-white/10">
+                {lang === 'ar' ? 'دخول' : 'Login'}
+              </button>
+            </PrefetchLink>
           )}
 
               {/* Mobile Search Icon */}
@@ -498,37 +491,52 @@ export const QuantumNavbar = memo(() => {
               className="xl:hidden fixed inset-x-0 top-[80px] h-[calc(100vh-80px)] z-40 bg-black/95 backdrop-blur-md border-t border-white/10 overflow-y-auto overscroll-y-contain pb-32"
             >
               <div className="grid grid-cols-2 gap-3 p-4">
-                {navLinks.map((link) => (
-                  <div key={link.to} className={`flex flex-col ${link.subLinks || link.hasMega ? 'col-span-2' : 'col-span-1'}`}>
-                    <PrefetchLink
-                      to={link.to}
-                      target="_self"
-                      onClick={() => setMenuOpen(false)}
-                      className={`
-                        flex items-center gap-3 p-3 rounded-xl hover:bg-white/10 text-zinc-400 hover:text-white transition-colors border border-white/5
-                        ${!(link.subLinks || link.hasMega) ? 'flex-col justify-center text-center h-24' : 'w-full'}
-                      `}
-                    >
-                      <link.icon size={24} style={{ color: link.color }} />
-                      <span className="font-bold text-sm">{link.label}</span>
-                    </PrefetchLink>
-                    {link.subLinks && (
-                      <div className="flex flex-col gap-1 mt-2 pl-4 border-l-2 border-white/5 ml-2">
-                        {link.subLinks.map((sub, i) => (
-                          <PrefetchLink
-                            key={`${sub.to}-${i}`}
-                            to={sub.to}
-                            target="_self"
-                            onClick={() => setMenuOpen(false)}
-                            className="flex items-center gap-3 p-3 rounded-lg text-zinc-400 hover:text-cyan-400 hover:bg-white/5 transition-colors"
-                          >
-                            {sub.icon && <sub.icon size={18} />}
-                            <span className="font-medium text-sm">{sub.label}</span>
-                          </PrefetchLink>
-                        ))}
+                {navLinks.map((link, i) => (
+                  <Fragment key={link.to}>
+                    <div className={`flex flex-col ${link.subLinks || link.hasMega ? 'col-span-2' : 'col-span-1'}`}>
+                      <PrefetchLink
+                        to={link.to}
+                        target="_self"
+                        onClick={() => setMenuOpen(false)}
+                        className={`
+                          flex items-center gap-3 p-3 rounded-xl hover:bg-white/10 text-zinc-400 hover:text-white transition-colors border border-white/5
+                          ${!(link.subLinks || link.hasMega) ? 'flex-col justify-center text-center h-24' : 'w-full'}
+                        `}
+                      >
+                        <link.icon size={24} style={{ color: link.color }} />
+                        <span className="font-bold text-sm">{link.label}</span>
+                      </PrefetchLink>
+                      {link.subLinks && (
+                        <div className="flex flex-col gap-1 mt-2 pl-4 border-l-2 border-white/5 ml-2">
+                          {link.subLinks.map((sub, j) => (
+                            <PrefetchLink
+                              key={`${sub.to}-${j}`}
+                              to={sub.to}
+                              target="_self"
+                              onClick={() => setMenuOpen(false)}
+                              className="flex items-center gap-3 p-3 rounded-lg text-zinc-400 hover:text-cyan-400 hover:bg-white/5 transition-colors"
+                            >
+                              {sub.icon && <sub.icon size={18} />}
+                              <span className="font-medium text-sm">{sub.label}</span>
+                            </PrefetchLink>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    {i === 0 && !user && (
+                      <div className="col-span-1 flex flex-col">
+                        <PrefetchLink
+                          to="/login"
+                          target="_self"
+                          onClick={() => setMenuOpen(false)}
+                          className="flex flex-col items-center justify-center gap-3 p-3 rounded-xl hover:bg-white/10 text-zinc-400 hover:text-white transition-colors border border-white/5 h-24 text-center"
+                        >
+                          <User size={24} className="text-white" />
+                          <span className="font-bold text-sm">{lang === 'ar' ? 'تسجيل الدخول' : 'Login'}</span>
+                        </PrefetchLink>
                       </div>
                     )}
-                  </div>
+                  </Fragment>
                 ))}
                 {isSupported && !isInstalled && (
                   <div className="col-span-2 mt-4">
