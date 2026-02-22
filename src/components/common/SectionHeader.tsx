@@ -172,9 +172,9 @@ export const SectionHeader = ({ title, icon, link, badge, actions, color = 'cyan
   const theme = THEMES[color]
   
   return (
-    <div className="relative flex items-center w-full mb-8 group/header">
+    <div className="relative flex flex-col md:flex-row md:items-center w-full mb-8 group/header gap-4 md:gap-0">
       {/* 1. Title Section */}
-      <div className="flex items-center gap-3 shrink-0 z-10 pr-6 rtl:pl-6 rtl:pr-0 bg-[#08080c]">
+      <div className="flex items-center gap-3 shrink-0 z-10 md:pr-6 md:rtl:pl-6 md:rtl:pr-0 bg-[#08080c] w-full md:w-auto">
         <div className={`p-2.5 rounded-xl transition-all duration-500 group-hover/header:scale-110 relative overflow-hidden ${theme.iconBox}`}>
           <div className={`absolute inset-0 blur-xl opacity-0 group-hover/header:opacity-100 transition-opacity duration-500 ${theme.iconGlow}`} />
           {icon}
@@ -185,7 +185,7 @@ export const SectionHeader = ({ title, icon, link, badge, actions, color = 'cyan
       </div>
 
       {/* 2. The Artery (Circuit Line) */}
-      <div className="flex-1 relative h-[2px] bg-zinc-800/50 overflow-visible self-center flex items-center mx-[-10px] z-0">
+      <div className="hidden md:flex md:flex-1 relative h-[2px] bg-zinc-800/50 overflow-visible self-center items-center mx-[-10px] z-0">
         {/* Circuit Pattern Background */}
         <div className="absolute inset-0 opacity-30" style={{ backgroundImage: `linear-gradient(90deg, transparent 50%, ${theme.circuitColor} 50%)`, backgroundSize: '20px 100%' }} />
         
@@ -209,7 +209,7 @@ export const SectionHeader = ({ title, icon, link, badge, actions, color = 'cyan
       </div>
       
       {/* 3. Actions / View All Button */}
-      <div className="shrink-0 z-10 pl-6 rtl:pr-6 rtl:pl-0 bg-[#08080c] flex items-center gap-4">
+      <div className="shrink-0 z-10 md:pl-6 md:rtl:pr-6 md:rtl:pl-0 bg-[#08080c] flex items-center gap-4 w-full md:w-auto">
         {actions}
         
         {link && (
