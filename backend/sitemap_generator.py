@@ -54,45 +54,68 @@ def generate_sitemap():
 
     # Fetch Movies
     try:
-        movies = supabase.table("movies").select("id, title, created_at").eq("is_active", True).execute()
+        movies = supabase.table("movies").select("id, title, created_at, release_date, popularity").eq("is_active", True).execute()
         for m in movies.data:
+            # Calculate priority based on popularity or recency
+            priority = "0.6"
+            if m.get('popularity', 0) > 50 or (m.get('release_date') and m.get('release_date') > '2024-01-01'):
+                priority = "0.9"
+            
             # Add Watch Page
             urls.append({
                 "loc": f"{BASE_URL}/watch/movie/{m['id']}",
                 "lastmod": m.get('created_at', datetime.now().isoformat())[:10],
                 "changefreq": "weekly",
-                "priority": "0.9"
+                "priority": priority
             })
-            # Add Details Page (Optional, but good for structure)
+            # Add Details Page
             urls.append({
                 "loc": f"{BASE_URL}/movie/{m['id']}",
                 "lastmod": m.get('created_at', datetime.now().isoformat())[:10],
                 "changefreq": "weekly",
-                "priority": "0.8"
+                "priority": "0.7"
             })
     except Exception as e:
         print(f"Error fetching movies: {e}")
 
     # Fetch TV Series
     try:
-        series = supabase.table("tv_series").select("id, name, created_at").eq("is_active", True).execute()
+        series = supabase.table("tv_series").select("id, name, created_at, first_air_date, popularity").eq("is_active", True).execute()
         for s in series.data:
+            priority = "0.6"
+            if s.get('popularity', 0) > 50 or (s.get('first_air_date') and s.get('first_air_date') > '2024-01-01'):
+                priority = "0.9"
+
             # Add Watch Page
             urls.append({
                 "loc": f"{BASE_URL}/watch/tv/{s['id']}",
                 "lastmod": s.get('created_at', datetime.now().isoformat())[:10],
                 "changefreq": "weekly",
-                "priority": "0.9"
+                "priority": priority
             })
             # Add Details Page
             urls.append({
                 "loc": f"{BASE_URL}/series/{s['id']}",
                 "lastmod": s.get('created_at', datetime.now().isoformat())[:10],
                 "changefreq": "weekly",
-                "priority": "0.8"
+                "priority": "0.7"
             })
     except Exception as e:
         print(f"Error fetching series: {e}")
+
+    # Fetch Anime
+    try:
+        anime = supabase.table("anime").select("id, title, created_at").eq("is_active", True).execute()
+        for a in anime.data:
+            # Add Watch Page
+            urls.append({
+                "loc": f"{BASE_URL}/watch/anime/{a['id']}",
+                "lastmod": a.get('created_at', datetime.now().isoformat())[:10],
+                "changefreq": "weekly",
+                "priority": "0.8"
+            })
+    except Exception as e:
+        print(f"Error fetching anime: {e}")
 
     # Generate XML content
     xml_content = '<?xml version="1.0" encoding="UTF-8"?>\n'
