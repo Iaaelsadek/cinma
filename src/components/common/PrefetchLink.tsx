@@ -11,5 +11,5 @@ export const PrefetchLink = (props: LinkProps) => {
     },
     [props.to, props.onMouseEnter]
   )
-  return <Link {...props} onMouseEnter={handler} /> as React.JSX.Element
+  return <Link {...props} target={props.target || '_self'} onMouseEnter={handler} /> as React.JSX.Element
 }

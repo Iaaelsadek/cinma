@@ -146,7 +146,7 @@ export const Navbar = ({ isScrolled }: { isScrolled?: boolean }) => {
     >
       <div className="mx-auto flex w-full max-w-[2560px] items-center justify-between gap-4 h-16">
         <div className="flex items-center gap-2 lg:gap-6 flex-shrink-0">
-          <Link to="/" className="group relative py-2">
+          <Link to="/" target="_self" className="group relative py-2">
             <div className="relative z-10 flex items-center gap-1 font-black text-2xl tracking-tighter">
               <div className="relative">
                 <span className="bg-gradient-to-r from-primary via-emerald-400 to-cyan-500 bg-clip-text text-transparent drop-shadow-[0_0_15px_rgba(16,185,129,0.5)] group-hover:drop-shadow-[0_0_25px_rgba(16,185,129,0.8)] transition-all duration-300">
