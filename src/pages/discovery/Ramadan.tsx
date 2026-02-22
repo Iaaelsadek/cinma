@@ -50,6 +50,40 @@ const fetchTrendingRamadan = async () => {
   return data.results.map((item: any) => ({ ...item, media_type: 'tv' }))
 }
 
+const fetchByCountry = async (country: string) => {
+  const { data } = await tmdb.get('/discover/tv', {
+    params: {
+      with_original_language: 'ar',
+      with_origin_country: country,
+      sort_by: 'popularity.desc',
+      'vote_count.gte': 0
+    }
+  })
+  return data.results.map((item: any) => ({ ...item, media_type: 'tv' }))
+}
+
+const fetchRamadanComedy = async () => {
+  const { data } = await tmdb.get('/discover/tv', {
+    params: {
+      with_original_language: 'ar',
+      with_genres: 35,
+      sort_by: 'popularity.desc'
+    }
+  })
+  return data.results.map((item: any) => ({ ...item, media_type: 'tv' }))
+}
+
+const fetchRamadanHistorical = async () => {
+  const { data } = await tmdb.get('/discover/tv', {
+    params: {
+      with_original_language: 'ar',
+      with_genres: '36|10768', // History or War & Politics
+      sort_by: 'popularity.desc'
+    }
+  })
+  return data.results.map((item: any) => ({ ...item, media_type: 'tv' }))
+}
+
 export const RamadanPage = () => {
   const { lang } = useLang()
 
@@ -60,6 +94,12 @@ export const RamadanPage = () => {
   const ramadan2023 = useQuery({ queryKey: ['ramadan-2023'], queryFn: () => fetchRamadanSeries(2023) })
   const classics = useQuery({ queryKey: ['ramadan-classics'], queryFn: fetchClassicRamadan })
   const trending = useQuery({ queryKey: ['ramadan-trending'], queryFn: fetchTrendingRamadan })
+  
+  const egyptian = useQuery({ queryKey: ['ramadan-egypt'], queryFn: () => fetchByCountry('EG') })
+  const syrian = useQuery({ queryKey: ['ramadan-syria'], queryFn: () => fetchByCountry('SY') })
+  const gulf = useQuery({ queryKey: ['ramadan-gulf'], queryFn: () => fetchByCountry('SA|KW|AE') }) // SA=Saudi, KW=Kuwait, AE=UAE
+  const comedy = useQuery({ queryKey: ['ramadan-comedy'], queryFn: fetchRamadanComedy })
+  const historical = useQuery({ queryKey: ['ramadan-historical'], queryFn: fetchRamadanHistorical })
 
   const isLoading = ramadan2025.isLoading || ramadan2024.isLoading || classics.isLoading
 
@@ -96,6 +136,42 @@ export const RamadanPage = () => {
                 </p>
              </div>
         </div>
+
+        <QuantumTrain 
+          items={trending.data || []} 
+          title={lang === 'ar' ? 'الأكثر رواجاً الآن' : 'Trending Now'} 
+          link="/search?types=tv&lang=ar&sort=popularity.desc"
+        />
+
+        <QuantumTrain 
+          items={egyptian.data || []} 
+          title={lang === 'ar' ? 'دراما مصرية' : 'Egyptian Drama'} 
+          link="/search?types=tv&lang=ar&country=EG"
+        />
+
+        <QuantumTrain 
+          items={syrian.data || []} 
+          title={lang === 'ar' ? 'دراما سورية' : 'Syrian Drama'} 
+          link="/search?types=tv&lang=ar&country=SY"
+        />
+
+        <QuantumTrain 
+          items={gulf.data || []} 
+          title={lang === 'ar' ? 'دراما خليجية' : 'Gulf Drama'} 
+          link="/search?types=tv&lang=ar&keywords=gulf"
+        />
+
+        <QuantumTrain 
+          items={comedy.data || []} 
+          title={lang === 'ar' ? 'كوميديا رمضانية' : 'Ramadan Comedy'} 
+          link="/search?types=tv&lang=ar&genres=35"
+        />
+
+        <QuantumTrain 
+          items={historical.data || []} 
+          title={lang === 'ar' ? 'تاريخي وديني' : 'Historical & Religious'} 
+          link="/search?types=tv&lang=ar&genres=36"
+        />
 
         <QuantumTrain 
           items={ramadan2025.data || []} 

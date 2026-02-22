@@ -171,6 +171,51 @@ app.get('/api/profile/:id', async (req, res) => {
   }
 });
 
+// --- NEW ENDPOINT FOR ERROR LOGGING (SECURED & RATE LIMITED) ---
+app.post('/api/log', apiLimiter, async (req, res) => {
+  const { message, severity, category, context, stack, url, user_agent, user_id } = req.body;
+  
+  if (!supabase) {
+    console.error('Supabase not configured for logging');
+    return res.status(500).json({ error: 'Server logging unavailable' });
+  }
+
+  try {
+    // Validate required fields
+    if (!message || !severity || !category) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    // Insert into app_diagnostics using service_role key (admin privileges)
+    // This allows us to disable public INSERT RLS on the table
+    const { error } = await supabase
+      .from('app_diagnostics')
+      .insert({
+        message,
+        severity,
+        category,
+        context,
+        stack,
+        url,
+        user_agent,
+        user_id: user_id || null, // Optional user linking
+        resolved: false,
+        timestamp: new Date().toISOString()
+      });
+
+    if (error) {
+      console.error('Supabase log insert error:', error);
+      throw error;
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Logging endpoint error:', err);
+    // Don't expose internal errors to client for logs
+    res.status(500).json({ error: 'Logging failed' });
+  }
+});
+
 app.post('/api/profile/:id', async (req, res) => {
   const { id } = req.params;
   const { username, avatar_url } = req.body;

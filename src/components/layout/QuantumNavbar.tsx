@@ -8,7 +8,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { usePwa } from '../../context/PwaContext'
 import { getContinueWatching } from '../../lib/supabase'
 import { useEffect, useState, useRef, useMemo, memo } from 'react'
-import { Home, Film, Tv, Gamepad2, Zap, User, Search, Menu, X, Clock, ChevronDown, BookOpen, History, Smile, Drama, Radio, ListVideo, Moon, Download, MapPin, Star, Mic, Loader2, Shuffle } from 'lucide-react'
+import { Home, Film, Tv, Gamepad2, Zap, User, Search, Menu, X, Clock, ChevronDown, BookOpen, History, Smile, Drama, Radio, ListVideo, Moon, Download, MapPin, Star, Mic, Loader2, Shuffle, Monitor, Smartphone, Apple, Terminal } from 'lucide-react'
 
 
 export const QuantumNavbar = memo(() => {
@@ -56,11 +56,17 @@ export const QuantumNavbar = memo(() => {
       ]
     },
     { 
-      to: '/random', 
-      label: lang === 'ar' ? 'اكتشف' : 'Discover', 
-      icon: Shuffle, 
-      color: '#d946ef',
-      hasMega: false
+      to: '/software', 
+      label: lang === 'ar' ? 'برمجيات' : 'Software', 
+      icon: Monitor, 
+      color: '#0ea5e9',
+      hasMega: true,
+      subLinks: [
+        { to: '/software?cat=pc', label: lang === 'ar' ? 'كمبيوتر' : 'PC', icon: Monitor },
+        { to: '/software?cat=android', label: lang === 'ar' ? 'أندرويد' : 'Android', icon: Smartphone },
+        { to: '/software?cat=apple', label: lang === 'ar' ? 'أبل' : 'Apple', icon: Apple },
+        { to: '/software?cat=terminal', label: lang === 'ar' ? 'تيرمينال' : 'Terminal', icon: Terminal }
+      ]
     },
     { 
       to: '/ramadan', 

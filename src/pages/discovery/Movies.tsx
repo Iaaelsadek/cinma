@@ -61,6 +61,29 @@ export const MoviesPage = () => {
   const topRated = useQuery({ queryKey: ['movies-top-rated'], queryFn: () => fetchTopRated('movie') })
   const popular = useQuery({ queryKey: ['movies-popular'], queryFn: () => fetchPopular('movie') })
   
+  const classics = useQuery({ queryKey: ['movies-classics'], queryFn: async () => {
+    const { data } = await tmdb.get('/discover/movie', {
+      params: { 
+        'primary_release_date.lte': '1980-01-01',
+        sort_by: 'popularity.desc',
+        'vote_count.gte': 100
+      }
+    })
+    return data.results.map((item: any) => ({ ...item, media_type: 'movie' }))
+  }})
+
+  const nineties = useQuery({ queryKey: ['movies-90s'], queryFn: async () => {
+    const { data } = await tmdb.get('/discover/movie', {
+      params: { 
+        'primary_release_date.gte': '1990-01-01',
+        'primary_release_date.lte': '1999-12-31',
+        sort_by: 'popularity.desc',
+        'vote_count.gte': 100
+      }
+    })
+    return data.results.map((item: any) => ({ ...item, media_type: 'movie' }))
+  }})
+
   const action = useQuery({ queryKey: ['movies-action'], queryFn: () => fetchByGenre(28, 'movie') })
   const adventure = useQuery({ queryKey: ['movies-adventure'], queryFn: () => fetchByGenre(12, 'movie') })
   const sciFi = useQuery({ queryKey: ['movies-scifi'], queryFn: () => fetchByGenre(878, 'movie') })
@@ -75,6 +98,10 @@ export const MoviesPage = () => {
   const documentary = useQuery({ queryKey: ['movies-documentary'], queryFn: () => fetchByGenre(99, 'movie') })
   const history = useQuery({ queryKey: ['movies-history'], queryFn: () => fetchByGenre(36, 'movie') })
   const war = useQuery({ queryKey: ['movies-war'], queryFn: () => fetchByGenre(10752, 'movie') })
+  const western = useQuery({ queryKey: ['movies-western'], queryFn: () => fetchByGenre(37, 'movie') })
+  const music = useQuery({ queryKey: ['movies-music'], queryFn: () => fetchByGenre(10402, 'movie') })
+  const mystery = useQuery({ queryKey: ['movies-mystery'], queryFn: () => fetchByGenre(9648, 'movie') })
+  const fantasy = useQuery({ queryKey: ['movies-fantasy'], queryFn: () => fetchByGenre(14, 'movie') })
   
   const anime = useQuery({ queryKey: ['movies-anime'], queryFn: async () => {
     const { data } = await tmdb.get('/discover/movie', {
@@ -174,6 +201,90 @@ export const MoviesPage = () => {
     return data.results.map((item: any) => ({ ...item, media_type: 'movie' }))
   }})
 
+  const illumination = useQuery({ queryKey: ['movies-illumination'], queryFn: async () => {
+    const { data } = await tmdb.get('/discover/movie', {
+      params: { with_companies: 6704, sort_by: 'popularity.desc' }
+    })
+    return data.results.map((item: any) => ({ ...item, media_type: 'movie' }))
+  }})
+
+  const a24 = useQuery({ queryKey: ['movies-a24'], queryFn: async () => {
+    const { data } = await tmdb.get('/discover/movie', {
+      params: { with_companies: 41077, sort_by: 'popularity.desc' }
+    })
+    return data.results.map((item: any) => ({ ...item, media_type: 'movie' }))
+  }})
+
+  const mgm = useQuery({ queryKey: ['movies-mgm'], queryFn: async () => {
+    const { data } = await tmdb.get('/discover/movie', {
+      params: { with_companies: 8411, sort_by: 'popularity.desc' }
+    })
+    return data.results.map((item: any) => ({ ...item, media_type: 'movie' }))
+  }})
+
+  const lucasfilm = useQuery({ queryKey: ['movies-lucasfilm'], queryFn: async () => {
+    const { data } = await tmdb.get('/discover/movie', {
+      params: { with_companies: 1, sort_by: 'popularity.desc' }
+    })
+    return data.results.map((item: any) => ({ ...item, media_type: 'movie' }))
+  }})
+
+  const blumhouse = useQuery({ queryKey: ['movies-blumhouse'], queryFn: async () => {
+    const { data } = await tmdb.get('/discover/movie', {
+      params: { with_companies: 3172, sort_by: 'popularity.desc' }
+    })
+    return data.results.map((item: any) => ({ ...item, media_type: 'movie' }))
+  }})
+
+  const newLine = useQuery({ queryKey: ['movies-newline'], queryFn: async () => {
+    const { data } = await tmdb.get('/discover/movie', {
+      params: { with_companies: 12, sort_by: 'popularity.desc' }
+    })
+    return data.results.map((item: any) => ({ ...item, media_type: 'movie' }))
+  }})
+
+  const columbia = useQuery({ queryKey: ['movies-columbia'], queryFn: async () => {
+    const { data } = await tmdb.get('/discover/movie', {
+      params: { with_companies: 5, sort_by: 'popularity.desc' }
+    })
+    return data.results.map((item: any) => ({ ...item, media_type: 'movie' }))
+  }})
+
+  const legendary = useQuery({ queryKey: ['movies-legendary'], queryFn: async () => {
+    const { data } = await tmdb.get('/discover/movie', {
+      params: { with_companies: 923, sort_by: 'popularity.desc' }
+    })
+    return data.results.map((item: any) => ({ ...item, media_type: 'movie' }))
+  }})
+
+  const focus = useQuery({ queryKey: ['movies-focus'], queryFn: async () => {
+    const { data } = await tmdb.get('/discover/movie', {
+      params: { with_companies: 10146, sort_by: 'popularity.desc' }
+    })
+    return data.results.map((item: any) => ({ ...item, media_type: 'movie' }))
+  }})
+
+  const summit = useQuery({ queryKey: ['movies-summit'], queryFn: async () => {
+    const { data } = await tmdb.get('/discover/movie', {
+      params: { with_companies: 491, sort_by: 'popularity.desc' }
+    })
+    return data.results.map((item: any) => ({ ...item, media_type: 'movie' }))
+  }})
+
+  const toho = useQuery({ queryKey: ['movies-toho'], queryFn: async () => {
+    const { data } = await tmdb.get('/discover/movie', {
+      params: { with_companies: 882, sort_by: 'popularity.desc' }
+    })
+    return data.results.map((item: any) => ({ ...item, media_type: 'movie' }))
+  }})
+
+  const netflixMovies = useQuery({ queryKey: ['movies-netflix'], queryFn: async () => {
+    const { data } = await tmdb.get('/discover/movie', {
+      params: { with_companies: 20580, sort_by: 'popularity.desc' }
+    })
+    return data.results.map((item: any) => ({ ...item, media_type: 'movie' }))
+  }})
+
   const heroItems = trending.data?.slice(0, 10) || []
 
   return (
@@ -222,6 +333,20 @@ export const MoviesPage = () => {
         />
 
         <QuantumTrain 
+          items={classics.data || []} 
+          title={lang === 'ar' ? 'كلاسيكيات السينما' : 'Cinema Classics'} 
+          link="/search?types=movie&year=1970"
+          color="gold"
+        />
+
+        <QuantumTrain 
+          items={nineties.data || []} 
+          title={lang === 'ar' ? 'أفلام التسعينات' : '90s Nostalgia'} 
+          link="/search?types=movie&year=1995"
+          color="purple"
+        />
+
+        <QuantumTrain 
           items={action.data || []} 
           title={lang === 'ar' ? 'أكشن' : 'Action'} 
           link="/movies/genre/28"
@@ -237,6 +362,30 @@ export const MoviesPage = () => {
           items={sciFi.data || []} 
           title={lang === 'ar' ? 'خيال علمي' : 'Sci-Fi'} 
           link="/movies/genre/878"
+        />
+
+        <QuantumTrain 
+          items={fantasy.data || []} 
+          title={lang === 'ar' ? 'فانتازيا' : 'Fantasy'} 
+          link="/movies/genre/14"
+        />
+
+        <QuantumTrain 
+          items={mystery.data || []} 
+          title={lang === 'ar' ? 'غموض' : 'Mystery'} 
+          link="/movies/genre/9648"
+        />
+
+        <QuantumTrain 
+          items={western.data || []} 
+          title={lang === 'ar' ? 'ويسترن' : 'Western'} 
+          link="/movies/genre/37"
+        />
+
+        <QuantumTrain 
+          items={music.data || []} 
+          title={lang === 'ar' ? 'موسيقي' : 'Music'} 
+          link="/movies/genre/10402"
         />
 
         <QuantumTrain 
@@ -319,6 +468,90 @@ export const MoviesPage = () => {
           title={lang === 'ar' ? 'دريم ووركس أنيميشن' : 'DreamWorks Animation'} 
           link="/search?types=movie&keywords=dreamworks"
           color="blue"
+        />
+
+        <QuantumTrain 
+          items={illumination.data || []} 
+          title={lang === 'ar' ? 'إليمونيشن' : 'Illumination'} 
+          link="/search?types=movie&keywords=illumination"
+          color="gold"
+        />
+
+        <QuantumTrain 
+          items={a24.data || []} 
+          title={lang === 'ar' ? 'أفلام A24' : 'A24 Movies'} 
+          link="/search?types=movie&keywords=a24"
+          color="cyan"
+        />
+
+        <QuantumTrain 
+          items={mgm.data || []} 
+          title={lang === 'ar' ? 'مترو غولدوين ماير' : 'Metro-Goldwyn-Mayer'} 
+          link="/search?types=movie&keywords=mgm"
+          color="gold"
+        />
+
+        <QuantumTrain 
+          items={lucasfilm.data || []} 
+          title={lang === 'ar' ? 'لوكاس فيلم' : 'Lucasfilm'} 
+          link="/search?types=movie&keywords=lucasfilm"
+          color="green"
+        />
+
+        <QuantumTrain 
+          items={blumhouse.data || []} 
+          title={lang === 'ar' ? 'بلامهاوس (رعب)' : 'Blumhouse (Horror)'} 
+          link="/search?types=movie&keywords=blumhouse"
+          color="red"
+        />
+
+        <QuantumTrain 
+          items={newLine.data || []} 
+          title={lang === 'ar' ? 'نيو لاين سينما' : 'New Line Cinema'} 
+          link="/search?types=movie&keywords=newline"
+          color="blue"
+        />
+
+        <QuantumTrain 
+          items={columbia.data || []} 
+          title={lang === 'ar' ? 'كولومبيا بيكتشرز' : 'Columbia Pictures'} 
+          link="/search?types=movie&keywords=columbia"
+          color="gold"
+        />
+
+        <QuantumTrain 
+          items={legendary.data || []} 
+          title={lang === 'ar' ? 'ليجنداري بيكتشرز' : 'Legendary Pictures'} 
+          link="/search?types=movie&keywords=legendary"
+          color="red"
+        />
+
+        <QuantumTrain 
+          items={focus.data || []} 
+          title={lang === 'ar' ? 'فوكس فيتشرز' : 'Focus Features'} 
+          link="/search?types=movie&keywords=focus"
+          color="blue"
+        />
+
+        <QuantumTrain 
+          items={summit.data || []} 
+          title={lang === 'ar' ? 'سميت إنترتينمنت' : 'Summit Entertainment'} 
+          link="/search?types=movie&keywords=summit"
+          color="gold"
+        />
+
+        <QuantumTrain 
+          items={toho.data || []} 
+          title={lang === 'ar' ? 'توهو (اليابان)' : 'Toho'} 
+          link="/search?types=movie&keywords=toho"
+          color="red"
+        />
+
+        <QuantumTrain 
+          items={netflixMovies.data || []} 
+          title={lang === 'ar' ? 'أفلام نتفليكس' : 'Netflix Movies'} 
+          link="/search?types=movie&keywords=netflix"
+          color="red"
         />
 
         <QuantumTrain 
