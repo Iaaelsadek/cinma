@@ -241,6 +241,11 @@ const App = () => {
             <Route path="/bollywood/:genre/:year" element={<AsianDramaPage type="bollywood" />} />
             <Route path="/bollywood/:genre/:year/:rating" element={<AsianDramaPage type="bollywood" />} />
 
+            <Route path="/turkish" element={<AsianDramaPage type="turkish" />} />
+            <Route path="/turkish/:genre" element={<AsianDramaPage type="turkish" />} />
+            <Route path="/turkish/:genre/:year" element={<AsianDramaPage type="turkish" />} />
+            <Route path="/turkish/:genre/:year/:rating" element={<AsianDramaPage type="turkish" />} />
+
             {/* Plays Routes with Filters */}
             <Route path="/plays" element={<PlaysPage />} />
             <Route path="/plays/:genre" element={<PlaysPage />} />

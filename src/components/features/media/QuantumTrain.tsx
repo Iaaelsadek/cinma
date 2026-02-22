@@ -31,7 +31,7 @@ export const QuantumTrain = memo(({
   icon?: React.ReactNode,
   badge?: string,
   className?: string,
-  color?: 'cyan' | 'purple' | 'gold' | 'red' | 'pink'
+  color?: 'cyan' | 'purple' | 'gold' | 'red' | 'pink' | 'blue' | 'green' | 'indigo' | 'orange'
 }) => {
   const { lang } = useLang()
   const [prevEl, setPrevEl] = useState<HTMLElement | null>(null)

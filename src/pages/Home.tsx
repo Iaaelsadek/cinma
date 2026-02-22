@@ -560,7 +560,7 @@ export const Home = () => {
         <section>
            {chineseSeries.isLoading ? (
             <>
-              <SectionHeader title={lang === 'ar' ? 'مسلسلات صينية قصيرة' : 'Chinese Short Series'} icon={<Tv />} link="/c-drama" />
+              <SectionHeader title={lang === 'ar' ? 'مسلسلات صينية قصيرة' : 'Chinese Short Series'} icon={<Tv />} link="/chinese" />
               <SkeletonGrid count={6} variant="poster" />
             </>
            ) : (
@@ -568,7 +568,7 @@ export const Home = () => {
               items={translatedChinese.data || chineseSeries.data?.results || []} 
               title={lang === 'ar' ? 'مسلسلات صينية قصيرة' : 'Chinese Short Series'} 
               icon={<Tv />} 
-              link="/c-drama" 
+              link="/chinese" 
               color="cyan"
             />
            )}
@@ -578,7 +578,7 @@ export const Home = () => {
         <section>
           {turkishSeries.isLoading ? (
             <>
-              <SectionHeader title={lang === 'ar' ? 'الدراما التركية' : 'Turkish Drama'} icon={<Film />} link="/series" />
+              <SectionHeader title={lang === 'ar' ? 'الدراما التركية' : 'Turkish Drama'} icon={<Film />} link="/turkish" />
               <SkeletonGrid count={6} variant="poster" />
             </>
           ) : (
@@ -586,7 +586,43 @@ export const Home = () => {
               items={translatedTurkish.data || turkishSeries.data?.results || []} 
               title={lang === 'ar' ? 'الدراما التركية' : 'Turkish Drama'} 
               icon={<Film />} 
-              link="/series" 
+              link="/turkish" 
+            />
+          )}
+        </section>
+
+        {/* Section: Anime */}
+        <section>
+          {tmdbAnime.isLoading ? (
+            <>
+              <SectionHeader title={lang === 'ar' ? 'أحدث الأنمي' : 'Latest Anime'} icon={<Zap />} link="/anime" />
+              <SkeletonGrid count={6} variant="poster" />
+            </>
+          ) : (
+            <QuantumTrain 
+              items={tmdbAnime.data || []} 
+              title={lang === 'ar' ? 'أحدث الأنمي' : 'Latest Anime'} 
+              icon={<Zap />} 
+              link="/anime" 
+              color="purple"
+            />
+          )}
+        </section>
+
+        {/* Section: Bollywood */}
+        <section>
+          {bollywoodMovies.isLoading ? (
+            <>
+              <SectionHeader title={lang === 'ar' ? 'أفلام بوليوود' : 'Bollywood Movies'} icon={<Film />} link="/bollywood" />
+              <SkeletonGrid count={6} variant="poster" />
+            </>
+          ) : (
+            <QuantumTrain 
+              items={bollywoodMovies.data?.results || []} 
+              title={lang === 'ar' ? 'أفلام بوليوود' : 'Bollywood Movies'} 
+              icon={<Film />} 
+              link="/bollywood" 
+              color="gold"
             />
           )}
         </section>
