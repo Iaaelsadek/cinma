@@ -43,7 +43,7 @@ export interface AppError {
 }
 
 class ErrorLoggingService {
-  private supabase;
+
   private isEnabled: boolean = true; // ENABLED
   private queue: AppError[] = [];
   private isProcessing: boolean = false;
