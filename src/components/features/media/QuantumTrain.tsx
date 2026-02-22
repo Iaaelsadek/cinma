@@ -44,7 +44,7 @@ export const QuantumTrain = ({
   const isVideo = type === 'video'
 
   return (
-    <div className={`relative py-6 w-full perspective-1000 group/section ${className || ''}`}>
+    <div className={`relative py-3 w-full perspective-1000 group/section ${className || ''}`}>
       
       <div className="px-4 md:px-12">
         <SectionHeader 
