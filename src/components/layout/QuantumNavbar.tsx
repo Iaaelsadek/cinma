@@ -151,7 +151,7 @@ export const QuantumNavbar = memo(() => {
 
   const [scrolled, setScrolled] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
-  const [searchOpen, setSearchOpen] = useState(false)
+  const [showMobileSearch, setShowMobileSearch] = useState(false)
   const [hoveredLink, setHoveredLink] = useState<string | null>(null)
 
   const cwQuery = useQuery({
@@ -416,10 +416,24 @@ export const QuantumNavbar = memo(() => {
             </>
           )}
 
+              {/* Mobile Search Icon */}
+              <button 
+                className="xl:hidden p-1.5 text-white"
+                onClick={() => {
+                  setShowMobileSearch(!showMobileSearch);
+                  setMenuOpen(false);
+                }}
+              >
+                <Search size={24} />
+              </button>
+
               {/* Hamburger - Visible when Desktop Nav is hidden */}
               <button 
                 className="xl:hidden p-1.5 text-white"
-                onClick={() => setMenuOpen(!menuOpen)}
+                onClick={() => {
+                  setMenuOpen(!menuOpen);
+                  setShowMobileSearch(false);
+                }}
               >
                 {menuOpen ? <X size={24} /> : <Menu size={24} />}
               </button>
@@ -427,30 +441,70 @@ export const QuantumNavbar = memo(() => {
           </div>
         </div>
 
+        {/* Mobile Search Overlay */}
+        <AnimatePresence>
+          {showMobileSearch && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="xl:hidden bg-black/95 backdrop-blur-md border-b border-white/10 overflow-hidden"
+            >
+              <div className="p-4">
+                <div className="relative group">
+                   <input 
+                    type="text" 
+                    value={query || ''}
+                    onChange={(e) => setQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleSearch();
+                        setShowMobileSearch(false);
+                      }
+                    }}
+                    placeholder={lang === 'ar' ? 'بحث...' : 'Search...'}
+                    autoFocus
+                    className="w-full bg-zinc-900 border border-white/10 rounded-full py-3 pl-10 pr-10 text-base text-zinc-300 hover:bg-zinc-800 hover:border-cyan-500/30 transition-all focus:outline-none focus:border-cyan-500/50 placeholder:text-zinc-600"
+                  />
+                  <button 
+                    onClick={() => { handleSearch(); setShowMobileSearch(false); }}
+                    className={`absolute top-1/2 -translate-y-1/2 text-zinc-500 hover:text-cyan-400 transition-colors ${lang === 'ar' ? 'left-4' : 'right-4'}`}
+                  >
+                    <Search size={20} />
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Mobile Menu */}
         <AnimatePresence>
           {menuOpen && (
             <motion.div
               key="mobile-menu"
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="xl:hidden bg-black/95 backdrop-blur-md border-t border-white/10 overflow-hidden"
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="xl:hidden fixed inset-x-0 top-[80px] bottom-0 z-40 bg-black/95 backdrop-blur-md border-t border-white/10 overflow-y-auto overscroll-y-contain pb-32"
             >
-              <div className="flex flex-col p-4 space-y-2">
+              <div className="grid grid-cols-2 gap-3 p-4">
                 {navLinks.map((link) => (
-                  <div key={link.to} className="flex flex-col">
+                  <div key={link.to} className={`flex flex-col ${link.subLinks || link.hasMega ? 'col-span-2' : 'col-span-1'}`}>
                     <PrefetchLink
                       to={link.to}
                       target="_self"
                       onClick={() => setMenuOpen(false)}
-                      className="flex items-center gap-4 p-4 rounded-xl hover:bg-white/10 text-zinc-400 hover:text-white transition-colors"
+                      className={`
+                        flex items-center gap-3 p-3 rounded-xl hover:bg-white/10 text-zinc-400 hover:text-white transition-colors border border-white/5
+                        ${!(link.subLinks || link.hasMega) ? 'flex-col justify-center text-center h-24' : 'w-full'}
+                      `}
                     >
-                      <link.icon size={20} style={{ color: link.color }} />
-                      <span className="font-bold text-lg">{link.label}</span>
+                      <link.icon size={24} style={{ color: link.color }} />
+                      <span className="font-bold text-sm">{link.label}</span>
                     </PrefetchLink>
                     {link.subLinks && (
-                      <div className="flex flex-col gap-1 px-4 border-r border-white/5 mr-6 pr-4">
+                      <div className="flex flex-col gap-1 mt-2 pl-4 border-l-2 border-white/5 ml-2">
                         {link.subLinks.map((sub, i) => (
                           <PrefetchLink
                             key={`${sub.to}-${i}`}
@@ -460,7 +514,7 @@ export const QuantumNavbar = memo(() => {
                             className="flex items-center gap-3 p-3 rounded-lg text-zinc-400 hover:text-cyan-400 hover:bg-white/5 transition-colors"
                           >
                             {sub.icon && <sub.icon size={18} />}
-                            <span className="font-medium">{sub.label}</span>
+                            <span className="font-medium text-sm">{sub.label}</span>
                           </PrefetchLink>
                         ))}
                       </div>
@@ -468,13 +522,15 @@ export const QuantumNavbar = memo(() => {
                   </div>
                 ))}
                 {isSupported && !isInstalled && (
-                  <button
-                    onClick={() => { install(); setMenuOpen(false); }}
-                    className="flex items-center gap-4 p-4 rounded-xl border border-lumen-gold/40 bg-lumen-gold/5 text-lumen-gold hover:bg-lumen-gold/10 transition-colors mt-2 w-full"
-                  >
-                    <Download size={20} />
-                    <span className="font-bold text-lg">{lang === 'ar' ? 'تثبيت التطبيق' : 'Install App'}</span>
-                  </button>
+                  <div className="col-span-2 mt-4">
+                    <button
+                      onClick={() => { install(); setMenuOpen(false); }}
+                      className="flex items-center justify-center gap-3 p-4 rounded-xl border border-lumen-gold/40 bg-lumen-gold/5 text-lumen-gold hover:bg-lumen-gold/10 transition-colors w-full"
+                    >
+                      <Download size={20} />
+                      <span className="font-bold text-lg">{lang === 'ar' ? 'تثبيت التطبيق' : 'Install App'}</span>
+                    </button>
+                  </div>
                 )}
               </div>
             </motion.div>
