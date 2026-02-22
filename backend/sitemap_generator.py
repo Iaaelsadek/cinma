@@ -58,7 +58,7 @@ def generate_sitemap():
         for m in movies.data:
             # Calculate priority based on popularity or recency
             priority = "0.6"
-            if m.get('popularity', 0) > 50 or (m.get('release_date') and m.get('release_date') > '2024-01-01'):
+            if (m.get('popularity') or 0) > 50 or (m.get('release_date') and m.get('release_date') > '2024-01-01'):
                 priority = "0.9"
             
             # Add Watch Page
@@ -83,7 +83,7 @@ def generate_sitemap():
         series = supabase.table("tv_series").select("id, name, created_at, first_air_date, popularity").eq("is_active", True).execute()
         for s in series.data:
             priority = "0.6"
-            if s.get('popularity', 0) > 50 or (s.get('first_air_date') and s.get('first_air_date') > '2024-01-01'):
+            if (s.get('popularity') or 0) > 50 or (s.get('first_air_date') and s.get('first_air_date') > '2024-01-01'):
                 priority = "0.9"
 
             # Add Watch Page
