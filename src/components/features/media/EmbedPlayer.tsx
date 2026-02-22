@@ -67,8 +67,8 @@ export const EmbedPlayer = ({ server, cinemaMode, toggleCinemaMode, loading, onN
             className="h-full w-full bg-black"
             allowFullScreen
             scrolling="no"
-            referrerPolicy="origin"
-            sandbox="allow-scripts allow-same-origin allow-forms allow-presentation allow-popups"
+            referrerPolicy="no-referrer"
+            sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
             style={{ border: 'none', overflow: 'hidden' }}
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
             title={`Stream ${server.name}`}
