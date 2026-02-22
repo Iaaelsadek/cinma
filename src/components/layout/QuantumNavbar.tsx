@@ -7,11 +7,11 @@ import { useLang } from '../../state/useLang'
 import { useAuth } from '../../hooks/useAuth'
 import { usePwa } from '../../context/PwaContext'
 import { getContinueWatching } from '../../lib/supabase'
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useMemo, memo } from 'react'
 import { Home, Film, Tv, Gamepad2, Zap, User, Search, Menu, X, Clock, ChevronDown, BookOpen, History, Smile, Drama, Radio, ListVideo, Moon, Download, MapPin, Star, Mic, Loader2 } from 'lucide-react'
 
 
-export const QuantumNavbar = () => {
+export const QuantumNavbar = memo(() => {
   const { user, loading, profile } = useAuth()
   const { lang, toggle } = useLang()
   const { isSupported, isInstalled, install } = usePwa()
@@ -33,7 +33,7 @@ export const QuantumNavbar = () => {
     }, 300)
   }
 
-  const navLinks = [
+  const navLinks = useMemo(() => [
     { 
       to: '/', 
       label: lang === 'ar' ? 'الرئيسية' : 'Home', 
@@ -134,7 +134,7 @@ export const QuantumNavbar = () => {
         { to: '/search?types=movie&genres=16', label: lang === 'ar' ? 'أفلام كرتون' : 'Animation', icon: Film }
       ]
     }
-  ]
+  ], [lang])
 
   const [scrolled, setScrolled] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -470,4 +470,4 @@ export const QuantumNavbar = () => {
       </nav>
     </div>
   )
-}
+})
