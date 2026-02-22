@@ -1,4 +1,4 @@
-import { useRef, useMemo } from 'react'
+import { useRef, memo } from 'react'
 import { ChevronLeft, ChevronRight, Play } from 'lucide-react'
 import { VideoCard, VideoItem } from './VideoCard'
 import { SectionHeader } from '../../common/SectionHeader'
@@ -10,7 +10,7 @@ type Props = {
   link?: string
 }
 
-export const VideoRow = ({ title, videos, icon, link }: Props) => {
+export const VideoRow = memo(({ title, videos, icon, link }: Props) => {
   const ref = useRef<HTMLDivElement>(null)
   
   const onLeft = () => ref.current?.scrollBy({ left: -window.innerWidth * 0.8, behavior: 'smooth' })
@@ -63,4 +63,11 @@ export const VideoRow = ({ title, videos, icon, link }: Props) => {
       </div>
     </section>
   )
-}
+}, (prev, next) => {
+  if (prev.videos.length !== next.videos.length) return false
+  if (prev.title !== next.title) return false
+  if (prev.videos.length > 0 && next.videos.length > 0) {
+    if (prev.videos[0].id !== next.videos[0].id) return false
+  }
+  return true
+})

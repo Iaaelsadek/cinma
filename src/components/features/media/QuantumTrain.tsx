@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, memo } from 'react'
 import { motion, useScroll, useTransform, useSpring } from 'framer-motion'
 import { HolographicCard } from '../../effects/HolographicCard'
 import { Star, Calendar, Film, ChevronLeft, ChevronRight, Zap } from 'lucide-react'
@@ -14,7 +14,7 @@ import 'swiper/css'
 import 'swiper/css/free-mode'
 import 'swiper/css/navigation'
 
-export const QuantumTrain = ({ 
+export const QuantumTrain = memo(({ 
   items, 
   title, 
   link, 
@@ -98,4 +98,13 @@ export const QuantumTrain = ({
       </div>
     </div>
   )
-}
+}, (prev, next) => {
+  // Only re-render if title changes or items length changes or first item id changes
+  // This avoids re-renders when parent state changes but data is same
+  if (prev.title !== next.title) return false
+  if (prev.items.length !== next.items.length) return false
+  if (prev.items.length > 0 && next.items.length > 0) {
+    if (prev.items[0].id !== next.items[0].id) return false
+  }
+  return true
+})

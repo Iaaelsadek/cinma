@@ -15,16 +15,17 @@ export type VideoItem = {
   quality?: string | null
 }
 
-type UseCategoryOptions = {
+export type UseCategoryOptions = {
   limit?: number
   orderBy?: 'created_at' | 'views' | 'year'
   ascending?: boolean
   enabled?: boolean
   year?: number
+  staleTime?: number
 }
 
 export function useCategoryVideos(category: string, options: UseCategoryOptions = {}) {
-  const { limit = 20, orderBy = 'created_at', ascending = false, enabled = true, year } = options
+  const { limit = 20, orderBy = 'created_at', ascending = false, enabled = true, year, staleTime = 1000 * 60 * 30 } = options
   return useQuery({
     queryKey: ['videos', category, limit, orderBy, ascending, year],
     queryFn: async () => {
@@ -42,12 +43,13 @@ export function useCategoryVideos(category: string, options: UseCategoryOptions 
         .limit(limit)
       return (data || []) as VideoItem[]
     },
-    enabled
+    enabled,
+    staleTime
   })
 }
 
 export function useClassicVideos(options: UseCategoryOptions = {}) {
-  const { limit = 20, orderBy = 'created_at', ascending = false, enabled = true } = options
+  const { limit = 20, orderBy = 'created_at', ascending = false, enabled = true, staleTime = 1000 * 60 * 30 } = options
   return useQuery({
     queryKey: ['videos', 'classics', limit, orderBy, ascending],
     queryFn: async () => {
@@ -59,6 +61,7 @@ export function useClassicVideos(options: UseCategoryOptions = {}) {
         .limit(limit)
       return (data || []) as VideoItem[]
     },
-    enabled
+    enabled,
+    staleTime
   })
 }
