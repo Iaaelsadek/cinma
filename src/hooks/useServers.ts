@@ -14,6 +14,7 @@ export type Server = {
 // STAGE 2: ZERO-FAILURE STREAMING ARCHITECTURE
 // ------------------------------------------------------------------
 const PROVIDERS = [
+  { id: 'vidsrc_nl', name: 'VidSrc NL (Fast)', base: 'https://vidsrc.net/embed' },
   { id: 'vidsrc', name: 'VidSrc (Primary)', base: 'https://vidsrc.to/embed' },
   { id: 'vidsrc_me', name: 'VidSrc Me', base: 'https://vidsrc.me/embed' },
   { id: 'embed_su', name: 'Embed.su', base: 'https://embed.su/embed' },
@@ -113,10 +114,11 @@ export const useServers = (tmdbId: number, type: 'movie' | 'tv', season?: number
         let url = ''
         
           // Vidsrc.to / Pro / VIP / XYZ / ICU / In-house
-          if (['vidsrc', 'vidsrc_pro', 'vidsrc_vip', 'vidsrc_xyz', 'vidsrc_icu'].includes(p.id)) {
+          if (['vidsrc', 'vidsrc_pro', 'vidsrc_vip', 'vidsrc_xyz', 'vidsrc_icu', 'vidsrc_nl'].includes(p.id)) {
+            const query = '?ds_lang=ar'
             url = type === 'movie' 
-              ? (imdbId ? `${p.base}/movie/${imdbId}?sub.lang=ar` : `${p.base}/movie/${tmdbId}?sub.lang=ar`)
-              : (imdbId ? `${p.base}/tv/${imdbId}/${season}/${episode}?sub.lang=ar` : `${p.base}/tv/${tmdbId}/${season}/${episode}?sub.lang=ar`)
+              ? (imdbId ? `${p.base}/movie/${imdbId}${query}` : `${p.base}/movie/${tmdbId}${query}`)
+              : (imdbId ? `${p.base}/tv/${imdbId}/${season}/${episode}${query}` : `${p.base}/tv/${tmdbId}/${season}/${episode}${query}`)
           } 
         // Vidsrc.me (Supports IMDb)
         else if (p.id === 'vidsrc_me') {

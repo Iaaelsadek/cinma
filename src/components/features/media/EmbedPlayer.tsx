@@ -60,29 +60,31 @@ export const EmbedPlayer = ({ server, cinemaMode, toggleCinemaMode, loading, onN
           ? 'fixed inset-0 z-[60] h-screen w-screen rounded-none border-none' 
           : 'border-white/10 ring-1 ring-white/5'}`}
       >
-        {server ? (
-          <iframe
-            key={server.url}
-            src={server.url}
-            className="h-full w-full bg-black"
-            allowFullScreen
-            scrolling="no"
-            referrerPolicy="no-referrer"
-            sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
-            style={{ border: 'none', overflow: 'hidden' }}
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            title={`Stream ${server.name}`}
-            onError={() => onNextServer()}
-          />
-        ) : (
-          <div className="flex h-full flex-col items-center justify-center text-zinc-500 gap-4 bg-zinc-900/50">
-            <WifiOff size={48} className="opacity-50" />
-            <div className="text-center space-y-2">
-              <span className="block text-lg font-medium text-zinc-300">No working servers found</span>
-              <span className="block text-sm text-zinc-500">Try switching servers below or use the external link</span>
+        {/* Event Interceptor Container */}
+        <div className="h-full w-full relative">
+          {server ? (
+            <iframe
+              key={server.url}
+              src={server.url}
+              className="h-full w-full bg-black"
+              allowFullScreen
+              scrolling="no"
+              referrerPolicy="origin"
+              style={{ border: 'none', overflow: 'hidden' }}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              title={`Stream ${server.name}`}
+              onError={() => onNextServer()}
+            />
+          ) : (
+            <div className="flex h-full flex-col items-center justify-center text-zinc-500 gap-4 bg-zinc-900/50">
+              <WifiOff size={48} className="opacity-50" />
+              <div className="text-center space-y-2">
+                <span className="block text-lg font-medium text-zinc-300">No working servers found</span>
+                <span className="block text-sm text-zinc-500">Try switching servers below or use the external link</span>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
         
         {cinemaMode && (
           <button 
