@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, memo } from 'react'
 import { ImageOff, Loader2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -20,7 +20,7 @@ const getUrl = (path: string, size: TmdbImageSize) => {
   return `https://image.tmdb.org/t/p/${size}${path}`
 }
 
-export const TmdbImage = ({
+export const TmdbImage = memo(({
   path,
   size = 'w342',
   fallback,
@@ -84,4 +84,4 @@ export const TmdbImage = ({
       )}
     </div>
   )
-}
+})

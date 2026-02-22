@@ -1,8 +1,10 @@
+import { memo } from 'react'
+
 /**
  * LUMEN ambient background — warm, subtle mesh (no images).
  * Pure CSS; sits behind content at z-index -1.
  */
-export const AuroraBackground = () => {
+export const AuroraBackground = memo(() => {
   return (
     <div className="fixed inset-0 z-[-1] overflow-hidden pointer-events-none" aria-hidden>
       <div className="absolute inset-0 bg-lumen-void" />
@@ -17,4 +19,4 @@ export const AuroraBackground = () => {
       />
     </div>
   )
-}
+})
