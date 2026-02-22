@@ -1,8 +1,8 @@
+import { memo, useState, type MouseEvent } from 'react'
 import { motion } from 'framer-motion'
 import { Play, Star, Plus, Check } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { PrefetchLink } from '../../common/PrefetchLink'
-import { useState, type MouseEvent } from 'react'
 import { useAuth } from '../../../hooks/useAuth'
 import { addToWatchlist, isInWatchlist, removeFromWatchlist } from '../../../lib/supabase'
 import { getGenreName } from '../../../lib/genres'
@@ -28,7 +28,7 @@ export type Movie = {
 }
 
 
-export const MovieCard = ({ movie, index = 0 }: { movie: Movie; index?: number }) => {
+export const MovieCard = memo(({ movie, index = 0 }: { movie: Movie; index?: number }) => {
   const [isHovered, setIsHovered] = useState(false)
   const [listBusy, setListBusy] = useState(false)
   const [inList, setInList] = useState(false)
@@ -223,4 +223,6 @@ export const MovieCard = ({ movie, index = 0 }: { movie: Movie; index?: number }
       </PrefetchLink>
     </motion.div>
   )
-}
+}, (prev, next) => {
+  return prev.movie.id === next.movie.id && prev.index === next.index
+})

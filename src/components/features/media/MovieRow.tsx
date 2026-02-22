@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { memo, useRef } from 'react'
 import { ChevronLeft, ChevronRight, Film } from 'lucide-react'
 import { MovieCard } from './MovieCard'
 import { SectionHeader } from '../../common/SectionHeader'
@@ -24,7 +24,7 @@ type Props = {
   link?: string
 }
 
-export const MovieRow = ({ title, movies, isSeries, icon, link }: Props) => {
+export const MovieRow = memo(({ title, movies, isSeries, icon, link }: Props) => {
   const ref = useRef<HTMLDivElement>(null)
   
   const onLeft = () => ref.current?.scrollBy({ left: -window.innerWidth * 0.8, behavior: 'smooth' })
@@ -77,4 +77,13 @@ export const MovieRow = ({ title, movies, isSeries, icon, link }: Props) => {
       </div>
     </section>
   )
-}
+}, (prev, next) => {
+  // Only re-render if the movie IDs change
+  if (prev.movies.length !== next.movies.length) return false
+  if (prev.title !== next.title) return false
+  
+  // Fast check: compare first and last ID if length is same (heuristic)
+  // or compare all IDs if needed for absolute correctness.
+  // Using the user's suggestion for a robust check:
+  return prev.movies.map(m => m.id).join(',') === next.movies.map(m => m.id).join(',')
+})
