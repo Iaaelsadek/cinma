@@ -21,7 +21,6 @@ const PROVIDERS = [
   { id: 'vidsrc_vip', name: 'VidSrc VIP', base: 'https://vidsrc.vip/embed' },
   { id: 'vidsrc_xyz', name: 'VidSrc XYZ', base: 'https://vidsrc.xyz/embed' },
   { id: 'vidsrc_icu', name: 'VidSrc ICU', base: 'https://vidsrc.icu/embed' },
-  { id: 'vidsrc_nl', name: 'VidSrc NL', base: 'https://player.vidsrc.nl/embed' },
   { id: 'autoembed', name: 'AutoEmbed', base: 'https://autoembed.co' },
   { id: 'vidsrc_cc', name: 'VidSrc CC', base: 'https://vidsrc.cc/v2/embed' },
   { id: 'vidlink', name: 'VidLink', base: 'https://vidlink.pro' },
@@ -114,10 +113,10 @@ export const useServers = (tmdbId: number, type: 'movie' | 'tv', season?: number
         let url = ''
         
           // Vidsrc.to / Pro / VIP / XYZ / ICU / In-house
-          if (['vidsrc', 'vidsrc_pro', 'vidsrc_vip', 'vidsrc_xyz', 'vidsrc_icu', 'vidsrc_nl'].includes(p.id)) {
+          if (['vidsrc', 'vidsrc_pro', 'vidsrc_vip', 'vidsrc_xyz', 'vidsrc_icu'].includes(p.id)) {
             url = type === 'movie' 
-              ? (imdbId ? `${p.base}/movie/${imdbId}` : `${p.base}/movie/${tmdbId}`)
-              : (imdbId ? `${p.base}/tv/${imdbId}/${season}/${episode}` : `${p.base}/tv/${tmdbId}/${season}/${episode}`)
+              ? (imdbId ? `${p.base}/movie/${imdbId}?sub.lang=ar` : `${p.base}/movie/${tmdbId}?sub.lang=ar`)
+              : (imdbId ? `${p.base}/tv/${imdbId}/${season}/${episode}?sub.lang=ar` : `${p.base}/tv/${tmdbId}/${season}/${episode}?sub.lang=ar`)
           } 
         // Vidsrc.me (Supports IMDb)
         else if (p.id === 'vidsrc_me') {
