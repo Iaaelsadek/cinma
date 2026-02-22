@@ -243,95 +243,93 @@ export const QuantumNavbar = memo(() => {
               </div>
             </PrefetchLink>
 
-            {/* Combined Nav & Actions Group for maximum separation */}
-            <div className="flex items-center gap-4 flex-1 justify-between">
-              {/* Desktop Nav - Hidden on smaller screens to prevent overlap */}
-              <div className="hidden xl:flex items-center gap-3 mx-auto">
-                {navLinks.map((link) => (
-                  <div 
-                    key={link.to} 
-                    className="relative group h-full flex items-center"
-                    onMouseEnter={() => handleMouseEnter(link.label)}
-                    onMouseLeave={handleMouseLeave}
+            {/* Desktop Nav - Hidden on smaller screens to prevent overlap */}
+            <div className="hidden xl:flex items-center gap-3">
+              {navLinks.map((link) => (
+                <div 
+                  key={link.to} 
+                  className="relative group h-full flex items-center"
+                  onMouseEnter={() => handleMouseEnter(link.label)}
+                  onMouseLeave={handleMouseLeave}
+                >
+                  <PrefetchLink
+                    to={link.to}
+                    target="_self"
+                    className="flex flex-col items-center justify-center gap-1 px-2 py-1 text-xs font-bold text-zinc-400 group-hover:text-white transition-all duration-300 relative"
                   >
-                    <PrefetchLink
-                      to={link.to}
-                      target="_self"
-                      className="flex flex-col items-center justify-center gap-1 px-2 py-1 text-xs font-bold text-zinc-400 group-hover:text-white transition-all duration-300 relative"
-                    >
-                      <div className="relative p-1.5 rounded-xl group-hover:bg-white/5 transition-colors duration-300">
-                        <link.icon size={18} style={{ color: link.color }} className="group-hover:scale-110 transition-transform duration-300" />
-                        {link.hasMega && (
-                          <div className={`absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-current opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${hoveredLink === link.label ? 'opacity-100' : ''}`} />
-                        )}
-                      </div>
-                      <span className="uppercase tracking-wider group-hover:tracking-widest transition-all duration-300">{link.label}</span>
-                    </PrefetchLink>
-                    
-                    {/* Mega Menu Dropdown */}
-        <AnimatePresence>
-          {link.hasMega && hoveredLink === link.label && (
-            <motion.div
-              initial={{ opacity: 0, y: 10, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 10, scale: 0.95 }}
-              transition={{ duration: 0.2 }}
-              className="absolute top-full left-1/2 -translate-x-1/2 w-max z-50 pt-4"
-              onMouseEnter={() => handleMouseEnter(link.label)}
-              onMouseLeave={handleMouseLeave}
+                    <div className="relative p-1.5 rounded-xl group-hover:bg-white/5 transition-colors duration-300">
+                      <link.icon size={18} style={{ color: link.color }} className="group-hover:scale-110 transition-transform duration-300" />
+                      {link.hasMega && (
+                        <div className={`absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-current opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${hoveredLink === link.label ? 'opacity-100' : ''}`} />
+                      )}
+                    </div>
+                    <span className="uppercase tracking-wider group-hover:tracking-widest transition-all duration-300">{link.label}</span>
+                  </PrefetchLink>
+                  
+                  {/* Mega Menu Dropdown */}
+      <AnimatePresence>
+        {link.hasMega && hoveredLink === link.label && (
+          <motion.div
+            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 10, scale: 0.95 }}
+            transition={{ duration: 0.2 }}
+            className="absolute top-full left-1/2 -translate-x-1/2 w-max z-50 pt-4"
+            onMouseEnter={() => handleMouseEnter(link.label)}
+            onMouseLeave={handleMouseLeave}
+          >
+            <div 
+              className="bg-[#0a0a0a]/95 border border-white/10 rounded-2xl shadow-xl overflow-hidden p-6 backdrop-blur-sm min-w-[280px]"
             >
-              <div 
-                className="bg-[#0a0a0a]/95 border border-white/10 rounded-2xl shadow-xl overflow-hidden p-6 backdrop-blur-sm min-w-[280px]"
-              >
-                 <div className="w-full flex flex-col gap-6">
-                    {/* SubLinks Section */}
-                    {link.subLinks && (
-                      <div>
-                        <h3 className="text-white font-bold mb-3 flex items-center gap-2 border-b border-white/10 pb-2">
-                          {lang === 'ar' ? 'الأقسام' : 'Sections'}
-                        </h3>
-                        <ul className="grid grid-cols-1 gap-2">
-                          {link.subLinks.map((sub, i) => (
-                            <li key={`${sub.to}-${i}`}>
-                              <PrefetchLink to={sub.to} target="_self" className="flex items-center gap-3 text-zinc-300 hover:text-cyan-400 transition-colors py-1 group/sub">
-                                {sub.icon && <sub.icon size={18} className="text-zinc-500 group-hover/sub:text-cyan-400 transition-colors" />}
-                                <span className="font-medium">{sub.label}</span>
-                              </PrefetchLink>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
+               <div className="w-full flex flex-col gap-6">
+                  {/* SubLinks Section */}
+                  {link.subLinks && (
+                    <div>
+                      <h3 className="text-white font-bold mb-3 flex items-center gap-2 border-b border-white/10 pb-2">
+                        {lang === 'ar' ? 'الأقسام' : 'Sections'}
+                      </h3>
+                      <ul className="grid grid-cols-1 gap-2">
+                        {link.subLinks.map((sub, i) => (
+                          <li key={`${sub.to}-${i}`}>
+                            <PrefetchLink to={sub.to} target="_self" className="flex items-center gap-3 text-zinc-300 hover:text-cyan-400 transition-colors py-1 group/sub">
+                              {sub.icon && <sub.icon size={18} className="text-zinc-500 group-hover/sub:text-cyan-400 transition-colors" />}
+                              <span className="font-medium">{sub.label}</span>
+                            </PrefetchLink>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
 
-                    {/* Categories Section */}
-                    {link.categories && (
-                      <div>
-                        <h3 className="text-white font-bold mb-4 flex items-center gap-2">
-                          <link.icon size={18} style={{ color: link.color }} />
-                          {lang === 'ar' ? 'التصنيفات' : 'Categories'}
-                        </h3>
-                        <ul className="grid grid-cols-2 gap-2">
-                          {link.categories.map(cat => (
-                            <li key={cat.id}>
-                              <PrefetchLink to={`${link.to}?cat=${cat.id.toLowerCase()}`} target="_self" className="text-zinc-400 hover:text-cyan-400 text-sm transition-colors block py-1">
-                                {lang === 'ar' ? cat.label.ar : cat.label.en}
-                              </PrefetchLink>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                 </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-                  </div>
-                ))}
-              </div>
+                  {/* Categories Section */}
+                  {link.categories && (
+                    <div>
+                      <h3 className="text-white font-bold mb-4 flex items-center gap-2">
+                        <link.icon size={18} style={{ color: link.color }} />
+                        {lang === 'ar' ? 'التصنيفات' : 'Categories'}
+                      </h3>
+                      <ul className="grid grid-cols-2 gap-2">
+                        {link.categories.map(cat => (
+                          <li key={cat.id}>
+                            <PrefetchLink to={`${link.to}?cat=${cat.id.toLowerCase()}`} target="_self" className="text-zinc-400 hover:text-cyan-400 text-sm transition-colors block py-1">
+                              {lang === 'ar' ? cat.label.ar : cat.label.en}
+                            </PrefetchLink>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+               </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+                </div>
+              ))}
+            </div>
 
-              {/* Actions */}
-              <div className="flex items-center gap-2 shrink-0 ml-auto">
+            {/* Actions */}
+            <div className="flex items-center gap-2 shrink-0">
               {/* Desktop Search */}
               <div className="hidden md:flex items-center gap-4 relative">
                 <div className="relative group">
@@ -431,7 +429,6 @@ export const QuantumNavbar = memo(() => {
                 {menuOpen ? <X size={24} /> : <Menu size={24} />}
               </button>
             </div>
-          </div>
         </div>
 
         {/* Mobile Search Overlay */}
