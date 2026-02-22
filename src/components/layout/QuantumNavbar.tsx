@@ -8,7 +8,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { usePwa } from '../../context/PwaContext'
 import { getContinueWatching } from '../../lib/supabase'
 import { useEffect, useState, useRef, useMemo, memo } from 'react'
-import { Home, Film, Tv, Gamepad2, Zap, User, Search, Menu, X, Clock, ChevronDown, BookOpen, History, Smile, Drama, Radio, ListVideo, Moon, Download, MapPin, Star, Mic, Loader2 } from 'lucide-react'
+import { Home, Film, Tv, Gamepad2, Zap, User, Search, Menu, X, Clock, ChevronDown, BookOpen, History, Smile, Drama, Radio, ListVideo, Moon, Download, MapPin, Star, Mic, Loader2, Shuffle } from 'lucide-react'
 
 
 export const QuantumNavbar = memo(() => {
@@ -54,6 +54,13 @@ export const QuantumNavbar = memo(() => {
         { to: '/movies/top_rated', label: lang === 'ar' ? 'أعلى الأفلام تقييماً' : 'Top Rated Movies', icon: Star },
         { to: '/series/top_rated', label: lang === 'ar' ? 'أعلى المسلسلات تقييماً' : 'Top Rated Series', icon: Star }
       ]
+    },
+    { 
+      to: '/random', 
+      label: lang === 'ar' ? 'اكتشف' : 'Discover', 
+      icon: Shuffle, 
+      color: '#d946ef',
+      hasMega: false
     },
     { 
       to: '/ramadan', 
