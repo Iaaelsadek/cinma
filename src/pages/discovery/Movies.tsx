@@ -90,6 +90,34 @@ export const MoviesPage = () => {
     return data.results.map((item: any) => ({ ...item, media_type: 'movie' }))
   }})
 
+  const marvel = useQuery({ queryKey: ['movies-marvel'], queryFn: async () => {
+    const { data } = await tmdb.get('/discover/movie', {
+      params: { with_companies: 420, sort_by: 'popularity.desc' }
+    })
+    return data.results.map((item: any) => ({ ...item, media_type: 'movie' }))
+  }})
+
+  const dc = useQuery({ queryKey: ['movies-dc'], queryFn: async () => {
+    const { data } = await tmdb.get('/discover/movie', {
+      params: { with_companies: 9993, sort_by: 'popularity.desc' }
+    })
+    return data.results.map((item: any) => ({ ...item, media_type: 'movie' }))
+  }})
+
+  const pixar = useQuery({ queryKey: ['movies-pixar'], queryFn: async () => {
+    const { data } = await tmdb.get('/discover/movie', {
+      params: { with_companies: 3, sort_by: 'popularity.desc' }
+    })
+    return data.results.map((item: any) => ({ ...item, media_type: 'movie' }))
+  }})
+
+  const disney = useQuery({ queryKey: ['movies-disney'], queryFn: async () => {
+    const { data } = await tmdb.get('/discover/movie', {
+      params: { with_companies: 2, sort_by: 'popularity.desc' }
+    })
+    return data.results.map((item: any) => ({ ...item, media_type: 'movie' }))
+  }})
+
   const heroItems = trending.data?.slice(0, 10) || []
 
   return (
@@ -153,6 +181,30 @@ export const MoviesPage = () => {
           items={sciFi.data || []} 
           title={lang === 'ar' ? 'خيال علمي' : 'Sci-Fi'} 
           link="/movies/genre/878"
+        />
+
+        <QuantumTrain 
+          items={marvel.data || []} 
+          title={lang === 'ar' ? 'عالم مارفل السينمائي' : 'Marvel Cinematic Universe'} 
+          link="/search?types=movie&keywords=marvel"
+        />
+
+        <QuantumTrain 
+          items={dc.data || []} 
+          title={lang === 'ar' ? 'عالم دي سي' : 'DC Universe'} 
+          link="/search?types=movie&keywords=dc"
+        />
+
+        <QuantumTrain 
+          items={disney.data || []} 
+          title={lang === 'ar' ? 'ديزني' : 'Disney'} 
+          link="/search?types=movie&genres=16"
+        />
+
+        <QuantumTrain 
+          items={pixar.data || []} 
+          title={lang === 'ar' ? 'بيكسار' : 'Pixar'} 
+          link="/search?types=movie&genres=16"
         />
 
         <QuantumTrain 
