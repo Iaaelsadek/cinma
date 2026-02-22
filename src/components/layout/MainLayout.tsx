@@ -17,6 +17,10 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
   const location = useLocation()
   const { lang } = useLang()
 
+  if (location.pathname === '/quran/radio') {
+    return <>{children}</>
+  }
+
   return (
     <div className={`min-h-screen font-dm selection:bg-lumen-gold selection:text-lumen-void ${lang === 'ar' ? 'font-cairo' : ''}`}>
       {/* THE LIVING ORGANISM CORE */}

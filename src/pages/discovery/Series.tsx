@@ -52,12 +52,30 @@ const fetchArabic = async () => {
   return data.results.map((item: any) => ({ ...item, media_type: 'tv' }))
 }
 
+const fetchOnTheAir = async () => {
+  const { data } = await tmdb.get('/tv/on_the_air')
+  return data.results.map((item: any) => ({ ...item, media_type: 'tv' }))
+}
+
+const fetchKorean = async () => {
+  const { data } = await tmdb.get('/discover/tv', {
+    params: {
+      with_original_language: 'ko',
+      sort_by: 'popularity.desc',
+      'vote_count.gte': 50
+    }
+  })
+  return data.results.map((item: any) => ({ ...item, media_type: 'tv' }))
+}
+
 export const SeriesPage = () => {
   const { lang } = useLang()
 
   const trending = useQuery({ queryKey: ['series-trending'], queryFn: () => fetchTrending('tv') })
+  const onTheAir = useQuery({ queryKey: ['series-on-the-air'], queryFn: fetchOnTheAir })
   const turkish = useQuery({ queryKey: ['series-turkish'], queryFn: fetchTurkish })
   const arabic = useQuery({ queryKey: ['series-arabic'], queryFn: fetchArabic })
+  const korean = useQuery({ queryKey: ['series-korean'], queryFn: fetchKorean })
   const topRated = useQuery({ queryKey: ['series-top-rated'], queryFn: () => fetchTopRated('tv') })
   const popular = useQuery({ queryKey: ['series-popular'], queryFn: () => fetchPopular('tv') })
   
@@ -69,6 +87,23 @@ export const SeriesPage = () => {
   const mystery = useQuery({ queryKey: ['series-mystery'], queryFn: () => fetchByGenre(9648, 'tv') })
   const crime = useQuery({ queryKey: ['series-crime'], queryFn: () => fetchByGenre(80, 'tv') })
   const kids = useQuery({ queryKey: ['series-kids'], queryFn: () => fetchByGenre(10762, 'tv') })
+  const documentary = useQuery({ queryKey: ['series-documentary'], queryFn: () => fetchByGenre(99, 'tv') })
+  const reality = useQuery({ queryKey: ['series-reality'], queryFn: () => fetchByGenre(10764, 'tv') })
+  const soap = useQuery({ queryKey: ['series-soap'], queryFn: () => fetchByGenre(10766, 'tv') })
+  
+  const anime = useQuery({ queryKey: ['series-anime'], queryFn: async () => {
+    const { data } = await tmdb.get('/discover/tv', {
+      params: { with_genres: 16, with_original_language: 'ja', sort_by: 'popularity.desc' }
+    })
+    return data.results.map((item: any) => ({ ...item, media_type: 'tv' }))
+  }})
+
+  const bollywood = useQuery({ queryKey: ['series-bollywood'], queryFn: async () => {
+    const { data } = await tmdb.get('/discover/tv', {
+      params: { with_original_language: 'hi', sort_by: 'popularity.desc' }
+    })
+    return data.results.map((item: any) => ({ ...item, media_type: 'tv' }))
+  }})
 
   const heroItems = trending.data?.slice(0, 10) || []
 
@@ -78,20 +113,25 @@ export const SeriesPage = () => {
         <title>{lang === 'ar' ? 'المسلسلات - سينما أونلاين' : 'Series - Cinema Online'}</title>
       </Helmet>
 
-      {/* Hero Section (REMOVED) */}
-      {/* <QuantumHero items={heroItems} /> */}
+      <QuantumHero items={heroItems} />
 
       <div className="space-y-2 pt-4 relative z-10">
         <QuantumTrain 
+          items={onTheAir.data || []} 
+          title={lang === 'ar' ? 'يعرض الآن' : 'On The Air'} 
+          link="/search?types=tv&sort=first_air_date.desc"
+        />
+
+        <QuantumTrain 
           items={trending.data || []} 
           title={lang === 'ar' ? 'الرائج هذا الأسبوع' : 'Trending This Week'} 
-          link="/search?types=tv&sort=trending"
+          link="/search?types=tv&sort=popularity.desc"
         />
 
         <QuantumTrain 
           items={arabic.data || []} 
           title={lang === 'ar' ? 'مسلسلات عربية ورمضانية' : 'Arabic & Ramadan Series'} 
-          link="/search?types=tv&lang=ar"
+          link="/ramadan"
         />
 
         <QuantumTrain 
@@ -99,17 +139,23 @@ export const SeriesPage = () => {
           title={lang === 'ar' ? 'الدراما التركية' : 'Turkish Drama'} 
           link="/search?types=tv&lang=tr"
         />
-        
+
+        <QuantumTrain 
+          items={korean.data || []} 
+          title={lang === 'ar' ? 'الدراما الكورية' : 'K-Drama'} 
+          link="/search?types=tv&lang=ko"
+        />
+
         <QuantumTrain 
           items={topRated.data || []} 
           title={lang === 'ar' ? 'الأعلى تقييماً' : 'Top Rated'} 
-          link="/search?types=tv&sort=top_rated"
+          link="/search?types=tv&sort=vote_average.desc"
         />
 
         <QuantumTrain 
           items={popular.data || []} 
-          title={lang === 'ar' ? 'الأكثر شعبية' : 'Most Popular'} 
-          link="/search?types=tv&sort=popular"
+          title={lang === 'ar' ? 'الأكثر مشاهدة' : 'Most Watched'} 
+          link="/search?types=tv&sort=vote_count.desc"
         />
 
         <QuantumTrain 
@@ -158,6 +204,36 @@ export const SeriesPage = () => {
           items={kids.data || []} 
           title={lang === 'ar' ? 'أطفال' : 'Kids'} 
           link="/series/genre/10762"
+        />
+
+        <QuantumTrain 
+          items={documentary.data || []} 
+          title={lang === 'ar' ? 'وثائقي' : 'Documentary'} 
+          link="/series/genre/99"
+        />
+
+        <QuantumTrain 
+          items={reality.data || []} 
+          title={lang === 'ar' ? 'برامج واقعية' : 'Reality TV'} 
+          link="/series/genre/10764"
+        />
+
+        <QuantumTrain 
+          items={soap.data || []} 
+          title={lang === 'ar' ? 'مسلسلات طويلة' : 'Soap Operas'} 
+          link="/series/genre/10766"
+        />
+
+        <QuantumTrain 
+          items={anime.data || []} 
+          title={lang === 'ar' ? 'أنمي ياباني' : 'Anime'} 
+          link="/search?types=tv&lang=ja&genres=16"
+        />
+
+        <QuantumTrain 
+          items={bollywood.data || []} 
+          title={lang === 'ar' ? 'مسلسلات هندية' : 'Bollywood Series'} 
+          link="/search?types=tv&lang=hi"
         />
       </div>
     </div>
