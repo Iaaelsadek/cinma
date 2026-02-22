@@ -20,7 +20,7 @@ const callGeminiWithFallback = async (prompt: string, contextLabel: string): Pro
 
   try {
     // 1. Primary Model (Latest Stable)
-    const model = genAI.getGenerativeModel({ model: "gemini-3.1-pro" });
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
     const result = await model.generateContent(prompt);
     const response = result.response;
     return response.text().trim();
