@@ -108,7 +108,7 @@ export const HeroSlider = ({ items }: Props) => {
                     alt={item.title || item.name} 
                     className="h-full w-full object-cover opacity-60"
                     loading={i === 0 ? "eager" : "lazy"}
-                    fetchpriority={i === 0 ? "high" : "low"}
+                    fetchPriority={i === 0 ? "high" : "low"}
                   />
                 ) : (
                   <div className="h-full w-full bg-zinc-900" />
