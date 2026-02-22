@@ -230,12 +230,10 @@ export const QuranPlayerProvider = ({ children }: { children: ReactNode }) => {
           
           if (retryCount < 2 && currentTrack?.url) {
              const delay = (retryCount + 1) * 1000
-             console.log(`Retrying playback in ${delay}ms... (Attempt ${retryCount + 1})`)
              
              // Try to fix URL if it's HTTP
              if (currentTrack.url.startsWith('http:')) {
                 const newUrl = currentTrack.url.replace('http:', 'https:')
-                console.log('Upgrading to HTTPS for retry:', newUrl)
                 // We can't easily update currentTrack here without causing a loop if not careful
                 // But we can try to reload
              }

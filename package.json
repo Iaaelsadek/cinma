@@ -18,8 +18,9 @@
     "fetch:trend": ".\\\\.venv\\\\Scripts\\\\python.exe content_aggregator.py trend",
     "fetch:keywords": ".\\\\.venv\\\\Scripts\\\\python.exe content_aggregator.py keywords",
     "fetch:indexnow": ".\\\\.venv\\\\Scripts\\\\python.exe content_aggregator.py indexnow",
-    "import:content": ".\\\\.venv\\\\Scripts\\\\python.exe backend\\\\mass_content_importer.py",
-    "setup:python": "python -m venv .venv && .\\\\.venv\\\\Scripts\\\\python.exe -m pip install --upgrade pip && .\\\\.venv\\\\Scripts\\\\python.exe -m pip install supabase yt-dlp openai python-dotenv",
+    "import:content": ".\\.venv\\Scripts\\python.exe backend\\mass_content_importer.py",
+    "generate:sitemap": ".\\.venv\\Scripts\\python.exe backend\\sitemap_generator.py",
+    "setup:python": "python -m venv .venv && .\\.venv\\Scripts\\python.exe -m pip install --upgrade pip && .\\.venv\\Scripts\\python.exe -m pip install supabase yt-dlp openai python-dotenv",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

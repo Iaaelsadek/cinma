@@ -49,7 +49,6 @@ const SummariesPage = lazy(() => import('./pages/discovery/Summaries').then(m =>
 const QuranPage = lazy(() => import('./pages/discovery/Quran').then(m => ({ default: m.QuranPage })))
 const QuranRadio = lazy(() => import('./pages/discovery/QuranRadio').then(m => ({ default: m.QuranRadio })))
 const RamadanPage = lazy(() => import('./pages/discovery/Ramadan').then(m => ({ default: m.RamadanPage })))
-const RandomDiscovery = lazy(() => import('./pages/discovery/RandomDiscovery').then(m => ({ default: m.RandomDiscovery })))
 const ReciterDetails = lazy(() => import('./pages/media/ReciterDetails').then(m => ({ default: m.ReciterDetails })))
 
 // User
@@ -183,7 +182,6 @@ const App = () => {
 
             {/* Discovery Routes */}
             <Route path="/quran/radio" element={<QuranRadio />} />
-            <Route path="/random" element={<RandomDiscovery />} />
             <Route path="/search" element={<Search />} />
             
             {/* Silo Routes */}
@@ -337,8 +335,6 @@ const WatchFromSeries = () => {
   return <Navigate to={`/watch/${id}?type=tv&season=${ss}&episode=${ee}`} replace />
 }
 
-const MoviesRoot = () => <Navigate to="/search?types=movie" replace />
-const SeriesRoot = () => <Navigate to="/search?types=tv" replace />
 const MoviesByYear = () => {
   const { year } = useParams()
   const y = String(year || '')

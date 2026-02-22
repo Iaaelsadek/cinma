@@ -150,6 +150,18 @@ export const AsianDramaPage = ({ type }: Props) => {
     enabled: !paramGenre 
   })
 
+  const comedy = useQuery({ 
+    queryKey: [`${type}-comedy`], 
+    queryFn: () => fetchHubSection(35), // Comedy
+    enabled: !paramGenre 
+  })
+
+  const crime = useQuery({ 
+    queryKey: [`${type}-crime`], 
+    queryFn: () => fetchHubSection(80), // Crime
+    enabled: !paramGenre 
+  })
+
   const fantasy = useQuery({ 
     queryKey: [`${type}-fantasy`], 
     queryFn: () => fetchHubSection(14), // Fantasy
@@ -230,12 +242,20 @@ export const AsianDramaPage = ({ type }: Props) => {
              />
 
              {type === 'chinese' && (
-               <QuantumTrain 
-                 items={fantasy.data || []} 
-                 title={lang === 'ar' ? 'خيال وأساطير (Wuxia)' : 'Fantasy & Myth (Wuxia)'} 
-                 link={`/${type}/fantasy`}
-                 color="purple"
-               />
+               <>
+                 <QuantumTrain 
+                   items={fantasy.data || []} 
+                   title={lang === 'ar' ? 'خيال وأساطير (Wuxia)' : 'Fantasy & Myth (Wuxia)'} 
+                   link={`/${type}/fantasy`}
+                   color="purple"
+                 />
+                 <QuantumTrain 
+                   items={history.data || []} 
+                   title={lang === 'ar' ? 'دراما تاريخية' : 'Historical Drama'} 
+                   link={`/${type}/history`}
+                   color="gold"
+                 />
+               </>
              )}
 
              {type === 'korean' && (
@@ -252,33 +272,66 @@ export const AsianDramaPage = ({ type }: Props) => {
                    link={`/${type}/thriller`}
                    color="red"
                  />
+                 <QuantumTrain 
+                   items={family.data || []} 
+                   title={lang === 'ar' ? 'دراما عائلية' : 'Family Drama'} 
+                   link={`/${type}/family`}
+                   color="green"
+                 />
                </>
              )}
 
              {type === 'turkish' && (
-               <QuantumTrain 
-                 items={family.data || []} 
-                 title={lang === 'ar' ? 'دراما عائلية' : 'Family Drama'} 
-                 link={`/${type}/family`}
-                 color="green"
-               />
+               <>
+                 <QuantumTrain 
+                   items={history.data || []} 
+                   title={lang === 'ar' ? 'تاريخي (Ertugrul)' : 'Historical (Ertugrul)'} 
+                   link={`/${type}/history`}
+                   color="gold"
+                 />
+                 <QuantumTrain 
+                   items={crime.data || []} 
+                   title={lang === 'ar' ? 'أكشن ومافيا' : 'Action & Mafia'} 
+                   link={`/${type}/crime`}
+                   color="red"
+                 />
+                 <QuantumTrain 
+                   items={family.data || []} 
+                   title={lang === 'ar' ? 'دراما عائلية' : 'Family Drama'} 
+                   link={`/${type}/family`}
+                   color="green"
+                 />
+               </>
              )}
 
              {type === 'bollywood' && (
-               <QuantumTrain 
-                 items={music.data || []} 
-                 title={lang === 'ar' ? 'موسيقي واستعراضي' : 'Musical'} 
-                 link={`/${type}/music`}
-                 color="pink"
-               />
+               <>
+                 <QuantumTrain 
+                   items={romance.data || []} 
+                   title={lang === 'ar' ? 'رومانسي' : 'Romance'} 
+                   link={`/${type}/romance`}
+                   color="red"
+                 />
+                 <QuantumTrain 
+                   items={action.data || []} 
+                   title={lang === 'ar' ? 'أكشن' : 'Action'} 
+                   link={`/${type}/action`}
+                   color="blue"
+                 />
+                 <QuantumTrain 
+                   items={comedy.data || []} 
+                   title={lang === 'ar' ? 'كوميديا' : 'Comedy'} 
+                   link={`/${type}/comedy`}
+                   color="orange"
+                 />
+                 <QuantumTrain 
+                   items={music.data || []} 
+                   title={lang === 'ar' ? 'موسيقي واستعراضي' : 'Musical'} 
+                   link={`/${type}/music`}
+                   color="pink"
+                 />
+               </>
              )}
-
-
-             <QuantumTrain 
-               items={comedy.data || []} 
-               title={lang === 'ar' ? 'كوميديا' : 'Comedy'} 
-               link={`/${type}/comedy`}
-             />
           </div>
         </>
       ) : (

@@ -44,22 +44,8 @@ export default defineConfig({
       },
       devOptions: { enabled: false }
     }),
-    sitemap({
-      hostname: 'https://cinma.online',
-      generateRobotsTxt: false,
-      dynamicRoutes: [
-        '/',
-        '/movies',
-        '/series',
-        '/ramadan',
-        '/plays',
-        '/top-watched',
-        '/search',
-        '/login',
-        '/profile',
-        '/admin'
-      ]
-    })
+    // DISABLED: We use backend/sitemap_generator.py for rich dynamic sitemap
+    /* sitemap({ ... }) removed to prevent conflict */
   ],
   server: {
     port: 5173,

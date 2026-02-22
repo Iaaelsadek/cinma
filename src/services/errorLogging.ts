@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import { toast } from 'sonner';
 import { CONFIG } from '../lib/constants';
 
@@ -44,7 +44,7 @@ export interface AppError {
 
 class ErrorLoggingService {
   private supabase;
-  private isEnabled: boolean = false; // DISABLED BY DEFAULT
+  private isEnabled: boolean = true; // ENABLED
   private queue: AppError[] = [];
   private isProcessing: boolean = false;
   private batchSize: number = 10;
@@ -53,20 +53,16 @@ class ErrorLoggingService {
   private readonly STORAGE_KEY = 'error_logs_queue';
   private lastToast: { message: string, time: number } | null = null;
 
+  private readonly LOG_ENDPOINT = '/api/log';
+
   constructor() {
-    this.supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
-    });
+    // We don't need Supabase client for logging anymore, we use the proxy
+    // But we might need it for other things if we expand this service
     
-    // LOGGING DISABLED - No queue loading, no flushing, no listeners
-    // this.loadQueue();
-    // this.startPeriodicFlush();
+    // LOGGING ENABLED
+    this.loadQueue();
+    this.startPeriodicFlush();
     
-    // Handle window errors - DISABLED
-    /*
     if (typeof window !== 'undefined') {
       this.setupGlobalErrorHandlers();
       // Save queue before unload
@@ -74,39 +70,119 @@ class ErrorLoggingService {
       // Flush queue when coming back online
       window.addEventListener('online', () => this.processQueue());
     }
-    */
   }
 
   private loadQueue() {
-    // DISABLED
-    return;
+    if (typeof localStorage === 'undefined') return;
+    const saved = localStorage.getItem(this.STORAGE_KEY);
+    if (saved) {
+      try {
+        this.queue = JSON.parse(saved);
+      } catch (e) {
+        console.error('Failed to load error queue', e);
+      }
+    }
   }
 
   private saveQueue() {
-    // DISABLED
     if (typeof localStorage === 'undefined') return;
-    localStorage.removeItem(this.STORAGE_KEY);
+    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.queue));
   }
 
   private setupGlobalErrorHandlers() {
-    // DISABLED
-    return;
+    window.onerror = (message, source, lineno, colno, error) => {
+      this.logError({
+        message: String(message),
+        severity: 'high',
+        category: 'system',
+        stack: error?.stack,
+        context: { source, lineno, colno }
+      });
+    };
+
+    window.onunhandledrejection = (event) => {
+      this.logError({
+        message: `Unhandled Rejection: ${event.reason}`,
+        severity: 'high',
+        category: 'system',
+        context: { reason: event.reason }
+      });
+    };
   }
 
   private startPeriodicFlush() {
-    // DISABLED
-    return;
+    this.flushTimer = setInterval(() => {
+      if (this.queue.length > 0 && !this.isProcessing) {
+        this.processQueue();
+      }
+    }, this.flushInterval);
   }
 
   private async processQueue() {
-    // DISABLED - Just clear queue to be safe
-    this.queue = [];
-    return;
+    if (this.isProcessing || this.queue.length === 0) return;
+
+    this.isProcessing = true;
+    const batch = this.queue.slice(0, this.batchSize);
+
+    try {
+      // Send batch to API Proxy instead of direct Supabase insert
+      // This allows us to use rate limiting and hide the RLS public insert
+      await Promise.all(batch.map(error => 
+        fetch(this.LOG_ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(error)
+        }).catch(err => console.error('Failed to send log:', err))
+      ));
+
+      // Remove processed items
+      this.queue = this.queue.slice(batch.length);
+      this.saveQueue();
+    } catch (error) {
+      console.error('Failed to process error queue:', error);
+    } finally {
+      this.isProcessing = false;
+      
+      // If there are more items, schedule next batch
+      if (this.queue.length > 0) {
+        setTimeout(() => this.processQueue(), 1000);
+      }
+    }
   }
 
-  public logError(error: AppError) {
-    // DISABLED
-    return;
+  public logError(error: Omit<AppError, 'timestamp' | 'resolved' | 'severity' | 'category'> & { severity?: ErrorSeverity, category?: ErrorCategory }) {
+    if (!this.isEnabled) return;
+
+    // Deduplicate rapid errors (simple debounce)
+    const now = Date.now();
+    if (this.lastToast && 
+        this.lastToast.message === error.message && 
+        now - this.lastToast.time < 2000) {
+      return;
+    }
+
+    const newError: AppError = {
+      ...error,
+      id: crypto.randomUUID(),
+      severity: error.severity || 'medium',
+      category: error.category || 'unknown',
+      timestamp: new Date().toISOString(),
+      resolved: false
+    };
+
+    this.queue.push(newError);
+    this.saveQueue();
+
+    // Show toast for visible errors
+    if (newError.severity === 'high' || newError.severity === 'critical') {
+      toast.error(newError.message);
+      this.lastToast = { message: newError.message, time: now };
+    }
+
+    // Trigger flush if queue gets too big
+    if (this.queue.length >= this.batchSize && !this.isProcessing) {
+      this.processQueue();
+    }
   }
 
   public captureException(error: any, context?: Record<string, any>) {
