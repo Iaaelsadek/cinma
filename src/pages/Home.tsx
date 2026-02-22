@@ -259,10 +259,20 @@ export const Home = () => {
   const animeHub = useQuery<any[]>({
     queryKey: ['home-anime'],
     queryFn: async () => {
-      const { data } = await supabase.from('anime').select('id,title,category,image_url').order('id', { ascending: false }).limit(12)
+      const { data, error } = await supabase
+        .from('anime')
+        .select('*')
+        .order('id', { ascending: false })
+        .limit(12)
+      
+      if (error) {
+        console.error('Error fetching anime:', error)
+        return []
+      }
+
       return (data || []).map(item => ({
         ...item,
-        poster_path: item.image_url,
+        poster_path: item.image_url || item.poster_url || item.image,
         media_type: 'tv',
         original_language: 'ja'
       }))
@@ -273,11 +283,21 @@ export const Home = () => {
   const quranHub = useQuery<any[]>({
     queryKey: ['home-quran'],
     queryFn: async () => {
-      const { data } = await supabase.from('quran_reciters').select('id,name,category,image,rewaya,server').order('id', { ascending: false }).limit(10)
+      const { data, error } = await supabase
+        .from('quran_reciters')
+        .select('*')
+        .order('id', { ascending: false })
+        .limit(10)
+
+      if (error) {
+        console.error('Error fetching quran:', error)
+        return []
+      }
+
       return (data || []).map(item => ({
         ...item,
         title: item.name,
-        poster_path: item.image,
+        poster_path: item.image || item.image_url || item.poster_url,
         media_type: 'quran',
         overview: item.rewaya
       }))
