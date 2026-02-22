@@ -278,8 +278,8 @@ export const QuantumNavbar = memo(() => {
                           {lang === 'ar' ? 'الأقسام' : 'Sections'}
                         </h3>
                         <ul className="grid grid-cols-1 gap-2">
-                          {link.subLinks.map(sub => (
-                            <li key={sub.to}>
+                          {link.subLinks.map((sub, i) => (
+                            <li key={`${sub.to}-${i}`}>
                               <PrefetchLink to={sub.to} target="_self" className="flex items-center gap-3 text-zinc-300 hover:text-cyan-400 transition-colors py-1 group/sub">
                                 {sub.icon && <sub.icon size={18} className="text-zinc-500 group-hover/sub:text-cyan-400 transition-colors" />}
                                 <span className="font-medium">{sub.label}</span>
@@ -438,9 +438,9 @@ export const QuantumNavbar = memo(() => {
                     </PrefetchLink>
                     {link.subLinks && (
                       <div className="flex flex-col gap-1 px-4 border-r border-white/5 mr-6 pr-4">
-                        {link.subLinks.map(sub => (
+                        {link.subLinks.map((sub, i) => (
                           <PrefetchLink
-                            key={sub.to}
+                            key={`${sub.to}-${i}`}
                             to={sub.to}
                             target="_self"
                             onClick={() => setMenuOpen(false)}

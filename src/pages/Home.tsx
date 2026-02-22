@@ -259,50 +259,91 @@ export const Home = () => {
   const animeHub = useQuery<any[]>({
     queryKey: ['home-anime'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('anime')
-        .select('*')
-        .order('id', { ascending: false })
-        .limit(12)
-      
-      if (error) {
-        console.error('Error fetching anime:', error)
-        return []
-      }
+      try {
+        const { data, error } = await supabase
+          .from('anime')
+          .select('*')
+          .order('id', { ascending: false })
+          .limit(12)
+        
+        if (error) {
+           // If 404/PGRST116 (relation not found), return empty gracefully
+           if (error.code === '42P01') {
+              console.warn('[Home] Anime table not found (42P01), returning empty.');
+              return [];
+           }
+           // Check for AbortError wrapped by Supabase
+           if (error.message?.includes('AbortError') || error.details?.includes('AbortError') || error.hint?.includes('timeout')) {
+              console.warn('[Home] Anime fetch timed out (Supabase wrapper).');
+              return [];
+           }
+           console.error('Error fetching anime:', error)
+           return []
+         }
 
-      return (data || []).map(item => ({
-        ...item,
-        poster_path: item.image_url || item.poster_url || item.image,
-        media_type: 'tv',
-        original_language: 'ja'
-      }))
+        return (data || []).map(item => ({
+          ...item,
+          poster_path: item.image_url || item.poster_url || item.image,
+          media_type: 'tv',
+          original_language: 'ja'
+        }))
+      } catch (err: any) {
+        // Handle AbortError or network failure gracefully
+        if (err.name === 'AbortError') {
+             console.warn('[Home] Anime fetch aborted/timed out.');
+             return [];
+        }
+        console.error('Unexpected error fetching anime:', err);
+        return [];
+      }
     },
-    staleTime: 300000
+    staleTime: 300000,
+    retry: 1
   })
 
   const quranHub = useQuery<any[]>({
     queryKey: ['home-quran'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('quran_reciters')
-        .select('*')
-        .order('id', { ascending: false })
-        .limit(10)
+      try {
+        const { data, error } = await supabase
+          .from('quran_reciters')
+          .select('*')
+          .order('id', { ascending: false })
+          .limit(10)
 
-      if (error) {
-        console.error('Error fetching quran:', error)
-        return []
+        if (error) {
+           // If 404/PGRST116 (relation not found), return empty gracefully
+           if (error.code === '42P01') {
+             console.warn('[Home] Quran table not found (42P01), returning empty.');
+             return [];
+          }
+          // Check for AbortError wrapped by Supabase
+          if (error.message?.includes('AbortError') || error.details?.includes('AbortError') || error.hint?.includes('timeout')) {
+             console.warn('[Home] Quran fetch timed out (Supabase wrapper).');
+             return [];
+          }
+          console.error('Error fetching quran:', error)
+          return []
+        }
+
+        return (data || []).map(item => ({
+          ...item,
+          title: item.name,
+          poster_path: item.image || item.image_url || item.poster_url,
+          media_type: 'quran',
+          overview: item.rewaya
+        }))
+      } catch (err: any) {
+         if (err.name === 'AbortError') {
+             console.warn('[Home] Quran fetch aborted/timed out.');
+             return [];
+        }
+        console.error('Unexpected error fetching quran:', err);
+        return [];
       }
-
-      return (data || []).map(item => ({
-        ...item,
-        title: item.name,
-        poster_path: item.image || item.image_url || item.poster_url,
-        media_type: 'quran',
-        overview: item.rewaya
-      }))
     },
-    staleTime: 300000
+    staleTime: 300000,
+    retry: 1
   })
 
   const arabicSeries = useQuery<{ results: TmdbMedia[] }>({

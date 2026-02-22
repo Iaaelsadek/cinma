@@ -33,9 +33,9 @@ def run_sql_file(sql_file):
         # Try to execute via RPC if available
         try:
             # This would require a stored procedure on the database
-            result = supabase.rpc('exec_sql', {'query': sql})
+            result = supabase.rpc('exec_sql', {'query': sql}).execute()
             print("\n✅ SQL executed successfully via RPC")
-            print(json.dumps({"status": "success", "message": "SQL logged for manual execution"}))
+            print(json.dumps({"status": "success", "message": "SQL executed"}))
         except Exception as e:
             print(f"\n⚠️  Could not execute via RPC: {e}")
             print("\n📋 Manual Execution Instructions:")

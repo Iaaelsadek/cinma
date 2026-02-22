@@ -6,22 +6,45 @@ import { errorLogger } from '../services/errorLogging'
 const sbUrl = CONFIG.SUPABASE_URL || 'https://placeholder.supabase.co'
 const sbKey = CONFIG.SUPABASE_ANON_KEY || 'placeholder'
 
-export const supabase = createClient(sbUrl, sbKey)
+export const supabase = createClient(sbUrl, sbKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+    storageKey: 'supabase-auth-token-v2' // Unique key to prevent conflicts
+  },
+  global: {
+    fetch: (input, init) => fetchWithTimeout(input, init)
+  },
+  db: {
+    schema: 'public'
+  }
+})
 
 interface FetchOptions extends RequestInit {
   timeout?: number;
 }
 
-async function fetchWithTimeout(resource: string, options: FetchOptions = {}) {
-  const { timeout = 5000 } = options;
+async function fetchWithTimeout(resource: RequestInfo | URL, options: FetchOptions = {}) {
+  // Increased default timeout to 60s to ensure data loads even on slow connections
+  const { timeout = 60000, ...fetchOptions } = options; 
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeout);
-  const response = await fetch(resource, {
-    ...options,
-    signal: controller.signal
-  });
-  clearTimeout(id);
-  return response;
+  
+  try {
+    const response = await fetch(resource, {
+      ...fetchOptions,
+      signal: controller.signal
+    });
+    clearTimeout(id);
+    return response;
+  } catch (error: any) {
+    clearTimeout(id);
+    if (error.name === 'AbortError') {
+      console.warn('[Supabase] Request timed out:', resource);
+    }
+    throw error;
+  }
 }
 
 export async function getProfile(userId: string) {

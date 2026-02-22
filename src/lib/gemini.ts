@@ -1,63 +1,71 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { errorLogger } from '../services/errorLogging';
+import { supabase } from './supabase';
 import { CONFIG } from './constants';
 
 // Use Vite environment variable
 const API_KEY = CONFIG.GEMINI_API_KEY || "";
 
 let genAI: GoogleGenerativeAI | null = null;
+let isGeminiDisabled = false; // Disable Gemini globally if models are missing
 
 if (API_KEY) {
-  genAI = new GoogleGenerativeAI(API_KEY);
-}
+    // Suppress console spam from the SDK itself if possible, or just catch errors gracefully
+    // Using apiVersion: 'v1beta' is default, but maybe we need to specify it or leave it?
+    // Some regions might need specific base url, but usually default is fine.
+    genAI = new GoogleGenerativeAI(API_KEY);
+  } else {
+    console.warn('[Gemini] API Key missing. AI features will be disabled.');
+    isGeminiDisabled = true;
+  }
 
 /**
  * Helper function to call Gemini API with Fallback Mechanism.
  * Tries the primary model (gemini-3.1-pro), then falls back to gemini-1.5-flash if needed.
  */
 const callGeminiWithFallback = async (prompt: string, contextLabel: string): Promise<string | null> => {
-  if (!genAI) return null;
+  if (!genAI || isGeminiDisabled) return null;
 
-  try {
-    // 1. Primary Model (Latest Stable - Free Tier Friendly)
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-    const result = await model.generateContent(prompt);
-    const response = result.response;
-    return response.text().trim();
-  } catch (error: any) {
-    // 2. Exception Handling & Fallback
-    const errorStr = String(error);
-    const isResourceError = errorStr.includes("ResourceExhausted") || errorStr.includes("429") || errorStr.includes("Quota");
-
-    if (isResourceError) {
-      console.warn(`[Gemini] Primary model exhausted for ${contextLabel}. Switching to Fallback Model...`);
-      try {
-        // 3. Fallback Model (Efficient/Free Tier friendly)
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-        const result = await model.generateContent(prompt);
+  // Try list of models in order. 
+  // We prioritize gemini-1.5-flash-001 for stability.
+  const models = ["gemini-1.5-flash-001", "gemini-1.5-pro-001", "gemini-pro"];
+  
+  for (const modelName of models) {
+    try {
+        const model = genAI.getGenerativeModel({ model: modelName });
+        const result = await model.generateContent({
+            contents: [{ role: "user", parts: [{ text: prompt }] }],
+        });
         const response = result.response;
         return response.text().trim();
-      } catch (fallbackError) {
-        errorLogger.logError({
-          message: `Gemini Fallback failed for ${contextLabel}`,
-          severity: 'low',
-          category: 'api',
-          context: { error: fallbackError, prompt }
-        });
-        return null;
-      }
-    } else {
-      // 4. Catch unexpected errors
-      errorLogger.logError({
-        message: `Gemini Primary failed for ${contextLabel}`,
-        severity: 'low',
-        category: 'api',
-        context: { error, prompt }
-      });
-      return null;
+    } catch (error: any) {
+        const errorStr = String(error);
+        
+        // Log warning
+        console.warn(`[Gemini - ${contextLabel}] Model ${modelName} failed: ${errorStr}`);
+
+        // Continue only if it's a 404 (Model Not Found) or 503 (Overloaded)
+        if (errorStr.includes("404") || errorStr.includes("not found") || errorStr.includes("503")) {
+            continue;
+        }
+        
+        // If it's a permission/quota error, we might as well stop trying other models if they share quota
+        if (errorStr.includes("API_KEY_INVALID") || errorStr.includes("400")) {
+             console.error(`[Gemini - ${contextLabel}] Fatal API Error: ${errorStr}`);
+             isGeminiDisabled = true;
+             break;
+        }
     }
   }
+
+  // If all failed
+  console.warn(`[Gemini - ${contextLabel}] All models failed. Disabling Gemini for this session.`);
+  isGeminiDisabled = true;
+  return null;
 };
+
+// Module-level flag to prevent parallel requests from spamming during rate limit
+let isMyMemoryRateLimited = false;
 
 /**
  * Uses Gemini to correct spelling, fix keyboard layout issues, and extract search intent.
@@ -129,6 +137,12 @@ export const generateArabicSummary = async (title: string, originalOverview?: st
 export const translateTitleToArabic = async (title: string): Promise<string> => {
   if (!title) return '';
 
+  // Early return if already Arabic
+  if (/[\u0600-\u06FF]/.test(title)) return title;
+
+  // Early return if too short or numeric
+  if (title.length < 3 || /^\d+$/.test(title)) return title;
+
   // 1. Check LocalStorage Cache
   const cacheKey = `ar_title_cache_${title.toLowerCase().trim()}`;
   const cached = localStorage.getItem(cacheKey);
@@ -136,12 +150,28 @@ export const translateTitleToArabic = async (title: string): Promise<string> => 
     return cached;
   }
 
+  // 1.5. Check Supabase Translations Table (Permanent Cache)
+  try {
+    const { data } = await supabase
+      .from('translations')
+      .select('arabic_title')
+      .eq('original_title', title)
+      .maybeSingle();
+      
+    if (data && data.arabic_title) {
+      localStorage.setItem(cacheKey, data.arabic_title);
+      return data.arabic_title;
+    }
+  } catch (error) {
+    // Silent fail if table doesn't exist or network error
+  }
+
   let finalTranslation = title;
 
   // 2. Try Gemini if configured
-  if (genAI) {
+  if (genAI && !isGeminiDisabled) {
     try {
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      // Use fallback mechanism for title translation too
       const prompt = `
       You are an expert translator for movie and TV show titles for an Arab audience.
       Task: Translate "${title}" to Arabic.
@@ -154,20 +184,26 @@ export const translateTitleToArabic = async (title: string): Promise<string> => 
       5. Return **ONLY** the Arabic string. No quotes, no extra text.
       `;
       
-      const result = await model.generateContent(prompt);
-      const response = result.response;
-      const text = response.text().trim();
+      const text = await callGeminiWithFallback(prompt, "title-translation");
       
-      if (text.length > 0 && text.length < 100) {
+      if (text && text.length > 0 && text.length < 100) {
         finalTranslation = text;
+        localStorage.setItem(cacheKey, finalTranslation);
+        
+        // Save to Supabase (Async - Fire and Forget)
+        supabase.from('translations').upsert({
+          original_title: title,
+          arabic_title: finalTranslation
+        }).then(({ error }) => {
+           if (error && error.code !== '42P01') { // Ignore if table missing
+             console.warn('[Translation] Failed to save to DB:', error.message);
+           }
+        });
+        
+        return finalTranslation;
       }
     } catch (error) {
-      errorLogger.logError({
-        message: "Gemini title translation failed",
-        severity: 'low',
-        category: 'api',
-        context: { error, title }
-      });
+      // Silent fail for Gemini to try MyMemory
     }
   }
 
@@ -176,7 +212,7 @@ export const translateTitleToArabic = async (title: string): Promise<string> => 
   // Added Circuit Breaker for 429 errors
   const backoffKey = 'mymemory_backoff_until';
   const backoffUntil = localStorage.getItem(backoffKey);
-  const isBackedOff = backoffUntil && Date.now() < parseInt(backoffUntil);
+  const isBackedOff = (backoffUntil && Date.now() < parseInt(backoffUntil)) || isMyMemoryRateLimited;
 
   if (finalTranslation === title && !isBackedOff) {
     try {
@@ -184,8 +220,11 @@ export const translateTitleToArabic = async (title: string): Promise<string> => 
       
       if (res.status === 429) {
         // Rate limit hit: Back off for 1 hour to prevent console spam
-        console.warn('[Translation] MyMemory rate limit reached. Pausing requests for 1 hour.');
-        localStorage.setItem(backoffKey, (Date.now() + 3600000).toString());
+        if (!isMyMemoryRateLimited) {
+            console.warn('[Translation] MyMemory rate limit reached. Pausing requests for 1 hour.');
+            isMyMemoryRateLimited = true;
+            localStorage.setItem(backoffKey, (Date.now() + 3600000).toString());
+        }
       } else {
         const data = await res.json();
         if (data.responseData && data.responseData.translatedText) {
@@ -193,24 +232,19 @@ export const translateTitleToArabic = async (title: string): Promise<string> => 
             const translated = data.responseData.translatedText;
             if (!translated.includes('MYMEMORY') && !translated.includes('QUERY LENGTH LIMIT')) {
                 finalTranslation = translated;
-            }
+          localStorage.setItem(cacheKey, finalTranslation);
+          
+          // Save MyMemory result to Supabase too
+          supabase.from('translations').upsert({
+             original_title: title,
+             arabic_title: finalTranslation
+          }).then(() => {});
+        }
         }
       }
     } catch (e) {
-      errorLogger.logError({
-        message: "MyMemory translation fallback failed",
-        severity: 'low',
-        category: 'api',
-        context: { error: e, title }
-      });
+      // Ignore network errors for translations to avoid spam
     }
-  }
-
-  // 4. Save to Cache (even if it failed and returned original, to avoid retrying immediately, 
-  // but preferably we only cache if it looks like Arabic)
-  const isArabic = /[\u0600-\u06FF]/.test(finalTranslation);
-  if (isArabic && finalTranslation !== title) {
-    localStorage.setItem(cacheKey, finalTranslation);
   }
 
   return finalTranslation;

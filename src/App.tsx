@@ -47,6 +47,7 @@ const PlaysPage = lazy(() => import('./pages/discovery/Plays').then(m => ({ defa
 const ClassicsPage = lazy(() => import('./pages/discovery/Classics').then(m => ({ default: m.ClassicsPage })))
 const SummariesPage = lazy(() => import('./pages/discovery/Summaries').then(m => ({ default: m.SummariesPage })))
 const QuranPage = lazy(() => import('./pages/discovery/Quran').then(m => ({ default: m.QuranPage })))
+const QuranRadio = lazy(() => import('./pages/discovery/QuranRadio').then(m => ({ default: m.QuranRadio })))
 const RamadanPage = lazy(() => import('./pages/discovery/Ramadan').then(m => ({ default: m.RamadanPage })))
 const ReciterDetails = lazy(() => import('./pages/media/ReciterDetails').then(m => ({ default: m.ReciterDetails })))
 
@@ -180,6 +181,7 @@ const App = () => {
             <Route path="/demo/details" element={<CinematicDetails />} />
 
             {/* Discovery Routes */}
+            <Route path="/quran/radio" element={<QuranRadio />} />
             <Route path="/search" element={<Search />} />
             
             {/* Silo Routes */}
@@ -210,7 +212,7 @@ const App = () => {
             <Route path="/foreign-series" element={<DynamicContentPage preset="foreign" type="tv" />} />
             
             <Route path="/indian" element={<DynamicContentPage preset="indian" />} />
-            <Route path="/ramadan" element={<DynamicContentPage preset="ramadan" />} />
+            <Route path="/ramadan" element={<RamadanPage />} />
             <Route path="/religious" element={<DynamicContentPage preset="religious" />} />
 
             {/* Anime Routes with Filters */}
