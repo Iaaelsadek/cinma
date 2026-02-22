@@ -331,7 +331,7 @@ export const QuantumNavbar = memo(() => {
               </div>
 
               {/* Actions */}
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-2 shrink-0 ml-auto">
               {/* Desktop Search */}
               <div className="hidden md:flex items-center gap-4 relative">
                 <div className="relative group">
@@ -418,7 +418,7 @@ export const QuantumNavbar = memo(() => {
 
               {/* Mobile Search Icon */}
               <button 
-                className="xl:hidden p-1.5 text-white"
+                className="xl:hidden p-0.5 text-white"
                 onClick={() => {
                   setShowMobileSearch(!showMobileSearch);
                   setMenuOpen(false);
@@ -495,7 +495,7 @@ export const QuantumNavbar = memo(() => {
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="xl:hidden fixed inset-x-0 top-[80px] bottom-0 z-40 bg-black/95 backdrop-blur-md border-t border-white/10 overflow-y-auto overscroll-y-contain pb-32"
+              className="xl:hidden fixed inset-x-0 top-[80px] h-[calc(100vh-80px)] z-40 bg-black/95 backdrop-blur-md border-t border-white/10 overflow-y-auto overscroll-y-contain pb-32"
             >
               <div className="grid grid-cols-2 gap-3 p-4">
                 {navLinks.map((link) => (
