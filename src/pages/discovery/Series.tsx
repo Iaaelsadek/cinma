@@ -91,6 +91,34 @@ export const SeriesPage = () => {
   const reality = useQuery({ queryKey: ['series-reality'], queryFn: () => fetchByGenre(10764, 'tv') })
   const soap = useQuery({ queryKey: ['series-soap'], queryFn: () => fetchByGenre(10766, 'tv') })
   
+  const netflix = useQuery({ queryKey: ['series-netflix'], queryFn: async () => {
+    const { data } = await tmdb.get('/discover/tv', {
+      params: { with_networks: 213, sort_by: 'popularity.desc' }
+    })
+    return data.results.map((item: any) => ({ ...item, media_type: 'tv' }))
+  }})
+
+  const hbo = useQuery({ queryKey: ['series-hbo'], queryFn: async () => {
+    const { data } = await tmdb.get('/discover/tv', {
+      params: { with_networks: 49, sort_by: 'popularity.desc' }
+    })
+    return data.results.map((item: any) => ({ ...item, media_type: 'tv' }))
+  }})
+
+  const apple = useQuery({ queryKey: ['series-apple'], queryFn: async () => {
+    const { data } = await tmdb.get('/discover/tv', {
+      params: { with_networks: 2552, sort_by: 'popularity.desc' }
+    })
+    return data.results.map((item: any) => ({ ...item, media_type: 'tv' }))
+  }})
+
+  const amazon = useQuery({ queryKey: ['series-amazon'], queryFn: async () => {
+    const { data } = await tmdb.get('/discover/tv', {
+      params: { with_networks: 1024, sort_by: 'popularity.desc' }
+    })
+    return data.results.map((item: any) => ({ ...item, media_type: 'tv' }))
+  }})
+
   const anime = useQuery({ queryKey: ['series-anime'], queryFn: async () => {
     const { data } = await tmdb.get('/discover/tv', {
       params: { with_genres: 16, with_original_language: 'ja', sort_by: 'popularity.desc' }
@@ -156,6 +184,30 @@ export const SeriesPage = () => {
           items={popular.data || []} 
           title={lang === 'ar' ? 'الأكثر مشاهدة' : 'Most Watched'} 
           link="/search?types=tv&sort=vote_count.desc"
+        />
+
+        <QuantumTrain 
+          items={netflix.data || []} 
+          title={lang === 'ar' ? 'أعمال نتفليكس الأصلية' : 'Netflix Originals'} 
+          link="/search?types=tv&keywords=netflix"
+        />
+
+        <QuantumTrain 
+          items={hbo.data || []} 
+          title={lang === 'ar' ? 'إنتاجات HBO' : 'HBO Productions'} 
+          link="/search?types=tv&keywords=hbo"
+        />
+
+        <QuantumTrain 
+          items={apple.data || []} 
+          title={lang === 'ar' ? 'أبل تي في بلس' : 'Apple TV+'} 
+          link="/search?types=tv&keywords=apple"
+        />
+
+        <QuantumTrain 
+          items={amazon.data || []} 
+          title={lang === 'ar' ? 'أمازون برايم' : 'Amazon Prime'} 
+          link="/search?types=tv&keywords=amazon"
         />
 
         <QuantumTrain 
