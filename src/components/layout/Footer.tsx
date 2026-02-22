@@ -36,6 +36,19 @@ export const Footer = () => {
               ? 'منصة الترفيه الرقمي الأولى في الشرق الأوسط. تجربة مشاهدة سينمائية فائقة الجودة مع أحدث تقنيات العرض.'
               : 'The premier digital entertainment platform in the Middle East. Cinematic viewing experience with state-of-the-art streaming technology.'}
           </p>
+          
+          <div className="pt-2">
+             <a 
+               href="https://www.facebook.com/online.cinma." 
+               target="_blank" 
+               rel="noopener noreferrer"
+               className="inline-flex items-center gap-2 text-zinc-400 hover:text-blue-500 transition-colors"
+               aria-label="Facebook"
+             >
+               <Facebook size={20} />
+               <span className="text-xs font-medium">{lang === 'ar' ? 'تابعنا على فيسبوك' : 'Follow us on Facebook'}</span>
+             </a>
+          </div>
         </div>
 
         {/* Column 2: Navigation */}
