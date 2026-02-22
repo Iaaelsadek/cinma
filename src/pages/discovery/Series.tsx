@@ -486,7 +486,7 @@ export const SeriesPage = () => {
           items={natGeo.data || []} 
           title={lang === 'ar' ? 'ناشيونال جيوغرافيك' : 'National Geographic'} 
           link="/search?types=tv&keywords=national"
-          color="yellow"
+          color="gold"
         />
 
         <QuantumTrain 
