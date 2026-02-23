@@ -16,7 +16,7 @@ export const QuantumNavbar = memo(() => {
   const { lang, toggle } = useLang()
   const { isSupported, isInstalled, install } = usePwa()
   
-  const leaveTimeout = useRef<any>(null)
+  const leaveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const handleMouseEnter = (label: string) => {
     if (leaveTimeout.current) {
