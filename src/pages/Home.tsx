@@ -109,15 +109,14 @@ export const Home = () => {
                if (enRes.data) {
                  item = { ...item, ...enRes.data }
                }
-             } catch (e) {
-               // console.warn(`Failed to fetch English fallback for ${item.id}`)
-             }
+            } catch (e) {
+              // Ignore fallback error
+            }
           }
 
           return { ...item, media_type: ep.type }
         } catch (e) {
           // Silent fail for hero section
-          // console.error('Diverse hero fetch error:', e)
           return null
         }
       })
