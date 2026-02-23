@@ -9,15 +9,12 @@ import { useLang } from '../state/useLang'
 import { getRecommendations, RecommendationItem } from '../services/recommendations'
 import { useRecommendations } from '../hooks/useRecommendations'
 import { BrainCircuit, Play, Zap, Tv, Film, Drama, BookOpen, Sparkles, Globe, Smile, FileText } from 'lucide-react'
-// import { MovieRow } from '../components/features/media/MovieRow'
 import { MovieCard } from '../components/features/media/MovieCard'
-// import { VideoRow } from '../components/features/media/VideoRow'
 import { motion } from 'framer-motion'
 import { useCategoryVideos, useClassicVideos } from '../hooks/useFetchContent'
 import { SkeletonGrid, SkeletonHero } from '../components/common/Skeletons'
 import { supabase, getContinueWatching } from '../lib/supabase'
 import { SeoHead } from '../components/common/SeoHead'
-// import { useQuranPlayer } from '../context/QuranPlayerContext'
 import { QuantumHero } from '../components/features/hero/QuantumHero'
 import { QuantumTrain } from '../components/features/media/QuantumTrain'
 import { ContinueWatchingRow } from '../components/features/media/ContinueWatchingRow'
@@ -53,11 +50,6 @@ type QuranRow = {
   rewaya: string | null
   server: string | null
 }
-
-// import { Swiper, SwiperSlide } from 'swiper/react'
-// import { Autoplay, FreeMode } from 'swiper/modules'
-// import 'swiper/css'
-// import 'swiper/css/free-mode'
 
 import { isCJK } from '../lib/utils'
 import { useTranslatedContent } from '../hooks/useTranslatedContent'

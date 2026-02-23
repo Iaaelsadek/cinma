@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { VideoPlayer } from '../../components/features/media/VideoPlayer'
 import { SubtitleManager } from '../../components/features/media/SubtitleManager'
-import { ChevronLeft, Eye, Clock, Calendar, Maximize2, Users, Send, X, MessageSquare, Sparkles } from 'lucide-react'
+import { ChevronLeft, Eye, Clock, Calendar, Users, Send, X, Sparkles } from 'lucide-react'
 import { Helmet } from 'react-helmet-async'
 import { useLang } from '../../state/useLang'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -53,7 +53,6 @@ export const WatchVideo = () => {
   const id = resolvedId
   const [video, setVideo] = useState<VideoData | null>(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(false)
   const [isCinemaMode, setIsCinemaMode] = useState(false)
   const [isChatOpen, setIsChatOpen] = useState(false)
   const [message, setMessage] = useState('')
@@ -104,13 +103,7 @@ export const WatchVideo = () => {
         if (error) throw error
         if (mounted) setVideo(data)
       } catch (err) {
-        errorLogger.logError({
-          message: 'Error loading video',
-          severity: 'high',
-          category: 'database',
-          context: { error: err, id, slug }
-        })
-        if (mounted) setError(true)
+        console.error('Error loading video:', err)
       } finally {
         if (mounted) setLoading(false)
       }

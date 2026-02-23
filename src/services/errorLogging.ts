@@ -113,6 +113,13 @@ class ErrorLoggingService {
       }
     }, this.flushInterval);
   }
+  
+  public stopPeriodicFlush() {
+    if (this.flushTimer) {
+      clearInterval(this.flushTimer);
+      this.flushTimer = undefined;
+    }
+  }
 
   private async processQueue() {
     if (this.isProcessing || this.queue.length === 0) return;
