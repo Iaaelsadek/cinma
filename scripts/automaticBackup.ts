@@ -1,15 +1,12 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import fs from 'fs';
 import path from 'path';
-import { exec } from 'child_process';
-import { promisify } from 'util';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 
 // Load environment variables
 dotenv.config();
 
-const execAsync = promisify(exec);
 const __filename = fileURLToPath(import.meta.url);
 
 // Configuration
@@ -45,7 +42,6 @@ class AutomaticBackupSystem {
   private supabase: SupabaseClient;
   private config: BackupConfig;
   private isRunning: boolean;
-  private backupInterval?: NodeJS.Timeout;
 
   constructor(config: BackupConfig) {
     this.supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {

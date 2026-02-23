@@ -19,8 +19,4 @@ export const FLAGS = {
 
 export function assertEnv() {
   // Disabled to prevent crash
-  // const values = Object.entries(CONFIG)
-  // for (const [k, v] of values) {
-  //   if (!v) throw new Error(`Missing env: ${k}`)
-  // }
 }

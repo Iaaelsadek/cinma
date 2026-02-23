@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
-import { getProfile, updateUsername, uploadAvatar, supabase, getWatchlist, getContinueWatching, getHistory, removeFromWatchlist } from '../../lib/supabase'
+import { updateUsername, uploadAvatar, supabase, getWatchlist, getContinueWatching, getHistory, removeFromWatchlist } from '../../lib/supabase'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useQuery as useRQ } from '@tanstack/react-query'
@@ -10,14 +9,13 @@ import { getRecommendations, RecommendationItem } from '../../services/recommend
 import { Helmet } from 'react-helmet-async'
 import { SkeletonGrid, SkeletonProfile } from '../../components/common/Skeletons'
 import { getArabicErrorMessage, getArabicSuccessMessage } from '../../lib/arabic-messages'
-import { errorLogger, logAuthError } from '../../services/errorLogging'
+import { errorLogger } from '../../services/errorLogging'
 
 type Role = 'user' | 'admin' | 'supervisor'
 
 // Error Boundary Component for Profile Page
 const ProfileErrorBoundary = ({ children }: { children: React.ReactNode }) => {
   const [hasError, setHasError] = useState(false)
-  const [error, setError] = useState<Error | null>(null)
 
   useEffect(() => {
     const handleError = (event: ErrorEvent) => {
@@ -29,7 +27,6 @@ const ProfileErrorBoundary = ({ children }: { children: React.ReactNode }) => {
         context: { error: event.error }
       })
       setHasError(true)
-      setError(event.error)
     }
 
     window.addEventListener('error', handleError)
@@ -45,7 +42,6 @@ const ProfileErrorBoundary = ({ children }: { children: React.ReactNode }) => {
           <button 
             onClick={() => {
               setHasError(false)
-              setError(null)
               window.location.reload()
             }}
             className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors"
@@ -59,33 +55,6 @@ const ProfileErrorBoundary = ({ children }: { children: React.ReactNode }) => {
 
   return <>{children}</>
 }
-
-// Loading Skeleton Component
-// const ProfileSkeleton = () => (
-//   <div className="mx-auto max-w-5xl space-y-4 animate-pulse">
-//     <div className="h-10 w-48 bg-zinc-800 rounded mb-8"></div>
-//     <div className="rounded-lg border border-zinc-800 p-6 h-64 bg-zinc-900/50">
-//       <div className="flex items-center gap-4 mb-6">
-//         <div className="w-24 h-24 bg-zinc-800 rounded-full"></div>
-//         <div className="flex-1">
-//           <div className="h-6 w-32 bg-zinc-800 rounded mb-2"></div>
-//           <div className="h-4 w-48 bg-zinc-800 rounded"></div>
-//         </div>
-//       </div>
-//       <div className="space-y-4">
-//         <div className="h-10 bg-zinc-800 rounded"></div>
-//         <div className="flex gap-2">
-//           <div className="h-10 w-24 bg-zinc-800 rounded"></div>
-//           <div className="h-10 w-32 bg-zinc-800 rounded"></div>
-//         </div>
-//       </div>
-//     </div>
-//     <div className="grid md:grid-cols-2 gap-4">
-//       <div className="rounded-lg border border-zinc-800 p-4 h-48 bg-zinc-900/50"></div>
-//       <div className="rounded-lg border border-zinc-800 p-4 h-48 bg-zinc-900/50"></div>
-//     </div>
-//   </div>
-// )
 
 export const Profile = () => {
   const { user, profile: authProfile, loading, refreshProfile, error: authError } = useAuth()
@@ -105,14 +74,6 @@ export const Profile = () => {
 
   // Force refresh profile on mount to ensure role is up to date
   // REMOVED: Managed by useInitAuth globally to prevent duplicate fetches
-  /*
-  useEffect(() => {
-    refreshProfile(true).catch(err => {
-      logAuthError('Failed to refresh profile', err)
-      setError(getArabicErrorMessage(err))
-    })
-  }, [])
-  */
 
   useEffect(() => {
     if (authProfile) {
@@ -124,40 +85,6 @@ export const Profile = () => {
   }, [authProfile])
 
   // REMOVED: Redundant fetch logic that causes loops and duplicate toasts
-  /*
-  useEffect(() => {
-    let cancelled = false
-    ;(async () => {
-      if (!user) return
-      
-      // If we already have profile from auth, skip fetch unless forced
-      if (authProfile && authProfile.id === user.id) return
-
-      try {
-        const p = await getProfile(user.id)
-        if (cancelled) return
-        if (p) {
-          setUsername(p.username || '')
-          setAvatar(p.avatar_url || null)
-          setRole(p.role as Role)
-          setError(null)
-        } else {
-          // If profile missing, try to refresh/create it via auth
-          await refreshProfile()
-        }
-      } catch (err) {
-        logAuthError('Failed to fetch profile', err)
-        // Show user-friendly error message
-        const errorMsg = getArabicErrorMessage(err as string | Error | null)
-        setError(errorMsg)
-        toast.error(`فشل تحميل البيانات الشخصية: ${errorMsg}`)
-      }
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [user, authProfile, refreshProfile])
-  */
 
   if (!loading && !user) return <Navigate to="/login" replace />
 
@@ -195,27 +122,6 @@ export const Profile = () => {
 
   // Show error state if profile loading failed
   // REMOVED: Redundant as handled by !authProfile check above
-  /*
-  if (error && !authProfile) {
-    return (
-      <div className="mx-auto max-w-5xl space-y-4 p-4">
-        <div className="rounded-lg border border-red-800 bg-red-900/20 p-6 text-center">
-          <h2 className="text-xl font-bold text-red-400 mb-2">فشل تحميل الملف الشخصي</h2>
-          <p className="text-zinc-300 mb-4">{error}</p>
-          <button 
-            onClick={() => {
-              setError(null)
-              refreshProfile(true)
-            }}
-            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors"
-          >
-            إعادة المحاولة
-          </button>
-        </div>
-      </div>
-    )
-  }
-  */
 
   const onSave = async () => {
     if (!user) return
