@@ -438,7 +438,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     return series.find(s => s.id === id)
   }
 
-  const addSeason = async (seriesId: number, seasonData: Omit<AdminSeason, 'id'>) => {
+  const addSeason = async (_seriesId: number, _seasonData: Omit<AdminSeason, 'id'>) => {
     // Implementation for seasons
     toast.info('Add season not fully implemented')
   }
@@ -468,15 +468,15 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     }
   }
 
-  const addEpisode = async (seriesId: number, seasonId: number, episodeData: Omit<AdminEpisode, 'id'>) => {
+  const addEpisode = async (_seriesId: number, _seasonId: number, _episodeData: Omit<AdminEpisode, 'id'>) => {
     toast.info('Add episode not fully implemented')
   }
 
-  const deleteEpisode = async (seriesId: number, seasonId: number, episodeId: number) => {
+  const deleteEpisode = async (_seriesId: number, _seasonId: number, _episodeId: number) => {
     toast.info('Delete episode not fully implemented')
   }
 
-  const updateEpisode = async (seriesId: number, seasonId: number, episodeId: number, data: Partial<AdminEpisode>) => {
+  const updateEpisode = async (_seriesId: number, _seasonId: number, _episodeId: number, _data: Partial<AdminEpisode>) => {
     toast.info('Update episode not fully implemented')
   }
 

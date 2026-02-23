@@ -131,7 +131,7 @@ export function useRecommendations() {
             recommendations.push(...(castMovies.results?.map((m: any) => ({ ...m, media_type: 'movie' })) || []))
         }
       } catch (e) {
-        // console.error('Error fetching movie recommendations', e)
+        // Ignore error
       }
 
       // Fetch for top genre (TV)
@@ -148,7 +148,7 @@ export function useRecommendations() {
         const tvResults = tv.results?.map((t: any) => ({ ...t, media_type: 'tv' })) || []
         recommendations.push(...tvResults)
       } catch (e) {
-        // console.error('Error fetching tv recommendations', e)
+        // Ignore error
       }
 
       // 4. Filter out watched/watchlist items

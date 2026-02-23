@@ -1,14 +1,10 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import { toast } from 'sonner';
-import { CONFIG } from '../lib/constants';
 
 // Define process for browser environment
 declare const process: { env: { NODE_ENV?: string } } | undefined;
 
 // Configuration
 // Using public anon key for client-side logging. RLS must allow inserts.
-const SUPABASE_URL = CONFIG.SUPABASE_URL;
-const SUPABASE_KEY = CONFIG.SUPABASE_ANON_KEY;
 
 // Error severity levels
 export type ErrorSeverity = 'low' | 'medium' | 'high' | 'critical';
@@ -185,20 +181,15 @@ class ErrorLoggingService {
     }
   }
 
-  public captureException(error: any, context?: Record<string, any>) {
+  public captureException(_error: any, _context?: Record<string, any>) {
     // DISABLED
     return;
-  }
-  
-  private generateErrorId(): string {
-    return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
   }
 }
 
 export const errorLogger = new ErrorLoggingService();
 
 // Added back exported helper function to satisfy build
-export const logAuthError = (...args: any[]) => {
-  // DISABLED
-  return;
+export const logAuthError = (..._args: any[]) => {
+  // Stub
 };
