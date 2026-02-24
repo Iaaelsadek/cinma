@@ -21,7 +21,7 @@ import { addComment, deleteComment, getComments } from '../../lib/supabase'
 import { getProfile } from '../../lib/supabase'
 import { Helmet } from 'react-helmet-async'
 import { motion } from 'framer-motion'
-import { Star, List, MessageSquare } from 'lucide-react'
+import { Star, List, MessageSquare, Play } from 'lucide-react'
 import { ShareButton } from '../../components/common/ShareButton'
 import { SectionHeader } from '../../components/common/SectionHeader'
 import { useLang } from '../../state/useLang'
@@ -202,6 +202,15 @@ const SeriesDetails = ({ id: propId }: SeriesDetailsProps = {}) => {
   })()
   const [playingEpisode, setPlayingEpisode] = useState<number | null>(null)
   const [serverIndex, setServerIndex] = useState<number>(0)
+  const [showTrailer, setShowTrailer] = useState(false)
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowTrailer(true)
+    }, 3000)
+    return () => clearTimeout(timer)
+  }, [])
+
   const embedUrl = useMemo(() => {
     if (!tvId) return ''
     const s = seasonNumber || 1
@@ -391,17 +400,23 @@ const SeriesDetails = ({ id: propId }: SeriesDetailsProps = {}) => {
                   allow="autoplay; fullscreen; picture-in-picture"
                   referrerPolicy="no-referrer"
                 />
-              ) : trailerKey ? (
+              ) : (trailerKey && showTrailer) ? (
                 <ReactPlayer
                   url={`https://www.youtube.com/watch?v=${trailerKey}`}
                   width="100%"
                   height="100%"
-                  playing
-                  muted
+                  light={true}
                   controls
+                  playIcon={<div className="bg-primary rounded-full p-4"><Play className="w-8 h-8 text-white fill-current" /></div>}
                 />
               ) : (
-                <div className="flex h-full items-center justify-center text-sm text-zinc-400">لا يوجد تريلر</div>
+                <div className="flex h-full items-center justify-center text-sm text-zinc-400">
+                  {!showTrailer && trailerKey ? (
+                    <div className="animate-pulse bg-zinc-800 w-full h-full" />
+                  ) : (
+                    'لا يوجد تريلر'
+                  )}
+                </div>
               )}
             </div>
           </div>

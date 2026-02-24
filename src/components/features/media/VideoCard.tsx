@@ -1,10 +1,12 @@
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Play, Info, Plus, Check } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useLang } from '../../../state/useLang'
 import { useEffect, useState, type MouseEvent, memo } from 'react'
 import { useAuth } from '../../../hooks/useAuth'
 import { addToWatchlist, isInWatchlist, removeFromWatchlist } from '../../../lib/supabase'
+import ReactPlayer from 'react-player/youtube'
+import { tmdb } from '../../../lib/tmdb'
 
 import { useDualTitles } from '../../../hooks/useDualTitles'
 
@@ -41,6 +43,7 @@ export const VideoCard = memo(({ video, index = 0 }: { video: VideoItem; index?:
   const titles = useDualTitles(video)
   const displayTitle = lang === 'ar' ? (titles.sub || titles.main) : titles.main
   const [isHovered, setIsHovered] = useState(false)
+  const [trailerKey, setTrailerKey] = useState<string | null>(null)
   const [inList, setInList] = useState(false)
   const [busy, setBusy] = useState(false)
   const { user } = useAuth()
@@ -74,6 +77,28 @@ export const VideoCard = memo(({ video, index = 0 }: { video: VideoItem; index?:
   const contentId = Number(video.id)
   const canToggle = Number.isFinite(contentId)
   const contentType = video.category === 'series' ? 'tv' : 'movie'
+
+  useEffect(() => {
+    let mounted = true
+    if (isHovered && !trailerKey) {
+      const fetchTrailer = async () => {
+        try {
+          const type = video.category === 'series' ? 'tv' : 'movie'
+          const { data } = await tmdb.get(`/${type}/${video.id}/videos`)
+          const trailer = data.results?.find(
+            (v: any) => v.site === 'YouTube' && (v.type === 'Trailer' || v.type === 'Teaser')
+          )
+          if (mounted && trailer?.key) {
+            setTrailerKey(trailer.key)
+          }
+        } catch (e) {
+          // Silent fail
+        }
+      }
+      fetchTrailer()
+    }
+    return () => { mounted = false }
+  }, [isHovered, trailerKey, video.category, video.id])
 
   useEffect(() => {
     let mounted = true
@@ -136,6 +161,40 @@ export const VideoCard = memo(({ video, index = 0 }: { video: VideoItem; index?:
             <Play className="text-zinc-600" />
           </div>
         )}
+        
+        {/* Lazy Video Player */}
+        <AnimatePresence>
+          {isHovered && trailerKey && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 z-10 bg-black"
+            >
+              <ReactPlayer
+                url={`https://www.youtube.com/watch?v=${trailerKey}`}
+                width="100%"
+                height="100%"
+                playing
+                muted
+                loop
+                config={{
+                  youtube: {
+                    playerVars: { 
+                      autoplay: 1, 
+                      controls: 0, 
+                      showinfo: 0, 
+                      modestbranding: 1, 
+                      rel: 0,
+                      iv_load_policy: 3
+                    }
+                  }
+                } as any}
+                className="pointer-events-none scale-150"
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
         
         {/* Overlay */}
         <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors" />

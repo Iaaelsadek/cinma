@@ -51,37 +51,31 @@ export const QuantumHero = memo(({ items }: { items: any[] }) => {
   const heroItems = items
 
   useEffect(() => {
-    if (!heroItems.length) return
+    if (!activeId) return
+    if (trailers[activeId]) return // Already have it
+
     let mounted = true
+    const fetchTrailer = async () => {
+      try {
+        const item = heroItems.find(i => i.id === activeId)
+        if (!item) return
 
-    const fetchTrailers = async () => {
-      const newTrailers: Record<number, string> = {}
-      
-      await Promise.all(heroItems.map(async (item) => {
-        if (!item?.id) return
-
-        try {
-          const type = item.media_type || 'movie'
-          const { data } = await tmdb.get(`/${type}/${item.id}/videos`)
-          const trailer = data.results?.find(
-            (v: any) => v.site === 'YouTube' && (v.type === 'Trailer' || v.type === 'Teaser')
-          )
-          if (trailer?.key) {
-            newTrailers[item.id] = trailer.key
-          }
-        } catch (e) {
-          // Trailer fetch failed, silently ignore to avoid console clutter
+        const type = item.media_type || 'movie'
+        const { data } = await tmdb.get(`/${type}/${item.id}/videos`)
+        const trailer = data.results?.find(
+          (v: any) => v.site === 'YouTube' && (v.type === 'Trailer' || v.type === 'Teaser')
+        )
+        if (mounted && trailer?.key) {
+          setTrailers(prev => ({ ...prev, [activeId]: trailer.key }))
         }
-      }))
-      
-      if (mounted) {
-        setTrailers(newTrailers)
+      } catch (e) {
+        // Silent fail
       }
     }
 
-    fetchTrailers()
+    fetchTrailer()
     return () => { mounted = false }
-  }, [heroItems.map(i => i.id).join(',')])
+  }, [activeId, heroItems, trailers])
 
   if (!heroItems.length) return null
 

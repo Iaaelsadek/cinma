@@ -217,7 +217,7 @@ export const QuranPlayerProvider = ({ children }: { children: ReactNode }) => {
       <audio
         ref={audioRef}
         src={currentTrack?.url || undefined}
-        preload="metadata"
+        preload="none"
         {...{ referrerPolicy: "no-referrer" } as any}
         onEnded={() => skipNext()}
         onError={(e) => {
