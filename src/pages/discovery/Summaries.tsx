@@ -117,7 +117,7 @@ export const SummariesPage = () => {
       </Helmet>
 
       {heroItems.length > 0 ? (
-        <QuantumHero items={heroItems} type="video" />
+        <QuantumHero items={heroItems} />
       ) : (
         !isFiltered && (
           <div className="h-[50vh] flex items-center justify-center">
