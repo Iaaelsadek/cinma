@@ -1,5 +1,5 @@
-import { memo, useState, type MouseEvent } from 'react'
-import { motion } from 'framer-motion'
+import { memo, useState, type MouseEvent, useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Play, Star, Plus, Check } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { PrefetchLink } from '../../common/PrefetchLink'
@@ -10,6 +10,8 @@ import { generateWatchPath } from '../../../lib/utils'
 import { useLang } from '../../../state/useLang'
 import { useDualTitles } from '../../../hooks/useDualTitles'
 import { TmdbImage } from '../../common/TmdbImage'
+import ReactPlayer from 'react-player/youtube'
+import { tmdb } from '../../../lib/tmdb'
 
 export type Movie = {
   id: number
@@ -30,6 +32,7 @@ export type Movie = {
 
 export const MovieCard = memo(({ movie, index = 0 }: { movie: Movie; index?: number }) => {
   const [isHovered, setIsHovered] = useState(false)
+  const [trailerKey, setTrailerKey] = useState<string | null>(null)
   const [listBusy, setListBusy] = useState(false)
   const [inList, setInList] = useState(false)
   const { user } = useAuth()
@@ -73,6 +76,27 @@ export const MovieCard = memo(({ movie, index = 0 }: { movie: Movie; index?: num
     return words.slice(0, 15).join(' ') + '...'
   }
   const shortOverview = getShortOverview(movie.overview)
+  
+  useEffect(() => {
+    let mounted = true
+    if (isHovered && !trailerKey) {
+      const fetchTrailer = async () => {
+        try {
+          const { data } = await tmdb.get(`/${mediaType}/${movie.id}/videos`)
+          const trailer = data.results?.find(
+            (v: any) => v.site === 'YouTube' && (v.type === 'Trailer' || v.type === 'Teaser')
+          )
+          if (mounted && trailer?.key) {
+            setTrailerKey(trailer.key)
+          }
+        } catch (e) {
+          // Silent fail
+        }
+      }
+      fetchTrailer()
+    }
+    return () => { mounted = false }
+  }, [isHovered, trailerKey, mediaType, movie.id])
 
   const toggleList = async (e: MouseEvent<HTMLButtonElement>) => {
     e.preventDefault()
@@ -131,6 +155,40 @@ export const MovieCard = memo(({ movie, index = 0 }: { movie: Movie; index?: num
                 </div>
               }
             />
+
+            {/* Lazy Video Layer */}
+            <AnimatePresence>
+              {isHovered && trailerKey && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="absolute inset-0 z-10 bg-black"
+                >
+                  <ReactPlayer
+                    url={`https://www.youtube.com/watch?v=${trailerKey}`}
+                    width="100%"
+                    height="100%"
+                    playing
+                    muted
+                    loop
+                    config={{
+                      youtube: {
+                        playerVars: { 
+                          autoplay: 1, 
+                          controls: 0, 
+                          showinfo: 0, 
+                          modestbranding: 1, 
+                          rel: 0,
+                          iv_load_policy: 3
+                        }
+                      }
+                    } as any}
+                    className="pointer-events-none scale-150"
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* LUMEN grain overlay (subtle) */}
             <div className="lumen-grain rounded-2xl" aria-hidden />

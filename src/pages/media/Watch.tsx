@@ -60,6 +60,14 @@ export const Watch = () => {
   const { user } = useAuth()
   const [elapsed, setElapsed] = useState(0)
   const [showPreroll, setShowPreroll] = useState(true)
+  const [showTrailer, setShowTrailer] = useState(false)
+  
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowTrailer(true)
+    }, 3000)
+    return () => clearTimeout(timer)
+  }, [])
   
   // Normalize type param (movies -> movie, series -> tv)
   const rawType = typeParam || sp.get('type') || 'movie'
@@ -434,13 +442,17 @@ export const Watch = () => {
             <div className="order-1 md:order-2">
               <div className={`relative overflow-hidden rounded-2xl border border-white/10 bg-black shadow-2xl ${trailer ? 'aspect-video' : 'aspect-[2/3]'}`}>
                 <div className="h-full w-full bg-[#1a1a1a]">
-                  {trailer ? (
+                  {trailer && showTrailer ? (
                     <iframe
                       src={`https://www.youtube.com/embed/${trailer}?autoplay=1&mute=1&loop=1&playlist=${trailer}&controls=0&showinfo=0&modestbranding=1`}
                       className="h-full w-full pointer-events-none scale-110"
                       allow="autoplay; encrypted-media"
                       title="Trailer"
                     />
+                  ) : trailer && !showTrailer ? (
+                    <div className="h-full w-full animate-pulse bg-zinc-800 flex items-center justify-center">
+                        <img src={poster} alt={title} className="h-full w-full object-cover opacity-20" loading="lazy" />
+                    </div>
                   ) : (
                     poster && <img src={poster} alt={title} className="h-full w-full object-cover" loading="lazy" />
                   )}

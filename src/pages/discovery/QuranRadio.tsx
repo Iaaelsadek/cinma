@@ -338,7 +338,7 @@ export const QuranRadio = () => {
       <audio 
         ref={audioRef}
         src={currentStation.url}
-        preload="metadata"
+        preload="none"
         playsInline
         onEnded={() => {
            if (isOn && audioRef.current) {

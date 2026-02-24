@@ -408,15 +408,24 @@ const CinematicDetails = () => {
             <div className="space-y-3">
               <div onMouseEnter={() => setHoverPlay(true)} onMouseLeave={() => setHoverPlay(false)} className="overflow-hidden rounded-xl border border-white/5 bg-black/40 p-1">
                 <div className="aspect-video w-full overflow-hidden rounded-lg bg-zinc-900">
-                  {data.trailer ? (
+                  {data.trailer && hoverPlay ? (
                     <ReactPlayer
                       url={data.trailer}
                       width="100%"
                       height="100%"
                       muted
-                      playing={hoverPlay}
+                      playing={true}
                       controls={false}
                     />
+                  ) : data.trailer ? (
+                    <div className="w-full h-full relative">
+                      {data.backdrop && (
+                        <img src={data.backdrop} alt="" className="w-full h-full object-cover opacity-50" />
+                      )}
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <Play className="w-12 h-12 text-white opacity-20" />
+                      </div>
+                    </div>
                   ) : (
                     <div className="flex h-full w-full items-center justify-center text-xs text-zinc-600">
                       {t('لا يوجد عرض متاح', 'No trailer available')}

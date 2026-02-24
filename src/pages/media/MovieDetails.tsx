@@ -67,6 +67,14 @@ export const MovieDetails = () => {
   const [dbTrailerUrl, setDbTrailerUrl] = useState<string | null>(null)
   const [genLoading, setGenLoading] = useState(false)
   const [heart, setHeart] = useState(false)
+  const [showTrailer, setShowTrailer] = useState(false)
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowTrailer(true)
+    }, 3000)
+    return () => clearTimeout(timer)
+  }, [])
 
   const { data, isLoading } = useQuery<TmdbMovieDetails>({
     queryKey: ['movie-details', movieId],
@@ -445,13 +453,17 @@ export const MovieDetails = () => {
               </div>
             </div>
             
-            {trailerUrl && (
+            {trailerUrl && showTrailer ? (
               <div className="overflow-hidden rounded-xl border border-white/10 bg-black/60 backdrop-blur-md">
                  <div className="aspect-video w-full">
-                    <ReactPlayer url={trailerUrl} width="100%" height="100%" light controls playIcon={<div className="bg-red-600 rounded-full p-3"><Play className="w-6 h-6 text-white fill-current" /></div>} />
+                    <ReactPlayer url={trailerUrl} width="100%" height="100%" light={true} controls playIcon={<div className="bg-red-600 rounded-full p-3"><Play className="w-6 h-6 text-white fill-current" /></div>} />
                  </div>
               </div>
-            )}
+            ) : trailerUrl && !showTrailer ? (
+              <div className="overflow-hidden rounded-xl border border-white/10 bg-black/60 backdrop-blur-md">
+                <div className="aspect-video w-full animate-pulse bg-zinc-800" />
+              </div>
+            ) : null}
           </div>
         </motion.div>
       )}
