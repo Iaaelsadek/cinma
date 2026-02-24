@@ -74,6 +74,8 @@ const SeriesManage = () => {
             src={`https://image.tmdb.org/t/p/w200${series.poster_path}`} 
             alt={series.name} 
             className="w-24 h-36 object-cover rounded-lg shadow-lg"
+            loading="lazy"
+            decoding="async"
           />
         ) : (
           <div className="w-24 h-36 bg-zinc-800 rounded-lg flex items-center justify-center text-zinc-600">
@@ -113,6 +115,8 @@ const SeriesManage = () => {
                     src={`https://image.tmdb.org/t/p/w92${season.poster_path}`} 
                     alt={season.name} 
                     className="w-16 h-24 object-cover rounded shadow-sm"
+                    loading="lazy"
+                    decoding="async"
                   />
                 ) : (
                   <div className="w-16 h-24 bg-zinc-800 rounded flex items-center justify-center text-zinc-600">

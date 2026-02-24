@@ -187,6 +187,8 @@ export const AddMovie = () => {
                     src={`https://image.tmdb.org/t/p/w342${movie.poster_path}`} 
                     alt={movie.title}
                     className="w-full h-full object-cover"
+                    loading="lazy"
+                    decoding="async"
                   />
                 ) : (
                   <div className="w-full h-full bg-zinc-800 flex items-center justify-center">
@@ -213,6 +215,8 @@ export const AddMovie = () => {
                 src={posterPreview || `https://image.tmdb.org/t/p/w500${selectedMovie.poster_path}`} 
                 alt={selectedMovie.title}
                 className="w-full h-full object-cover"
+                loading="lazy"
+                decoding="async"
               />
               <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                  <button 

@@ -85,7 +85,7 @@ export const ReciterDetails = () => {
             className="mb-2 h-16 w-16 overflow-hidden rounded-full border-4 border-emerald-500/30 shadow-2xl shadow-emerald-500/20"
           >
             {reciter.image ? (
-              <img src={reciter.image} alt={reciter.name} className="h-full w-full object-cover" />
+              <img src={reciter.image} alt={reciter.name} className="h-full w-full object-cover" loading="lazy" decoding="async" />
             ) : (
               <div className="flex h-full w-full items-center justify-center bg-zinc-800 text-2xl font-bold text-zinc-600">
                 {reciter.name.charAt(0)}

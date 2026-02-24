@@ -2,7 +2,7 @@ import { useState, memo } from 'react'
 import { ImageOff, Loader2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
-export type TmdbImageSize = 'w92' | 'w154' | 'w185' | 'w342' | 'w500' | 'w780' | 'original'
+export type TmdbImageSize = 'w92' | 'w154' | 'w185' | 'w342' | 'w500' | 'w780' | 'w1280' | 'original'
 
 interface TmdbImageProps extends React.HTMLAttributes<HTMLDivElement> {
   path?: string | null
@@ -22,7 +22,7 @@ const getUrl = (path: string, size: TmdbImageSize) => {
 
 export const TmdbImage = memo(({
   path,
-  size = 'w342',
+  size = 'w500',
   fallback,
   showLoading = true,
   className = '',

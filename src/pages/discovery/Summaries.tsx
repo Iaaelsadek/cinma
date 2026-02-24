@@ -24,7 +24,7 @@ export const SummariesPage = () => {
         id: 's1',
         title: 'ملخص فيلم Interstellar',
         description: 'ملخص فيلم الخيال العلمي الملحمي Interstellar للمخرج كريستوفر نولان.',
-        thumbnail: 'https://image.tmdb.org/t/p/original/rAiYTfKGqDCRIIqo664sY9XZIvQ.jpg',
+        thumbnail: 'https://image.tmdb.org/t/p/w500/rAiYTfKGqDCRIIqo664sY9XZIvQ.jpg',
         created_at: '2024-01-01',
         category: 'summary'
       },
@@ -32,7 +32,7 @@ export const SummariesPage = () => {
         id: 's2',
         title: 'ملخص فيلم Inception',
         description: 'رحلة في عالم الأحلام مع فيلم Inception.',
-        thumbnail: 'https://image.tmdb.org/t/p/original/9gk7adHYeDvHkCSEqAvQNLV5Uge.jpg',
+        thumbnail: 'https://image.tmdb.org/t/p/w500/9gk7adHYeDvHkCSEqAvQNLV5Uge.jpg',
         created_at: '2024-01-02',
         category: 'summary'
       },
@@ -40,7 +40,7 @@ export const SummariesPage = () => {
         id: 's3',
         title: 'ملخص فيلم The Dark Knight',
         description: 'قصة باتمان والجوكر في تحفة نولان الخالدة.',
-        thumbnail: 'https://image.tmdb.org/t/p/original/nMKdUUepR0i5zn0y1T4CsSB5chy.jpg',
+        thumbnail: 'https://image.tmdb.org/t/p/w500/nMKdUUepR0i5zn0y1T4CsSB5chy.jpg',
         created_at: '2024-01-03',
         category: 'summary'
       },
@@ -48,7 +48,7 @@ export const SummariesPage = () => {
         id: 's4',
         title: 'ملخص فيلم Oppenheimer',
         description: 'قصة مخترع القنبلة الذرية وصراعه النفسي.',
-        thumbnail: 'https://image.tmdb.org/t/p/original/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg',
+        thumbnail: 'https://image.tmdb.org/t/p/w500/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg',
         created_at: '2024-01-04',
         category: 'summary'
       },
@@ -56,7 +56,7 @@ export const SummariesPage = () => {
         id: 's5',
         title: 'ملخص فيلم Dune: Part Two',
         description: 'تكملة ملحمة بول أتريديس في صحراء أراكيس.',
-        thumbnail: 'https://image.tmdb.org/t/p/original/1pdfLvkbY9ohJlCjQH2CZjjYVvJ.jpg',
+        thumbnail: 'https://image.tmdb.org/t/p/w500/1pdfLvkbY9ohJlCjQH2CZjjYVvJ.jpg',
         created_at: '2024-01-05',
         category: 'summary'
       }

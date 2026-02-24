@@ -89,7 +89,7 @@ export const GameDetails = () => {
               className="relative aspect-[3/4] overflow-hidden rounded-xl border border-white/10 shadow-2xl"
             >
               {poster ? (
-                <img src={poster} alt={title} className="h-full w-full object-cover" />
+                <img src={poster} alt={title} className="h-full w-full object-cover" loading="lazy" />
               ) : (
                 <div className="flex h-full w-full items-center justify-center bg-zinc-900">
                   <span className="text-zinc-500">No Poster</span>
@@ -171,7 +171,7 @@ export const GameDetails = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {screenshots.map((shot, idx) => (
                     <div key={idx} className="overflow-hidden rounded-xl border border-white/10 bg-zinc-900 aspect-video">
-                      <img src={shot} alt={`Screenshot ${idx + 1}`} className="h-full w-full object-cover transition-transform hover:scale-105" />
+                      <img src={shot} alt={`Screenshot ${idx + 1}`} className="h-full w-full object-cover transition-transform hover:scale-105" loading="lazy" />
                     </div>
                   ))}
                 </div>

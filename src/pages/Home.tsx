@@ -715,6 +715,7 @@ export const Home = () => {
                          alt={item.title}
                          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110 opacity-80 group-hover:opacity-100"
                          loading="lazy"
+                         decoding="async"
                        />
                        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
                        <div className="absolute bottom-0 left-0 right-0 p-3">
@@ -815,6 +816,7 @@ const BentoBox = ({ title, icon, items, color }: { title: string, icon: any, ite
                     className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" 
                     alt={item.title || item.name}
                     loading="lazy"
+                    decoding="async"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
                   <div className="absolute bottom-4 left-4 right-4">
@@ -848,6 +850,7 @@ const AIRecommended = ({ userId }: { userId: string }) => {
                className="w-full h-full object-cover" 
                alt={m.title}
                loading="lazy" 
+               decoding="async"
              />
            </PrefetchLink>
         </HolographicCard>

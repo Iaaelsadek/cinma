@@ -106,6 +106,8 @@ export const MoviesManage = () => {
                         src={movie.poster_path.startsWith('http') ? movie.poster_path : `https://image.tmdb.org/t/p/w92${movie.poster_path}`} 
                         alt={movie.title} 
                         className="w-6 h-9 object-cover rounded shadow-sm"
+                        loading="lazy"
+                        decoding="async"
                       />
                     )}
                     <span className="font-semibold group-hover:text-primary transition-colors line-clamp-1">{movie.title}</span>

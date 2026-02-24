@@ -392,6 +392,7 @@ export const QuantumNavbar = memo(() => {
                           src={profile.avatar_url} 
                           alt="User" 
                           className="w-full h-full object-cover"
+                          loading="lazy"
                         />
                       ) : (
                         <User size={18} className="text-white" />
