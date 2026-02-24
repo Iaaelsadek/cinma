@@ -150,7 +150,7 @@ export const SoftwareDetails = () => {
               className="relative aspect-square overflow-hidden rounded-3xl border border-white/10 shadow-2xl bg-[#111]"
             >
               {poster ? (
-                <img src={poster} alt={title} className="h-full w-full object-contain p-4" />
+                <img src={poster} alt={title} className="h-full w-full object-contain p-4" loading="lazy" />
               ) : (
                 <div className="flex h-full w-full items-center justify-center bg-zinc-900">
                   <Cpu size={64} className="text-zinc-700" />

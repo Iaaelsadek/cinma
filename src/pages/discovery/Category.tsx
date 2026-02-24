@@ -55,11 +55,11 @@ export const CategoryPage = () => {
       if (data && data.length > 0) return data as AnimeRow[]
       // Mock Data
       return [
-        { id: 101, title: 'Attack on Titan', category: 'Action', image_url: 'https://image.tmdb.org/t/p/original/8C5gDxV5b1bYy72FNUYGBO2LbAt.jpg' },
-        { id: 102, title: 'One Piece', category: 'Adventure', image_url: 'https://image.tmdb.org/t/p/original/cMD9Ygz11VJmK195pHeV4Crghgy.jpg' },
-        { id: 103, title: 'Demon Slayer', category: 'Fantasy', image_url: 'https://image.tmdb.org/t/p/original/nTvM4mhq82TQNnf3RFULl4UB26b.jpg' },
-        { id: 104, title: 'Jujutsu Kaisen', category: 'Supernatural', image_url: 'https://image.tmdb.org/t/p/original/h8jGnEsL5QZc32l621f3jXf5j5.jpg' },
-        { id: 105, title: 'Naruto Shippuden', category: 'Action', image_url: 'https://image.tmdb.org/t/p/original/zAYRe2bJxpWTVrwwmBc00VFkAf4.jpg' }
+        { id: 101, title: 'Attack on Titan', category: 'Action', image_url: 'https://image.tmdb.org/t/p/w500/8C5gDxV5b1bYy72FNUYGBO2LbAt.jpg' },
+        { id: 102, title: 'One Piece', category: 'Adventure', image_url: 'https://image.tmdb.org/t/p/w500/cMD9Ygz11VJmK195pHeV4Crghgy.jpg' },
+        { id: 103, title: 'Demon Slayer', category: 'Fantasy', image_url: 'https://image.tmdb.org/t/p/w500/nTvM4mhq82TQNnf3RFULl4UB26b.jpg' },
+        { id: 104, title: 'Jujutsu Kaisen', category: 'Supernatural', image_url: 'https://image.tmdb.org/t/p/w500/h8jGnEsL5QZc32l621f3jXf5j5.jpg' },
+        { id: 105, title: 'Naruto Shippuden', category: 'Action', image_url: 'https://image.tmdb.org/t/p/w500/zAYRe2bJxpWTVrwwmBc00VFkAf4.jpg' }
       ] as AnimeRow[]
     },
     enabled: isAnime

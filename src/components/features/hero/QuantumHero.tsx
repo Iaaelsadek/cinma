@@ -40,7 +40,7 @@ const getLocalizedOrigin = (origin: string, lang: string) => {
  * - Diverse Content (Movies/Series from various regions)
  * - Auto-play Trailers on Active/Hover (Optional, simplified for marquee)
  */
-export const QuantumHero = memo(({ items, type }: { items: any[], type?: string }) => {
+export const QuantumHero = memo(({ items }: { items: any[] }) => {
   const navigate = useNavigate()
   const { lang } = useLang()
   const [activeId, setActiveId] = useState<number | null>(null)
@@ -123,7 +123,7 @@ export const QuantumHero = memo(({ items, type }: { items: any[], type?: string 
                   <TmdbImage
                     path={item.poster_path}
                     alt={item.title || item.name}
-                    size="original"
+                    size="w1280"
                     priority={true} // Improve LCP
                     className="w-full h-full"
                     imgClassName="object-cover object-center transition-transform duration-1000 group-hover:scale-110"

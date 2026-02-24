@@ -112,7 +112,7 @@ const CinematicDetails = () => {
     : details?.episode_run_time?.[0] ? `${details.episode_run_time[0]}m` : '—'
   const synopsis = details?.overview || t('لا يوجد وصف متاح حالياً.', 'No synopsis available yet.')
   const poster = buildImage(details?.poster_path, 'w500')
-  const backdrop = buildImage(details?.backdrop_path, 'original')
+  const backdrop = buildImage(details?.backdrop_path, 'w1280')
   const director = type === 'movie'
     ? credits?.crew?.find((c: any) => c.job === 'Director')?.name
     : details?.created_by?.[0]?.name
@@ -245,7 +245,7 @@ const CinematicDetails = () => {
           transition={{ duration: 0.6 }}
           className="pointer-events-none fixed inset-0 -z-10"
         >
-          {data.backdrop && <img src={data.backdrop} alt="" className="h-full w-full object-cover" />}
+          {data.backdrop && <img src={data.backdrop} alt="" className="h-full w-full object-cover" loading="lazy" />}
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0.1)_0%,rgba(0,0,0,0.7)_60%,#0f0f0f_100%)]" />
         </motion.div>
       </AnimatePresence>
@@ -280,7 +280,7 @@ const CinematicDetails = () => {
             <div ref={glowRef} className="space-y-3 [--glow:#ff3b3b]">
               <div className="relative overflow-hidden rounded-xl border border-white/10 bg-black/40 shadow-2xl ring-1 ring-[var(--glow)]/30">
                 <div className="aspect-[2/3] w-full">
-                  {data.poster ? <img src={data.poster} alt={data.title} className="h-full w-full object-cover" /> : null}
+                  {data.poster ? <img src={data.poster} alt={data.title} className="h-full w-full object-cover" loading="lazy" /> : null}
                 </div>
                 <div className="pointer-events-none absolute inset-0 shadow-[0_0_60px_0_var(--glow)]" />
               </div>
@@ -334,7 +334,7 @@ const CinematicDetails = () => {
                   {data.cast.map((p) => (
                     <div key={p.id} className="w-16 shrink-0 text-center">
                       <div className="mx-auto h-16 w-16 overflow-hidden rounded-full border border-white/5 bg-zinc-900">
-                        {p.avatar ? <img src={p.avatar} alt={p.name} className="h-full w-full object-cover" /> : null}
+                        {p.avatar ? <img src={p.avatar} alt={p.name} className="h-full w-full object-cover" loading="lazy" /> : null}
                       </div>
                       <div className="mt-1 truncate text-[10px] font-medium text-zinc-300">{p.name}</div>
                       <div className="truncate text-[9px] text-zinc-500">{p.role || ''}</div>
@@ -386,7 +386,7 @@ const CinematicDetails = () => {
                         className="group relative overflow-hidden rounded-lg border border-white/5 bg-white/5 text-left transition-all hover:bg-white/10 hover:border-white/10"
                       >
                         <div className="aspect-video w-full bg-zinc-900/50">
-                          {e.still && <img src={e.still} alt={e.title} className="h-full w-full object-cover opacity-75 transition-opacity group-hover:opacity-100" />}
+                          {e.still && <img src={e.still} alt={e.title} className="h-full w-full object-cover opacity-75 transition-opacity group-hover:opacity-100" loading="lazy" />}
                         </div>
                         <div className="p-2">
                           <div className="truncate text-xs font-bold text-zinc-200 group-hover:text-white">
@@ -435,7 +435,7 @@ const CinematicDetails = () => {
                       className="flex w-full items-center gap-3 rounded-lg border border-transparent bg-white/5 p-1.5 hover:bg-white/10 hover:border-white/5 transition-colors text-left"
                     >
                       <div className="h-10 w-7 shrink-0 overflow-hidden rounded bg-zinc-800">
-                        {s.thumb && <img src={s.thumb} alt={s.title} className="h-full w-full object-cover" />}
+                        {s.thumb && <img src={s.thumb} alt={s.title} className="h-full w-full object-cover" loading="lazy" />}
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="truncate text-xs font-medium text-zinc-200">{s.title}</div>

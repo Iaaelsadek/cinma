@@ -164,7 +164,7 @@ export const MovieDetails = () => {
   })
 
   const poster = data?.poster_path ? `https://image.tmdb.org/t/p/w500${data.poster_path}` : ''
-  const backdrop = data?.backdrop_path ? `https://image.tmdb.org/t/p/original${data.backdrop_path}` : ''
+  const backdrop = data?.backdrop_path ? `https://image.tmdb.org/t/p/w1280${data.backdrop_path}` : ''
   const title = dualTitles.main || data?.title || data?.name || `فيلم #${id}`
   const arabicTitle = dualTitles.sub
   const year = data?.release_date ? new Date(data.release_date).getFullYear() : ''
@@ -338,7 +338,7 @@ export const MovieDetails = () => {
       {/* Cinematic background */}
       {backdrop && (
         <div className="absolute top-0 left-0 right-0 h-[35vh] -z-10 overflow-hidden">
-          <img src={backdrop} alt={title} className="h-full w-full object-cover opacity-50" />
+          <img src={backdrop} alt={title} className="h-full w-full object-cover opacity-50" loading="lazy" />
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#050505]/60 to-[#050505]" />
         </div>
       )}
@@ -426,7 +426,7 @@ export const MovieDetails = () => {
                     return (
                       <div key={p.id} className="w-16 shrink-0 text-center">
                         <div className="mx-auto h-16 w-16 overflow-hidden rounded-full bg-zinc-800 border border-white/5">
-                          {img && <img src={img} alt={p.name} className="h-full w-full object-cover" />}
+                          {img && <img src={img} alt={p.name} className="h-full w-full object-cover" loading="lazy" />}
                         </div>
                         <div className="mt-1 truncate text-[10px] text-zinc-300">{p.name}</div>
                       </div>
@@ -441,7 +441,7 @@ export const MovieDetails = () => {
           <div className="space-y-3">
             <div className="relative overflow-hidden rounded-xl border border-white/10 bg-zinc-900 shadow-2xl">
               <div className="aspect-[2/3] w-full">
-                {poster && <img src={poster} alt={title} className="h-full w-full object-cover" />}
+                {poster && <img src={poster} alt={title} className="h-full w-full object-cover" loading="lazy" />}
               </div>
             </div>
             

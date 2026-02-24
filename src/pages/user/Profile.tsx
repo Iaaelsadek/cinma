@@ -400,6 +400,8 @@ const WatchlistSection = () => {
                 alt={item.title} 
                 className="w-12 h-16 object-cover rounded"
                 onError={(e) => e.currentTarget.src = '/default-poster.jpg'}
+                loading="lazy"
+                decoding="async"
               />
               <div className="flex-1">
                 <h4 className="text-sm font-medium text-white">{item.title}</h4>
@@ -470,6 +472,8 @@ const ContinueWatchingSection = () => {
                 alt={item.title} 
                 className="w-12 h-16 object-cover rounded"
                 onError={(e) => e.currentTarget.src = '/default-poster.jpg'}
+                loading="lazy"
+                decoding="async"
               />
               <div className="flex-1">
                 <h4 className="text-sm font-medium text-white">{item.title}</h4>
@@ -537,6 +541,8 @@ const HistorySection = () => {
                 alt={item.title} 
                 className="w-12 h-16 object-cover rounded"
                 onError={(e) => e.currentTarget.src = '/default-poster.jpg'}
+                loading="lazy"
+                decoding="async"
               />
               <div className="flex-1">
                 <h4 className="text-sm font-medium text-white">{item.title}</h4>
@@ -591,6 +597,8 @@ const RecommendationsSection = () => {
                 alt={item.title} 
                 className="w-12 h-16 object-cover rounded"
                 onError={(e) => e.currentTarget.src = '/default-poster.jpg'}
+                loading="lazy"
+                decoding="async"
               />
               <div className="flex-1">
                 <h4 className="text-sm font-medium text-white">{item.title}</h4>

@@ -85,10 +85,12 @@ const AdminSeriesList = () => {
               <div className="aspect-[2/3] w-full overflow-hidden rounded-lg bg-zinc-800 relative">
                 {s.poster_path ? (
                   <img 
-                    src={`https://image.tmdb.org/t/p/w200${s.poster_path}`} 
-                    alt={s.name} 
-                    className="h-full w-full object-cover transition-transform group-hover:scale-105" 
-                  />
+            src={`https://image.tmdb.org/t/p/w200${s.poster_path}`} 
+            alt={s.name} 
+            className="h-full w-full object-cover transition-transform group-hover:scale-105" 
+            loading="lazy"
+            decoding="async"
+          />
                 ) : (
                   <div className="h-full w-full flex items-center justify-center text-zinc-600">
                     <Tv size={32} />

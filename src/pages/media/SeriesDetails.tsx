@@ -185,7 +185,7 @@ const SeriesDetails = ({ id: propId }: SeriesDetailsProps = {}) => {
   })
 
   const poster = series.data?.poster_path ? `https://image.tmdb.org/t/p/w500${series.data.poster_path}` : ''
-  const backdrop = series.data?.backdrop_path ? `https://image.tmdb.org/t/p/original${series.data.backdrop_path}` : ''
+  const backdrop = series.data?.backdrop_path ? `https://image.tmdb.org/t/p/w1280${series.data.backdrop_path}` : ''
   const title = dualTitles.main || series.data?.name || `مسلسل #${id}`
   const arabicTitle = dualTitles.sub
   const overview = series.data?.overview || 'لا يوجد وصف متاح'
@@ -283,7 +283,7 @@ const SeriesDetails = ({ id: propId }: SeriesDetailsProps = {}) => {
       />
       {backdrop && (
         <div className="absolute top-0 left-0 right-0 h-[30vh] -z-10 overflow-hidden">
-          <img src={backdrop} alt={title} className="h-full w-full object-cover opacity-50" />
+          <img src={backdrop} alt={title} className="h-full w-full object-cover opacity-50" loading="lazy" />
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#050505]/60 to-[#050505]" />
         </div>
       )}
@@ -292,7 +292,7 @@ const SeriesDetails = ({ id: propId }: SeriesDetailsProps = {}) => {
         <div className="space-y-2 order-2 md:order-1">
           <div className="overflow-hidden rounded-xl border border-white/10 bg-white/5 shadow-2xl backdrop-blur-md">
             <div className="aspect-[2/3] w-full bg-zinc-900/40">
-              {poster && <img src={poster} alt={title} className="h-full w-full object-cover" />}
+              {poster && <img src={poster} alt={title} className="h-full w-full object-cover" loading="lazy" />}
             </div>
           </div>
           {user && (
@@ -368,7 +368,7 @@ const SeriesDetails = ({ id: propId }: SeriesDetailsProps = {}) => {
                   return (
                     <div key={p.id} className="w-16 shrink-0 text-center">
                       <div className="mx-auto h-16 w-16 overflow-hidden rounded-full bg-zinc-800 border border-white/5">
-                        {img && <img src={img} alt={p.name} className="h-full w-full object-cover" />}
+                        {img && <img src={img} alt={p.name} className="h-full w-full object-cover" loading="lazy" />}
                       </div>
                       <div className="mt-1 truncate text-[10px] text-zinc-300">{p.name}</div>
                     </div>
@@ -435,7 +435,7 @@ const SeriesDetails = ({ id: propId }: SeriesDetailsProps = {}) => {
               >
                 <div className="relative">
                   <div className="aspect-[16/9] w-full bg-zinc-800">
-                    {still && <img src={still} alt={e.name} className="h-full w-full object-cover" />}
+                    {still && <img src={still} alt={e.name} className="h-full w-full object-cover" loading="lazy" />}
                   </div>
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                   <div className="absolute bottom-2 left-2 right-2 line-clamp-1 text-sm font-semibold text-white">
