@@ -217,9 +217,19 @@ export const QuranPlayerProvider = ({ children }: { children: ReactNode }) => {
       <audio
         ref={audioRef}
         src={currentTrack?.url || undefined}
-        preload="none"
+        preload="auto"
+        crossOrigin="anonymous"
         {...{ referrerPolicy: "no-referrer" } as any}
         onEnded={() => skipNext()}
+        onCanPlay={() => {
+          if (isPlaying) {
+            audioRef.current?.play().catch(err => {
+              if (err.name !== 'AbortError') {
+                console.error("Autoplay failed:", err)
+              }
+            })
+          }
+        }}
         onError={(e) => {
           console.error('Audio error details:', {
              error: e.currentTarget.error,

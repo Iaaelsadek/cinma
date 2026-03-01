@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { useLang } from '../../state/useLang'
 import { useQuranPlayer } from '../../context/QuranPlayerContext'
-import { SURAHS } from '../../lib/quran_meta'
+import { SURAHS } from '../../data/quran'
 import { Play, Share2, ArrowLeft, ArrowRight, Pause } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { Helmet } from 'react-helmet-async'
@@ -140,7 +140,7 @@ export const ReciterDetails = () => {
                     </div>
                     <div>
                       <h3 className={`font-bold text-sm ${isCurrent ? 'text-emerald-400' : 'text-zinc-200'}`}>
-                        {lang === 'ar' ? `سورة ${surah.ar}` : surah.name}
+                        {lang === 'ar' ? `سورة ${surah.name}` : surah.englishName}
                       </h3>
                       <p className="text-[10px] text-zinc-500">
                         {reciter.rewaya}
@@ -154,9 +154,9 @@ export const ReciterDetails = () => {
                         toggle()
                       } else {
                         playTrack({
-                          id: `${reciter.id}-${surah.id}`,
-                          title: lang === 'ar' ? `سورة ${surah.ar}` : surah.name,
-                          reciter: reciter.name,
+                            id: `${reciter.id}-${surah.id}`,
+                            title: lang === 'ar' ? `سورة ${surah.name}` : surah.englishName,
+                            reciter: reciter.name,
                           url: buildUrl(reciter.server, surah.id),
                           image: reciter.image
                         })

@@ -1,10 +1,9 @@
 import { create } from 'zustand'
 import type { Session, User } from '@supabase/supabase-js'
-import { supabase, getProfile } from '../lib/supabase'
+import { supabase, getProfile, type Profile } from '../lib/supabase'
 import { logAuthError } from '../services/errorLogging'
 
-export type Role = 'user' | 'admin'
-export type Profile = { id: string; username: string; avatar_url?: string | null; role: Role }
+export type Role = 'user' | 'admin' | 'supervisor'
 
 type AuthState = {
   profile: Profile | null
@@ -13,7 +12,7 @@ type AuthState = {
   loading: boolean
   error: Error | null
   login: (email: string, password: string) => Promise<void>
-  logout: () => Promise<void>
+  signOut: () => Promise<void>
   refreshProfile: (silent?: boolean) => Promise<void>
   setProfile: (p: Profile | null) => void
   setLoading: (loading: boolean) => void
@@ -34,7 +33,7 @@ export const useAuth = create<AuthState>((set, get) => ({
       await get().refreshProfile()
     }
   },
-  async logout() {
+  async signOut() {
     await supabase.auth.signOut()
     set({ profile: null, user: null, session: null })
   },

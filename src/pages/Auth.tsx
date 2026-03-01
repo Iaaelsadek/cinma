@@ -12,13 +12,18 @@ import { toast } from 'sonner'
 const Auth = () => {
   const [searchParams] = useSearchParams()
   const initialMode = searchParams.get('mode') === 'register' ? 'register' : 'login'
-  const [mode, setMode] = useState<'login' | 'register'>(initialMode)
+  const [mode, setMode] = useState<'login' | 'register' | 'forgot-password' | 'mfa' | 'update-password'> (initialMode)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [username, setUsername] = useState('')
+  const [mfaToken, setMfaToken] = useState('')
+  const [challengeId, setChallengeId] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [successMsg, setSuccessMsg] = useState<string | null>(null)
   const navigate = useNavigate()
   const { syncLocalData, refreshProfile, user } = useAuth()
   const isSupabaseConfigured = Boolean(
@@ -99,7 +104,12 @@ const Auth = () => {
   }
 
   useEffect(() => {
-    setMode(initialMode)
+    // Check for password recovery hash in URL
+    if (window.location.hash.includes('type=recovery')) {
+      setMode('update-password')
+    } else {
+      setMode(initialMode)
+    }
     setErrorMsg(null)
 
     // تنظيف الجلسات العالقة عند فتح الصفحة
@@ -127,14 +137,93 @@ const Auth = () => {
   cleanupSession()
 }, [initialMode])
 
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!email) {
+      setErrorMsg('يرجى إدخال البريد الإلكتروني')
+      return
+    }
+    setLoading(true)
+    setErrorMsg(null)
+    setSuccessMsg(null)
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/reset-password`,
+      })
+      if (error) throw error
+      setSuccessMsg('تم إرسال رابط استعادة كلمة المرور إلى بريدك الإلكتروني')
+    } catch (err: any) {
+      setErrorMsg(err.message || 'فشل إرسال رابط الاستعادة')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleMfaVerify = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!mfaToken || !challengeId) return
+    
+    setLoading(true)
+    setErrorMsg(null)
+
+    try {
+      const { error } = await supabase.auth.mfa.verify({
+        factorId: challengeId,
+        challengeId,
+        code: mfaToken
+      })
+      
+      if (error) throw error
+      await handleLoginSuccess()
+    } catch (err: any) {
+      setErrorMsg(err.message || 'رمز التحقق غير صحيح')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (newPassword !== confirmPassword) {
+      setErrorMsg('كلمات المرور غير متطابقة')
+      return
+    }
+    if (newPassword.length < 6) {
+      setErrorMsg('كلمة المرور يجب أن تكون 6 أحرف على الأقل')
+      return
+    }
+    setLoading(true)
+    setErrorMsg(null)
+    setSuccessMsg(null)
+
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      })
+      if (error) throw error
+      setSuccessMsg('تم تحديث كلمة المرور بنجاح. يمكنك الآن تسجيل الدخول.')
+      setTimeout(() => setMode('login'), 2000)
+    } catch (err: any) {
+      setErrorMsg(err.message || 'فشل تحديث كلمة المرور')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (mode === 'forgot-password') return handleForgotPassword(e)
+    if (mode === 'mfa') return handleMfaVerify(e)
+    if (mode === 'update-password') return handleUpdatePassword(e)
+    
     if (!isSupabaseConfigured) {
       setErrorMsg('بيانات Supabase غير مُعدّة. تحقق من ملف .env وأعد التشغيل.')
       return
     }
     setLoading(true)
     setErrorMsg(null)
+    setSuccessMsg(null)
 
     try {
       if (mode === 'login') {
@@ -143,18 +232,33 @@ const Auth = () => {
             supabase.auth.signInWithPassword({ email, password }),
             8000
           )
-          if (error) throw error
+          
+          if (error) {
+            // Check for MFA requirement
+            if (error.message.includes('mfa_required')) {
+              const { data: factors, error: factorsError } = await supabase.auth.mfa.listFactors()
+              if (factorsError) throw factorsError
+              
+              const totpFactor = factors.totp[0]
+              if (!totpFactor) throw new Error('لم يتم العثور على عامل مصادقة ثنائية')
+              
+              const { data: challenge, error: challengeError } = await supabase.auth.mfa.challenge({
+                factorId: totpFactor.id
+              })
+              if (challengeError) throw challengeError
+              
+              setChallengeId(challenge.id)
+              setMode('mfa')
+              setLoading(false)
+              return
+            }
+            throw error
+          }
+
           if (data.user) {
             await handleLoginSuccess()
           }
         } catch (err: any) {
-          errorLogger.logError({
-            message: 'Login attempt 1 failed',
-            severity: 'low',
-            category: 'auth',
-            context: { error: err, email }
-          })
-          // المحاولة باستخدام المسار البديل في حال انتهاء المهلة أو خطأ في الشبكة
           const isNetworkError = err?.message === 'TIMEOUT' || 
                                  err?.message?.toLowerCase().includes('fetch') ||
                                  err?.message?.toLowerCase().includes('network')
@@ -185,7 +289,7 @@ const Auth = () => {
         }
       }
     } catch (err: any) {
-      logAuthError('Login error:', err)
+      logAuthError('Auth error:', err)
       let msg = err?.message || 'حدث خطأ غير متوقع'
       
       if (msg === 'TIMEOUT') {
@@ -240,147 +344,256 @@ const Auth = () => {
     }
   }
 
+  const getTitle = () => {
+    switch (mode) {
+      case 'login': return 'مرحباً بعودتك'
+      case 'register': return 'انضم إلينا'
+      case 'forgot-password': return 'استعادة كلمة المرور'
+      case 'mfa': return 'التحقق الثنائي'
+      case 'update-password': return 'تغيير كلمة المرور'
+    }
+  }
+
+  const getSubtitle = () => {
+    switch (mode) {
+      case 'login': return 'استكمل رحلة المشاهدة السينمائية'
+      case 'register': return 'أنشئ حسابك واستمتع بتجربة فريدة'
+      case 'forgot-password': return 'أدخل بريدك الإلكتروني لاستلام رابط الاستعادة'
+      case 'mfa': return 'أدخل الرمز المكون من 6 أرقام من تطبيق التحقق'
+      case 'update-password': return 'أدخل كلمة المرور الجديدة لحسابك'
+    }
+  }
+
   return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-black py-4">
-      {/* Background Effects */}
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-lumen-void py-8">
+      {/* LUMEN Background Effects */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-[20%] -left-[10%] w-[70vw] h-[70vw] bg-purple-600/20 rounded-full blur-[120px] animate-pulse-slow" />
-        <div className="absolute top-[40%] -right-[10%] w-[60vw] h-[60vw] bg-cyan-600/20 rounded-full blur-[100px] animate-pulse-slow delay-1000" />
+        <div className="absolute -top-[20%] -left-[10%] w-[70vw] h-[70vw] bg-lumen-gold/10 rounded-full blur-[120px] animate-pulse-slow" />
+        <div className="absolute top-[40%] -right-[10%] w-[60vw] h-[60vw] bg-lumen-gold/5 rounded-full blur-[100px] animate-pulse-slow delay-1000" />
+        <div className="lumen-grain opacity-10" />
       </div>
 
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-sm relative z-10 p-3"
+        className="w-full max-w-md relative z-10 p-4"
       >
-        <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-black/40 backdrop-blur-xl shadow-2xl">
+        <div className="relative overflow-hidden rounded-2xl border border-lumen-muted bg-lumen-surface/60 backdrop-blur-2xl shadow-2xl">
           {/* Header */}
-          <div className="p-3 pb-0 text-center">
+          <div className="p-6 pb-2 text-center">
             <motion.div 
-              className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-tr from-cyan-500 to-purple-600 mb-1.5 shadow-lg shadow-purple-500/20"
+              className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-lumen-gold mb-4 shadow-lg shadow-lumen-gold/20"
               whileHover={{ scale: 1.05, rotate: 5 }}
             >
-              <Sparkles className="text-white w-4 h-4" />
+              <Sparkles className="text-lumen-void w-6 h-6" />
             </motion.div>
-            <h1 className="text-base font-black text-white tracking-tight mb-1">
-              {mode === 'login' ? 'مرحباً بعودتك' : 'انضم إلينا'}
+            <h1 className="text-2xl font-black text-lumen-cream tracking-tight mb-2 font-syne">
+              {getTitle()}
             </h1>
-            <p className="text-zinc-400 text-[10px] mb-1.5">
-              {mode === 'login' 
-                ? 'استكمل رحلة المشاهدة السينمائية' 
-                : 'أنشئ حسابك واستمتع بتجربة فريدة'}
+            <p className="text-lumen-silver text-sm mb-4">
+              {getSubtitle()}
             </p>
             
             {errorMsg && (
-              <div className="mx-auto w-full rounded-lg bg-red-500/10 border border-red-500/20 p-1.5 text-[10px] text-red-400">
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="mx-auto w-full rounded-lg bg-red-500/10 border border-red-500/20 p-3 text-xs text-red-400 mb-4"
+              >
                 {errorMsg}
-              </div>
+              </motion.div>
+            )}
+
+            {successMsg && (
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="mx-auto w-full rounded-lg bg-green-500/10 border border-green-500/20 p-3 text-xs text-green-400 mb-4"
+              >
+                {successMsg}
+              </motion.div>
             )}
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="p-3 space-y-1.5">
+          <form onSubmit={handleSubmit} className="p-6 pt-2 space-y-4">
             {mode === 'register' && (
-              <div className="space-y-0.5">
-                <label className="text-[9px] font-bold uppercase tracking-widest text-zinc-500">اسم المستخدم</label>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-lumen-silver/60">اسم المستخدم</label>
                 <div className="relative group">
-                  <User className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-cyan-400 transition-colors" size={14} />
+                  <User className="absolute right-3 top-1/2 -translate-y-1/2 text-lumen-silver/40 group-focus-within:text-lumen-gold transition-colors" size={18} />
                   <input
                     type="text"
                     required
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    className="w-full h-9 rounded-lg bg-white/5 border border-white/10 px-8 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:border-cyan-500/50 focus:bg-white/10 transition-all"
+                    className="w-full h-11 rounded-xl bg-lumen-void/50 border border-lumen-muted px-10 text-sm text-lumen-cream placeholder:text-lumen-silver/30 focus:outline-none focus:border-lumen-gold/50 focus:bg-lumen-void/80 transition-all"
                     placeholder="Username"
                   />
                 </div>
               </div>
             )}
 
-            <div className="space-y-0.5">
-              <label className="text-[9px] font-bold uppercase tracking-widest text-zinc-500">البريد الإلكتروني</label>
-              <div className="relative group">
-                <Mail className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-cyan-400 transition-colors" size={14} />
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full h-9 rounded-lg bg-white/5 border border-white/10 px-8 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:border-cyan-500/50 focus:bg-white/10 transition-all"
-                  placeholder="name@example.com"
-                />
+            {(mode === 'login' || mode === 'register' || mode === 'forgot-password') && (
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-lumen-silver/60">البريد الإلكتروني</label>
+                <div className="relative group">
+                  <Mail className="absolute right-3 top-1/2 -translate-y-1/2 text-lumen-silver/40 group-focus-within:text-lumen-gold transition-colors" size={18} />
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full h-11 rounded-xl bg-lumen-void/50 border border-lumen-muted px-10 text-sm text-lumen-cream placeholder:text-lumen-silver/30 focus:outline-none focus:border-lumen-gold/50 focus:bg-lumen-void/80 transition-all"
+                    placeholder="name@example.com"
+                  />
+                </div>
               </div>
-            </div>
+            )}
 
-            <div className="space-y-0.5">
-              <label className="text-[9px] font-bold uppercase tracking-widest text-zinc-500">كلمة المرور</label>
-              <div className="relative group">
-                <Lock className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-cyan-400 transition-colors" size={14} />
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full h-9 rounded-lg bg-white/5 border border-white/10 px-8 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:border-cyan-500/50 focus:bg-white/10 transition-all"
-                  placeholder="••••••••"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors"
-                >
-                  {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
-                </button>
+            {(mode === 'login' || mode === 'register') && (
+              <div className="space-y-1">
+                <div className="flex justify-between items-center">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-lumen-silver/60">كلمة المرور</label>
+                  {mode === 'login' && (
+                    <button 
+                      type="button"
+                      onClick={() => setMode('forgot-password')}
+                      className="text-[10px] text-lumen-gold hover:underline transition-all"
+                    >
+                      نسيت كلمة المرور؟
+                    </button>
+                  )}
+                </div>
+                <div className="relative group">
+                  <Lock className="absolute right-3 top-1/2 -translate-y-1/2 text-lumen-silver/40 group-focus-within:text-lumen-gold transition-colors" size={18} />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full h-11 rounded-xl bg-lumen-void/50 border border-lumen-muted px-10 text-sm text-lumen-cream placeholder:text-lumen-silver/30 focus:outline-none focus:border-lumen-gold/50 focus:bg-lumen-void/80 transition-all"
+                    placeholder="••••••••"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-lumen-silver/40 hover:text-lumen-cream transition-colors"
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
+
+            {mode === 'update-password' && (
+              <div className="space-y-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-lumen-silver/60">كلمة المرور الجديدة</label>
+                  <div className="relative group">
+                    <Lock className="absolute right-3 top-1/2 -translate-y-1/2 text-lumen-silver/40 group-focus-within:text-lumen-gold transition-colors" size={18} />
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      className="w-full h-11 rounded-xl bg-lumen-void/50 border border-lumen-muted px-10 text-sm text-lumen-cream placeholder:text-lumen-silver/30 focus:outline-none focus:border-lumen-gold/50 focus:bg-lumen-void/80 transition-all"
+                      placeholder="••••••••"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-lumen-silver/60">تأكيد كلمة المرور</label>
+                  <div className="relative group">
+                    <Lock className="absolute right-3 top-1/2 -translate-y-1/2 text-lumen-silver/40 group-focus-within:text-lumen-gold transition-colors" size={18} />
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className="w-full h-11 rounded-xl bg-lumen-void/50 border border-lumen-muted px-10 text-sm text-lumen-cream placeholder:text-lumen-silver/30 focus:outline-none focus:border-lumen-gold/50 focus:bg-lumen-void/80 transition-all"
+                      placeholder="••••••••"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {mode === 'mfa' && (
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-lumen-silver/60">رمز التحقق (TOTP)</label>
+                <div className="relative group">
+                  <Lock className="absolute right-3 top-1/2 -translate-y-1/2 text-lumen-silver/40 group-focus-within:text-lumen-gold transition-colors" size={18} />
+                  <input
+                    type="text"
+                    required
+                    value={mfaToken}
+                    onChange={(e) => setMfaToken(e.target.value)}
+                    className="w-full h-11 rounded-xl bg-lumen-void/50 border border-lumen-muted px-10 text-sm text-lumen-cream placeholder:text-lumen-silver/30 focus:outline-none focus:border-lumen-gold/50 focus:bg-lumen-void/80 transition-all"
+                    placeholder="000000"
+                    maxLength={6}
+                  />
+                </div>
+              </div>
+            )}
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full h-9 mt-1 rounded-lg bg-gradient-to-r from-cyan-500 to-purple-600 text-white font-bold text-xs tracking-wide hover:shadow-[0_0_20px_rgba(6,182,212,0.4)] hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 group"
+              className="btn-primary w-full h-11 mt-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 group"
             >
               {loading ? (
-                <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <div className="w-5 h-5 border-2 border-lumen-void/30 border-t-lumen-void rounded-full animate-spin" />
               ) : (
                 <>
-                  {mode === 'login' ? 'تسجيل الدخول' : 'إنشاء حساب'}
-                  <ArrowRight size={14} className="group-hover:-translate-x-1 transition-transform" />
+                  {mode === 'login' ? 'تسجيل الدخول' : 
+                   mode === 'register' ? 'إنشاء حساب' : 
+                   mode === 'mfa' ? 'تحقق' : 
+                   mode === 'update-password' ? 'تحديث كلمة المرور' :
+                   'إرسال رابط الاستعادة'}
+                  <ArrowRight size={18} className="group-hover:-translate-x-1 transition-transform" />
                 </>
               )}
             </button>
 
-            <div className="relative py-1">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-white/10"></div>
-              </div>
-              <div className="relative flex justify-center text-[9px] uppercase">
-                <span className="bg-[#0a0a0a] px-2 text-zinc-500">أو المتابعة باستخدام</span>
-              </div>
-            </div>
+            {mode !== 'mfa' && (
+              <>
+                <div className="relative py-2">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-lumen-muted"></div>
+                  </div>
+                  <div className="relative flex justify-center text-[10px] uppercase">
+                    <span className="bg-lumen-surface px-3 text-lumen-silver/60">أو المتابعة باستخدام</span>
+                  </div>
+                </div>
 
-            <button
-              type="button"
-              onClick={handleGoogleLogin}
-              disabled={loading}
-              className="w-full h-9 rounded-lg bg-white text-black font-bold text-xs flex items-center justify-center gap-2 hover:bg-gray-200 transition-colors"
-            >
-              <Chrome size={16} />
-              <span>Google</span>
-            </button>
-          </form>
+                <div className="grid grid-cols-1 gap-3">
+                  <button
+                    type="button"
+                    onClick={handleGoogleLogin}
+                    className="flex items-center justify-center gap-3 w-full h-11 rounded-xl border border-lumen-muted bg-lumen-void/30 hover:bg-lumen-void/60 text-lumen-cream text-sm transition-all"
+                  >
+                    <Chrome size={18} />
+                    Google
+                  </button>
+                </div>
+              </>
+            )}
 
-          {/* Footer */}
-          <div className="p-3 bg-white/5 border-t border-white/5 text-center">
-            <p className="text-[10px] text-zinc-400">
-              {mode === 'login' ? 'لا تملك حساباً؟' : 'لديك حساب بالفعل؟'}
+            <div className="mt-6 text-center">
               <button
-                onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
-                className="mx-2 font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-400 hover:opacity-80 transition-opacity"
+                type="button"
+                onClick={() => {
+                  setMode(mode === 'login' ? 'register' : 'login')
+                  setErrorMsg(null)
+                  setSuccessMsg(null)
+                }}
+                className="text-sm text-lumen-silver hover:text-lumen-gold transition-colors"
               >
-                {mode === 'login' ? 'أنشئ حساباً الآن' : 'سجل دخولك'}
+                {mode === 'login' ? 'ليس لديك حساب؟ انضم إلينا' : 'لديك حساب بالفعل؟ سجل دخولك'}
               </button>
-            </p>
-          </div>
+            </div>
+          </form>
         </div>
       </motion.div>
     </div>

@@ -18,11 +18,15 @@ import { useAuth } from '../../hooks/useAuth'
 import { toast } from 'sonner'
 import { useForm } from 'react-hook-form'
 import { addComment, deleteComment, getComments } from '../../lib/supabase'
+import { ReviewVotes } from '../../components/features/social/ReviewVotes'
+import { AddToListModal } from '../../components/features/social/AddToListModal'
 import { getProfile } from '../../lib/supabase'
 import { Helmet } from 'react-helmet-async'
-import { motion } from 'framer-motion'
-import { Star, List, MessageSquare, Play } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Star, List, MessageSquare, Play, Trash2 } from 'lucide-react'
+import { clsx } from 'clsx'
 import { ShareButton } from '../../components/common/ShareButton'
+import { AiInsights } from '../../components/features/media/AiInsights'
 import { SectionHeader } from '../../components/common/SectionHeader'
 import { useLang } from '../../state/useLang'
 import React from 'react'
@@ -203,6 +207,7 @@ const SeriesDetails = ({ id: propId }: SeriesDetailsProps = {}) => {
   const [playingEpisode, setPlayingEpisode] = useState<number | null>(null)
   const [serverIndex, setServerIndex] = useState<number>(0)
   const [showTrailer, setShowTrailer] = useState(false)
+  const [showListModal, setShowListModal] = useState(false)
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -218,18 +223,41 @@ const SeriesDetails = ({ id: propId }: SeriesDetailsProps = {}) => {
     return getEmbedUrlByIndex('tv', tvId, { season: s, episode: e, serverIndex })
   }, [tvId, seasonNumber, playingEpisode, serverIndex])
 
+  const [userRating, setUserRating] = useState<number>(0)
+  const [avgRating, setAvgRating] = useState<number>(0)
+
   const comments = useQuery({
     queryKey: ['comments', 'tv', tvId],
     queryFn: () => getComments(tvId, 'tv'),
     enabled: Number.isFinite(tvId)
   })
-  const { register, handleSubmit, reset } = useForm<{ text: string }>()
-  const onAddComment = async (v: { text: string }) => {
+
+  useEffect(() => {
+    if (comments.data) {
+      const rated = comments.data.filter(c => c.rating)
+      if (rated.length > 0) {
+        const sum = rated.reduce((acc, curr) => acc + (curr.rating || 0), 0)
+        setAvgRating(parseFloat((sum / rated.length).toFixed(1)))
+      }
+    }
+  }, [comments.data])
+
+  const { register, handleSubmit, reset } = useForm<{ text: string; title: string }>()
+  const onAddComment = async (v: { text: string; title: string }) => {
     if (!user || !id) return
     try {
-      await addComment(user.id, Number(id), 'tv', v.text)
-      reset({ text: '' })
+      await addComment({
+        userId: user.id,
+        contentId: Number(id),
+        contentType: 'tv',
+        text: v.text,
+        title: v.title,
+        rating: userRating > 0 ? userRating : undefined
+      })
+      reset({ text: '', title: '' })
+      setUserRating(0)
       comments.refetch()
+      toast.success(t('تم إضافة المراجعة بنجاح', 'Review added successfully'))
     } catch (e: any) {
       toast.error(e?.message || 'فشل الإضافة')
     }
@@ -348,6 +376,13 @@ const SeriesDetails = ({ id: propId }: SeriesDetailsProps = {}) => {
             
             <p className="mt-3 text-sm leading-relaxed text-zinc-300">{overview}</p>
             
+            <AiInsights 
+              title={series.data?.name || ''} 
+              type="tv" 
+              overview={series.data?.overview || ''}
+              className="mt-6"
+            />
+            
             <div className="mt-3 no-scrollbar flex gap-2 overflow-x-auto pb-1">
               {(seasons.data || [])
                 .filter((s: any) => (s.season_number ?? 0) >= 0)
@@ -427,6 +462,14 @@ const SeriesDetails = ({ id: propId }: SeriesDetailsProps = {}) => {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <ShareButton title={title} text={overview?.slice(0, 100)} />
+            {user && (
+              <button 
+                onClick={() => setShowListModal(true)}
+                className="p-2 rounded-lg border border-white/10 bg-white/5 text-zinc-400 hover:text-lumen-gold transition-colors"
+              >
+                <List className="w-5 h-5" />
+              </button>
+            )}
             <Link to={`/watch/${id}?type=tv&season=${seasonNumber || 1}&episode=${playingEpisode || 1}`} className="flex-1 rounded-md bg-gradient-to-r from-primary to-luxury-purple h-10 flex items-center justify-center text-white font-bold min-w-[120px]">
               {t('شاهد الآن', 'Watch Now')}
             </Link>
@@ -472,52 +515,166 @@ const SeriesDetails = ({ id: propId }: SeriesDetailsProps = {}) => {
           ))}
         </div>
       </section>
-      <section className="space-y-2">
-        <SectionHeader 
-          title={t('التعليقات', 'Comments')} 
-          icon={<MessageSquare />} 
-          color="cyan"
-        />
-        {user ? (
-          <form onSubmit={handleSubmit(onAddComment)} className="grid gap-2">
-            <textarea
-              {...register('text', { required: true, minLength: 1 })}
-              placeholder="أضف تعليقاً"
-              className="w-full rounded-md border border-zinc-700 bg-zinc-900 p-2"
-              rows={3}
+      <section id="reviews" className="pt-8">
+        <div className="flex items-center justify-between mb-6">
+          <SectionHeader 
+            title={t(`المراجعات والتقييمات (${comments.data?.length || 0})`, `Reviews & Ratings (${comments.data?.length || 0})`)} 
+            icon={<MessageSquare className="text-primary" />} 
+          />
+          {avgRating > 0 && (
+            <div className="flex items-center gap-2 bg-primary/10 px-3 py-1.5 rounded-full border border-primary/20">
+              <Star className="w-4 h-4 text-primary fill-current" />
+              <span className="text-sm font-bold text-primary">{avgRating}/10</span>
+              <span className="text-[10px] text-zinc-500 uppercase tracking-tighter">{t('متوسط التقييم', 'Avg Rating')}</span>
+            </div>
+          )}
+        </div>
+
+        {user && showListModal && (
+          <AnimatePresence>
+            <AddToListModal
+              userId={user.id}
+              contentId={tvId}
+              contentType="tv"
+              onClose={() => setShowListModal(false)}
+              lang={lang}
             />
-            <div>
-              <button className="rounded-md bg-primary px-4 h-11 text-white">نشر</button>
-            </div>
-          </form>
-        ) : (
-          <div className="text-sm text-zinc-400">سجل الدخول لإضافة تعليق</div>
+          </AnimatePresence>
         )}
-        <div className="space-y-2">
-          {(comments.data || []).map((c) => (
-            <div key={c.id} className="rounded-lg border border-zinc-800 p-3">
-              <div className="text-sm">{c.text}</div>
-              <div className="mt-1 text-xs text-zinc-500">{new Date(c.created_at).toLocaleString()}</div>
-              {(user?.id === c.user_id || isAdmin) && (
-                <div className="mt-2">
+
+        {user ? (
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl mb-8"
+          >
+            <form onSubmit={handleSubmit(onAddComment)} className="space-y-4">
+              <div className="flex flex-col md:flex-row md:items-center gap-6 pb-4 border-b border-white/5">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest">{t('تقييمك', 'Your Rating')}</label>
+                  <div className="flex items-center gap-1.5">
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
+                      <button
+                        key={num}
+                        type="button"
+                        onClick={() => setUserRating(num)}
+                        onMouseEnter={() => setUserRating(num)}
+                        className="transition-transform active:scale-90"
+                      >
+                        <Star 
+                          className={clsx(
+                            "w-5 h-5 transition-colors",
+                            num <= userRating ? "text-primary fill-current" : "text-zinc-700"
+                          )} 
+                        />
+                      </button>
+                    ))}
+                    <span className="ml-2 text-sm font-bold text-white w-6">{userRating || '-'}</span>
+                  </div>
+                </div>
+                
+                <div className="flex-1 space-y-1">
+                  <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest">{t('عنوان المراجعة', 'Review Title')}</label>
+                  <input
+                    {...register('title')}
+                    placeholder={t('مثال: تجربة سينمائية رائعة', 'Example: Great cinematic experience')}
+                    className="w-full rounded-xl border border-white/10 bg-black/40 p-3 text-sm focus:border-primary/50 focus:ring-1 focus:ring-primary/50 outline-none transition-all"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest">{t('مراجعتك', 'Your Review')}</label>
+                <textarea
+                  {...register('text', { required: true, minLength: 1 })}
+                  placeholder={t('ما رأيك في هذا العمل؟ (بدون حرق للأحداث)', 'What did you think of this? (No spoilers)')}
+                  className="w-full rounded-xl border border-white/10 bg-black/40 p-4 text-sm focus:border-primary/50 focus:ring-1 focus:ring-primary/50 outline-none transition-all"
+                  rows={4}
+                />
+              </div>
+
+              <div className="flex justify-end">
+                <button 
+                  type="submit"
+                  className="rounded-xl bg-primary px-8 py-3 text-sm font-bold text-white shadow-lg shadow-primary/20 hover:brightness-110 active:scale-95 transition-all"
+                >
+                  {t('نشر المراجعة', 'Post Review')}
+                </button>
+              </div>
+            </form>
+          </motion.div>
+        ) : (
+          <div className="rounded-2xl border border-dashed border-white/10 p-8 text-center mb-8">
+            <p className="text-zinc-400 text-sm mb-4">{t('سجل الدخول لتتمكن من إضافة تقييم ومراجعة', 'Sign in to add a rating and review')}</p>
+            <Link to="/auth" className="text-primary font-bold hover:underline">{t('تسجيل الدخول', 'Sign In')}</Link>
+          </div>
+        )}
+
+        <div className="grid gap-4">
+          {(comments.data || []).map((c, idx) => (
+            <motion.div 
+              key={c.id} 
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: idx * 0.05 }}
+              className="group relative rounded-2xl border border-white/5 bg-white/[0.02] p-5 hover:bg-white/[0.04] transition-all"
+            >
+              <div className="flex justify-between items-start gap-4 mb-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-primary/20 border border-primary/20 flex items-center justify-center text-primary font-bold">
+                    {c.user_id.slice(0, 1).toUpperCase()}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold text-white">User #{c.user_id.slice(0, 4)}</span>
+                      {c.rating && (
+                        <div className="flex items-center gap-1 bg-yellow-500/10 px-2 py-0.5 rounded text-[10px] font-bold text-yellow-500 border border-yellow-500/20">
+                          <Star className="w-2.5 h-2.5 fill-current" />
+                          {c.rating}/10
+                        </div>
+                      )}
+                    </div>
+                    <div className="text-[10px] text-zinc-500">{new Date(c.created_at).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+                  </div>
+                </div>
+                
+                {(user?.id === c.user_id || isAdmin) && (
                   <button
-                    onClick={async () => { await deleteComment(c.id); comments.refetch() }}
-                    className="text-xs text-red-400"
+                    onClick={async () => { 
+                      if (confirm(t('هل أنت متأكد من حذف هذه المراجعة؟', 'Are you sure you want to delete this review?'))) {
+                        await deleteComment(c.id)
+                        comments.refetch() 
+                      }
+                    }}
+                    className="opacity-0 group-hover:opacity-100 p-2 text-zinc-500 hover:text-red-500 transition-all"
                   >
-                    حذف
+                    <Trash2 className="w-4 h-4" />
                   </button>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+
+              {c.title && <h4 className="text-sm font-bold text-white mb-1">{c.title}</h4>}
+              <p className="text-sm text-zinc-400 leading-relaxed">{c.text}</p>
+              
+              <ReviewVotes 
+                commentId={c.id} 
+                userId={user?.id} 
+                lang={lang} 
+              />
+            </motion.div>
           ))}
+          
           {comments.isLoading && (
-            <div className="space-y-2">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div key={`sk-cm-${i}`} className="rounded-lg border border-zinc-800 p-3">
-                  <div className="h-4 w-3/4 animate-pulse rounded bg-zinc-800" />
-                  <div className="mt-1 h-3 w-1/3 animate-pulse rounded bg-zinc-900" />
-                </div>
-              ))}
+            <div className="flex flex-col items-center justify-center py-12 gap-3">
+              <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+              <div className="text-xs text-zinc-500 animate-pulse uppercase tracking-widest">{t('جاري تحميل المراجعات...', 'Loading reviews...')}</div>
+            </div>
+          )}
+          
+          {!comments.isLoading && (comments.data || []).length === 0 && (
+            <div className="py-12 text-center border border-dashed border-white/5 rounded-2xl">
+              <MessageSquare className="w-8 h-8 text-zinc-700 mx-auto mb-3" />
+              <p className="text-sm text-zinc-500">{t('لا توجد مراجعات بعد. كن أول من يشارك رأيه!', 'No reviews yet. Be the first to share your thoughts!')}</p>
             </div>
           )}
         </div>

@@ -1,12 +1,13 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useQuranPlayer } from '../../context/QuranPlayerContext'
 import { useLang } from '../../state/useLang'
 import { supabase } from '../../lib/supabase'
 import { errorLogger } from '../../services/errorLogging'
 import { Helmet } from 'react-helmet-async'
-import { Search, Play, Pause, ChevronRight, Volume2, User, Heart, Radio } from 'lucide-react'
+import { Search, Play, Pause, Volume2, User, Heart, Radio, BookOpen, Star, Filter, Grid, List, Download } from 'lucide-react'
 import { SURAHS, NATURE_IMAGES } from '../../data/quran'
+import { motion, AnimatePresence } from 'framer-motion'
 
 type QuranReciter = {
   id: number
@@ -122,6 +123,10 @@ export const QuranPage = () => {
   const { playTrack, currentTrack, isPlaying, toggle } = useQuranPlayer()
   const [selectedReciter, setSelectedReciter] = useState<QuranReciter | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
+  const [surahSearch, setSurahSearch] = useState('')
+  const [filterType, setFilterType] = useState<'all' | 'meccan' | 'medinan'>('all')
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+  const [showFeaturedOnly, setShowFeaturedOnly] = useState(false)
 
   const { data: reciters, isLoading } = useQuery({
     queryKey: ['quran-reciters-list'],
@@ -167,13 +172,58 @@ export const QuranPage = () => {
 
   const filteredReciters = useMemo(() => {
     if (!reciters) return []
-    if (!searchQuery) return reciters
-    const q = searchQuery.toLowerCase()
-    return reciters.filter(r => 
-      r.name.toLowerCase().includes(q) || 
-      (r.rewaya && r.rewaya.toLowerCase().includes(q))
-    )
-  }, [reciters, searchQuery])
+    let filtered = reciters
+    
+    if (showFeaturedOnly) {
+      filtered = filtered.filter(r => r.featured)
+    }
+    
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase()
+      filtered = filtered.filter(r => 
+        r.name.toLowerCase().includes(q) || 
+        (r.rewaya && r.rewaya.toLowerCase().includes(q))
+      )
+    }
+    
+    return filtered
+  }, [reciters, searchQuery, showFeaturedOnly])
+
+  const filteredSurahs = useMemo(() => {
+    let filtered = SURAHS
+    
+    if (filterType !== 'all') {
+      filtered = filtered.filter(s => 
+        filterType === 'meccan' ? s.type === 'Meccan' : s.type === 'Medinan'
+      )
+    }
+    
+    if (surahSearch) {
+      const q = surahSearch.toLowerCase()
+      filtered = filtered.filter(s => 
+        s.name.toLowerCase().includes(q) || 
+        s.englishName.toLowerCase().includes(q) ||
+        s.id.toString().includes(q)
+      )
+    }
+    
+    if (selectedReciter?.surah_list) {
+      const available = selectedReciter.surah_list.split(',').map(s => parseInt(s.trim()))
+      filtered = filtered.filter(s => available.includes(s.id))
+    }
+    
+    return filtered
+  }, [filterType, surahSearch, selectedReciter])
+
+  // Auto-select first featured reciter on load
+  useEffect(() => {
+    if (reciters && reciters.length > 0 && !selectedReciter) {
+      const featured = reciters.find(r => r.featured)
+      if (featured) {
+        setSelectedReciter(featured)
+      }
+    }
+  }, [reciters, selectedReciter])
 
   const handlePlaySurah = (surahId: number, surahName: string) => {
     if (!selectedReciter) return
@@ -225,15 +275,25 @@ export const QuranPage = () => {
       </Helmet>
 
       {/* Background Ambience */}
-      <div className="fixed inset-0 pointer-events-none">
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-[-20%] right-[-10%] w-[70vw] h-[70vw] bg-emerald-900/10 rounded-full blur-[120px] animate-pulse-slow" />
-        <div className="absolute bottom-[-20%] left-[-10%] w-[50vw] h-[50vw] bg-blue-900/10 rounded-full blur-[100px] animate-pulse-slow delay-1000" />
+        <div className="absolute bottom-[-20%] left-[-10%] w-[50vw] h-[50vw] bg-teal-900/10 rounded-full blur-[100px] animate-pulse-slow delay-1000" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60vw] h-[60vw] bg-cyan-900/5 rounded-full blur-[150px] animate-pulse-slow delay-2000" />
       </div>
 
       <div className="relative z-10 max-w-[1920px] mx-auto p-4 md:p-6 lg:p-8 flex flex-col h-[calc(100vh-100px)]">
         
         {/* Header Section - Spiritual & Compact */}
-        <div className="flex flex-col items-center justify-center mb-8 shrink-0 relative">
+        <div className="flex flex-col items-center justify-center mb-6 shrink-0 relative">
+          {/* Page Title */}
+          <div className="text-center mb-6">
+            <h1 className="text-4xl md:text-5xl font-bold font-amiri text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 mb-2 drop-shadow-[0_0_30px_rgba(16,185,129,0.3)]">
+              {lang === 'ar' ? 'القرآن الكريم' : 'Holy Quran'}
+            </h1>
+            <p className="text-zinc-400 text-sm md:text-base">
+              {lang === 'ar' ? 'استمع إلى القرآن الكريم بأصوات نخبة من القراء' : 'Listen to the Holy Quran by elite reciters'}
+            </p>
+          </div>
           
           <button 
             onClick={() => window.open('/quran/radio', 'QuranRadio', 'width=320,height=450,menubar=no,toolbar=no,location=no,status=no')}
@@ -259,10 +319,20 @@ export const QuranPage = () => {
           {/* Sidebar: Reciters List */}
           <div className="w-full lg:w-80 xl:w-96 shrink-0 flex flex-col bg-[#0a0a0a]/80 backdrop-blur-xl border border-white/5 rounded-2xl overflow-hidden h-full shadow-2xl">
           <div className="p-4 border-b border-white/5 bg-gradient-to-b from-white/5 to-transparent">
-            <h2 className="text-xl font-bold mb-4 flex items-center gap-2 text-emerald-400">
-              <User size={20} />
-              {lang === 'ar' ? 'القراء' : 'Reciters'}
-            </h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold flex items-center gap-2 text-emerald-400">
+                <User size={18} />
+                {lang === 'ar' ? 'القراء' : 'Reciters'}
+                <span className="text-xs text-zinc-500">({filteredReciters.length})</span>
+              </h2>
+              <button
+                onClick={() => setShowFeaturedOnly(!showFeaturedOnly)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${showFeaturedOnly ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-white/5 text-zinc-400 border border-white/10 hover:border-emerald-500/30'}`}
+              >
+                <Star size={12} className={showFeaturedOnly ? 'fill-emerald-400' : ''} />
+                {lang === 'ar' ? 'مميز' : 'Featured'}
+              </button>
+            </div>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={16} />
               <input
@@ -369,14 +439,72 @@ export const QuranPage = () => {
                 </div>
               </div>
 
-              {/* Surahs Grid (Scrollable) */}
+              {/* Filters & Search */}
+              <div className="shrink-0 mb-4 space-y-3">
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="relative flex-1 min-w-[200px]">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={16} />
+                    <input
+                      type="text"
+                      placeholder={lang === 'ar' ? 'بحث في السور...' : 'Search surahs...'}
+                      value={surahSearch}
+                      onChange={(e) => setSurahSearch(e.target.value)}
+                      className="w-full bg-black/40 border border-white/10 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50 transition-colors placeholder:text-zinc-600"
+                    />
+                  </div>
+                  
+                  <div className="flex items-center gap-2 bg-black/40 border border-white/10 rounded-xl p-1">
+                    <button
+                      onClick={() => setFilterType('all')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${filterType === 'all' ? 'bg-emerald-500/20 text-emerald-400' : 'text-zinc-400 hover:text-white'}`}
+                    >
+                      {lang === 'ar' ? 'الكل' : 'All'}
+                    </button>
+                    <button
+                      onClick={() => setFilterType('meccan')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${filterType === 'meccan' ? 'bg-emerald-500/20 text-emerald-400' : 'text-zinc-400 hover:text-white'}`}
+                    >
+                      {lang === 'ar' ? 'مكية' : 'Meccan'}
+                    </button>
+                    <button
+                      onClick={() => setFilterType('medinan')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${filterType === 'medinan' ? 'bg-emerald-500/20 text-emerald-400' : 'text-zinc-400 hover:text-white'}`}
+                    >
+                      {lang === 'ar' ? 'مدنية' : 'Medinan'}
+                    </button>
+                  </div>
+                  
+                  <div className="flex items-center gap-1 bg-black/40 border border-white/10 rounded-xl p-1">
+                    <button
+                      onClick={() => setViewMode('grid')}
+                      className={`p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-emerald-500/20 text-emerald-400' : 'text-zinc-400 hover:text-white'}`}
+                      title="Grid View"
+                    >
+                      <Grid size={16} />
+                    </button>
+                    <button
+                      onClick={() => setViewMode('list')}
+                      className={`p-2 rounded-lg transition-all ${viewMode === 'list' ? 'bg-emerald-500/20 text-emerald-400' : 'text-zinc-400 hover:text-white'}`}
+                      title="List View"
+                    >
+                      <List size={16} />
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="flex items-center justify-between text-xs text-zinc-500">
+                  <span>{filteredSurahs.length} {lang === 'ar' ? 'سورة' : 'Surahs'}</span>
+                  <span className="flex items-center gap-1">
+                    <BookOpen size={12} />
+                    114 {lang === 'ar' ? 'سورة في القرآن الكريم' : 'Surahs in the Quran'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Surahs Grid/List (Scrollable) */}
               <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 pb-20">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                  {SURAHS.filter(surah => {
-                    if (!selectedReciter.surah_list) return true // Default to all if not specified
-                    const available = selectedReciter.surah_list.split(',').map(s => parseInt(s.trim()))
-                    return available.includes(surah.id)
-                  }).map((surah) => {
+                <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3' : 'space-y-2'}>
+                  {filteredSurahs.map((surah) => {
                     const active = isCurrentTrack(selectedReciter.id, surah.id)
                     return (
                       <button

@@ -1,5 +1,6 @@
-import { getHistory, getContinueWatching } from '../lib/supabase'
+import { getHistory, getContinueWatching, supabase } from '../lib/supabase'
 import { tmdb } from '../lib/tmdb'
+import { callGeminiWithFallback } from '../lib/gemini'
 
 export type RecommendationItem = {
   id: number
@@ -147,20 +148,42 @@ async function summarizeGenres(userId: string): Promise<string[]> {
   return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([k]) => k)
 }
 
-async function generateTitles(genres: string[]): Promise<string[]> {
+async function generateTitles(genres: string[], userId: string): Promise<string[]> {
   try {
-    const res = await fetch('/api/gemini-recommendations', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ genres })
-    })
-    if (!res.ok) throw new Error('gemini_error')
-    const data = await res.json()
-    const text = data?.titles || ''
-    const lines = text.split('\n').map((l: string) => l.replace(/^\d+\.\s*/, '').trim()).filter(Boolean)
-    return lines.slice(0, 5)
-  } catch {
-    return []
+    // Get last 5 history items to give Gemini more context
+    const lastItems = await getHistory(userId)
+    const context = await Promise.all(lastItems.slice(0, 5).map(async (h) => {
+      try {
+        const path = h.content_type === 'movie' ? `/movie/${h.content_id}` : `/tv/${h.content_id}`
+        const { data } = await tmdb.get(path)
+        return `${h.content_type === 'movie' ? 'Movie' : 'TV'}: ${data.title || data.name}`
+      } catch { return null }
+    }))
+    const validContext = context.filter(Boolean).join(', ')
+
+    const prompt = `
+      You are a cinematic recommendation expert for a user with these favorite genres: ${genres.join(', ')}.
+      Recent history: ${validContext || "No recent history available"}.
+      
+      Task: Provide a list of 8 unique movie or TV show titles that this user would love.
+      Requirements:
+      1. Mix well-known hits with hidden gems.
+      2. Ensure they fit the genres and history provided.
+      3. Return ONLY the titles, one per line. No numbers, no extra text.
+      `;
+      
+    const text = await callGeminiWithFallback(prompt, "recommendations");
+    
+    if (!text) throw new Error('gemini_error');
+    
+    const lines = text.split('\n')
+      .map((l: string) => l.replace(/^\d+\.\s*/, '').trim())
+      .filter(Boolean);
+      
+    return lines.slice(0, 8);
+  } catch (err) {
+    console.warn('[Recommendations] Gemini failed, falling back to TMDB genres', err);
+    return [];
   }
 }
 
@@ -188,7 +211,7 @@ export async function getRecommendations(userId: string): Promise<Recommendation
 
   const genres = await summarizeGenres(userId)
   if (genres.length > 0) {
-    const titles = await generateTitles(genres)
+    const titles = await generateTitles(genres, userId)
     if (titles.length > 0) {
       const items = await searchTitles(titles)
       if (items.length > 0) {
@@ -197,8 +220,8 @@ export async function getRecommendations(userId: string): Promise<Recommendation
       }
     }
   }
-
-  // Fallback: TMDB similar + discover (no Gemini)
+  
+  // Fallback if AI fails or no history
   const fallback = await tmdbFallback(userId)
   if (fallback.length > 0) {
     cacheSet(key, fallback)
@@ -206,11 +229,15 @@ export async function getRecommendations(userId: string): Promise<Recommendation
   }
 
   // Ultimate fallback: trending
-  const { data } = await tmdb.get('/trending/all/week', { params: { page: 1 } })
-  const items = (data.results || []).slice(0, 10).map((m: RecommendationItem) => ({
-    ...m,
-    media_type: (m.media_type || 'movie') as 'movie' | 'tv'
-  }))
-  cacheSet(key, items)
-  return items
+  try {
+    const { data } = await tmdb.get('/trending/all/week', { params: { page: 1 } })
+    const items = (data.results || []).slice(0, 10).map((m: RecommendationItem) => ({
+      ...m,
+      media_type: (m.media_type || (m.title ? 'movie' : 'tv')) as 'movie' | 'tv'
+    }))
+    cacheSet(key, items)
+    return items
+  } catch {
+    return []
+  }
 }

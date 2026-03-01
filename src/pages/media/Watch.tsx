@@ -1,11 +1,11 @@
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../../hooks/useAuth'
-import { addHistory, getProgress, supabase, upsertProgress } from '../../lib/supabase'
+import { addHistory, getProgress, supabase, upsertProgress, createWatchParty, updateWatchParty, grantAchievement } from '../../lib/supabase'
 import { AdsManager } from '../../components/features/system/AdsManager'
 import { tmdb } from '../../lib/tmdb'
 import { SeoHead } from '../../components/common/SeoHead'
-import { Calendar, Clock, Star, AlertTriangle, X } from 'lucide-react'
+import { Calendar, Clock, Star, AlertTriangle, X, Users, Play as PlayIcon, Sparkles } from 'lucide-react'
 import { ShareButton } from '../../components/common/ShareButton'
 import { NotFound } from '../NotFound'
 import { SkeletonGrid } from '../../components/common/Skeletons'
@@ -15,6 +15,9 @@ import { errorLogger } from '../../services/errorLogging'
 import { EmbedPlayer } from '../../components/features/media/EmbedPlayer'
 import { ServerSelector } from '../../components/features/media/ServerSelector'
 import { EpisodeSelector } from '../../components/features/media/EpisodeSelector'
+import { WatchParty } from '../../components/features/social/WatchParty'
+import { toast } from 'sonner'
+import { motion, AnimatePresence } from 'framer-motion'
 
 type DownloadLink = { label?: string; url: string }
 
@@ -81,6 +84,57 @@ export const Watch = () => {
   const [error, setError] = useState(false)
   const [cinemaMode, setCinemaMode] = useState(false)
   const [showDisclaimer, setShowDisclaimer] = useState(true)
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [partyId, setPartyId] = useState<string | null>(sp.get('partyId'))
+  const [showCreateParty, setShowCreateParty] = useState(false)
+  const [roomName, setRoomName] = useState('')
+  const [syncSeek, setSyncSeek] = useState<number | undefined>(undefined)
+
+  const handleCreateParty = async () => {
+    if (!user) {
+      toast.error('يجب تسجيل الدخول لإنشاء غرفة مشاهدة')
+      return
+    }
+    if (!roomName.trim()) {
+      toast.error('يرجى إدخال اسم الغرفة')
+      return
+    }
+
+    try {
+      const party = await createWatchParty({
+        room_name: roomName,
+        content_id: id || '',
+        content_type: type,
+        creator_id: user.id,
+        current_time: elapsed,
+        is_playing: isPlaying
+      })
+      setPartyId(party.id)
+      setSp(prev => {
+        prev.set('partyId', party.id)
+        return prev
+      })
+      setShowCreateParty(false)
+      toast.success('تم إنشاء غرفة المشاهدة بنجاح')
+      
+      // Grant achievement
+      try {
+        const granted = await grantAchievement(user.id, 'party_host')
+        if (granted) toast.success('إنجاز جديد: صاحب المجلس 🏠')
+      } catch (err) {
+        console.error('Failed to grant achievement:', err)
+      }
+    } catch (err) {
+      toast.error('فشل إنشاء الغرفة')
+    }
+  }
+
+  const handleSync = (time: number, playing: boolean) => {
+    setSyncSeek(time)
+    setIsPlaying(playing)
+    // Clear sync seek after a moment to allow manual seeking again
+    setTimeout(() => setSyncSeek(undefined), 1000)
+  }
 
   // Determine effective ID
   const id = resolvedId || idParam
@@ -427,7 +481,18 @@ export const Watch = () => {
                 </div>
               )}
               <div className="mt-4 flex flex-wrap gap-2 items-center">
-                <ShareButton title={title} text={overview?.slice(0, 100)} />
+                <ShareButton 
+                  title={title} 
+                  text={overview?.slice(0, 100)} 
+                  currentTime={elapsed}
+                />
+                <button
+                  onClick={() => setShowCreateParty(true)}
+                  className="rounded-xl border border-primary/20 bg-primary/10 px-5 h-9 flex items-center justify-center text-primary text-xs font-bold shadow-md hover:bg-primary/20 transition-all gap-2"
+                >
+                  <Users size={16} />
+                  غرفة مشاهدة
+                </button>
                 <a href="#player" className="rounded-xl bg-[#e50914] px-5 h-9 flex items-center justify-center text-white text-xs font-bold shadow-md hover:brightness-110">
                   مشاهدة الآن
                 </a>
@@ -491,6 +556,21 @@ export const Watch = () => {
                         onNextServer={() => active < servers.length - 1 ? setActive(active + 1) : setActive(0)}
                         onReport={reportBroken}
                         reporting={reporting}
+                        onProgress={(seconds) => setElapsed(seconds)}
+                        onPlay={() => {
+                          setIsPlaying(true)
+                          if (partyId) {
+                            updateWatchParty(partyId, { is_playing: true, current_time: elapsed })
+                          }
+                        }}
+                        onPause={() => {
+                          setIsPlaying(false)
+                          if (partyId) {
+                            updateWatchParty(partyId, { is_playing: false, current_time: elapsed })
+                          }
+                        }}
+                        playing={isPlaying}
+                        seekTo={syncSeek}
                     />
                     )}
                 </div>
@@ -587,6 +667,81 @@ export const Watch = () => {
           </div>
         </section>
       </div>
+      {/* Watch Party Component */}
+      {partyId && (
+        <WatchParty 
+          partyId={partyId}
+          onSync={handleSync}
+          onClose={() => {
+            setPartyId(null)
+            setSp(prev => {
+              prev.delete('partyId')
+              return prev
+            })
+          }}
+          currentVideoTime={elapsed}
+          isVideoPlaying={isPlaying}
+        />
+      )}
+
+      {/* Create Watch Party Modal */}
+      <AnimatePresence>
+        {showCreateParty && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="w-full max-w-md overflow-hidden rounded-3xl border border-white/10 bg-[#1a1a1a] shadow-2xl"
+            >
+              <div className="border-b border-white/5 bg-white/5 p-6 flex justify-between items-center">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-primary/20 text-primary">
+                    <Users size={24} />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-black text-white">إنشاء غرفة مشاهدة</h2>
+                    <p className="text-xs text-zinc-400">شاهد مع أصدقائك في نفس الوقت</p>
+                  </div>
+                </div>
+                <button onClick={() => setShowCreateParty(false)} className="text-zinc-500 hover:text-white transition-colors">
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-6">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest mr-1">اسم الغرفة</label>
+                  <input
+                    type="text"
+                    value={roomName}
+                    onChange={(e) => setRoomName(e.target.value)}
+                    placeholder="مثلاً: سهرة الخميس 🍿"
+                    className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all"
+                  />
+                </div>
+
+                <div className="rounded-2xl bg-primary/5 border border-primary/10 p-4 flex gap-4">
+                  <div className="p-2 h-fit rounded-lg bg-primary/20 text-primary">
+                    <Sparkles size={18} />
+                  </div>
+                  <div className="text-xs text-zinc-300 leading-relaxed">
+                    بصفتك المنشئ، سيتم مزامنة تشغيل الفيديو وإيقافه ووقته مع جميع المنضمين للغرفة تلقائياً.
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleCreateParty}
+                  className="w-full flex items-center justify-center gap-2 rounded-2xl bg-primary py-4 text-sm font-black text-black hover:brightness-110 active:scale-[0.98] transition-all shadow-xl shadow-primary/20"
+                >
+                  <PlayIcon size={18} fill="currentColor" />
+                  بدء الحفلة الآن
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

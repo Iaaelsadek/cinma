@@ -53,6 +53,7 @@ const ReciterDetails = lazy(() => import('./pages/media/ReciterDetails').then(m 
 
 // User
 const Profile = lazy(() => import('./pages/user/Profile').then(m => ({ default: m.Profile })))
+const PublicProfile = lazy(() => import('./pages/user/PublicProfile').then(m => ({ default: m.PublicProfile })))
 const RequestPage = lazy(() => import('./pages/user/Request').then(m => ({ default: m.RequestPage })))
 
 // Legal
@@ -285,6 +286,7 @@ const App = () => {
                 <Profile />
               </ProtectedRoute>
             } />
+            <Route path="/user/:username" element={<PublicProfile />} />
             <Route path="/favorites" element={
               <ProtectedRoute>
                 <Profile />

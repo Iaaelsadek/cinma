@@ -23,7 +23,7 @@ if (API_KEY) {
  * Helper function to call Gemini API with Fallback Mechanism.
  * Tries the primary model (gemini-3.1-pro), then falls back to gemini-1.5-flash if needed.
  */
-const callGeminiWithFallback = async (prompt: string, contextLabel: string): Promise<string | null> => {
+export const callGeminiWithFallback = async (prompt: string, contextLabel: string): Promise<string | null> => {
   if (!genAI || isGeminiDisabled) return null;
 
   // Try list of models in order. 
@@ -122,6 +122,130 @@ export const generateArabicSummary = async (title: string, originalOverview?: st
   
   if (!text || text.length === 0) return originalOverview || "";
   return text;
+};
+
+/**
+ * Uses Gemini to provide unique insights or fun facts about content.
+ * @param title Title of the content.
+ * @param type 'movie' or 'tv'
+ * @param overview Original overview context.
+ * @returns Array of 3 interesting insights in Arabic.
+ */
+export const generateAiInsights = async (title: string, type: 'movie' | 'tv', overview?: string): Promise<string[]> => {
+  if (!genAI || !title || isGeminiDisabled) return [];
+
+  const prompt = `
+    Analyze the ${type === 'movie' ? 'movie' : 'TV show'} "${title}".
+    Original overview: ${overview || "No overview provided."}
+    
+    Task: Provide 3 unique and interesting insights or fun facts about this content in Arabic.
+    Requirements:
+    1. Language: Arabic (Modern Standard Arabic).
+    2. Tone: Enthusiastic, knowledgeable, and cinematic.
+    3. Format: Return a valid JSON array of 3 strings.
+    4. Each insight should be max 15 words.
+    5. Do not include spoilers.
+    6. Return ONLY the JSON array. No markdown, no extra text.
+    `;
+    
+  const text = await callGeminiWithFallback(prompt, "ai-insights");
+  
+  if (!text) return [];
+  
+  try {
+    // Clean potential markdown or extra text
+    const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
+    const insights = JSON.parse(jsonStr);
+    if (Array.isArray(insights)) return insights.map(i => i.replace(/^[-•]\s*/, '').trim());
+  } catch (err) {
+    console.warn('[Gemini - ai-insights] Failed to parse JSON:', err);
+    // Simple fallback: split by newline if it looks like a list
+    if (text.includes('\n')) return text.split('\n')
+      .filter(s => s.trim().length > 0)
+      .map(s => s.replace(/^[-•\d.]+\s*/, '').trim())
+      .slice(0, 3);
+  }
+  
+  return [];
+};
+
+/**
+ * Uses Gemini to extract search parameters from natural language.
+ * @param query Natural language search query.
+ * @returns Object with extracted parameters (genres, actors, year, type, etc.)
+ */
+export const processSmartSearch = async (query: string): Promise<any> => {
+  if (!genAI || !query || query.trim().length < 5 || isGeminiDisabled) return null;
+
+  const prompt = `
+    You are a search assistant for a movie/TV show database (TMDB-based).
+    User query: "${query}"
+    
+    Task: Extract search parameters into a JSON object.
+    Parameters to extract:
+    - genre: (string) Genre name in English (e.g., "Action", "Comedy", "Drama", "Horror", "Science Fiction", "Animation", "Documentary")
+    - genre_id: (number) TMDB Genre ID if known (Action: 28, Comedy: 35, Drama: 18, Horror: 27, Sci-Fi: 878, Animation: 16, Documentary: 99, Mystery: 9648, Crime: 80, Thriller: 53)
+    - actor: (string) Actor name in English
+    - year: (number) Release year
+    - type: (string) "movie" or "tv"
+    - keywords: (string) Key topics or theme
+    - sort_by: (string) "popularity.desc", "release_date.desc", "vote_average.desc"
+    
+    Requirements:
+    1. If a parameter is not found, omit it from the JSON.
+    2. Return ONLY the JSON object. No markdown.
+    3. Be smart: "من التسعينات" means year could be 1995 or keywords "90s".
+    4. "أفلام" -> type: "movie", "مسلسلات" -> type: "tv".
+    `;
+    
+  const text = await callGeminiWithFallback(prompt, "smart-search");
+  
+  if (!text) return null;
+  
+  try {
+    const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
+    return JSON.parse(jsonStr);
+  } catch (err) {
+    console.warn('[Gemini - smart-search] Failed to parse JSON:', err);
+    return null;
+  }
+};
+
+/**
+ * Uses Gemini to generate a themed playlist.
+ * @param theme Optional theme (e.g. "Space adventures").
+ * @param history Optional user watch history context.
+ * @returns Object with playlist title, description, and content titles.
+ */
+export const generateAiPlaylist = async (theme?: string, history?: string): Promise<any> => {
+  if (!genAI || isGeminiDisabled) return null;
+
+  const prompt = `
+    You are a professional film curator.
+    Theme: ${theme || "General cinematic gems"}
+    User history context: ${history || "None"}
+    
+    Task: Create a unique themed playlist for a user.
+    Requirements:
+    1. Title: A creative and catchy title in Arabic.
+    2. Description: A short engaging description in Arabic (max 15 words).
+    3. Content: A list of 6-10 movie or TV show titles (English) that fit this theme.
+    
+    Format: Return ONLY a valid JSON object with keys: "title", "description", "content" (array of strings).
+    Do not include markdown or extra text.
+    `;
+    
+  const text = await callGeminiWithFallback(prompt, "ai-playlist");
+  
+  if (!text) return null;
+  
+  try {
+    const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
+    return JSON.parse(jsonStr);
+  } catch (err) {
+    console.warn('[Gemini - ai-playlist] Failed to parse JSON:', err);
+    return null;
+  }
 };
 
 /**
