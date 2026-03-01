@@ -1,6 +1,8 @@
-import { useState } from 'react'
-import { Share2, Check } from 'lucide-react'
+import { useState, useRef } from 'react'
+import { Share2 } from 'lucide-react'
 import { toast } from 'sonner'
+import { clsx } from 'clsx'
+import { ShareModal } from './ShareModal'
 
 interface ShareButtonProps {
   title: string
@@ -8,15 +10,28 @@ interface ShareButtonProps {
   text?: string
   className?: string
   size?: 'sm' | 'md'
+  currentTime?: number
 }
 
-export const ShareButton = ({ title, url, text, className = '', size = 'md' }: ShareButtonProps) => {
-  const [copied, setCopied] = useState(false)
+export const ShareButton = ({ title, url, text, className = '', size = 'md', currentTime }: ShareButtonProps) => {
+  const [isOpen, setIsOpen] = useState(false)
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
 
-  const shareUrl = url || (typeof window !== 'undefined' ? window.location.href : '')
+  const getShareUrl = () => {
+    let baseUrl = url || (typeof window !== 'undefined' ? window.location.href : '')
+    if (currentTime && currentTime > 0) {
+      const urlObj = new URL(baseUrl)
+      urlObj.searchParams.set('t', Math.floor(currentTime).toString())
+      return urlObj.toString()
+    }
+    return baseUrl
+  }
+
+  const shareUrl = getShareUrl()
   const shareText = text || `${title} - شاهد على أونلاين سينما`
 
-  const handleShare = async () => {
+  const handleNativeShare = async () => {
     if (navigator.share) {
       try {
         await navigator.share({
@@ -27,35 +42,35 @@ export const ShareButton = ({ title, url, text, className = '', size = 'md' }: S
         toast.success('تم المشاركة بنجاح')
       } catch (err) {
         if ((err as Error).name !== 'AbortError') {
-          await copyToClipboard()
+          setIsModalOpen(true)
         }
       }
     } else {
-      await copyToClipboard()
+      setIsModalOpen(true)
     }
   }
-
-  const copyToClipboard = async () => {
-    try {
-      await navigator.clipboard.writeText(shareUrl)
-      setCopied(true)
-      toast.success('تم نسخ الرابط')
-      setTimeout(() => setCopied(false), 2000)
-    } catch {
-      toast.error('فشل النسخ')
-    }
-  }
-
-  const isSm = size === 'sm'
 
   return (
-    <button
-      onClick={handleShare}
-      className={`inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-bold text-white hover:bg-white/10 transition-all ${className}`}
-      title="مشاركة"
-    >
-      {copied ? <Check size={isSm ? 14 : 18} className="text-emerald-400" /> : <Share2 size={isSm ? 14 : 18} />}
-      <span>{copied ? 'تم النسخ' : 'مشاركة'}</span>
-    </button>
+    <>
+      <button
+        onClick={handleNativeShare}
+        className={clsx(
+          "flex items-center gap-2 rounded-xl transition-all active:scale-95",
+          size === 'sm' ? "px-3 py-2 text-[10px]" : "px-4 py-2.5 text-xs",
+          "bg-white/5 border border-white/10 text-zinc-400 hover:text-lumen-gold hover:border-lumen-gold/30 hover:bg-lumen-gold/5",
+          className
+        )}
+      >
+        <Share2 size={size === 'sm' ? 14 : 16} />
+        <span className="font-black uppercase tracking-widest">مشاركة</span>
+      </button>
+
+      <ShareModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        url={shareUrl}
+        title={shareText}
+      />
+    </>
   )
 }

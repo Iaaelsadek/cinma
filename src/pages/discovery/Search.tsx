@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Star } from 'lucide-react'
+import { Star, Sparkles } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import InfiniteScroll from 'react-infinite-scroll-component'
 import { advancedSearch, fetchGenres } from '../../lib/tmdb'
+import { processSmartSearch } from '../../lib/gemini'
 import { MovieCard } from '../../components/features/media/MovieCard'
 import { VideoCard, VideoItem } from '../../components/features/media/VideoCard'
 import { useDebounce } from '../../hooks/useDebounce'
@@ -48,6 +49,46 @@ export const Search = () => {
   const sort = sp.get('sort') || 'popularity.desc'
   const [page, setPage] = useState(1)
   const [items, setItems] = useState<SearchItem[]>([])
+  const [isSmartSearchLoading, setIsSmartSearchLoading] = useState(false)
+  const [smartResult, setSmartResult] = useState<any>(null)
+
+  // Natural Language Search Effect
+  useEffect(() => {
+    const runSmartSearch = async () => {
+      // Only run if q is long enough and not just a title
+      if (q.length > 12 && (q.includes(' ') || q.includes('أفلام') || q.includes('مسلسلات'))) {
+        setIsSmartSearchLoading(true)
+        try {
+          const result = await processSmartSearch(q)
+          if (result) {
+            setSmartResult(result)
+            // Optionally update URL params based on AI extraction
+            const newSp = new URLSearchParams(sp)
+            if (result.type && !sp.get('types')) newSp.set('types', result.type)
+            if (result.genre_id && !sp.get('genres')) newSp.set('genres', result.genre_id.toString())
+            if (result.year && !sp.get('yfrom')) {
+              newSp.set('yfrom', (result.year - 2).toString())
+              newSp.set('yto', (result.year + 2).toString())
+            }
+            if (result.sort_by && !sp.get('sort')) newSp.set('sort', result.sort_by)
+            
+            // Only update if something changed
+            if (newSp.toString() !== sp.toString()) {
+              setSp(newSp, { replace: true })
+            }
+          }
+        } catch (err) {
+          console.error('Smart Search Error:', err)
+        } finally {
+          setIsSmartSearchLoading(false)
+        }
+      } else {
+        setSmartResult(null)
+      }
+    }
+
+    runSmartSearch()
+  }, [q])
 
   const supabaseQuery = useQuery<VideoItem[]>({
     queryKey: ['search-supabase', q],
@@ -272,6 +313,50 @@ export const Search = () => {
               {showFilters ? 'إخفاء المرشحات' : 'إظهار المرشحات'}
             </button>
           </div>
+
+          <AnimatePresence>
+            {isSmartSearchLoading && (
+              <motion.div 
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className="mt-2 flex items-center gap-2 px-1"
+              >
+                <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
+                <span className="text-[10px] font-bold text-primary uppercase tracking-widest">
+                  الذكاء الاصطناعي يحلل طلبك...
+                </span>
+              </motion.div>
+            )}
+            {!isSmartSearchLoading && smartResult && (
+              <motion.div 
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mt-2 flex flex-wrap items-center gap-2 px-1"
+              >
+                <div className="flex items-center gap-1.5 rounded-full bg-primary/20 px-2.5 py-1 text-[9px] font-black text-primary uppercase tracking-tighter border border-primary/30">
+                  <Sparkles size={10} />
+                  بحث ذكي نشط
+                </div>
+                {smartResult.genre && (
+                  <span className="text-[9px] text-zinc-500 bg-white/5 px-2 py-0.5 rounded-md border border-white/10 italic">
+                    التصنيف: {smartResult.genre}
+                  </span>
+                )}
+                {smartResult.year && (
+                  <span className="text-[9px] text-zinc-500 bg-white/5 px-2 py-0.5 rounded-md border border-white/10 italic">
+                    السنة: {smartResult.year}
+                  </span>
+                )}
+                {smartResult.actor && (
+                  <span className="text-[9px] text-zinc-500 bg-white/5 px-2 py-0.5 rounded-md border border-white/10 italic">
+                    الممثل: {smartResult.actor}
+                  </span>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           <AnimatePresence>
             {showFilters && (
               <motion.div

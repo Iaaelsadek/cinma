@@ -2,19 +2,23 @@ import { useState, useEffect, useRef } from 'react'
 import { Play, Pause, ChevronRight, ChevronLeft, Power } from 'lucide-react'
 import { Helmet } from 'react-helmet-async'
 
-// Ultra-Reliable HTTPS MP3 Streams
+// Ultra-Reliable HTTPS MP3 Streams - Expanded List
 const STATIONS = [
-  { id: 'cairo_alt', name: 'إذاعة القرآن الكريم (عبدالباسط)', url: 'https://qurango.net/radio/abdulbasit_abdulsamad_mojawwad' },
-  { id: 'minshawi', name: 'إذاعة القرآن الكريم (المنشاوي)', url: 'https://qurango.net/radio/mohammed_siddiq_alminshawi_mojawwad' },
-  { id: 'alafasy', name: 'إذاعة القرآن الكريم (العفاسي)', url: 'https://qurango.net/radio/mishary_alafasy_mojawwad' },
-  { id: 'tablawi', name: 'إذاعة القرآن الكريم (الطبلاوي)', url: 'https://qurango.net/radio/mohammed_mahmoud_altablawi_mojawwad' },
-  { id: 'maher', name: 'إذاعة القرآن الكريم (ماهر المعيقلي)', url: 'https://qurango.net/radio/maher_al_muaiqly_mojawwad' },
-  { id: 'shuraim', name: 'إذاعة القرآن الكريم (سعود الشريم)', url: 'https://qurango.net/radio/saud_alshuraim_mojawwad' },
-  { id: 'sudais', name: 'إذاعة القرآن الكريم (عبدالرحمن السديس)', url: 'https://qurango.net/radio/abdulrahman_alsudaes_mojawwad' },
-  { id: 'ajmy', name: 'إذاعة القرآن الكريم (أحمد العجمي)', url: 'https://qurango.net/radio/ahmad_alajmy_mojawwad' },
-  { id: 'fares', name: 'إذاعة القرآن الكريم (فارس عباد)', url: 'https://qurango.net/radio/fares_abbad' },
-  { id: 'idris', name: 'إذاعة القرآن الكريم (إدريس أبكر)', url: 'https://qurango.net/radio/idris_abkar' },
-  { id: 'yasser', name: 'إذاعة القرآن الكريم (ياسر الدوسري)', url: 'https://qurango.net/radio/yasser_aldosari' },
+  { id: 'alafasy', name: 'مشاري العفاسي', name_en: 'Mishary Alafasy', url: 'https://qurango.net/radio/mishary_alafasy_mojawwad', featured: true },
+  { id: 'cairo_alt', name: 'عبدالباسط عبدالصمد', name_en: 'Abdul Basit', url: 'https://qurango.net/radio/abdulbasit_abdulsamad_mojawwad', featured: true },
+  { id: 'minshawi', name: 'محمد صديق المنشاوي', name_en: 'Al-Minshawi', url: 'https://qurango.net/radio/mohammed_siddiq_alminshawi_mojawwad', featured: true },
+  { id: 'sudais', name: 'عبدالرحمن السديس', name_en: 'Al-Sudais', url: 'https://qurango.net/radio/abdulrahman_alsudaes_mojawwad', featured: true },
+  { id: 'maher', name: 'ماهر المعيقلي', name_en: 'Maher Al-Muaiqly', url: 'https://qurango.net/radio/maher_al_muaiqly_mojawwad', featured: true },
+  { id: 'shuraim', name: 'سعود الشريم', name_en: 'Saud Al-Shuraim', url: 'https://qurango.net/radio/saud_alshuraim_mojawwad', featured: true },
+  { id: 'tablawi', name: 'محمد الطبلاوي', name_en: 'Al-Tablawi', url: 'https://qurango.net/radio/mohammed_mahmoud_altablawi_mojawwad', featured: false },
+  { id: 'ajmy', name: 'أحمد العجمي', name_en: 'Ahmed Al-Ajmi', url: 'https://qurango.net/radio/ahmad_alajmy_mojawwad', featured: false },
+  { id: 'yasser', name: 'ياسر الدوسري', name_en: 'Yasser Al-Dosari', url: 'https://qurango.net/radio/yasser_aldosari', featured: false },
+  { id: 'fares', name: 'فارس عباد', name_en: 'Fares Abbad', url: 'https://qurango.net/radio/fares_abbad', featured: false },
+  { id: 'idris', name: 'إدريس أبكر', name_en: 'Idris Abkar', url: 'https://qurango.net/radio/idris_abkar', featured: false },
+  { id: 'husary', name: 'محمود الحصري', name_en: 'Al-Hussary', url: 'https://qurango.net/radio/mahmoud_khalil_alhussary_mojawwad', featured: false },
+  { id: 'ghamdi', name: 'سعد الغامدي', name_en: 'Saad Al-Ghamdi', url: 'https://qurango.net/radio/saad_alghamdi', featured: false },
+  { id: 'qatami', name: 'ناصر القطامي', name_en: 'Nasser Al-Qatami', url: 'https://qurango.net/radio/nasser_alqatami', featured: false },
+  { id: 'juhany', name: 'عبدالله الجهني', name_en: 'Abdullah Al-Juhany', url: 'https://qurango.net/radio/abdullah_aljuhany', featured: false },
 ]
 
 export const QuranRadio = () => {
@@ -230,7 +234,7 @@ export const QuranRadio = () => {
               ) : (
                 <div className="flex flex-col">
                   <span className="text-xs font-bold line-clamp-1">{currentStation.name}</span>
-                  <span className="text-[10px] opacity-70">FM {90 + stationIndex * 2}.0 MHZ</span>
+                  <span className="text-[9px] opacity-60">{currentStation.name_en}</span>
                 </div>
               )}
            </div>
