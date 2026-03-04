@@ -166,7 +166,7 @@ export const useServers = (tmdbId: number, type: 'movie' | 'tv', season?: number
     
     const init = async () => {
       if (!tmdbId || isNaN(tmdbId) || tmdbId <= 0) {
-        setServers([])
+        setBaseServers([])
         setLoading(false)
         return
       }

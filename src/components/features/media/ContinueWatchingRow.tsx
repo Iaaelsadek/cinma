@@ -18,6 +18,7 @@ type CwItem = {
 }
 
 type EnrichedCwItem = CwItem & {
+  id: number
   poster_path?: string
   title?: string
   name?: string
@@ -41,9 +42,9 @@ export const ContinueWatchingRow = ({ userId }: { userId: string }) => {
         try {
           const path = r.content_type === 'movie' ? `/movie/${r.content_id}` : `/tv/${r.content_id}`
           const { data } = await tmdb.get(path)
-          return { ...r, poster_path: data.poster_path, title: data.title, name: data.name, vote_average: data.vote_average } as EnrichedCwItem
+          return { ...r, id: r.content_id, poster_path: data.poster_path, title: data.title, name: data.name, vote_average: data.vote_average } as EnrichedCwItem
         } catch {
-          return r as EnrichedCwItem
+          return { ...r, id: r.content_id } as EnrichedCwItem
         }
       })
       return Promise.all(promises)
@@ -52,7 +53,7 @@ export const ContinueWatchingRow = ({ userId }: { userId: string }) => {
   })
 
   const rawData = enriched.data || []
-  const data = filterMedia(rawData)
+  const data = filterMedia<EnrichedCwItem>(rawData)
 
   if (!cwQuery.data?.length) return null
   if (cwQuery.isPending) {

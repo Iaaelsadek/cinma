@@ -68,11 +68,11 @@ export const MovieDetails = () => {
   const movieId = Number(id)
   const { user, loading: authLoading } = useAuth()
   const { filterMedia, hiddenIds, isAdmin: isUserAdmin } = useHiddenMedia()
-  const { lang } = useLang()
+  const { lang: currentLang } = useLang()
 
   // Hidden Content Check
-  const isHidden = hiddenIds.has(movieId)
-  if (isHidden && !isUserAdmin) {
+  const isHiddenFromStart = hiddenIds.has(movieId)
+  if (isHiddenFromStart && !isUserAdmin) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#050505] text-center p-6">
         <div className="w-24 h-24 bg-rose-500/10 rounded-full flex items-center justify-center mb-6">
@@ -147,7 +147,7 @@ export const MovieDetails = () => {
   useEffect(() => {
     let cancelled = false
     ;(async () => {
-      if (loading) return
+      if (isLoading) return
       if (!user) {
         setIsAdmin(false)
         setHeart(false)
@@ -162,7 +162,7 @@ export const MovieDetails = () => {
       }
     })()
     return () => { cancelled = true }
-  }, [user, loading])
+  }, [user, isLoading])
 
   const usCert = useMemo(() => {
     const groups = data?.release_dates?.results as TmdbReleaseDatesGroup[] | undefined
@@ -317,8 +317,8 @@ export const MovieDetails = () => {
     }
   })
 
-  const { lang } = useLang()
-  const t = (ar: string, en: string) => (lang === 'ar' ? ar : en)
+  const { lang: currentLangForT } = useLang()
+  const t = (ar: string, en: string) => (currentLangForT === 'ar' ? ar : en)
   const quality = '1080p'
   const canonicalUrl = typeof window !== 'undefined' ? `${location.origin}${location.pathname}` : ''
   const trailerUrl: string | null = (() => {
@@ -379,8 +379,8 @@ export const MovieDetails = () => {
   }
 
   // Hidden Content Check
-  const isHidden = hiddenIds.has(movieId)
-  if (isHidden && !isUserAdmin) {
+  const isHiddenAfterLoad = hiddenIds.has(movieId)
+  if (isHiddenAfterLoad && !isUserAdmin) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#050505] text-center p-6">
         <div className="w-24 h-24 bg-rose-500/10 rounded-full flex items-center justify-center mb-6">
@@ -549,7 +549,7 @@ export const MovieDetails = () => {
               contentId={movieId}
               contentType="movie"
               onClose={() => setShowListModal(false)}
-              lang={lang}
+              lang={currentLangForT}
             />
           </AnimatePresence>
         )}
@@ -646,7 +646,7 @@ export const MovieDetails = () => {
                         </div>
                       )}
                     </div>
-                    <div className="text-[10px] text-zinc-500">{new Date(c.created_at).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+                    <div className="text-[10px] text-zinc-500">{new Date(c.created_at).toLocaleDateString(currentLangForT === 'ar' ? 'ar-EG' : 'en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
                   </div>
                 </div>
                 
@@ -671,7 +671,7 @@ export const MovieDetails = () => {
               <ReviewVotes 
                 commentId={c.id} 
                 userId={user?.id} 
-                lang={lang} 
+                lang={currentLangForT} 
               />
             </motion.div>
           ))}

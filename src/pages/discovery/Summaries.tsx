@@ -6,7 +6,7 @@ import { useHiddenMedia } from '../../hooks/useHiddenMedia'
 import { QuantumHero } from '../../components/features/hero/QuantumHero'
 import { QuantumTrain } from '../../components/features/media/QuantumTrain'
 import { VideoCard } from '../../components/features/media/VideoCard'
-import { useCategoryVideos } from '../../hooks/useFetchContent'
+import { useCategoryVideos, VideoItem } from '../../hooks/useFetchContent'
 import { PageLoader } from '../../components/common/PageLoader'
 
 export const SummariesPage = () => {
@@ -28,6 +28,7 @@ export const SummariesPage = () => {
         title: 'ملخص فيلم Interstellar',
         description: 'ملخص فيلم الخيال العلمي الملحمي Interstellar للمخرج كريستوفر نولان.',
         thumbnail: 'https://image.tmdb.org/t/p/w500/rAiYTfKGqDCRIIqo664sY9XZIvQ.jpg',
+        url: 'https://www.youtube.com/watch?v=zSWdZVtXT7E',
         created_at: '2024-01-01',
         category: 'summary'
       },
@@ -36,6 +37,7 @@ export const SummariesPage = () => {
         title: 'ملخص فيلم Inception',
         description: 'رحلة في عالم الأحلام مع فيلم Inception.',
         thumbnail: 'https://image.tmdb.org/t/p/w500/9gk7adHYeDvHkCSEqAvQNLV5Uge.jpg',
+        url: 'https://www.youtube.com/watch?v=YoHD9XEInc0',
         created_at: '2024-01-02',
         category: 'summary'
       },
@@ -44,6 +46,7 @@ export const SummariesPage = () => {
         title: 'ملخص فيلم The Dark Knight',
         description: 'قصة باتمان والجوكر في تحفة نولان الخالدة.',
         thumbnail: 'https://image.tmdb.org/t/p/w500/nMKdUUepR0i5zn0y1T4CsSB5chy.jpg',
+        url: 'https://www.youtube.com/watch?v=EXeTwQWrcwY',
         created_at: '2024-01-03',
         category: 'summary'
       },
@@ -52,6 +55,7 @@ export const SummariesPage = () => {
         title: 'ملخص فيلم Oppenheimer',
         description: 'قصة مخترع القنبلة الذرية وصراعه النفسي.',
         thumbnail: 'https://image.tmdb.org/t/p/w500/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg',
+        url: 'https://www.youtube.com/watch?v=uYPbbksJxIg',
         created_at: '2024-01-04',
         category: 'summary'
       },
@@ -60,14 +64,14 @@ export const SummariesPage = () => {
         title: 'ملخص فيلم Dune: Part Two',
         description: 'تكملة ملحمة بول أتريديس في صحراء أراكيس.',
         thumbnail: 'https://image.tmdb.org/t/p/w500/1pdfLvkbY9ohJlCjQH2CZjjYVvJ.jpg',
+        url: 'https://www.youtube.com/watch?v=Way9Dexny3w',
         created_at: '2024-01-05',
         category: 'summary'
       }
     ]
 
   const summaries = (dbSummaries && dbSummaries.length > 0) ? dbSummaries : FALLBACK_SUMMARIES
-
-  const filteredData = useMemo(() => filterMedia(summaries || []), [summaries, filterMedia])
+  const filteredData = useMemo(() => filterMedia<VideoItem>(summaries as VideoItem[] || []), [summaries, filterMedia])
 
   if (isLoading) return <PageLoader />
 

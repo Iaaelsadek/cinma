@@ -254,7 +254,7 @@ export const AnimePage = () => {
               items={filterMedia(horror.data || [])} 
               title={lang === 'ar' ? 'أنمي رعب' : 'Horror Anime'} 
               link="/search?types=anime&genres=16,27"
-              color="black"
+              color="indigo"
             />
 
             {categories.map((cat: any) => (
