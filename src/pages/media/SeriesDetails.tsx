@@ -23,9 +23,10 @@ import { AddToListModal } from '../../components/features/social/AddToListModal'
 import { getProfile } from '../../lib/supabase'
 import { Helmet } from 'react-helmet-async'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Star, List, MessageSquare, Play, Trash2 } from 'lucide-react'
+import { Star, List, MessageSquare, Play, Trash2, AlertTriangle } from 'lucide-react'
 import { clsx } from 'clsx'
 import { ShareButton } from '../../components/common/ShareButton'
+import { AiInsights } from '../../components/features/media/AiInsights'
 import { SectionHeader } from '../../components/common/SectionHeader'
 import { useLang } from '../../state/useLang'
 import React from 'react'
@@ -34,7 +35,6 @@ import { getEmbedUrlByIndex } from '../../services/embedService'
 import { SeoHead } from '../../components/common/SeoHead'
 import { useDualTitles } from '../../hooks/useDualTitles'
 import { useHiddenMedia } from '../../hooks/useHiddenMedia'
-import { AlertTriangle } from 'lucide-react'
 
 interface SeriesDetailsProps {
   id?: string
@@ -45,7 +45,7 @@ const SeriesDetails = ({ id: propId }: SeriesDetailsProps = {}) => {
   const id = propId || params.id
   const tvId = Number(id)
   const { user } = useAuth()
-  const { filterMedia, hiddenIds, isAdmin: isUserAdmin } = useHiddenMedia()
+  const { hiddenIds, isAdmin: isUserAdmin } = useHiddenMedia()
   const [seasonNumber, setSeasonNumber] = useState<number | null>(null)
   const [seasonId, setSeasonId] = useState<number | null>(null)
   const [heart, setHeart] = useState(false)
@@ -90,17 +90,20 @@ const SeriesDetails = ({ id: propId }: SeriesDetailsProps = {}) => {
         backdrop_path: data.backdrop_path || null
       })
       const remoteSeasons: Array<any> = data.seasons || []
+      
       for (const s of remoteSeasons) {
-        if ((s.season_number ?? 0) < 0) continue
-        await upsertSeason({
-          series_id: tvId,
-          season_number: s.season_number ?? 0,
-          name: s.name || '',
-          overview: s.overview || '',
-          poster_path: s.poster_path || null,
-          air_date: s.air_date || null
-        })
+        if ((s.season_number ?? 0) >= 0) {
+          await upsertSeason({
+            series_id: tvId,
+            season_number: s.season_number ?? 0,
+            name: s.name || '',
+            overview: s.overview || '',
+            poster_path: s.poster_path || null,
+            air_date: s.air_date || null
+          })
+        }
       }
+      
       const after = await getSeriesById(tvId)
       return after
     },
@@ -167,6 +170,7 @@ const SeriesDetails = ({ id: propId }: SeriesDetailsProps = {}) => {
       if (rows.length > 0) return rows
       const { data } = await tmdb.get(`/tv/${tvId}/season/${seasonNumber}`)
       const eps = (data.episodes || []) as Array<any>
+      
       for (const e of eps) {
         await upsertEpisode({
           season_id: seasonId,
@@ -177,6 +181,7 @@ const SeriesDetails = ({ id: propId }: SeriesDetailsProps = {}) => {
           air_date: e.air_date || null
         })
       }
+      
       const after = await getEpisodes(seasonId)
       return after
     },
@@ -323,6 +328,7 @@ const SeriesDetails = ({ id: propId }: SeriesDetailsProps = {}) => {
       }
     }
   }, [vote, remote.data, title, poster, backdrop, overview, cast, genres, id])
+
   return (
     <div className="relative space-y-3">
       {schemaData && (
@@ -345,8 +351,7 @@ const SeriesDetails = ({ id: propId }: SeriesDetailsProps = {}) => {
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#050505]/60 to-[#050505]" />
         </div>
       )}
-      <div className="max-w-[2400px] mx-auto px-4 md:px-12 w-full relative z-10 pt-6">
-        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="grid grid-cols-1 gap-2 md:grid-cols-[160px_1fr_240px]">
+      <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="grid grid-cols-1 gap-2 md:grid-cols-[160px_1fr_240px]">
         {/* Left: Poster & actions */}
         <div className="space-y-2 order-2 md:order-1">
           <div className="overflow-hidden rounded-xl border border-white/10 bg-white/5 shadow-2xl backdrop-blur-md">
@@ -397,6 +402,13 @@ const SeriesDetails = ({ id: propId }: SeriesDetailsProps = {}) => {
             )}
             
             <p className="mt-3 text-sm leading-relaxed text-zinc-300">{overview}</p>
+
+            <AiInsights
+              title={series.data?.name || ''}
+              type="tv"
+              overview={series.data?.overview || ''}
+              className="mt-6"
+            />
             
             <div className="mt-3 no-scrollbar flex gap-2 overflow-x-auto pb-1">
               {(seasons.data || [])
@@ -417,6 +429,25 @@ const SeriesDetails = ({ id: propId }: SeriesDetailsProps = {}) => {
                 ))}
             </div>
           </div>
+
+          {!!cast.length && (
+            <div className="rounded-xl border border-white/10 bg-white/5 p-3 backdrop-blur-md">
+              <div className="mb-2 text-xs font-semibold text-zinc-400 uppercase tracking-wider">{t('طاقم العمل', 'Cast')}</div>
+              <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1">   
+                {cast.map((p) => {
+                  const img = p.profile_path ? `https://image.tmdb.org/t/p/w185${p.profile_path}` : ''
+                  return (
+                    <div key={p.id} className="w-16 shrink-0 text-center">     
+                      <div className="mx-auto h-16 w-16 overflow-hidden rounded-full bg-zinc-800 border border-white/5">
+                        {img && <img src={img} alt={p.name} className="h-full w-full object-cover" loading="lazy" />}
+                      </div>
+                      <div className="mt-1 truncate text-[10px] text-zinc-300">{p.name}</div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
         </div>
         
         {/* Right: Trailer + actions */}
@@ -466,8 +497,11 @@ const SeriesDetails = ({ id: propId }: SeriesDetailsProps = {}) => {
                 <List className="w-5 h-5" />
               </button>
             )}
-            <Link to={`/watch/tv/${id}/s${seasonNumber || 1}/ep${playingEpisode || 1}`} className="flex-1 rounded-md bg-gradient-to-r from-primary to-luxury-purple h-10 flex items-center justify-center text-white font-bold min-w-[120px]">
+            <Link to={`/watch/${id}?type=tv&season=${seasonNumber || 1}&episode=${playingEpisode || 1}`} className="flex-1 rounded-md bg-gradient-to-r from-primary to-luxury-purple h-10 flex items-center justify-center text-white font-bold min-w-[120px]">
               {t('شاهد الآن', 'Watch Now')}
+            </Link>
+            <Link to={`/watch/${id}?type=tv&season=${seasonNumber || 1}&episode=1`} className="rounded-md border border-white/10 bg-white/10 px-4 h-10 flex items-center text-white hover:bg-white/20">
+              {t('تحميل', 'Download')}
             </Link>
           </div>
         </div>
@@ -475,111 +509,104 @@ const SeriesDetails = ({ id: propId }: SeriesDetailsProps = {}) => {
 
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">{t('الحلقات', 'Episodes')}</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
           {(episodes.data || []).map((e: any) => {
             const still = e.still_path ? `https://image.tmdb.org/t/p/w300${e.still_path}` : ''
             return (
               <button
                 key={e.id}
                 onClick={() => setPlayingEpisode(e.episode_number || 1)}
-                className={`overflow-hidden rounded-lg border border-zinc-800 text-left transition ${playingEpisode === (e.episode_number || 1) ? 'bg-white/10' : 'bg-white/5 hover:bg-white/10'}`}
+                className={clsx(
+                  'group relative overflow-hidden rounded-xl border transition-all duration-300',
+                  playingEpisode === e.episode_number
+                    ? 'border-primary bg-primary/10 ring-1 ring-primary'
+                    : 'border-white/10 bg-white/5 hover:border-white/30'
+                )}
               >
-                <div className="relative">
-                  <div className="aspect-[16/9] w-full bg-zinc-800">
-                    {still && <img src={still} alt={e.name} className="h-full w-full object-cover" loading="lazy" />}
-                  </div>
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                  <div className="absolute bottom-2 left-2 right-2 line-clamp-1 text-sm font-semibold text-white">
-                    {t('الحلقة', 'Episode')} {e.episode_number}: {e.name || t('بدون عنوان', 'Untitled')}
+                <div className="aspect-video w-full overflow-hidden bg-zinc-900">
+                  {still ? (
+                    <img src={still} alt={e.name} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" loading="lazy" />
+                  ) : (
+                    <div className="flex h-full items-center justify-center text-[10px] text-zinc-600 uppercase tracking-tighter italic">No Still</div>
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                  <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between">
+                    <span className="text-[10px] font-black text-white/90 uppercase tracking-tighter">Ep {e.episode_number}</span>
+                    <div className="rounded-full bg-primary/20 p-1 backdrop-blur-md opacity-0 transition-opacity group-hover:opacity-100">
+                      <Play className="h-2 w-2 text-primary fill-current" />
+                    </div>
                   </div>
                 </div>
-                <div className="line-clamp-2 p-2 text-xs text-zinc-400">{e.overview || '—'}</div>
+                <div className="p-2 text-right">
+                  <div className="truncate text-[10px] font-bold text-white group-hover:text-primary transition-colors">{e.name || `Episode ${e.episode_number}`}</div>
+                </div>
               </button>
             )
           })}
-          {episodes.isLoading && Array.from({ length: 6 }).map((_, i) => (
-            <div key={`sk-ep-${i}`} className="overflow-hidden rounded-lg border border-zinc-800 bg-white/5">
-              <div className="aspect-[16/9] w-full animate-pulse bg-zinc-800" />
-              <div className="p-2 space-y-2">
-                <div className="h-4 w-3/4 animate-pulse rounded bg-zinc-800" />
-                <div className="h-3 w-2/3 animate-pulse rounded bg-zinc-800" />
-              </div>
-            </div>
-          ))}
         </div>
       </section>
-      <section id="reviews" className="pt-8">
-        <div className="flex items-center justify-between mb-6">
-          <SectionHeader 
-            title={t(`المراجعات والتقييمات (${comments.data?.length || 0})`, `Reviews & Ratings (${comments.data?.length || 0})`)} 
-            icon={<MessageSquare className="text-primary" />} 
-          />
+
+      <section className="mt-12 space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-primary/10 border border-primary/20">
+              <MessageSquare className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <h3 className="text-xl font-black text-white">{t('المراجعات والتقييمات', 'Reviews & Ratings')}</h3>
+              <p className="text-xs text-zinc-500">{t('شارك رأيك مع المجتمع', 'Share your thoughts with the community')}</p>
+            </div>
+          </div>
           {avgRating > 0 && (
-            <div className="flex items-center gap-2 bg-primary/10 px-3 py-1.5 rounded-full border border-primary/20">
-              <Star className="w-4 h-4 text-primary fill-current" />
-              <span className="text-sm font-bold text-primary">{avgRating}/10</span>
-              <span className="text-[10px] text-zinc-500 uppercase tracking-tighter">{t('متوسط التقييم', 'Avg Rating')}</span>
+            <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-2 rounded-2xl">
+              <Star className="w-4 h-4 text-yellow-500 fill-current" />
+              <span className="text-lg font-black text-white">{avgRating}</span>
+              <span className="text-[10px] text-zinc-500 uppercase tracking-widest">Avg Score</span>
             </div>
           )}
         </div>
 
-        {user && showListModal && (
-          <AnimatePresence>
-            <AddToListModal
-              userId={user.id}
-              contentId={tvId}
-              contentType="tv"
-              onClose={() => setShowListModal(false)}
-              lang={lang}
-            />
-          </AnimatePresence>
-        )}
-
         {user ? (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl mb-8"
+            className="rounded-2xl border border-white/10 bg-white/[0.02] p-6 backdrop-blur-sm"
           >
             <form onSubmit={handleSubmit(onAddComment)} className="space-y-4">
-              <div className="flex flex-col md:flex-row md:items-center gap-6 pb-4 border-b border-white/5">
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest">{t('تقييمك', 'Your Rating')}</label>
-                  <div className="flex items-center gap-1.5">
-                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
-                      <button
-                        key={num}
-                        type="button"
-                        onClick={() => setUserRating(num)}
-                        onMouseEnter={() => setUserRating(num)}
-                        className="transition-transform active:scale-90"
-                      >
-                        <Star 
-                          className={clsx(
-                            "w-5 h-5 transition-colors",
-                            num <= userRating ? "text-primary fill-current" : "text-zinc-700"
-                          )} 
-                        />
-                      </button>
-                    ))}
-                    <span className="ml-2 text-sm font-bold text-white w-6">{userRating || '-'}</span>
-                  </div>
-                </div>
-                
-                <div className="flex-1 space-y-1">
-                  <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest">{t('عنوان المراجعة', 'Review Title')}</label>
+              <div className="flex flex-col md:flex-row gap-6">
+                <div className="flex-1 space-y-4">
                   <input
                     {...register('title')}
-                    placeholder={t('مثال: تجربة سينمائية رائعة', 'Example: Great cinematic experience')}
-                    className="w-full rounded-xl border border-white/10 bg-black/40 p-3 text-sm focus:border-primary/50 focus:ring-1 focus:ring-primary/50 outline-none transition-all"
+                    placeholder={t('عنوان المراجعة (اختياري)', 'Review Title (Optional)')}
+                    className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm focus:border-primary/50 focus:ring-1 focus:ring-primary/50 outline-none transition-all"
                   />
+                  
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest px-1">{t('تقييمك', 'Your Rating')}</label>
+                    <div className="flex gap-1.5">
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
+                        <button
+                          key={num}
+                          type="button"
+                          onClick={() => setUserRating(num)}
+                          className={clsx(
+                            "w-8 h-8 rounded-lg flex items-center justify-center text-xs font-black transition-all border",
+                            userRating >= num 
+                              ? "bg-yellow-500 border-yellow-500 text-black shadow-lg shadow-yellow-500/20 scale-110" 
+                              : "bg-white/5 border-white/10 text-zinc-500 hover:bg-white/10"
+                          )}
+                        >
+                          {num}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest">{t('مراجعتك', 'Your Review')}</label>
+              <div className="space-y-2">
                 <textarea
-                  {...register('text', { required: true, minLength: 1 })}
+                  {...register('text', { required: true })}
                   placeholder={t('ما رأيك في هذا العمل؟ (بدون حرق للأحداث)', 'What did you think of this? (No spoilers)')}
                   className="w-full rounded-xl border border-white/10 bg-black/40 p-4 text-sm focus:border-primary/50 focus:ring-1 focus:ring-primary/50 outline-none transition-all"
                   rows={4}
@@ -587,7 +614,7 @@ const SeriesDetails = ({ id: propId }: SeriesDetailsProps = {}) => {
               </div>
 
               <div className="flex justify-end">
-                <button 
+                <button
                   type="submit"
                   className="rounded-xl bg-primary px-8 py-3 text-sm font-bold text-white shadow-lg shadow-primary/20 hover:brightness-110 active:scale-95 transition-all"
                 >
@@ -605,16 +632,16 @@ const SeriesDetails = ({ id: propId }: SeriesDetailsProps = {}) => {
 
         <div className="grid gap-4">
           {(comments.data || []).map((c, idx) => (
-            <motion.div 
-              key={c.id} 
+            <motion.div
+              key={c.id}
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: idx * 0.05 }}
               className="group relative rounded-2xl border border-white/5 bg-white/[0.02] p-5 hover:bg-white/[0.04] transition-all"
             >
-              <div className="flex justify-between items-start gap-4 mb-3">
+              <div className="flex justify-between items-start gap-4 mb-3">     
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-primary/20 border border-primary/20 flex items-center justify-center text-primary font-bold">
+                  <div className="w-10 h-10 rounded-full bg-primary/20 border border-primary/20 flex items-center justify-center text-primary font-bold">       
                     {c.user_id.slice(0, 1).toUpperCase()}
                   </div>
                   <div>
@@ -630,13 +657,13 @@ const SeriesDetails = ({ id: propId }: SeriesDetailsProps = {}) => {
                     <div className="text-[10px] text-zinc-500">{new Date(c.created_at).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
                   </div>
                 </div>
-                
+
                 {(user?.id === c.user_id || isAdmin) && (
                   <button
-                    onClick={async () => { 
+                    onClick={async () => {
                       if (confirm(t('هل أنت متأكد من حذف هذه المراجعة؟', 'Are you sure you want to delete this review?'))) {
                         await deleteComment(c.id)
-                        comments.refetch() 
+                        comments.refetch()
                       }
                     }}
                     className="opacity-0 group-hover:opacity-100 p-2 text-zinc-500 hover:text-red-500 transition-all"
@@ -647,32 +674,42 @@ const SeriesDetails = ({ id: propId }: SeriesDetailsProps = {}) => {
               </div>
 
               {c.title && <h4 className="text-sm font-bold text-white mb-1">{c.title}</h4>}
-              <p className="text-sm text-zinc-400 leading-relaxed">{c.text}</p>
-              
-              <ReviewVotes 
-                commentId={c.id} 
-                userId={user?.id} 
-                lang={lang} 
+              <p className="text-sm text-zinc-400 leading-relaxed">{c.text}</p> 
+
+              <ReviewVotes
+                commentId={c.id}
+                userId={user?.id}
+                lang={lang}
               />
             </motion.div>
           ))}
-          
+
           {comments.isLoading && (
             <div className="flex flex-col items-center justify-center py-12 gap-3">
               <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
               <div className="text-xs text-zinc-500 animate-pulse uppercase tracking-widest">{t('جاري تحميل المراجعات...', 'Loading reviews...')}</div>
             </div>
           )}
-          
-          {!comments.isLoading && (comments.data || []).length === 0 && (
+
+          {!comments.isLoading && (comments.data || []).length === 0 && (       
             <div className="py-12 text-center border border-dashed border-white/5 rounded-2xl">
-              <MessageSquare className="w-8 h-8 text-zinc-700 mx-auto mb-3" />
+              <MessageSquare className="w-8 h-8 text-zinc-700 mx-auto mb-3" />  
               <p className="text-sm text-zinc-500">{t('لا توجد مراجعات بعد. كن أول من يشارك رأيه!', 'No reviews yet. Be the first to share your thoughts!')}</p>
             </div>
           )}
         </div>
       </section>
-      </div>
+
+      {showListModal && (
+        <AnimatePresence>
+          <AddToListModal
+            contentId={tvId}
+            contentType="tv"
+            onClose={() => setShowListModal(false)}
+            lang={lang}
+          />
+        </AnimatePresence>
+      )}
     </div>
   )
 }

@@ -63,7 +63,11 @@ export const Home = () => {
   const { data: recommendations, isLoading: recommendationsLoading } = useRecommendations()
   const { filterMedia } = useHiddenMedia()
   const isAdmin = profile?.role === 'admin' || profile?.role === 'supervisor'
-  console.log('[Home Debug] Current Profile Role:', profile?.role)
+
+  useEffect(() => {
+    console.log('[Home] Rendering main page');
+    if (isAdmin) console.log('[Home] Admin mode detected - showing all content');
+  }, [isAdmin]);
 
   // --- DATA FETCHING (Optimized & Parallelized) ---
   // 1. DIVERSE HERO CONTENT
@@ -430,26 +434,8 @@ export const Home = () => {
   const description = lang === 'ar' ? 'منصة أونلاين سينما - تجربة المستقبل' : 'Online Cinema - The Future Experience'
 
   const heroItems = useMemo(() => {
-    const filtered = filterMedia(diverseHero.data?.results, 10)
-    console.log('[Home Debug] isAdmin:', isAdmin)
-    console.log('[Home Debug] Original items:', diverseHero.data?.results?.length || 0)
-    console.log('[Home Debug] Filtered items:', filtered.length)
-    console.log('[Home Debug] Filtered IDs:', filtered.map(i => i.id))
-    
-    if (filtered.some(i => i.id === 482600 || i.id === 705996)) {
-      console.error(`[Home Debug] MOVIE ${filtered.find(i => i.id === 482600 || i.id === 705996)?.id} IS STILL IN HERO ITEMS!`)
-    }
-    
-    // Check for "The Witch" in any title
-    filtered.forEach(item => {
-      const title = item.title || item.name || ''
-      if (title.toLowerCase().includes('witch') || title.includes('ساحرة')) {
-        console.warn(`[Home Debug] Found "The Witch" related content: ${title} (ID: ${item.id})`)
-      }
-    })
-    
-    return filtered
-  }, [diverseHero.data, filterMedia, isAdmin])
+    return filterMedia(diverseHero.data?.results, 10)
+  }, [diverseHero.data, filterMedia])
 
   return (
     <div className="min-h-screen text-white overflow-x-hidden selection:bg-cyan-500 selection:text-black">

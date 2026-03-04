@@ -7,46 +7,37 @@ import { CONFIG } from './constants';
 const API_KEY = CONFIG.GEMINI_API_KEY || "";
 
 let genAI: GoogleGenerativeAI | null = null;
-let isGeminiDisabled = false; // Disable Gemini globally if models are missing
+let isGeminiDisabled = false;
 
 if (API_KEY) {
-    // Suppress console spam from the SDK itself if possible, or just catch errors gracefully
-    // Using apiVersion: 'v1beta' is default, but maybe we need to specify it or leave it?
-    // Some regions might need specific base url, but usually default is fine.
     genAI = new GoogleGenerativeAI(API_KEY);
   } else {
-    console.warn('[Gemini] API Key missing. AI features will be disabled.');
     isGeminiDisabled = true;
   }
 
 /**
  * Helper function to call Gemini API with Fallback Mechanism.
- * Tries the primary model (gemini-3.1-pro), then falls back to gemini-1.5-flash if needed.
  */
 export const callGeminiWithFallback = async (prompt: string, contextLabel: string): Promise<string | null> => {
   if (!genAI || isGeminiDisabled) return null;
 
-  // Try list of models in order. 
-  // We prioritize gemini-1.5-flash-001 for stability.
   const models = ["gemini-1.5-flash-001", "gemini-1.5-pro-001", "gemini-pro"];
   
   for (const modelName of models) {
     try {
-        // --- DB CACHE CHECK ---
         const cacheKey = `gemini:${contextLabel}:${prompt.slice(0, 100)}`;
         try {
-            const { data: cached, error: cacheError } = await supabase
+            const { data: cached } = await supabase
                 .from('ai_cache')
                 .select('response')
                 .eq('cache_key', cacheKey)
                 .maybeSingle();
 
             if (cached?.response) {
-                console.log(`[Gemini - ${contextLabel}] Cache hit!`);
                 return cached.response;
             }
         } catch (e) {
-            console.warn(`[Gemini - ${contextLabel}] Cache table check failed (likely table missing):`, e);
+            // Silently fail cache check
         }
 
         const model = genAI.getGenerativeModel({ model: modelName });
@@ -56,7 +47,6 @@ export const callGeminiWithFallback = async (prompt: string, contextLabel: strin
         const response = result.response;
         const text = response.text().trim();
 
-        // --- DB CACHE SAVE ---
         if (text) {
             try {
                 await supabase.from('ai_cache').upsert({
@@ -65,7 +55,7 @@ export const callGeminiWithFallback = async (prompt: string, contextLabel: strin
                     context: contextLabel
                 });
             } catch (e) {
-                // Silently ignore upsert errors (e.g. table missing)
+                // Silently ignore upsert errors
             }
         }
 
@@ -73,26 +63,17 @@ export const callGeminiWithFallback = async (prompt: string, contextLabel: strin
     } catch (error: any) {
         const errorStr = String(error);
         
-        // Log warning
-        console.warn(`[Gemini - ${contextLabel}] Model ${modelName} failed: ${errorStr}`);
-
-        // Continue only if it's a 404 (Model Not Found) or 503 (Overloaded)
         if (errorStr.includes("404") || errorStr.includes("not found") || errorStr.includes("503")) {
             continue;
         }
         
-        // If it's a permission/quota error, we might as well stop trying other models if they share quota
-        if (errorStr.includes("API_KEY_INVALID") || errorStr.includes("400")) {
-             console.error(`[Gemini - ${contextLabel}] Fatal API Error: ${errorStr}`);
+        if (errorStr.includes("API_KEY_INVALID") || errorStr.includes("401") || errorStr.includes("403")) {
              isGeminiDisabled = true;
              break;
         }
     }
   }
 
-  // If all failed
-  console.warn(`[Gemini - ${contextLabel}] All models failed. Disabling Gemini for this session.`);
-  isGeminiDisabled = true;
   return null;
 };
 
