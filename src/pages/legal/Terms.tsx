@@ -51,7 +51,10 @@ export const Terms = () => {
               : 'We may update these terms when needed, and the latest version will be posted on this page.'}
           </p>
         </section>
+        </div>
       </div>
     </div>
   )
 }
+
+export default Terms

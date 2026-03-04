@@ -554,7 +554,7 @@ export const Watch = () => {
         // If it's undefined (not checked yet), show it
         if (availableSeasonsMap[s.season_number] === false) {
           // But if we have NO other seasons, show it anyway to avoid empty UI
-          const otherAvailable = details.seasons.some(other => 
+          const otherAvailable = details?.seasons?.some(other => 
             other.season_number > 0 && 
             other.season_number !== s.season_number && 
             availableSeasonsMap[other.season_number] !== false

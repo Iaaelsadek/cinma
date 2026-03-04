@@ -26,6 +26,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Star, List, MessageSquare, Play, Trash2 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { ShareButton } from '../../components/common/ShareButton'
+import { SectionHeader } from '../../components/common/SectionHeader'
 import { useLang } from '../../state/useLang'
 import React from 'react'
 import ReactPlayer from 'react-player'
@@ -671,6 +672,7 @@ const SeriesDetails = ({ id: propId }: SeriesDetailsProps = {}) => {
           )}
         </div>
       </section>
+      </div>
     </div>
   )
 }
