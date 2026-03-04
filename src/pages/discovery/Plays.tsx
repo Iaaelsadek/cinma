@@ -10,6 +10,7 @@ import { useLang } from '../../state/useLang'
 import { Helmet } from 'react-helmet-async'
 import { useCategoryVideos } from '../../hooks/useFetchContent'
 import { PageLoader } from '../../components/common/PageLoader'
+import { useHiddenMedia } from '../../hooks/useHiddenMedia'
 
 // Fallback data for plays to ensure sections are not empty
 const FALLBACK_PLAYS: Record<string, any[]> = {
@@ -137,21 +138,26 @@ const fetchPlays = async (query: string, year?: string) => {
 export const PlaysPage = () => {
   const { lang } = useLang()
   const { genre, year, rating } = useParams()
+  const { filterMedia } = useHiddenMedia()
 
   // YouTube Content
   const { data: ytPlays, isLoading: ytLoading } = useCategoryVideos('plays', { limit: 20 })
-  const ytPlaysMapped = (ytPlays || []).map(item => ({
-    id: item.id,
-    title: item.title,
-    overview: item.description,
-    backdrop_path: item.thumbnail,
-    poster_path: item.thumbnail,
-    release_date: item.created_at,
-    vote_average: 8.0,
-    media_type: 'video',
-    original_language: 'ar',
-    category: 'plays'
-  }))
+  
+  const ytPlaysMapped = useMemo(() => {
+    const mapped = (ytPlays || []).map(item => ({
+      id: item.id,
+      title: item.title,
+      overview: item.description,
+      backdrop_path: item.thumbnail,
+      poster_path: item.thumbnail,
+      release_date: item.created_at,
+      vote_average: 8.0,
+      media_type: 'video',
+      original_language: 'ar',
+      category: 'plays'
+    }))
+    return filterMedia(mapped)
+  }, [ytPlays, filterMedia])
 
   // If a genre is selected, we only show that genre
   const query = genre ? CATEGORY_QUERIES[genre] : null
@@ -163,10 +169,8 @@ export const PlaysPage = () => {
     queryFn: async () => {
        if (!query || query === 'full') return []
        const res = await fetchPlays(query, year)
-       if (res.length > 0) return res
-       // Use fallback if available and result is empty
-       if (genre && FALLBACK_PLAYS[genre]) return FALLBACK_PLAYS[genre]
-       return []
+       const finalRes = res.length > 0 ? res : (genre && FALLBACK_PLAYS[genre] ? FALLBACK_PLAYS[genre] : [])
+       return filterMedia(finalRes)
     },
     enabled: !!query && query !== 'full'
   })
@@ -186,32 +190,32 @@ export const PlaysPage = () => {
    // Prefetch sections if not filtered
    const adelImam = useQuery({ queryKey: ['plays-adel-imam'], queryFn: async () => {
       const res = await fetchPlays('مسرحية عادل امام')
-      return res.length > 0 ? res : FALLBACK_PLAYS['adel-imam']
+      return filterMedia(res.length > 0 ? res : (FALLBACK_PLAYS['adel-imam'] || []))
    }, enabled: !isFiltered })
 
    const mohamedSobhy = useQuery({ queryKey: ['plays-mohamed-sobhy'], queryFn: async () => {
       const res = await fetchPlays('مسرحية محمد صبحي')
-      return res.length > 0 ? res : FALLBACK_PLAYS['mohamed-sobhy']
+      return filterMedia(res.length > 0 ? res : (FALLBACK_PLAYS['mohamed-sobhy'] || []))
    }, enabled: !isFiltered })
 
    const samirGhanem = useQuery({ queryKey: ['plays-samir-ghanem'], queryFn: async () => {
       const res = await fetchPlays('مسرحية سمير غانم')
-      return res.length > 0 ? res : (FALLBACK_PLAYS['samir-ghanem'] || [])
+      return filterMedia(res.length > 0 ? res : (FALLBACK_PLAYS['samir-ghanem'] || []))
    }, enabled: !isFiltered })
 
    const classics = useQuery({ queryKey: ['plays-classics'], queryFn: async () => {
       const res = await fetchPlays('مسرحية')
-      return res.length > 0 ? res : (FALLBACK_PLAYS['classics'] || [])
+      return filterMedia(res.length > 0 ? res : (FALLBACK_PLAYS['classics'] || []))
    }, enabled: !isFiltered })
 
    const gulf = useQuery({ queryKey: ['plays-gulf'], queryFn: async () => {
       const res = await fetchPlays('مسرحية طارق العلي|مسرحية عبدالحسين عبدالرضا')
-      return res.length > 0 ? res : (FALLBACK_PLAYS['gulf'] || [])
+      return filterMedia(res.length > 0 ? res : (FALLBACK_PLAYS['gulf'] || []))
    }, enabled: !isFiltered })
 
    const masrahMasr = useQuery({ queryKey: ['plays-masrah-masr'], queryFn: async () => {
       const res = await fetchPlays('مسرح مصر')
-      return res.length > 0 ? res : (FALLBACK_PLAYS['masrah-masr'] || [])
+      return filterMedia(res.length > 0 ? res : (FALLBACK_PLAYS['masrah-masr'] || []))
    }, enabled: !isFiltered })
 
    const isLoading = ytLoading || (isFiltered ? filteredLoading : (adelImam.isLoading || mohamedSobhy.isLoading || samirGhanem.isLoading || classics.isLoading || gulf.isLoading || masrahMasr.isLoading))
@@ -233,7 +237,7 @@ export const PlaysPage = () => {
         {isFiltered ? (
            <div>
               <h2 className="text-xl font-bold mb-4 capitalize">{genre?.replace('-', ' ')}</h2>
-              <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
                 {displayFiltered.map((item: any, idx: number) => (
                   <MovieCard key={item.id} movie={item} index={idx} />
                 ))}

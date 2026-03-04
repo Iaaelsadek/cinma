@@ -53,49 +53,57 @@ export const WatchParty = ({ partyId, onSync, onClose, currentVideoTime, isVideo
   const [activeTab, setActiveTab] = useState<'chat' | 'people'>('chat')
   const [isOpen, setIsOpen] = useState(true)
   const [isCreator, setIsCreator] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
   const [reactions, setReactions] = useState<{ id: string, emoji: string, x: number }[]>([])
   
   const lastUpdateRef = useRef<number>(0)
   const chatEndRef = useRef<HTMLDivElement>(null)
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
 
   const t = (ar: string, en: string) => (lang === 'ar' ? ar : en)
 
   // Scroll to bottom of chat
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    if (activeTab === 'chat' && scrollRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = scrollRef.current
+      const isNearBottom = scrollHeight - scrollTop - clientHeight < 100
+      
+      // Always scroll if it's the first load or user is near bottom
+      if (isNearBottom || messages.length <= 1) {
+        chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+      }
+    }
   }, [messages, activeTab])
 
   useEffect(() => {
     if (!user || !partyId) return
 
     const setupParty = async () => {
+      setIsLoading(true)
       try {
         await joinWatchParty(partyId, user.id)
         
         const { data: partyData } = await supabase.from('watch_parties').select('*').eq('id', partyId).single()
+        if (!partyData) throw new Error('Party not found')
+        
         setParty(partyData as WatchPartyType)
         setIsCreator(partyData.creator_id === user.id)
         
-        // Fetch participants and their profiles
+        // Fetch participants with profiles directly
         const participantsData = await getParticipants(partyId)
-        const participantsWithProfiles = await Promise.all(
-          participantsData.map(async (p) => {
-            const profile = await getProfile(p.user_id)
-            return {
-              ...p,
-              username: profile?.username || `User ${p.user_id.slice(0, 4)}`,
-              avatar_url: profile?.avatar_url || null
-            }
-          })
-        )
-        setParticipants(participantsWithProfiles)
+        setParticipants(participantsData as ParticipantWithProfile[])
 
         // Fetch initial messages
         const initialMessages = await getPartyMessages(partyId)
         setMessages(initialMessages)
+        setIsLoading(false)
 
         // Subscribe to changes
         const channel = supabase.channel(`watch_party:${partyId}`)
+        channelRef.current = channel
+
+        channel
           .on('postgres_changes', { 
             event: 'UPDATE', 
             schema: 'public', 
@@ -117,7 +125,24 @@ export const WatchParty = ({ partyId, onSync, onClose, currentVideoTime, isVideo
             table: 'watch_party_messages',
             filter: `party_id=eq.${partyId}`
           }, (payload) => {
-            setMessages(prev => [...prev, payload.new as PartyChatMessage])
+            const newMsg = payload.new as PartyChatMessage
+            // Only add if not already in list (prevents double messages due to optimistic UI)
+            setMessages(prev => {
+              if (prev.find(m => m.id === newMsg.id || (m.text === newMsg.text && m.user_id === newMsg.user_id && Math.abs(new Date(m.created_at).getTime() - new Date(newMsg.created_at).getTime()) < 5000))) {
+                return prev
+              }
+              return [...prev, newMsg]
+            })
+          })
+          .on('postgres_changes', {
+            event: '*',
+            schema: 'public',
+            table: 'watch_party_participants',
+            filter: `party_id=eq.${partyId}`
+          }, async () => {
+            // Refresh participants list on any change
+            const updated = await getParticipants(partyId)
+            setParticipants(updated as ParticipantWithProfile[])
           })
           .on('broadcast', { event: 'reaction' }, ({ payload }) => {
             const id = Math.random().toString(36).substring(7)
@@ -127,11 +152,6 @@ export const WatchParty = ({ partyId, onSync, onClose, currentVideoTime, isVideo
             }, 3000)
           })
           .subscribe()
-
-        return () => {
-          supabase.removeChannel(channel)
-          leaveWatchParty(partyId, user.id)
-        }
       } catch (err) {
         console.error('Watch party error:', err)
         toast.error(t('فشل الاتصال بغرفة المشاهدة', 'Failed to connect to watch party'))
@@ -140,12 +160,21 @@ export const WatchParty = ({ partyId, onSync, onClose, currentVideoTime, isVideo
     }
 
     setupParty()
-  }, [partyId, user, onSync, onClose])
+
+    return () => {
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current)
+        channelRef.current = null
+      }
+      leaveWatchParty(partyId, user.id)
+    }
+  }, [partyId, user?.id, onSync, onClose])
 
   // Sync Logic
   useEffect(() => {
     if (!isCreator || !party) return
     const now = Date.now()
+    // Sync every 5 seconds OR immediately if pause/play state changes
     if (now - lastUpdateRef.current > 5000 || isVideoPlaying !== party.is_playing) {
       updateWatchParty(partyId, {
         current_time: currentVideoTime,
@@ -155,28 +184,60 @@ export const WatchParty = ({ partyId, onSync, onClose, currentVideoTime, isVideo
     }
   }, [currentVideoTime, isVideoPlaying, isCreator, partyId, party])
 
+  // Participant sync logic (auto-sync if close enough)
+  useEffect(() => {
+    if (isCreator || !party) return
+    
+    // Auto-sync if time difference is small (e.g., < 2s) to keep everyone in line
+    // but only if playing. If paused, we follow creator exactly.
+    const diff = Math.abs(party.current_time - currentVideoTime)
+    if (party.is_playing && diff > 1 && diff < 5) {
+      onSync(party.current_time, party.is_playing)
+    }
+  }, [party?.current_time, party?.is_playing, isCreator])
+
   const handleSendMessage = async (e?: React.FormEvent) => {
     e?.preventDefault()
     if (!newMessage.trim() || !user || !party) return
 
+    const messageText = newMessage.trim()
+    const tempId = Math.random().toString(36).substring(7)
+    
+    // Optimistic update for better UX
+    const optimisticMessage: PartyChatMessage = {
+      id: tempId,
+      party_id: partyId,
+      user_id: user.id,
+      username: user.user_metadata?.username || 'User',
+      avatar_url: user.user_metadata?.avatar_url || null,
+      text: messageText,
+      created_at: new Date().toISOString()
+    }
+    
+    setMessages(prev => [...prev, optimisticMessage])
+    setNewMessage('')
+
     try {
-      const profile = await getProfile(user.id)
       await sendPartyMessage(
         partyId, 
         user.id, 
-        profile?.username || 'User', 
-        profile?.avatar_url || null, 
-        newMessage.trim()
+        optimisticMessage.username, 
+        optimisticMessage.avatar_url, 
+        messageText
       )
-      setNewMessage('')
     } catch (err) {
+      // Revert optimistic update on failure
+      setMessages(prev => prev.filter(m => m.id !== tempId))
+      setNewMessage(messageText) // Restore text so user can retry
       toast.error(t('فشل إرسال الرسالة', 'Failed to send message'))
     }
   }
 
   const sendReaction = (emoji: string) => {
+    if (!channelRef.current) return
+    
     const x = Math.random() * 100
-    supabase.channel(`watch_party:${partyId}`).send({
+    channelRef.current.send({
       type: 'broadcast',
       event: 'reaction',
       payload: { emoji, x }
@@ -268,9 +329,16 @@ export const WatchParty = ({ partyId, onSync, onClose, currentVideoTime, isVideo
 
             {/* Content */}
             <div className="flex-1 overflow-hidden relative">
-              {activeTab === 'chat' ? (
+              {isLoading ? (
+                <div className="h-full flex items-center justify-center">
+                  <RefreshCw className="animate-spin text-lumen-gold" size={24} />
+                </div>
+              ) : activeTab === 'chat' ? (
                 <div className="h-full flex flex-col p-6">
-                  <div className="flex-1 overflow-y-auto space-y-4 no-scrollbar pr-2">
+                  <div 
+                    ref={scrollRef}
+                    className="flex-1 overflow-y-auto space-y-4 no-scrollbar pr-2"
+                  >
                     {messages.map((msg, idx) => (
                       <motion.div
                         key={msg.id}
@@ -283,10 +351,10 @@ export const WatchParty = ({ partyId, onSync, onClose, currentVideoTime, isVideo
                       >
                         <img 
                           src={msg.avatar_url || '/default-avatar.png'} 
-                          className="w-8 h-8 rounded-xl border border-white/10"
+                          className="w-8 h-8 rounded-xl border border-white/10 flex-shrink-0"
                         />
                         <div className={clsx(
-                          "max-w-[70%] p-3 rounded-2xl text-xs",
+                          "max-w-[70%] p-3 rounded-2xl text-xs relative group",
                           msg.user_id === user?.id 
                             ? "bg-lumen-gold text-black font-bold rounded-tr-none" 
                             : "bg-white/5 text-zinc-300 rounded-tl-none"
@@ -294,7 +362,15 @@ export const WatchParty = ({ partyId, onSync, onClose, currentVideoTime, isVideo
                           {msg.user_id !== user?.id && (
                             <p className="text-[9px] font-black uppercase mb-1 opacity-50">{msg.username}</p>
                           )}
-                          <p className="leading-relaxed">{msg.text}</p>
+                          <p className="leading-relaxed break-words">{msg.text}</p>
+                          
+                          {/* Timestamp on hover */}
+                          <div className={clsx(
+                            "absolute top-0 opacity-0 group-hover:opacity-100 transition-opacity text-[8px] font-black whitespace-nowrap",
+                            msg.user_id === user?.id ? "right-full mr-2 text-zinc-500" : "left-full ml-2 text-zinc-500"
+                          )}>
+                            {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </div>
                         </div>
                       </motion.div>
                     ))}

@@ -145,7 +145,11 @@ export const VideoCard = memo(({ video, index = 0 }: { video: VideoItem; index?:
       className="relative group cursor-pointer"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      onClick={() => navigate(`/watch/${video.category === 'series' ? 'tv' : 'movie'}/${video.id}`)}
+      onClick={() => {
+        const type = video.category === 'series' || video.category === 'tv' ? 'tv' : 'movie'
+        const url = type === 'tv' ? `/watch/tv/${video.id}/s1/ep1` : `/watch/movie/${video.id}`
+        navigate(url)
+      }}
     >
       <div className="aspect-video rounded-xl overflow-hidden bg-zinc-900 border border-white/5 relative">
         {imageSrc ? (

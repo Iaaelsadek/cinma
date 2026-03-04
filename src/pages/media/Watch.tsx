@@ -1,16 +1,24 @@
-import { Link, useParams, useSearchParams } from 'react-router-dom'
-import { useEffect, useMemo, useState } from 'react'
+import { Swiper, SwiperSlide } from 'swiper/react'
+import { Navigation, FreeMode } from 'swiper/modules'
+import 'swiper/css'
+import 'swiper/css/navigation'
+import 'swiper/css/free-mode'
+import { Link, useParams, useSearchParams, useNavigate } from 'react-router-dom'
+import { useEffect, useMemo, useState, useRef, Fragment } from 'react'
+import { createPortal } from 'react-dom'
 import { useAuth } from '../../hooks/useAuth'
-import { addHistory, getProgress, supabase, upsertProgress, createWatchParty, updateWatchParty, grantAchievement } from '../../lib/supabase'
+import { supabase, createWatchParty, updateWatchParty, grantAchievement } from '../../lib/supabase'
 import { AdsManager } from '../../components/features/system/AdsManager'
 import { tmdb } from '../../lib/tmdb'
+import { MovieCard } from '../../components/features/media/MovieCard'
 import { SeoHead } from '../../components/common/SeoHead'
-import { Calendar, Clock, Star, AlertTriangle, X, Users, Play as PlayIcon, Sparkles } from 'lucide-react'
+import { Calendar, Clock, Star, AlertTriangle, X, Users, Play as PlayIcon, Sparkles, Layers, Film, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react'
 import { ShareButton } from '../../components/common/ShareButton'
 import { NotFound } from '../NotFound'
 import { SkeletonGrid } from '../../components/common/Skeletons'
 import { SubtitleManager } from '../../components/features/media/SubtitleManager'
 import { useServers } from '../../hooks/useServers'
+import { useWatchProgress } from '../../hooks/useWatchProgress'
 import { errorLogger } from '../../services/errorLogging'
 import { EmbedPlayer } from '../../components/features/media/EmbedPlayer'
 import { ServerSelector } from '../../components/features/media/ServerSelector'
@@ -18,8 +26,7 @@ import { EpisodeSelector } from '../../components/features/media/EpisodeSelector
 import { WatchParty } from '../../components/features/social/WatchParty'
 import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'framer-motion'
-
-type DownloadLink = { label?: string; url: string }
+import clsx from 'clsx'
 
 type TmdbCastMember = {
   id: number
@@ -53,15 +60,167 @@ type TmdbCrewMember = {
     seasons?: Array<{ season_number: number; episode_count: number; name: string }>
   }
 
+import { useHiddenMedia } from '../../hooks/useHiddenMedia'
+
 export const Watch = () => {
-  const { type: typeParam, id: idParam, slug } = useParams()
+  const { type: typeParam, id: idParam, slug: slugParam, s, e, lang: langParam } = useParams()
   const [sp, setSp] = useSearchParams()
+  const navigate = useNavigate()
   const [resolvedId, setResolvedId] = useState<string | null>(null)
-  
-  const [season, setSeason] = useState(Math.max(1, Number(sp.get('season')) || 1))
-  const [episode, setEpisode] = useState(Math.max(1, Number(sp.get('episode')) || 1))
   const { user } = useAuth()
-  const [elapsed, setElapsed] = useState(0)
+  const { hiddenIds, hiddenIds10, isAdmin: isUserAdmin } = useHiddenMedia()
+
+  // Hidden Content Check
+  const idToCheck = Number(idParam || resolvedId)
+  // Use stricter threshold (10) for specific content mentioned by user
+  const isHidden = !isNaN(idToCheck) && hiddenIds10.has(idToCheck)
+  
+  console.log(`[Watch Debug] idToCheck: ${idToCheck}, isHidden: ${isHidden}, isUserAdmin: ${isUserAdmin}`)
+  
+  if (isHidden && !isUserAdmin) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#050505] text-center p-6">
+        <div className="w-24 h-24 bg-rose-500/10 rounded-full flex items-center justify-center mb-6">
+          <AlertTriangle className="text-rose-500 w-12 h-12" />
+        </div>
+        <h1 className="text-3xl font-black mb-4">المحتوى غير متوفر حالياً</h1>
+        <p className="text-zinc-400 max-w-md mx-auto mb-8">
+          عذراً، هذا العمل تم إخفاؤه مؤقتاً بسبب تعطل السيرفرات الخاصة به. سنقوم بإعادة إظهاره فور توفر روابط جديدة.
+        </p>
+        <Link to="/" className="px-8 py-3 bg-primary text-black font-bold rounded-xl hover:scale-105 transition-transform">
+          العودة للرئيسية
+        </Link>
+      </div>
+    )
+  }
+
+  // 1. Route Detection & Parameter Remapping
+  // Detect if we matched /watch/:lang/:type/:genre/:slug OR /watch/:type/:id/:s/:e
+  // If idParam is not numeric, we likely matched an SEO route where params are shifted.
+  const isNumericId = useMemo(() => idParam && /^\d+$/.test(idParam), [idParam])
+  
+  const { initialType, initialId, initialSlug, initialSeason, initialEpisode, lang } = useMemo(() => {
+    // Case A: SEO Route (/watch/:lang/:type/:genre/:slug)
+    // Matched if langParam is ar or en
+    if (langParam === 'ar' || langParam === 'en' || typeParam === 'ar' || typeParam === 'en') {
+      const actualLang = (langParam === 'ar' || langParam === 'en') ? langParam : typeParam as 'ar' | 'en'
+      const actualTypeParam = (langParam === 'ar' || langParam === 'en') ? typeParam : idParam
+      const actualSlug = (langParam === 'ar' || langParam === 'en') ? e : s // Shifted depending on which route matched
+      
+      let t = actualTypeParam || 'movie'
+      if (t === 'series' || t === 'anime') t = 'tv'
+      if (t === 'movies' || t === 'plays') t = 'movie'
+      
+      return {
+        initialType: t,
+        initialId: null,
+        initialSlug: actualSlug || null,
+        initialSeason: 1,
+        initialEpisode: 1,
+        lang: actualLang
+      }
+    }
+
+    // Case B: ID Route (/watch/:type/:id/:s/:e)
+    // If typeParam is a valid media type, it's likely an ID route
+    const isValidType = typeParam === 'movie' || typeParam === 'tv' || typeParam === 'series' || typeParam === 'movies' || typeParam === 'anime' || typeParam === 'plays'
+    
+    if (isValidType && isNumericId) {
+      let t = typeParam || 'movie'
+      if (t === 'series' || t === 'anime') t = 'tv'
+      if (t === 'movies' || t === 'plays') t = 'movie'
+      
+      return {
+        initialType: t,
+        initialId: idParam,
+        initialSlug: slugParam,
+        initialSeason: null,
+        initialEpisode: null,
+        lang: 'ar' as 'ar' | 'en'
+      }
+    }
+
+    // Default Fallback
+    let t = typeParam || 'movie'
+    if (t === 'series' || t === 'anime') t = 'tv'
+    if (t === 'movies' || t === 'plays') t = 'movie'
+
+    return {
+      initialType: t,
+      initialId: idParam || null,
+      initialSlug: slugParam,
+      initialSeason: null,
+      initialEpisode: null,
+      lang: 'ar' as 'ar' | 'en'
+    }
+  }, [typeParam, idParam, slugParam, s, e, langParam, isNumericId])
+
+  const t = (ar: string, en: string) => (lang === 'ar' ? ar : en)
+
+  // Clean s and e from "s1" or "ep1" format
+  const sNum = useMemo(() => {
+    if (initialSeason) return initialSeason
+    if (!s) return null
+    if (s.toString().startsWith('s')) return Number(s.toString().slice(1))
+    return Number(s)
+  }, [s, initialSeason])
+
+  const eNum = useMemo(() => {
+    if (initialEpisode) return initialEpisode
+    if (!e) return null
+    if (e.toString().startsWith('ep')) return Number(e.toString().slice(2))
+    return Number(e)
+  }, [e, initialEpisode])
+
+  // Initial Sync from URL or SearchParams
+  useEffect(() => {
+    const sFromQuery = Number(sp.get('season'))
+    const eFromQuery = Number(sp.get('episode'))
+    
+    // If we have query params, redirect to clean URL and return
+    if ((sFromQuery || eFromQuery) && idParam) {
+      const typeParamFinal = typeParam || sp.get('type') || 'movie'
+      navigate(`/watch/${typeParamFinal}/${idParam}/s${sFromQuery || 1}/ep${eFromQuery || 1}`, { replace: true })
+      return
+    }
+  }, [sp, idParam, typeParam, navigate])
+
+  const [season, setSeason] = useState(Math.max(1, sNum || 1))
+  const [episode, setEpisode] = useState(Math.max(1, eNum || 1))
+  
+  // Sync state with URL params
+  useEffect(() => {
+    if (sNum) setSeason(sNum)
+    if (eNum) setEpisode(eNum)
+  }, [sNum, eNum])
+
+  const [mounted, setMounted] = useState(false)
+  
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  const handleSeasonChange = (newSeason: number) => {
+    setSeason(newSeason)
+    setEpisode(1)
+    if (type === 'tv') {
+      navigate(`/watch/tv/${id}/s${newSeason}/ep1`, { replace: true })
+    }
+  }
+
+  const handleEpisodeChange = (newEpisode: number) => {
+    setEpisode(newEpisode)
+    if (type === 'tv') {
+      navigate(`/watch/tv/${id}/s${season}/ep${newEpisode}`, { replace: true })
+    }
+  }
+
+  const type = initialType
+  const id = resolvedId || initialId
+  const slug = initialSlug
+
+  const { elapsed, setElapsed } = useWatchProgress({ user, id: id || null, type, season, episode })
+  
   const [showPreroll, setShowPreroll] = useState(true)
   const [showTrailer, setShowTrailer] = useState(false)
   
@@ -73,34 +232,43 @@ export const Watch = () => {
   }, [])
   
   // Normalize type param (movies -> movie, series -> tv)
-  const rawType = typeParam || sp.get('type') || 'movie'
-  let type = rawType
-  if (type === 'series' || type === 'anime') type = 'tv'
-  if (type === 'movies' || type === 'plays') type = 'movie'
+  // (type normalized above)
 
   const [details, setDetails] = useState<TmdbDetails | null>(null)
-  const [downloads, setDownloads] = useState<DownloadLink[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
   const [cinemaMode, setCinemaMode] = useState(false)
-  const [showDisclaimer, setShowDisclaimer] = useState(true)
   const [isPlaying, setIsPlaying] = useState(false)
   const [partyId, setPartyId] = useState<string | null>(sp.get('partyId'))
   const [showCreateParty, setShowCreateParty] = useState(false)
   const [roomName, setRoomName] = useState('')
+  const [isCreating, setIsCreating] = useState(false)
+  
   const [syncSeek, setSyncSeek] = useState<number | undefined>(undefined)
+  const [castPage, setCastPage] = useState(0)
+  const itemsPerPage = 4
 
   const handleCreateParty = async () => {
     if (!user) {
-      toast.error('يجب تسجيل الدخول لإنشاء غرفة مشاهدة')
+      toast.error(lang === 'ar' ? 'يجب تسجيل الدخول لإنشاء غرفة مشاهدة' : 'Please login to create a watch party')
       return
     }
     if (!roomName.trim()) {
-      toast.error('يرجى إدخال اسم الغرفة')
+      toast.error(lang === 'ar' ? 'يرجى إدخال اسم الغرفة' : 'Please enter room name')
       return
     }
 
+    setIsCreating(true)
     try {
+      console.log('Attempting to create watch party...', {
+        room_name: roomName,
+        content_id: id || '',
+        content_type: type,
+        creator_id: user.id,
+        current_time: elapsed,
+        is_playing: isPlaying
+      })
+
       const party = await createWatchParty({
         room_name: roomName,
         content_id: id || '',
@@ -109,23 +277,27 @@ export const Watch = () => {
         current_time: elapsed,
         is_playing: isPlaying
       })
+      
       setPartyId(party.id)
       setSp(prev => {
         prev.set('partyId', party.id)
         return prev
       })
       setShowCreateParty(false)
-      toast.success('تم إنشاء غرفة المشاهدة بنجاح')
+      toast.success(lang === 'ar' ? 'تم إنشاء غرفة المشاهدة بنجاح' : 'Watch party created successfully')
       
       // Grant achievement
       try {
         const granted = await grantAchievement(user.id, 'party_host')
-        if (granted) toast.success('إنجاز جديد: صاحب المجلس 🏠')
+        if (granted) toast.success(lang === 'ar' ? 'إنجاز جديد: صاحب المجلس 🏠' : 'New achievement: Party Host 🏠')
       } catch (err) {
         console.error('Failed to grant achievement:', err)
       }
-    } catch (err) {
-      toast.error('فشل إنشاء الغرفة')
+    } catch (err: any) {
+      console.error('Failed to create watch party:', err)
+      toast.error(lang === 'ar' ? `فشل إنشاء الغرفة: ${err.message || 'خطأ غير معروف'}` : `Failed to create party: ${err.message || 'Unknown error'}`)
+    } finally {
+      setIsCreating(false)
     }
   }
 
@@ -136,12 +308,9 @@ export const Watch = () => {
     setTimeout(() => setSyncSeek(undefined), 1000)
   }
 
-  // Determine effective ID
-  const id = resolvedId || idParam
-
   // Hook 0: Resolve Slug to ID
   useEffect(() => {
-    if (idParam) return // Already have ID
+    if (initialId) return // Already have ID
     if (!slug) return
 
     const resolveSlug = async () => {
@@ -174,7 +343,7 @@ export const Watch = () => {
     }
 
     resolveSlug()
-  }, [slug, idParam, type])
+  }, [slug, initialId, type])
 
   // Hook 1: Sync URL params
   useEffect(() => {
@@ -206,21 +375,19 @@ export const Watch = () => {
         return
       }
       try {
-        if (type === 'movie') {
-          const { data: row } = await supabase.from('movies').select('download_urls').eq('id', Number(id)).maybeSingle()
-          if (mounted && row?.download_urls) setDownloads(row.download_urls as DownloadLink[])
-        }
-      } catch (err) {
-        errorLogger.logError({
-          message: 'Failed to fetch download links',
-          severity: 'low',
-          category: 'media',
-          context: { error: err, id, type }
-        })
-      }
-      try {
         const path = type === 'movie' ? `/movie/${id}` : `/tv/${id}`
-        const { data } = await tmdb.get(path, { params: { append_to_response: 'credits,videos,external_ids' } })
+        const { data } = await tmdb.get(path, { params: { append_to_response: 'credits,videos,external_ids,recommendations,similar' } })
+        
+        // If it's a movie and belongs to a collection, fetch the collection
+        if (type === 'movie' && data.belongs_to_collection) {
+          try {
+            const { data: collectionData } = await tmdb.get(`/collection/${data.belongs_to_collection.id}`)
+            data.collection = collectionData
+          } catch (err) {
+            console.error('Failed to fetch collection:', err)
+          }
+        }
+        
         if (mounted) setDetails(data)
       } catch (e) {
         if (mounted) setError(true)
@@ -231,102 +398,7 @@ export const Watch = () => {
     return () => { mounted = false }
   }, [id, type, slug])
 
-  // Hook 3: Progress Tracking (Moved UP before early returns)
-  useEffect(() => {
-    let timer: ReturnType<typeof setInterval> | undefined
-    let mounted = true
-    
-    // Initial fetch
-    ;(async () => {
-      if (!id) return
-      
-      if (user) {
-        const p = await getProgress(user.id, Number(id), (type === 'movie' ? 'movie' : 'tv'))
-        if (!mounted) return
-        if (p?.progress_seconds) setElapsed(p.progress_seconds)
-      } else {
-        // Guest: Read from local storage
-        try {
-          const guestProgress = JSON.parse(localStorage.getItem('guest_progress') || '{}')
-          const key = `${type}_${id}${type === 'tv' ? `_${season}_${episode}` : ''}`
-          if (guestProgress[key]) {
-            setElapsed(guestProgress[key].progress)
-          }
-        } catch {}
-      }
-    })()
-
-    // Interval save
-    timer = setInterval(() => {
-      if (!id) return
-      setElapsed((e) => {
-        const next = e + 10
-        
-        if (user) {
-          upsertProgress({
-            userId: user.id,
-            contentId: Number(id),
-            contentType: type === 'movie' ? 'movie' : 'tv',
-            season: type === 'tv' ? season : null,
-            episode: type === 'tv' ? episode : null,
-            progressSeconds: next
-          }).catch(() => {})
-        } else {
-          // Guest: Save to local storage
-          try {
-            const guestProgress = JSON.parse(localStorage.getItem('guest_progress') || '{}')
-            const key = `${type}_${id}${type === 'tv' ? `_${season}_${episode}` : ''}`
-            guestProgress[key] = {
-              contentId: Number(id),
-              contentType: type,
-              season: type === 'tv' ? season : null,
-              episode: type === 'tv' ? episode : null,
-              progress: next,
-              updatedAt: Date.now()
-            }
-            localStorage.setItem('guest_progress', JSON.stringify(guestProgress))
-          } catch {}
-        }
-        return next
-      })
-    }, 10000)
-
-    const onUnload = async () => {
-      if (!id) return
-      if (user) {
-        try {
-          await upsertProgress({
-            userId: user.id,
-            contentId: Number(id),
-            contentType: type === 'movie' ? 'movie' : 'tv',
-            season: type === 'tv' ? season : null,
-            episode: type === 'tv' ? episode : null,
-            progressSeconds: elapsed
-          })
-          await addHistory({
-            userId: user.id,
-            contentId: Number(id),
-            contentType: type === 'movie' ? 'movie' : 'tv',
-            season: type === 'tv' ? season : null,
-            episode: type === 'tv' ? episode : null
-          })
-        } catch (err) {
-          errorLogger.logError({
-            message: 'Failed to save history on unload',
-            severity: 'low',
-            category: 'user_action',
-            context: { error: err, userId: user.id, contentId: id }
-          })
-        }
-      }
-    }
-    window.addEventListener('beforeunload', onUnload)
-    return () => {
-      mounted = false
-      clearInterval(timer)
-      window.removeEventListener('beforeunload', onUnload)
-    }
-  }, [user, id, type, season, episode])
+  // Hook 3: Progress Tracking (REPLACED by useWatchProgress)
 
   // Hook 4: Memos (Moved UP before early returns)
   const title = useMemo(() => {
@@ -352,20 +424,51 @@ export const Watch = () => {
   const overview = useMemo(() => details?.overview || 'لا يوجد وصف متاح', [details])
   const poster = useMemo(() => (details?.poster_path ? `https://image.tmdb.org/t/p/w500${details.poster_path}` : ''), [details])
   const backdrop = useMemo(() => (details?.backdrop_path ? `https://image.tmdb.org/t/p/original${details.backdrop_path}` : ''), [details])
-  const cast = useMemo(() => (details?.credits?.cast || []).slice(0, 16), [details])
+  const cast = useMemo(() => (details?.credits?.cast || []).slice(0, 12), [details])
   
-  const dlList = useMemo<DownloadLink[]>(() => (
-    downloads.length
-      ? downloads
-      : [
-          { label: 'Download 1080p', url: `https://files.cinma.online/${type}/${id}/1080p.mp4` },
-          { label: 'Download 720p', url: `https://files.cinma.online/${type}/${id}/720p.mp4` }
-        ]
-  ), [downloads, id, type])
-
   const trailer = useMemo(() => {
     return details?.videos?.results?.find((v) => v.type === 'Trailer' && v.site === 'YouTube')?.key
   }, [details])
+
+  const relatedParts = useMemo(() => {
+    // 1. If it's a movie and belongs to a collection, show other parts
+    if (type === 'movie' && (details as any)?.collection?.parts) {
+      const collectionParts = ((details as any).collection.parts as any[])
+        .filter(p => p.id !== Number(id)) // exclude current
+        .sort((a, b) => new Date(a.release_date).getTime() - new Date(b.release_date).getTime())
+        .map(p => ({
+          id: p.id,
+          title: p.title,
+          poster: p.poster_path ? `https://image.tmdb.org/t/p/w342${p.poster_path}` : '',
+          year: p.release_date ? new Date(p.release_date).getFullYear() : null,
+          type: 'movie'
+        }))
+      
+      if (collectionParts.length > 0) return collectionParts
+    }
+    
+    // 2. Combine recommendations and similar results to ensure content
+    const recommendations = (details as any)?.recommendations?.results || []
+    const similar = (details as any)?.similar?.results || []
+    
+    // Merge and remove duplicates by ID
+    const combined = [...recommendations, ...similar]
+    const uniqueMap = new Map()
+    combined.forEach(p => {
+      if (p.id !== Number(id) && !uniqueMap.has(p.id)) {
+        uniqueMap.set(p.id, p)
+      }
+    })
+    
+    const finalResults = Array.from(uniqueMap.values())
+      .slice(0, 18) // Show more results (up to 18)
+      .map((p: any) => ({
+        ...p,
+        media_type: p.media_type || (type === 'tv' ? 'tv' : 'movie')
+      }))
+
+    return finalResults
+  }, [details, id, type])
 
   const jsonLdWatch = useMemo(() => {
     if (!details) return undefined
@@ -390,13 +493,87 @@ export const Watch = () => {
   // New Server Hook
   // Don't call useServers with 0 or NaN if we are waiting for resolution
   const effectiveId = id ? Number(id) : 0
-  const { servers, active, setActive, loading: serversLoading, reportBroken, reporting } = useServers(
+  const { servers, active, setActive, loading: serversLoading, reportBroken, reporting, checkBatchAvailability } = useServers(
     effectiveId, 
     type as 'movie' | 'tv', 
     season, 
     episode,
     details?.external_ids?.imdb_id
   )
+
+  const [availableEpisodes, setAvailableEpisodes] = useState<Record<string, boolean>>({})
+  const [availableSeasonsMap, setAvailableSeasonsMap] = useState<Record<number, boolean>>({})
+
+  const episodesCount = useMemo(() => {
+    return details?.seasons?.find(s => s.season_number === season)?.episode_count || 0
+  }, [details?.seasons, season])
+
+  // 1. Fetch availability for current season episodes
+  useEffect(() => {
+    if (type === 'tv' && effectiveId && season && episodesCount > 0) {
+      const episodesToCheck = Array.from({ length: episodesCount }).map((_, i) => ({
+        s: season,
+        e: i + 1
+      }))
+      
+      checkBatchAvailability(episodesToCheck).then(results => {
+        setAvailableEpisodes(prev => ({ ...prev, ...results }))
+      })
+    }
+  }, [type, effectiveId, season, episodesCount, checkBatchAvailability])
+
+  // 2. Fetch availability for all seasons (check first episode of each)
+  useEffect(() => {
+    if (type === 'tv' && effectiveId && details?.seasons) {
+      const seasonsToCheck = details.seasons
+        .filter(s => s.season_number > 0 && s.episode_count > 0)
+        .map(s => ({
+          s: s.season_number,
+          e: 1
+        }))
+      
+      checkBatchAvailability(seasonsToCheck).then(results => {
+        const seasonMap: Record<number, boolean> = {}
+        Object.entries(results).forEach(([key, isAvailable]) => {
+          const sNum = parseInt(key.split('-')[0])
+          seasonMap[sNum] = isAvailable
+        })
+        setAvailableSeasonsMap(prev => ({ ...prev, ...seasonMap }))
+      })
+    }
+  }, [type, effectiveId, details?.seasons, checkBatchAvailability])
+
+    // Filter out seasons with no episodes or invalid data
+    const availableSeasons = useMemo(() => {
+      if (!details?.seasons) return []
+      return details.seasons.filter(s => {
+        if (s.season_number <= 0) return false
+        if (s.episode_count <= 0) return false
+        
+        // ONLY hide if we have explicitly checked it and it's false
+        // If it's undefined (not checked yet), show it
+        if (availableSeasonsMap[s.season_number] === false) {
+          // But if we have NO other seasons, show it anyway to avoid empty UI
+          const otherAvailable = details.seasons.some(other => 
+            other.season_number > 0 && 
+            other.season_number !== s.season_number && 
+            availableSeasonsMap[other.season_number] !== false
+          )
+          if (!otherAvailable) return true
+          return false
+        }
+        return true
+      })
+    }, [details?.seasons, availableSeasonsMap])
+
+  const scrollToPlayer = () => {
+    const playerEl = document.getElementById('player')
+    if (playerEl) {
+      playerEl.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      setShowPreroll(false)
+      setIsPlaying(true)
+    }
+  }
 
   // Early Returns (Now safe because all hooks are declared above)
   if (error) return <NotFound />
@@ -423,252 +600,395 @@ export const Watch = () => {
       <div className="relative">
         {backdrop ? (
           <>
-            <img src={backdrop} alt={title} className="absolute inset-0 h-[35vh] w-full object-cover object-center opacity-60" loading="lazy" />
-            <div className="absolute inset-0 h-[35vh] bg-gradient-to-b from-black/40 via-[#0f0f0f]/60 to-[#0f0f0f]" />
+            <img src={backdrop} alt={title} className="absolute inset-0 h-[45vh] w-full object-cover object-top opacity-60" loading="lazy" />
+            <div className="absolute inset-0 h-[45vh] bg-gradient-to-b from-black/60 via-[#0f0f0f]/80 to-[#0f0f0f]" />
           </>
         ) : (
-          <div className="absolute inset-0 h-[25vh] bg-[#1a1a1a]" />
+          <div className="absolute inset-0 h-[35vh] bg-[#1a1a1a]" />
         )}
-        <div className="relative z-10 mx-auto max-w-6xl px-4 pt-20 pb-6">
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-[1fr_240px]">
-            <div className="order-2 md:order-1">
-              <h1 className="text-2xl md:text-3xl font-black tracking-tight text-white mt-4" dir="auto">{title}</h1>
-              <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-zinc-300">
+        <div className="relative z-10 mx-auto max-w-[2400px] px-4 md:px-12 pt-14 pb-6">
+          <div className="flex flex-col md:flex-row md:items-start justify-between gap-12">
+            {/* Left Side: Title, Details, Actions, Cast */}
+            <div className="flex-1 flex flex-col items-start text-left order-2 md:order-1">
+              <h1 className="text-3xl md:text-6xl font-black tracking-tight text-white mb-6 leading-[1.1]">
+                {title}
+              </h1>
+              
+              <div className="flex flex-wrap items-center gap-3 text-sm text-zinc-300 mb-8 justify-start">
                 {year && (
-                  <span className="inline-flex items-center gap-1">
-                    <Calendar size={14} className="text-[#f5c518]" /> {year}
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white/5 border border-white/10">
+                    <Calendar size={16} className="text-[#f5c518]" /> {year}
                   </span>
                 )}
                 {runtimeMin != null && (
-                  <span className="inline-flex items-center gap-1">
-                    <Clock size={14} className="text-[#f5c518]" /> {Math.floor(runtimeMin / 60)}س {runtimeMin % 60}د
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white/5 border border-white/10">
+                    <Clock size={16} className="text-[#f5c518]" /> {Math.floor(runtimeMin / 60)}س {runtimeMin % 60}د
                   </span>
                 )}
                 {!!genres.length && (
-                  <span className="inline-flex items-center gap-1">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white/5 border border-white/10">
                     {genres.slice(0, 2).map((g) => g.name).join(' • ')}
                   </span>
                 )}
                 {rating != null && (
-                  <span className="inline-flex items-center gap-1">
-                    <Star size={14} className="text-[#f5c518] fill-[#f5c518]" /> {rating}
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-[#f5c518]/10 border border-[#f5c518]/20 text-[#f5c518]">
+                    <Star size={16} className="fill-[#f5c518]" /> {rating}
                   </span>
                 )}
               </div>
-              <p className="mt-2 max-w-2xl text-sm text-zinc-300 line-clamp-3">{overview}</p>
-              {details?.credits?.crew?.find((c) => c.job === 'Director') && (
-                <div className="mt-1 text-xs text-zinc-400">
-                  <span className="text-zinc-500">المخرج: </span>
-                  <span className="text-white">{details.credits.crew.find((c) => c.job === 'Director')?.name}</span>
-                </div>
-              )}
-              {!!cast.length && (
-                <div className="mt-4">
-                  <div className="text-xs font-semibold text-zinc-200 mb-2">طاقم العمل</div>
-                  <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2">
-                    {cast.map((p) => {
-                      const img = p.profile_path ? `https://image.tmdb.org/t/p/w185${p.profile_path}` : ''
-                      return (
-                        <div key={p.id} className="flex flex-col items-center text-center group">
-                          <div className="relative h-12 w-12 overflow-hidden rounded-full border border-white/10 bg-zinc-800 transition-transform duration-300 group-hover:scale-110 group-hover:border-primary/50">
-                            {img && <img src={img} alt={p.name} className="h-full w-full object-cover" loading="lazy" />}
-                          </div>
-                          <div className="mt-1 truncate w-full text-[9px] font-bold text-zinc-200 group-hover:text-primary transition-colors">{p.name}</div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
-              <div className="mt-4 flex flex-wrap gap-2 items-center">
+              
+              <p className="max-w-2xl text-lg text-zinc-300 leading-relaxed line-clamp-4 mb-10 text-left">{overview}</p>
+              
+              {/* Actions Section */}
+              <div className="flex flex-wrap items-center gap-4 mb-10">
+                <button 
+                  onClick={scrollToPlayer}
+                  className="rounded-2xl bg-[#e50914] px-12 h-16 flex items-center justify-center text-white text-xl font-black shadow-[0_0_40px_rgba(229,9,20,0.4)] hover:scale-105 hover:brightness-110 transition-all active:scale-95 uppercase tracking-wider"
+                >
+                  مشاهدة الآن
+                </button>
+                
+                <button
+                  onClick={() => setShowCreateParty(true)}
+                  className="rounded-2xl border border-primary/20 bg-primary/10 px-8 h-16 flex items-center justify-center text-primary text-sm font-black shadow-lg hover:bg-primary/20 transition-all gap-3"
+                >
+                  <Users size={24} />
+                  غرفة المشاهدة
+                </button>
+
                 <ShareButton 
                   title={title} 
                   text={overview?.slice(0, 100)} 
                   currentTime={elapsed}
+                  className="h-16 w-16 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/10 transition-all"
                 />
-                <button
-                  onClick={() => setShowCreateParty(true)}
-                  className="rounded-xl border border-primary/20 bg-primary/10 px-5 h-9 flex items-center justify-center text-primary text-xs font-bold shadow-md hover:bg-primary/20 transition-all gap-2"
-                >
-                  <Users size={16} />
-                  غرفة مشاهدة
-                </button>
-                <a href="#player" className="rounded-xl bg-[#e50914] px-5 h-9 flex items-center justify-center text-white text-xs font-bold shadow-md hover:brightness-110">
-                  مشاهدة الآن
-                </a>
-                <a href="#downloads" className="rounded-xl bg-emerald-600 px-5 h-9 flex items-center justify-center text-white text-xs font-bold shadow-md hover:brightness-110">
-                  تحميل الآن
-                </a>
-                <Link to={type === 'movie' ? `/movie/${id}` : `/series/${id}`} className="rounded-xl border border-white/10 bg-white/10 px-5 h-9 flex items-center justify-center text-white text-xs">
-                  صفحة التفاصيل
-                </Link>
               </div>
+
+              {!!cast.length && (
+                <div className="w-full max-w-xl">
+                  <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-4">
+                    <span className="w-4 h-[1px] bg-zinc-800" />
+                    طاقم العمل
+                  </div>
+                  {/* Cast Slider Content - Keeping original logic but inside the new layout */}
+                  <div className="relative group/cast-slider">
+                    <Swiper
+                      modules={[Navigation, FreeMode]}
+                      navigation={{
+                        nextEl: '.cast-next',
+                        prevEl: '.cast-prev',
+                      }}
+                      freeMode={true}
+                      spaceBetween={16}
+                      slidesPerView="auto"
+                      className="!static"
+                    >
+                      {cast.map((p) => (
+                        <SwiperSlide key={p.id} className="!w-fit">
+                          <Link 
+                            to={`/actor/${p.id}`}
+                            className="group/cast flex flex-col items-center gap-2 w-20 text-center hover:scale-105 transition-all"
+                          >
+                            <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-white/5 group-hover/cast:border-primary/50 transition-all shadow-xl">
+                              {p.profile_path ? (
+                                <img 
+                                  src={`https://image.tmdb.org/t/p/w185${p.profile_path}`} 
+                                  alt={p.name} 
+                                  className="w-full h-full object-cover grayscale group-hover/cast:grayscale-0 transition-all duration-500"
+                                />
+                              ) : (
+                                <div className="w-full h-full bg-zinc-800 flex items-center justify-center">
+                                  <Users size={18} className="text-zinc-500" />
+                                </div>
+                              )}
+                            </div>
+                            <span className="font-bold text-zinc-300 text-[9px] line-clamp-1 group-hover/cast:text-primary transition-colors">{p.name}</span>
+                          </Link>
+                        </SwiperSlide>
+                      ))}
+                    </Swiper>
+                    <button className="cast-prev absolute -left-4 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-black/40 border border-white/10 hover:bg-primary hover:text-black transition-all opacity-0 group-hover/cast-slider:opacity-100 disabled:hidden z-20 backdrop-blur-sm">
+                      <ChevronLeft size={14} />
+                    </button>
+                    <button className="cast-next absolute -right-4 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-black/40 border border-white/10 hover:bg-primary hover:text-black transition-all opacity-0 group-hover/cast-slider:opacity-100 disabled:hidden z-20 backdrop-blur-sm">
+                      <ChevronRight size={14} />
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
-            <div className="order-1 md:order-2">
-              <div className={`relative overflow-hidden rounded-2xl border border-white/10 bg-black shadow-2xl ${trailer ? 'aspect-video' : 'aspect-[2/3]'}`}>
+
+            {/* Right Side: Poster */}
+            <div className="w-44 md:w-64 shrink-0 order-1 md:order-2 mx-auto md:mx-0">
+              <div 
+                onClick={scrollToPlayer}
+                className="relative aspect-[2/3] overflow-hidden rounded-3xl border-4 border-white/5 bg-black shadow-[0_0_50px_rgba(0,0,0,0.5)] cursor-pointer group/poster transition-all duration-500 hover:border-primary/30"
+              >
+                <div className="absolute inset-0 z-10 flex items-center justify-center opacity-0 group-hover/poster:opacity-100 transition-all duration-500 bg-black/60 backdrop-blur-[2px]">
+                  <div className="bg-[#e50914] rounded-full p-5 shadow-2xl transform scale-75 group-hover/poster:scale-100 transition-transform duration-500">
+                    <PlayIcon size={32} fill="white" className="text-white" />
+                  </div>
+                </div>
                 <div className="h-full w-full bg-[#1a1a1a]">
-                  {trailer && showTrailer ? (
-                    <iframe
-                      src={`https://www.youtube.com/embed/${trailer}?autoplay=1&mute=1&loop=1&playlist=${trailer}&controls=0&showinfo=0&modestbranding=1`}
-                      className="h-full w-full pointer-events-none scale-110"
-                      allow="autoplay; encrypted-media"
-                      title="Trailer"
+                  {poster && (
+                    <img 
+                      src={poster} 
+                      alt={title} 
+                      className="h-full w-full object-cover transition-transform duration-700 group-hover/poster:scale-105"
+                      loading="lazy"
                     />
-                  ) : trailer && !showTrailer ? (
-                    <div className="h-full w-full animate-pulse bg-zinc-800 flex items-center justify-center">
-                        <img src={poster} alt={title} className="h-full w-full object-cover opacity-20" loading="lazy" />
-                    </div>
-                  ) : (
-                    poster && <img src={poster} alt={title} className="h-full w-full object-cover" loading="lazy" />
                   )}
                 </div>
-                {!trailer && (
-                  <div className="absolute top-3 left-3 rounded-md bg-black/80 px-2 py-1 text-xs font-bold text-[#f5c518] border border-white/10">
-                    WEB-DL 1080p
-                  </div>
-                )}
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="mx-auto max-w-7xl px-4 py-6 space-y-6">
+      <div className="mx-auto max-w-[2400px] px-4 md:px-12 py-6 space-y-6">
         
 
 
-        {/* NEW LAYOUT: Grid with Side Panel */}
-        <section id="player" className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* NEW LAYOUT: Full Width Stack */}
+        <section id="player" className="flex flex-col gap-6">
             
-            {/* Left Column: Video Player */}
-            <div className="order-2 lg:order-2 space-y-6">
-                <div className="relative w-full">
-                    {showPreroll ? (
-                    <div className="aspect-video w-full overflow-hidden rounded-2xl border border-zinc-800 bg-black">
-                        <AdsManager type="preroll" position="player" onDone={() => setShowPreroll(false)} />
+            {/* Top Row: Player and Servers */}
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-6">
+                {/* Video Player */}
+                <div id="player" className="space-y-6">
+                    <div className="relative w-full">
+                        {showPreroll ? (
+                        <div className="aspect-video w-full overflow-hidden rounded-2xl border border-zinc-800 bg-black">
+                            <AdsManager type="preroll" position="player" onDone={() => setShowPreroll(false)} />
+                        </div>
+                        ) : (
+                        <EmbedPlayer
+                            server={servers[active]}
+                            cinemaMode={cinemaMode}
+                            toggleCinemaMode={() => setCinemaMode(!cinemaMode)}
+                            loading={serversLoading}
+                            onNextServer={() => active < servers.length - 1 ? setActive(active + 1) : setActive(0)}
+                            onReport={reportBroken}
+                            reporting={reporting}
+                            onProgress={(seconds) => setElapsed(seconds)}
+                            onPlay={() => {
+                              setIsPlaying(true)
+                              if (partyId) {
+                                updateWatchParty(partyId, { is_playing: true, current_time: elapsed })
+                              }
+                            }}
+                            onPause={() => {
+                              setIsPlaying(false)
+                              if (partyId) {
+                                updateWatchParty(partyId, { is_playing: false, current_time: elapsed })
+                              }
+                            }}
+                            playing={isPlaying}
+                            seekTo={syncSeek}
+                            lang={lang}
+                        />
+                        )}
                     </div>
-                    ) : (
-                    <EmbedPlayer
-                        server={servers[active]}
-                        cinemaMode={cinemaMode}
-                        toggleCinemaMode={() => setCinemaMode(!cinemaMode)}
-                        loading={serversLoading}
-                        onNextServer={() => active < servers.length - 1 ? setActive(active + 1) : setActive(0)}
-                        onReport={reportBroken}
-                        reporting={reporting}
-                        onProgress={(seconds) => setElapsed(seconds)}
-                        onPlay={() => {
-                          setIsPlaying(true)
-                          if (partyId) {
-                            updateWatchParty(partyId, { is_playing: true, current_time: elapsed })
-                          }
-                        }}
-                        onPause={() => {
-                          setIsPlaying(false)
-                          if (partyId) {
-                            updateWatchParty(partyId, { is_playing: false, current_time: elapsed })
-                          }
-                        }}
-                        playing={isPlaying}
-                        seekTo={syncSeek}
-                    />
-                    )}
+
+                    {/* Disclaimer Notice */}
+                    <div className="flex flex-col gap-4">
+                      <motion.div 
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="p-4 rounded-2xl bg-white/[0.02] border border-dashed border-white/10 text-center"
+                      >
+                      <div className="flex items-center justify-center gap-2 mb-1 text-zinc-500">
+                        <AlertTriangle size={12} />
+                        <span className="text-[10px] font-black uppercase tracking-widest">{t('إخلاء مسؤولية', 'DISCLAIMER')}</span>
+                      </div>
+                      <p className="text-[9px] text-zinc-500 font-bold leading-relaxed max-w-2xl mx-auto">
+                        {t(
+                          'تُجلب كافة المحتويات المعروضة آلياً من مصادر خارجية؛ الموقع غير مسؤول عن أي إعلانات تظهر داخل المشغلات أو أي مشاهد قد لا تلائم البعض. لا يقوم الموقع بتخزين أي ملفات فيديو على خوادمه الخاصة، وتعود حقوق الملكية الفكرية لأصحابها الأصليين.',
+                          'All content displayed is automatically fetched from external sources; the site is not responsible for any advertisements appearing within the players or any content that may not be suitable for all audiences. The site does not host any video files on its servers; all intellectual property rights belong to their respective owners.'
+                        )}
+                      </p>
+                    </motion.div>
+                  </div>
                 </div>
 
-                {type === 'movie' && (
-                    <div className="mt-4">
-                    <SubtitleManager
-                        tmdbId={id || ''}
-                        imdbId={details?.external_ids?.imdb_id}
-                        title={details?.title || details?.name}
-                    />
-                    </div>
-                )}
-
-                {/* Disclaimer Banner */}
-                {showDisclaimer && (
-                  <div className="relative mb-6 flex items-start gap-3 rounded-lg bg-red-900/90 p-4 text-white shadow-lg backdrop-blur-sm border border-red-500/30">
-                    <AlertTriangle className="shrink-0 text-yellow-400" size={20} />
-                    <p className="text-xs font-medium leading-relaxed md:text-sm">
-                      ⚠️ إخلاء مسؤولية أمام الله ثم أمامكم : هذا المحتوي المعروض مضاف تلقائياً لذلك نحن نبرأ إلى الله سبحانه وتعالي من أي مشاهد او إعلانات خادشة للحياء أو مخالفة للشرع قد تظهر إجبارياً من سيرفرات العرض الخارجية. نحن لا نملك السيطرة على هذه الإعلانات ولم نشاهد المحتوي المعروض ، لذا نرجو إغلاق أي نافذة منبثقة او محتوي مخالف فوراً .
-                    </p>
-                    <button 
-                      onClick={() => setShowDisclaimer(false)}
-                      className="absolute left-2 top-2 rounded-full p-1 hover:bg-white/10 transition-colors"
-                      aria-label="Close disclaimer"
-                    >
-                      <X size={16} />
-                    </button>
-                  </div>
-                )}
-
-                <div className="flex flex-col items-center gap-3 mt-4">
-                    <div className="flex items-center gap-3 rounded-full border border-red-500/20 bg-red-500/10 px-6 py-2">
-                    <span className="relative flex h-3 w-3">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-                    </span>
-                    <span className="text-xs font-bold text-red-200">
-                        Server Error? Try Server 2 (مشكلة في التشغيل؟ جرب سيرفر آخر)
-                    </span>
-                    </div>
-
-                    <a 
-                        href={`https://www.google.com/search?q=${encodeURIComponent(title + ' مشاهدة اونلاين')}`} 
+                {/* Sidebar: Servers, Seasons, and Episodes */}
+                <div className="space-y-4">
+                    {/* External Source Tool (Diagnostics) */}
+                    <div className="p-3 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <div className="p-1.5 rounded-lg bg-primary/20 text-primary">
+                          <ExternalLink size={14} />
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-black text-white uppercase tracking-tight">External Check</p>
+                          <p className="text-[8px] text-zinc-500 font-bold">Verify source status</p>
+                        </div>
+                      </div>
+                      <a 
+                        href={servers[active]?.url} 
                         target="_blank" 
                         rel="noopener noreferrer"
-                        className="text-xs font-bold text-zinc-400 hover:text-white transition-colors border-b border-zinc-600 hover:border-white pb-0.5"
-                    >
-                        بحث في Google (Search on Google)
-                    </a>
+                        className="px-3 py-1.5 rounded-lg bg-primary text-black text-[9px] font-black uppercase tracking-widest hover:scale-105 transition-transform"
+                      >
+                        Open Source
+                      </a>
+                    </div>
+
+                    {/* Server Selector */}
+                    <div className="bg-black/40 border border-white/5 rounded-2xl p-4 backdrop-blur-sm">
+                        <ServerSelector 
+                            servers={servers}
+                            active={active}
+                            onSelect={setActive}
+                            lang={lang}
+                        />
+                    </div>
+
+                    {/* Seasons Selector (TV Only) */}
+                    {type === 'tv' && (
+                      <div className="bg-black/40 border border-white/5 rounded-2xl p-4 backdrop-blur-sm space-y-4">
+                        <div className="flex items-center gap-2 px-1">
+                          <div className="p-1.5 rounded-lg bg-primary/10 text-primary">
+                            <Layers size={14} />
+                          </div>
+                          <h3 className="text-[11px] font-black text-white uppercase tracking-tight">
+                            {t('المواسم', 'Seasons')}
+                          </h3>
+                        </div>
+                        <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-1 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
+                          {availableSeasons.map((s: any) => (
+                              <button
+                                key={s.season_number}
+                                onClick={() => handleSeasonChange(s.season_number)}
+                                className={clsx(
+                                  "group relative flex items-center justify-center rounded-lg border transition-all duration-300 h-11 w-full overflow-hidden",
+                                  season === s.season_number 
+                                    ? "bg-primary border-transparent text-black shadow-lg shadow-primary/20"
+                                    : "bg-white/5 border-white/5 text-zinc-500 hover:border-white/10 hover:bg-white/[0.07] hover:text-white"
+                                )}
+                              >
+                              {/* Rotating Border Effect for Active Season (Blue/Cyan) */}
+                              {season === s.season_number && (
+                                <div className="absolute inset-0 z-0">
+                                  <motion.div
+                                    animate={{ rotate: 360 }}
+                                    transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                                    className="absolute inset-[-150%] bg-[conic-gradient(transparent,transparent,transparent,#3b82f6)]"
+                                  />
+                                </div>
+                              )}
+
+                              {/* Inner Content */}
+                              <div className={clsx(
+                                "relative z-10 flex items-center justify-center gap-1.5 w-[calc(100%-4px)] h-[calc(100%-4px)] rounded-[6px]",
+                                season === s.season_number ? "bg-primary" : ""
+                              )}>
+                                <span className="text-[10px] font-bold opacity-70 uppercase">{t('موسم', 'Season')}</span>
+                                <span className="text-sm md:text-base font-black">{s.season_number}</span>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Collection Parts (Movie Only) */}
+                    {type === 'movie' && (details as any)?.collection?.parts && (
+                      <div className="bg-black/40 border border-white/5 rounded-2xl p-4 backdrop-blur-sm space-y-4">
+                        <div className="flex items-center gap-3 px-1">
+                          <div className="p-2 rounded-xl bg-primary/10 text-primary">
+                            <Layers size={18} />
+                          </div>
+                          <h3 className="text-sm font-black text-white uppercase tracking-tight">
+                            {t('الأجزاء', 'Parts')}
+                          </h3>
+                        </div>
+                        <div className="flex flex-col gap-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                          {((details as any).collection.parts as any[])
+                            .sort((a, b) => new Date(a.release_date).getTime() - new Date(b.release_date).getTime())
+                            .map((p) => (
+                              <Link
+                                key={p.id}
+                                to={`/watch/movie/${p.id}`}
+                                className={clsx(
+                                  "px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-tight transition-all border text-center",
+                                  Number(id) === p.id 
+                                    ? "bg-primary border-primary text-black shadow-lg shadow-primary/20" 
+                                    : "bg-white/5 border-white/5 text-zinc-400 hover:border-white/10 hover:bg-white/[0.07] hover:text-white"
+                                )}
+                              >
+                                {p.title}
+                              </Link>
+                            ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Episodes Selector (TV Only) */}
+                    {type === 'tv' && (
+                      <div className="bg-black/40 border border-white/5 rounded-2xl p-4 backdrop-blur-sm">
+                        <EpisodeSelector 
+                            season={season}
+                            episode={episode}
+                            setSeason={handleSeasonChange}
+                            setEpisode={handleEpisodeChange}
+                            seasonsCount={details?.seasons?.length}
+                            episodesCount={episodesCount}
+                            lang={lang}
+                            availableEpisodes={availableEpisodes}
+                        />
+                      </div>
+                    )}
                 </div>
             </div>
 
-            {/* Right Column: Sidebar (Seasons, Episodes, Servers) */}
-            <div className="order-1 lg:order-1 space-y-6">
-                {/* Episodes Selector (TV Only) */}
-                {type === 'tv' && (
-                    <EpisodeSelector 
-                        season={season}
-                        episode={episode}
-                        setSeason={setSeason}
-                        setEpisode={setEpisode}
-                        seasonsCount={details?.seasons?.length}
-                        episodesCount={details?.seasons?.find(s => s.season_number === season)?.episode_count}
-                    />
+            {/* Recommendations Section */}
+            <div className="space-y-6 pt-6">
+                {/* Similar Recommendations Section */}
+                {relatedParts.length > 0 && (
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between px-1">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-xl bg-primary/20 text-primary">
+                          <Sparkles size={18} />
+                        </div>
+                        <h2 className="text-xl font-black text-white uppercase tracking-tight">
+                          {t('قد يعجبك أيضاً', 'You Might Also Like')}
+                        </h2>
+                      </div>
+                      
+                      <Link 
+                        to={`/parts/${type}/${id}`} 
+                        className="group flex items-center gap-2 text-[10px] font-black text-zinc-500 hover:text-primary transition-all uppercase tracking-widest bg-white/5 px-4 py-2 rounded-xl border border-white/5 hover:border-primary/20"
+                      >
+                        <span>{t('عرض المزيد', 'View More')}</span>
+                        <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform rotate-180" />
+                      </Link>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
+                      {relatedParts.slice(0, 100).map((p: any, index: number) => (
+                        <MovieCard key={p.id} movie={p} index={index} />
+                      ))}
+                    </div>
+
+                    {relatedParts.length > 100 && (
+                      <div className="flex justify-center pt-8">
+                        <Link 
+                          to={`/parts/${type}/${id}`}
+                          className="px-8 py-3 rounded-2xl bg-primary/10 border border-primary/20 text-primary text-xs font-black uppercase tracking-widest hover:bg-primary hover:text-black transition-all shadow-xl hover:shadow-primary/20"
+                        >
+                          {t('عرض جميع الأفلام (+' + (relatedParts.length - 100) + ')', 'View All Movies (+' + (relatedParts.length - 100) + ')')}
+                        </Link>
+                      </div>
+                    )}
+                  </div>
                 )}
-
-                {/* Server Selector */}
-                <div className="bg-black/40 border border-white/5 rounded-2xl p-4 backdrop-blur-sm">
-                    <ServerSelector 
-                        servers={servers}
-                        active={active}
-                        onSelect={setActive}
-                    />
-                </div>
             </div>
-
-        </section>
-
-        <section id="downloads" className="space-y-3">
-          <h2 className="text-lg font-bold text-white">سيرفرات التحميل</h2>
-          <div className="flex flex-wrap gap-3">
-            {dlList.map((d, i) => (
-              <a
-                key={`${d.url}-${i}`}
-                href={d.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="rounded-xl border border-white/10 bg-[#1a1a1a] px-4 h-11 flex items-center text-sm text-[#f5c518] hover:bg-zinc-900"
-              >
-                {d.label || `Download ${i + 1}`}
-              </a>
-            ))}
-          </div>
         </section>
       </div>
-      {/* Watch Party Component */}
-      {partyId && (
+      {/* Watch Party Component - Moved to Portal */}
+      {mounted && partyId && createPortal(
         <WatchParty 
           partyId={partyId}
           onSync={handleSync}
@@ -681,18 +1001,20 @@ export const Watch = () => {
           }}
           currentVideoTime={elapsed}
           isVideoPlaying={isPlaying}
-        />
+          lang={lang}
+        />,
+        document.body
       )}
 
-      {/* Create Watch Party Modal */}
+      {/* Create Watch Party Modal - Moved to Portal for fixed positioning */}
       <AnimatePresence>
-        {showCreateParty && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+        {mounted && showCreateParty && createPortal(
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
             <motion.div 
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              className="w-full max-w-md overflow-hidden rounded-3xl border border-white/10 bg-[#1a1a1a] shadow-2xl"
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="w-full max-w-md overflow-hidden rounded-3xl border border-white/10 bg-[#1a1a1a] shadow-2xl relative"
             >
               <div className="border-b border-white/5 bg-white/5 p-6 flex justify-between items-center">
                 <div className="flex items-center gap-3">
@@ -700,8 +1022,8 @@ export const Watch = () => {
                     <Users size={24} />
                   </div>
                   <div>
-                    <h2 className="text-xl font-black text-white">إنشاء غرفة مشاهدة</h2>
-                    <p className="text-xs text-zinc-400">شاهد مع أصدقائك في نفس الوقت</p>
+                    <h2 className="text-xl font-black text-white">{lang === 'ar' ? 'إنشاء غرفة مشاهدة' : 'Create Watch Party'}</h2>
+                    <p className="text-xs text-zinc-400">{lang === 'ar' ? 'شاهد مع أصدقائك في نفس الوقت' : 'Watch with friends in sync'}</p>
                   </div>
                 </div>
                 <button onClick={() => setShowCreateParty(false)} className="text-zinc-500 hover:text-white transition-colors">
@@ -711,12 +1033,12 @@ export const Watch = () => {
 
               <div className="p-6 space-y-6">
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest mr-1">اسم الغرفة</label>
+                  <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest mr-1">{lang === 'ar' ? 'اسم الغرفة' : 'Room Name'}</label>
                   <input
                     type="text"
                     value={roomName}
                     onChange={(e) => setRoomName(e.target.value)}
-                    placeholder="مثلاً: سهرة الخميس 🍿"
+                    placeholder={lang === 'ar' ? 'مثلاً: سهرة الخميس 🍿' : 'e.g. Movie Night 🍿'}
                     className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all"
                   />
                 </div>
@@ -726,20 +1048,30 @@ export const Watch = () => {
                     <Sparkles size={18} />
                   </div>
                   <div className="text-xs text-zinc-300 leading-relaxed">
-                    بصفتك المنشئ، سيتم مزامنة تشغيل الفيديو وإيقافه ووقته مع جميع المنضمين للغرفة تلقائياً.
+                    {lang === 'ar' 
+                      ? 'بصفتك المنشئ، سيتم مزامنة تشغيل الفيديو وإيقافه ووقته مع جميع المنضمين للغرفة تلقائياً.'
+                      : 'As the host, video playback and sync will be controlled by you for all participants.'}
                   </div>
                 </div>
 
                 <button
                   onClick={handleCreateParty}
-                  className="w-full flex items-center justify-center gap-2 rounded-2xl bg-primary py-4 text-sm font-black text-black hover:brightness-110 active:scale-[0.98] transition-all shadow-xl shadow-primary/20"
+                  disabled={isCreating}
+                  className="w-full flex items-center justify-center gap-2 rounded-2xl bg-primary py-4 text-sm font-black text-black hover:brightness-110 active:scale-[0.98] transition-all shadow-xl shadow-primary/20 disabled:opacity-50"
                 >
-                  <PlayIcon size={18} fill="currentColor" />
-                  بدء الحفلة الآن
+                  {isCreating ? (
+                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-black/20 border-t-black" />
+                  ) : (
+                    <>
+                      <PlayIcon size={18} fill="currentColor" />
+                      {lang === 'ar' ? 'بدء الحفلة الآن' : 'Start Party Now'}
+                    </>
+                  )}
                 </button>
               </div>
             </motion.div>
-          </div>
+          </div>,
+          document.body
         )}
       </AnimatePresence>
     </div>

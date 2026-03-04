@@ -18,14 +18,30 @@ type Props = {
   onPause?: () => void
   playing?: boolean
   seekTo?: number
+  lang?: 'ar' | 'en'
 }
 
-export const EmbedPlayer = ({ server, cinemaMode, toggleCinemaMode, loading, onNextServer, onReport, reporting, title, onProgress, onPlay, onPause, playing, seekTo }: Props) => {
+export const EmbedPlayer = ({ 
+  server, 
+  cinemaMode, 
+  toggleCinemaMode, 
+  loading, 
+  onNextServer, 
+  onReport, 
+  reporting, 
+  title, 
+  onProgress, 
+  onPlay, 
+  onPause, 
+  playing, 
+  seekTo,
+  lang = 'ar'
+}: Props) => {
   const [isIframeLoading, setIsIframeLoading] = useState(true)
   const [retryCount, setRetryCount] = useState(0)
   const [isSlowConnection, setIsSlowConnection] = useState(false)
   const [loadStartTime, setLoadStartTime] = useState<number>(0)
-  const [autoSwitchTimer, setAutoSwitchTimer] = useState<number>(0)
+  const t = (ar: string, en: string) => (lang === 'ar' ? ar : en)
 
   // Connection Quality Detection
   useEffect(() => {
@@ -69,14 +85,18 @@ export const EmbedPlayer = ({ server, cinemaMode, toggleCinemaMode, loading, onN
 
   if (loading) {
     return (
-      <div className="aspect-video w-full rounded-[2rem] border border-white/5 bg-luxury-charcoal animate-pulse flex flex-col items-center justify-center gap-6">
+      <div className="aspect-video w-full rounded-[2rem] border border-white/5 bg-[#0a0a0a] animate-pulse flex flex-col items-center justify-center gap-6">
         <div className="relative">
           <Loader2 className="animate-spin text-primary" size={56} />
           <div className="absolute inset-0 blur-3xl bg-primary/20 animate-pulse" />
         </div>
         <div className="text-center space-y-2">
-           <span className="block text-xs font-black text-primary uppercase tracking-[0.3em] animate-pulse">Initializing Flux Relay</span>
-           <span className="block text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Searching for optimized secure channels...</span>
+           <span className="block text-xs font-black text-primary uppercase tracking-[0.3em] animate-pulse">
+             {t('جاري التحميل...', 'INITIALIZING STREAM')}
+           </span>
+           <span className="block text-[10px] text-zinc-500 font-bold uppercase tracking-widest">
+             {t('البحث عن أفضل مسار للمشاهدة...', 'OPTIMIZING CONNECTION PATH...')}
+           </span>
         </div>
       </div>
     )
@@ -107,29 +127,22 @@ export const EmbedPlayer = ({ server, cinemaMode, toggleCinemaMode, loading, onN
           )}>
             <div className={clsx("w-1.5 h-1.5 rounded-full animate-pulse", isOffline ? "bg-red-500" : isDegraded ? "bg-yellow-500" : "bg-emerald-500")} />
             <Signal size={10} />
-            <span>{isOffline ? 'Offline' : isDegraded ? 'Degraded' : 'Secure Stream'}</span>
+            <span>{isOffline ? t('غير متصل', 'Offline') : isDegraded ? t('بطيء', 'Degraded') : t('اتصال آمن', 'Secure Stream')}</span>
           </div>
-
-          {server && (
-            <div className="hidden md:flex items-center gap-2 text-zinc-500 text-[10px] font-bold uppercase tracking-widest">
-              <ServerIcon size={12} />
-              <span>{server.name}</span>
-            </div>
-          )}
         </div>
         
         <div className="flex items-center gap-3">
           <button 
             onClick={toggleCinemaMode}
             className={clsx(
-              "group relative flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-500 border overflow-hidden",
+              "group relative flex items-center gap-2 px-6 py-3 rounded-xl text-xs md:text-sm font-black uppercase tracking-tight transition-all duration-500 border overflow-hidden",
               cinemaMode 
                 ? "bg-primary border-primary text-black shadow-[0_0_20px_rgba(245,197,24,0.3)]" 
                 : "bg-white/5 border-white/5 text-zinc-400 hover:text-white hover:border-white/10"
             )}
           >
-            <Lightbulb size={14} className={clsx("transition-transform duration-500", cinemaMode ? "fill-black scale-110" : "group-hover:scale-110")} />
-            <span>{cinemaMode ? 'Cinema ON' : 'Cinema Mode'}</span>
+            <Lightbulb size={16} className={clsx("transition-transform duration-500", cinemaMode ? "fill-black scale-110" : "group-hover:scale-110")} />
+            <span>{cinemaMode ? t('إيقاف السينما', 'Cinema ON') : t('وضع السينما', 'Cinema Mode')}</span>
           </button>
         </div>
       </div>
@@ -155,8 +168,9 @@ export const EmbedPlayer = ({ server, cinemaMode, toggleCinemaMode, loading, onN
                 <div className="absolute inset-0 blur-2xl bg-primary/20 animate-pulse" />
               </div>
               <div className="text-center space-y-1">
-                <span className="block text-xs font-black text-white uppercase tracking-[0.2em]">{server.name}</span>
-                <span className="block text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Establishing Encrypted Connection...</span>
+                <span className="block text-[10px] text-zinc-500 font-bold uppercase tracking-widest">
+                  {t('جاري إنشاء اتصال آمن...', 'ESTABLISHING SECURE CONNECTION...')}
+                </span>
               </div>
             </motion.div>
           )}
@@ -186,13 +200,17 @@ export const EmbedPlayer = ({ server, cinemaMode, toggleCinemaMode, loading, onN
                 <WifiOff size={64} className="opacity-20" />
               </div>
               <div className="text-center space-y-3 max-w-xs">
-                <span className="block text-xl font-black text-zinc-200 uppercase tracking-tighter">Transmission Lost</span>
-                <span className="block text-xs text-zinc-500 font-medium leading-relaxed">All secure uplink channels are currently unresponsive. Attempting to rotate to alternative relay nodes.</span>
+                <span className="block text-xl font-black text-zinc-200 uppercase tracking-tighter">
+                  {t('فشل الاتصال', 'CONNECTION FAILED')}
+                </span>
+                <span className="block text-xs text-zinc-500 font-medium leading-relaxed">
+                  {t('جميع قنوات البث غير مستجيبة حالياً. جاري محاولة التبديل لسيرفرات بديلة.', 'All stream channels are unresponsive. Attempting to rotate to alternative servers.')}
+                </span>
                 <button 
                   onClick={onNextServer}
-                  className="mt-4 px-6 py-3 rounded-2xl bg-primary text-black text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-transform"
+                  className="mt-4 px-10 py-4 rounded-2xl bg-primary text-black text-xs md:text-sm font-black uppercase tracking-tight hover:scale-105 transition-transform"
                 >
-                  Switch to Next Relay
+                  {t('التبديل للسيرفر التالي', 'Switch to Next Server')}
                 </button>
               </div>
             </div>
@@ -205,89 +223,66 @@ export const EmbedPlayer = ({ server, cinemaMode, toggleCinemaMode, loading, onN
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             onClick={toggleCinemaMode}
-            className="absolute top-8 right-8 z-[70] flex items-center gap-3 px-6 py-3 rounded-2xl bg-white/10 backdrop-blur-2xl border border-white/20 text-white hover:bg-white/20 transition-all group"
+            className="absolute top-8 right-8 z-[70] flex items-center gap-4 px-8 py-4 rounded-2xl bg-white/10 backdrop-blur-2xl border border-white/20 text-white hover:bg-white/20 transition-all group"
           >
-            <span className="text-[10px] font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">Exit Cinema</span>
-            <Lightbulb size={20} className="fill-white" />
+            <span className="text-xs md:text-sm font-black uppercase tracking-tight opacity-0 group-hover:opacity-100 transition-opacity">
+              {t('إغلاق وضع السينما', 'Exit Cinema')}
+            </span>
+            <Lightbulb size={24} className="fill-white" />
           </motion.button>
         )}
 
-        {/* Floating Controls for Iframe (Visual only to maintain LUMEN style) */}
+        {/* Floating Controls for Iframe */}
         {!cinemaMode && !isIframeLoading && server && (
           <div className="absolute top-4 left-4 pointer-events-none">
              <div className="px-3 py-1 rounded-full bg-black/40 backdrop-blur-md border border-white/10 text-[9px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-2">
                 <Wifi size={10} className="text-emerald-500" />
-                <span>Live Relay • {server.name}</span>
+                <span>{t('بث مباشر', 'Live Stream')}</span>
              </div>
           </div>
         )}
       </div>
 
       {/* Footer: Detailed Controls & Reporting */}
-      <div className="grid grid-cols-1 md:grid-cols-3 items-center gap-4 px-2">
-        <div className="flex items-center gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 items-center gap-4 px-2">
+        <div className="flex items-center gap-4 lg:col-span-2">
           <button 
             onClick={handleRetry}
-            className="group flex items-center gap-2 text-[10px] font-black text-zinc-500 hover:text-white uppercase tracking-widest transition-colors"
+            className="group flex items-center gap-3 text-xs md:text-sm font-black text-zinc-500 hover:text-white uppercase tracking-tight transition-colors"
           >
-            <RefreshCcw size={12} className="group-hover:rotate-180 transition-transform duration-700" />
-            <span>Reconnect</span>
+            <RefreshCcw size={16} className="group-hover:rotate-180 transition-transform duration-700" />
+            <span>{t('إعادة اتصال', 'Reconnect')}</span>
           </button>
-          
-          <div className="w-px h-3 bg-white/10" />
-
-          {server && (
-            <a 
-              href={server.url} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 text-[10px] font-black text-zinc-500 hover:text-white uppercase tracking-widest transition-colors"
-            >
-              <ExternalLink size={12} />
-              <span>External</span>
-            </a>
-          )}
         </div>
 
-        <div className="flex justify-center order-first md:order-none">
-           <div className="flex items-center gap-1.5 p-1 bg-white/5 border border-white/5 rounded-2xl">
+        <div className="flex justify-center order-first md:order-none lg:col-span-2">
+           <div className="flex items-center gap-1.5 p-1 bg-white/5 border border-white/5 rounded-2xl w-full md:w-auto">
               <button 
                 onClick={onNextServer}
-                className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-[10px] font-black uppercase tracking-widest transition-all"
+                className="flex items-center justify-center gap-3 px-10 py-4 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs md:text-sm font-black uppercase tracking-tight transition-all w-full"
               >
-                <span>Rotate Server</span>
-                <SkipForward size={14} />
+                <span>{t('تغيير السيرفر', 'Rotate Server')}</span>
+                <SkipForward size={18} />
               </button>
            </div>
         </div>
 
-        <div className="flex justify-end">
+        <div className="flex justify-end md:col-span-2 lg:col-span-2">
           <button 
             onClick={onReport}
             disabled={reporting}
             className={clsx(
-              "flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+              "flex items-center gap-3 px-6 py-3 rounded-xl text-xs md:text-sm font-black uppercase tracking-tight transition-all",
               reporting 
                 ? "bg-red-500/20 text-red-500 border border-red-500/20" 
                 : "text-red-500/60 hover:text-red-500 hover:bg-red-500/10"
             )}
           >
-            <AlertTriangle size={14} />
-            <span>{reporting ? 'Reporting...' : 'Report Failure'}</span>
+            <AlertTriangle size={18} />
+            <span>{reporting ? t('جاري الإبلاغ...', 'Reporting...') : t('إبلاغ عن عطل', 'Report Failure')}</span>
           </button>
         </div>
       </div>
-      
-      {/* Help Banner */}
-      <motion.div 
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="mx-2 p-3 rounded-2xl bg-white/5 border border-dashed border-white/10 text-center"
-      >
-        <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-[0.1em] leading-relaxed">
-          Uplink optimization in progress. If buffering persists, use the <span className="text-primary">Rotate Server</span> command to switch relay nodes.
-        </span>
-      </motion.div>
     </div>
   )
 }

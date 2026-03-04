@@ -232,10 +232,8 @@ export const QuantumHero = memo(({ items }: { items: any[] }) => {
     </div>
   )
 }, (prev, next) => {
-  // Deep comparison for items array length and first item ID
+  // Use shallow comparison for items array
+  if (prev.items === next.items) return true
   if (prev.items.length !== next.items.length) return false
-  if (prev.items.length > 0 && next.items.length > 0) {
-    if (prev.items[0].id !== next.items[0].id) return false
-  }
-  return true
+  return prev.items.every((item, index) => item.id === next.items[index].id)
 })

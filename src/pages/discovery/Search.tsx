@@ -16,6 +16,7 @@ import { SkeletonGrid } from '../../components/common/Skeletons'
 import { Button } from '../../components/common/Button'
 import { FileQuestion } from 'lucide-react'
 import { useLang } from '../../state/useLang'
+import { useHiddenMedia } from '../../hooks/useHiddenMedia'
 
 type SearchItem = {
   id: number
@@ -34,6 +35,7 @@ type AnimeRow = { id: number; title: string; image_url: string | null; category:
 type ReciterRow = { id: number; name: string; image: string | null; rewaya: string | null }
 
 export const Search = () => {
+  const { filterMedia } = useHiddenMedia()
   const [sp, setSp] = useSearchParams()
   const q = sp.get('q') || ''
   const types = (sp.get('types') || 'movie').split(',').filter(Boolean)
@@ -96,15 +98,18 @@ export const Search = () => {
       if (!q || q.length < 2) return []
       // Use fuzzy search RPC function
       const { data, error } = await supabase.rpc('fuzzy_search_videos', { query_text: q })
-      if (!error && data) return data as VideoItem[]
-      
-      // Fallback if RPC not ready or error
-      const { data: fallback } = await supabase
-        .from('videos')
-        .select('*')
-        .ilike('title', `%${q}%`)
-        .limit(20)
-      return fallback || []
+      let results: VideoItem[] = []
+      if (!error && data) results = data as VideoItem[]
+      else {
+        // Fallback if RPC not ready or error
+        const { data: fallback } = await supabase
+          .from('videos')
+          .select('*')
+          .ilike('title', `%${q}%`)
+          .limit(20)
+        results = fallback || []
+      }
+      return filterMedia(results)
     },
     enabled: q.length >= 2
   })
@@ -124,7 +129,7 @@ export const Search = () => {
       }
 
       const { data } = await query.limit(20)
-      return (data as GameRow[]) || []
+      return filterMedia((data as GameRow[]) || [])
     },
     enabled: (q.length >= 2) || (types.includes('game') && (keywords.length > 0 || rawGenres.length > 0))
   })
@@ -144,7 +149,7 @@ export const Search = () => {
       }
 
       const { data } = await query.limit(20)
-      return (data as SoftwareRow[]) || []
+      return filterMedia((data as SoftwareRow[]) || [])
     },
     enabled: (q.length >= 2) || (types.includes('software') && (keywords.length > 0 || rawGenres.length > 0))
   })
@@ -164,7 +169,7 @@ export const Search = () => {
       }
 
       const { data } = await query.limit(20)
-      return (data as AnimeRow[]) || []
+      return filterMedia((data as AnimeRow[]) || [])
     },
     enabled: (q.length >= 2) || (types.includes('anime') && (keywords.length > 0 || rawGenres.length > 0))
   })
@@ -192,7 +197,7 @@ export const Search = () => {
       }
 
       const { data } = await query.limit(20)
-      return (data as ReciterRow[]) || []
+      return filterMedia((data as ReciterRow[]) || [])
     },
     enabled: (q.length >= 2) || (types.includes('quran') && keywords.length > 0),
   })
@@ -239,9 +244,10 @@ export const Search = () => {
   const hasMore = useMemo(() => page < totalPages, [page, totalPages])
   useEffect(() => {
     if (data?.results?.length) {
-      setItems(prev => (page === 1 ? data.results : [...prev, ...data.results]))
+      const filtered = filterMedia(data.results)
+      setItems(prev => (page === 1 ? filtered : [...prev, ...filtered]))
     }
-  }, [data, page])
+  }, [data, page, filterMedia])
 
  
   const [searchText, setSearchText] = useState(q)
@@ -382,7 +388,7 @@ export const Search = () => {
                               return p
                             })
                           }}
-                          className={`h-9 rounded-lg border px-3 text-xs font-bold uppercase tracking-widest transition-all ${checked ? 'bg-primary border-primary text-black' : 'bg-black/40 border-white/10 text-zinc-400 hover:text-white'}`}
+                          className={`h-9 rounded-xl border px-4 text-[10px] font-black uppercase tracking-widest transition-all ${checked ? 'bg-primary border-primary text-black shadow-[0_0_15px_rgba(212,175,55,0.2)]' : 'bg-black/40 border-white/10 text-zinc-500 hover:text-white hover:bg-white/5'}`}
                         >
                           {t === 'movie' ? 'فيلم' : t === 'anime' ? 'أنمي' : 'مسلسل'}
                         </button>
@@ -398,7 +404,7 @@ export const Search = () => {
                           <button
                             key={i}
                             onClick={() => setParam('rfrom', String(i + 1))}
-                            className="h-7 w-7 flex items-center justify-center rounded hover:bg-white/10 transition-colors"
+                            className="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-white/10 transition-all active:scale-90"
                             aria-label={`rating-${i + 1}+`}
                             title={`${i + 1}+`}
                           >
@@ -406,48 +412,48 @@ export const Search = () => {
                           </button>
                         )
                       })}
-                      <span className="ml-2 text-xs text-zinc-400 font-bold uppercase tracking-widest">+{rfrom || 0}</span>
+                      <span className="ml-2 text-[10px] text-zinc-500 font-black uppercase tracking-widest">+{rfrom || 0}</span>
                     </div>
 
                     <div className="h-6 w-px bg-white/10" />
 
                     <select
                       value={yfrom && yto && yfrom === yto ? yfrom : ''}
-                  onChange={(e) => {
-                    const v = e.target.value
-                    if (v) {
-                      setParam('yfrom', v)
-                      setParam('yto', v)
-                    } else {
-                      setParam('yfrom', '')
-                      setParam('yto', '')
-                    }
-                  }}
-                  className="h-10 rounded-xl border border-white/10 bg-black/40 px-3 text-sm text-white focus:border-primary outline-none"
-                >
-                  <option value="">{'السنة'}</option>
-                  {years.map((y) => (
-                    <option key={y} value={y}>{y}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                {(gq.data || []).map((g) => {
-                  const on = genres.includes(g.id)
-                  return (
-                    <button
-                      key={g.id}
-                      onClick={() => {
-                        const next = on ? genres.filter(x => x !== g.id) : [...genres, g.id]
-                        setParam('genres', next.join(','))
+                      onChange={(e) => {
+                        const v = e.target.value
+                        if (v) {
+                          setParam('yfrom', v)
+                          setParam('yto', v)
+                        } else {
+                          setParam('yfrom', '')
+                          setParam('yto', '')
+                        }
                       }}
-                      className={`px-3 h-9 rounded-full border text-xs font-bold ${on ? 'bg-primary/20 border-primary/40 text-primary' : 'bg-white/5 border-white/10 text-zinc-300 hover:text-white'}`}
+                      className="h-9 rounded-xl border border-white/10 bg-black/40 px-3 text-xs text-white focus:border-primary outline-none transition-all"
                     >
-                      {g.name}
-                    </button>
-                  )
-                })}
+                      <option value="">{'السنة'}</option>
+                      {years.map((y) => (
+                        <option key={y} value={y}>{y}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    {(gq.data || []).map((g) => {
+                      const on = genres.includes(g.id)
+                      return (
+                        <button
+                          key={g.id}
+                          onClick={() => {
+                            const next = on ? genres.filter(x => x !== g.id) : [...genres, g.id]
+                            setParam('genres', next.join(','))
+                          }}
+                          className={`px-4 h-8 rounded-xl border text-[10px] font-black uppercase tracking-tighter transition-all ${on ? 'bg-primary/20 border-primary/40 text-primary' : 'bg-white/5 border-white/10 text-zinc-500 hover:text-white hover:bg-white/10'}`}
+                        >
+                          {g.name}
+                        </button>
+                      )
+                    })}
               </div>
             </div>
             </motion.div>
@@ -460,7 +466,7 @@ export const Search = () => {
         {supabaseQuery.data && supabaseQuery.data.length > 0 && (
           <div className="mb-4 space-y-3">
             <h2 className="text-lg font-semibold text-zinc-300">محتوى حصري</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
               {supabaseQuery.data.map((v) => (
                 <VideoCard key={v.id} video={v} />
               ))}
@@ -471,7 +477,7 @@ export const Search = () => {
         {gamesQuery.data && gamesQuery.data.length > 0 && (
           <div className="mb-4 space-y-3">
             <h2 className="text-lg font-semibold text-zinc-300">الألعاب</h2>
-            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
               {gamesQuery.data.map((g, idx) => (
                 <MovieCard 
                   key={g.id} 
@@ -493,7 +499,7 @@ export const Search = () => {
         {softwareQuery.data && softwareQuery.data.length > 0 && (
           <div className="mb-4 space-y-3">
             <h2 className="text-lg font-semibold text-zinc-300">البرمجيات</h2>
-            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
               {softwareQuery.data.map((g, idx) => (
                 <MovieCard 
                   key={g.id} 
@@ -515,7 +521,7 @@ export const Search = () => {
         {animeQuery.data && animeQuery.data.length > 0 && (
           <div className="mb-4 space-y-3">
             <h2 className="text-lg font-semibold text-zinc-300">الأنمي</h2>
-            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
               {animeQuery.data.map((g, idx) => (
                 <MovieCard 
                   key={g.id} 
@@ -537,7 +543,7 @@ export const Search = () => {
         {recitersQuery.data && recitersQuery.data.length > 0 && (
           <div className="mb-4 space-y-3">
             <h2 className="text-lg font-semibold text-zinc-300">القرّاء</h2>
-            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
               {recitersQuery.data.map((g, idx) => (
                 <MovieCard 
                   key={g.id} 
@@ -586,8 +592,8 @@ export const Search = () => {
             loader={<SkeletonGrid count={10} variant="poster" />}
             scrollThreshold={0.8}
           >
-            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
-              {items.map((m) => (
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
+            {items.map((m) => (
                 <MovieCard key={`${m.media_type}-${m.id}`} movie={m} />
               ))}
             </div>

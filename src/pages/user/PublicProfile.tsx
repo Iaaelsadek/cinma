@@ -81,7 +81,7 @@ export const PublicProfile = () => {
   const isOwnProfile = currentUser?.id === profile.id
 
   return (
-    <div className="mx-auto max-w-5xl space-y-8 p-4 pt-24 pb-20">
+    <div className="max-w-[2400px] mx-auto px-4 md:px-12 w-full space-y-8 pt-24 pb-20">
       <Helmet>
         <title>{profile.username} (@{profile.username}) - Cinema Online</title>
       </Helmet>
@@ -208,9 +208,9 @@ export const PublicProfile = () => {
           <p className="text-zinc-500 text-sm font-bold uppercase tracking-widest">This account is private</p>
         </div>
       ) : (
-        <div className="grid md:grid-cols-3 gap-8">
+        <div className="grid md:grid-cols-2 lg:grid-cols-6 gap-8">
           {/* Main Content */}
-          <div className="md:col-span-2 space-y-8">
+          <div className="md:col-span-2 lg:col-span-4 space-y-8">
             {/* Activity Feed */}
             <div className="rounded-[2.5rem] border border-white/5 bg-white/[0.01] p-8 backdrop-blur-md">
               <h3 className="text-xl font-black text-white mb-8 flex items-center gap-4 tracking-tighter uppercase">
@@ -259,8 +259,8 @@ export const PublicProfile = () => {
             </div>
           </div>
 
-          {/* Sidebar */}
-          <div className="space-y-8">
+          {/* Sidebar Social Info */}
+          <div className="space-y-6 lg:col-span-2">
             {/* Achievements */}
             <div className="rounded-[2.5rem] border border-white/5 bg-white/[0.01] p-6 backdrop-blur-md">
               <h3 className="text-sm font-black text-white mb-6 flex items-center gap-3 tracking-widest uppercase">

@@ -139,7 +139,7 @@ export const SoftwareDetails = () => {
         </div>
       </div>
 
-      <div className="relative z-20 px-4 md:px-12 max-w-7xl mx-auto -mt-32">
+      <div className="relative z-20 px-4 md:px-12 max-w-[2400px] mx-auto w-full -mt-32">
         <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] gap-8">
           
           {/* Poster Column */}

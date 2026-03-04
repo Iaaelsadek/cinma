@@ -52,7 +52,7 @@ def build_embed_urls(tmdb_id, media_type='movie', season=None, episode=None):
             continue
     return urls
 
-def build_embed_for_all():
+def build_embed_for_all(limit=100):
     """Generates and updates embed links for all content without links or needing update."""
     if not SUPABASE_URL or not SUPABASE_KEY:
         print("Error: Supabase credentials missing.")
@@ -62,15 +62,10 @@ def build_embed_for_all():
         supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
         
         # 1. Movies
-        print("Building embed links for movies...")
-        # Fetch movies with empty embed_links or NULL (or check limit 50 for demo)
-        # Using a limit to avoid timeouts in this context, but in production could be paginated
-        movies = supabase.table('movies').select('id').is_('embed_links', 'null').limit(100).execute()
+        print(f"Building embed links for up to {limit} movies...")
+        # Check both NULL and empty object
+        movies = supabase.table('movies').select('id').or_('embed_links.is.null,embed_links.eq.{}').limit(limit).execute()
         
-        if not movies.data:
-            # Check if empty object {}
-            movies = supabase.table('movies').select('id').eq('embed_links', '{}').limit(100).execute()
-            
         for movie in movies.data:
             links = build_embed_urls(movie['id'], 'movie')
             if links:
@@ -78,15 +73,12 @@ def build_embed_for_all():
                 print(f"Updated links for movie {movie['id']}")
                 
         # 2. Episodes
-        print("Building embed links for episodes...")
-        episodes = supabase.table('episodes').select('id, season_id, episode_number').is_('embed_links', 'null').limit(100).execute()
-        
-        if not episodes.data:
-             episodes = supabase.table('episodes').select('id, season_id, episode_number').eq('embed_links', '{}').limit(100).execute()
+        print(f"Building embed links for up to {limit} episodes...")
+        episodes = supabase.table('episodes').select('id, season_id, episode_number').or_('embed_links.is.null,embed_links.eq.{}').limit(limit).execute()
              
         for ep in episodes.data:
             # Need series ID and season number. Fetch season -> series
-            season_data = supabase.table('seasons').select('season_number, series_id').eq('id', ep['season_id']).single().execute()
+            season_data = supabase.table('seasons').select('season_number, series_id').eq('id', ep['season_id']).maybe_single().execute()
             if season_data.data:
                 series_id = season_data.data['series_id']
                 season_num = season_data.data['season_number']

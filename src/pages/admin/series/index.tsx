@@ -75,7 +75,7 @@ const AdminSeriesList = () => {
         </select>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
         {filteredSeries.map((s) => (
           <div key={s.id} className="group relative bg-zinc-900/40 border border-zinc-800 hover:border-primary/50 rounded-xl p-2 transition-all hover:-translate-y-1 overflow-hidden">
             <Link 

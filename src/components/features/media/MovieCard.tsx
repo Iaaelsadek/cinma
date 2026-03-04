@@ -79,8 +79,10 @@ export const MovieCard = memo(({ movie, index = 0 }: { movie: Movie; index?: num
   
   useEffect(() => {
     let mounted = true
+    let timeoutId: ReturnType<typeof setTimeout>
+    
     if (isHovered && !trailerKey) {
-      const fetchTrailer = async () => {
+      timeoutId = setTimeout(async () => {
         try {
           const { data } = await tmdb.get(`/${mediaType}/${movie.id}/videos`)
           const trailer = data.results?.find(
@@ -92,10 +94,13 @@ export const MovieCard = memo(({ movie, index = 0 }: { movie: Movie; index?: num
         } catch (e) {
           // Silent fail
         }
-      }
-      fetchTrailer()
+      }, 400) // 400ms debounce
     }
-    return () => { mounted = false }
+    
+    return () => { 
+      mounted = false
+      if (timeoutId) clearTimeout(timeoutId)
+    }
   }, [isHovered, trailerKey, mediaType, movie.id])
 
   const toggleList = async (e: MouseEvent<HTMLButtonElement>) => {

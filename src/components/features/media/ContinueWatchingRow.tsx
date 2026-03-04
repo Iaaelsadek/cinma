@@ -5,6 +5,7 @@ import { tmdb } from '../../../lib/tmdb'
 import { Clock } from 'lucide-react'
 import { SectionHeader } from '../../common/SectionHeader'
 import { useLang } from '../../../state/useLang'
+import { useHiddenMedia } from '../../../hooks/useHiddenMedia'
 
 type CwItem = {
   content_id: number
@@ -25,6 +26,7 @@ type EnrichedCwItem = CwItem & {
 
 export const ContinueWatchingRow = ({ userId }: { userId: string }) => {
   const { lang } = useLang()
+  const { filterMedia } = useHiddenMedia()
   const cwQuery = useQuery<CwItem[]>({
     queryKey: ['continue', userId],
     queryFn: () => getContinueWatching(userId),
@@ -49,7 +51,8 @@ export const ContinueWatchingRow = ({ userId }: { userId: string }) => {
     enabled: !!cwQuery.data?.length
   })
 
-  const data = enriched.data || []
+  const rawData = enriched.data || []
+  const data = filterMedia(rawData)
 
   if (!cwQuery.data?.length) return null
   if (cwQuery.isPending) {
@@ -72,7 +75,7 @@ export const ContinueWatchingRow = ({ userId }: { userId: string }) => {
         {data.map((r, i) => {
           const href = r.content_type === 'movie'
             ? `/watch/movie/${r.content_id}`
-            : `/watch/${r.content_id}?type=tv&season=${r.season_number || 1}&episode=${r.episode_number || 1}`
+            : `/watch/tv/${r.content_id}/s${r.season_number || 1}/ep${r.episode_number || 1}`
           const progress = r.duration_seconds > 0
             ? Math.min(99, Math.round((r.progress_seconds / r.duration_seconds) * 100))
             : 0

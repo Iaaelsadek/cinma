@@ -1,6 +1,8 @@
 import { Helmet } from 'react-helmet-async'
 import { useParams } from 'react-router-dom'
+import { useMemo } from 'react'
 import { useLang } from '../../state/useLang'
+import { useHiddenMedia } from '../../hooks/useHiddenMedia'
 import { QuantumHero } from '../../components/features/hero/QuantumHero'
 import { QuantumTrain } from '../../components/features/media/QuantumTrain'
 import { VideoCard } from '../../components/features/media/VideoCard'
@@ -9,6 +11,7 @@ import { PageLoader } from '../../components/common/PageLoader'
 
 export const SummariesPage = () => {
   const { lang } = useLang()
+  const { filterMedia } = useHiddenMedia()
   const { genre, year, rating } = useParams()
 
   // Fetch summaries from Supabase (populated from YouTube)
@@ -64,6 +67,7 @@ export const SummariesPage = () => {
 
   const summaries = (dbSummaries && dbSummaries.length > 0) ? dbSummaries : FALLBACK_SUMMARIES
 
+  const filteredData = useMemo(() => filterMedia(summaries || []), [summaries, filterMedia])
 
   if (isLoading) return <PageLoader />
 
@@ -71,11 +75,11 @@ export const SummariesPage = () => {
   // This assumes the description or title might contain the genre or tags
   // Since we don't have explicit genre tags in the video table yet
   let filteredSummaries = genre 
-    ? (summaries || []).filter(item => 
+    ? (filteredData || []).filter(item => 
         item.title?.toLowerCase().includes(genre.toLowerCase()) || 
         item.description?.toLowerCase().includes(genre.toLowerCase())
       )
-    : (summaries || [])
+    : (filteredData || [])
   
   if (rating) {
       // Since rating is fake, we can't really filter by it accurately yet.
@@ -131,7 +135,7 @@ export const SummariesPage = () => {
            <div>
               <h2 className="text-xl font-bold mb-4 capitalize">{genre}</h2>
               {displayItems.length > 0 ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
                   {displayItems.map((item, idx) => (
                     <VideoCard key={item.id} video={item} index={idx} />
                   ))}

@@ -32,12 +32,44 @@ export const callGeminiWithFallback = async (prompt: string, contextLabel: strin
   
   for (const modelName of models) {
     try {
+        // --- DB CACHE CHECK ---
+        const cacheKey = `gemini:${contextLabel}:${prompt.slice(0, 100)}`;
+        try {
+            const { data: cached, error: cacheError } = await supabase
+                .from('ai_cache')
+                .select('response')
+                .eq('cache_key', cacheKey)
+                .maybeSingle();
+
+            if (cached?.response) {
+                console.log(`[Gemini - ${contextLabel}] Cache hit!`);
+                return cached.response;
+            }
+        } catch (e) {
+            console.warn(`[Gemini - ${contextLabel}] Cache table check failed (likely table missing):`, e);
+        }
+
         const model = genAI.getGenerativeModel({ model: modelName });
         const result = await model.generateContent({
             contents: [{ role: "user", parts: [{ text: prompt }] }],
         });
         const response = result.response;
-        return response.text().trim();
+        const text = response.text().trim();
+
+        // --- DB CACHE SAVE ---
+        if (text) {
+            try {
+                await supabase.from('ai_cache').upsert({
+                    cache_key: cacheKey,
+                    response: text,
+                    context: contextLabel
+                });
+            } catch (e) {
+                // Silently ignore upsert errors (e.g. table missing)
+            }
+        }
+
+        return text;
     } catch (error: any) {
         const errorStr = String(error);
         
@@ -323,6 +355,12 @@ export const translateTitleToArabic = async (title: string): Promise<string> => 
              console.warn('[Translation] Failed to save to DB:', error.message);
            }
         });
+
+        // Log action to action_logs
+        supabase.from('action_logs').insert([{
+          action: 'ai_translation',
+          details: `title=${title}, translation=${finalTranslation}, provider=gemini`
+        }]).then(() => {});
         
         return finalTranslation;
       }

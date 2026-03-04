@@ -116,7 +116,7 @@ export const WatchVideo = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-luxury-obsidian">
-        <div className="mx-auto max-w-7xl px-4 py-6">
+        <div className="mx-auto max-w-[2400px] px-4 md:px-12 w-full py-6">
           <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-black">
             <div className="aspect-video w-full">
               <div className="h-full w-full animate-pulse bg-gradient-to-r from-zinc-900 via-zinc-800/60 to-zinc-900" />
@@ -171,7 +171,7 @@ export const WatchVideo = () => {
 
       <div className={`relative z-50 transition-all duration-500 flex ${isChatOpen ? 'mr-0 lg:mr-80' : ''}`}>
         <div className="flex-1">
-          <div className={`mx-auto max-w-7xl px-4 py-4 ${isCinemaMode ? 'lg:py-6' : 'py-4'}`}>
+          <div className={`mx-auto max-w-[2400px] px-4 md:px-12 w-full py-4 ${isCinemaMode ? 'lg:py-6' : 'py-4'}`}>
             <div className="flex items-center justify-between mb-3">
               <Link to="/" className={`inline-flex items-center gap-2 transition-colors text-sm ${isCinemaMode ? 'text-zinc-600 hover:text-zinc-400' : 'text-zinc-400 hover:text-white'}`}>
                 <ChevronLeft size={16} className={lang === 'ar' ? 'rotate-180' : ''} />

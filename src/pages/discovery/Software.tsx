@@ -6,6 +6,7 @@ import { supabase } from '../../lib/supabase'
 import { useQuery } from '@tanstack/react-query'
 import { Download, Monitor, Smartphone, Apple, Terminal, Star, Search, Shield, Cpu, Grid, Filter } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useHiddenMedia } from '../../hooks/useHiddenMedia'
 
 type SoftwareRow = {
   id: number
@@ -23,6 +24,7 @@ type SoftwareRow = {
 
 export const Software = () => {
   const { lang } = useLang()
+  const { filterMedia } = useHiddenMedia()
   const [searchParams, setSearchParams] = useSearchParams()
   const currentCategory = searchParams.get('cat') || 'all'
   const [searchTerm, setSearchTerm] = useState('')
@@ -70,7 +72,7 @@ export const Software = () => {
         { id: 503, title: 'Neovim', poster_url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/Neovim-mark.svg/1200px-Neovim-mark.svg.png', rating: 9.9, category: 'Editor', description: 'Hyperextensible Vim-based text editor.', version: '0.9.5', size: '10 MB', platform: 'terminal' },
       ]
 
-      return [...dbItems, ...mockItems]
+      return filterMedia([...dbItems, ...mockItems])
     },
     staleTime: 1000 * 60 * 60
   })
@@ -130,7 +132,7 @@ export const Software = () => {
 
       {/* TABS & SEARCH */}
       <div className="sticky top-20 z-40 bg-[#050505]/80 backdrop-blur-xl border-y border-white/5 py-4 px-4 md:px-12 mb-8">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4 max-w-7xl mx-auto">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4 w-full">
           
           {/* Categories */}
           <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto pb-2 md:pb-0 no-scrollbar">
@@ -169,15 +171,15 @@ export const Software = () => {
       </div>
 
       {/* GRID CONTENT */}
-      <div className="px-4 md:px-12 max-w-7xl mx-auto">
+      <div className="px-4 md:px-12 w-full">
         {isLoading ? (
-           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
              {[1,2,3,4,5,6,7,8].map(n => (
                <div key={n} className="h-64 rounded-3xl bg-white/5 animate-pulse" />
              ))}
            </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
             <AnimatePresence mode='popLayout'>
               {filteredSoftware.map((item) => (
                 <motion.div

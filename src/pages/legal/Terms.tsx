@@ -9,7 +9,7 @@ export const Terms = () => {
     : 'The terms that govern your use of Online Cinema and its content.'
 
   return (
-    <div className="min-h-screen bg-luxury-obsidian px-4 lg:px-8 pt-20 pb-8 text-white">
+    <div className="min-h-screen bg-luxury-obsidian px-4 md:px-12 pt-24 pb-12 text-white">
       <Helmet>
         <title>{`${title} | cinma.online`}</title>
         <meta name="description" content={description} />
@@ -18,11 +18,13 @@ export const Terms = () => {
         <link rel="canonical" href={typeof window !== 'undefined' ? `${location.origin}${location.pathname}` : ''} />
       </Helmet>
 
-      <div className="mx-auto max-w-4xl space-y-4">
-        <div>
-          <h1 className="text-xl md:text-2xl font-black tracking-tight">{title}</h1>
-          <p className="mt-1.5 text-xs text-zinc-400">{description}</p>
+      <div className="max-w-[2400px] mx-auto w-full space-y-8">
+        <div className="max-w-4xl">
+          <h1 className="text-3xl md:text-4xl font-black tracking-tight">{title}</h1>
+          <p className="mt-2 text-sm text-zinc-400">{description}</p>
         </div>
+
+        <div className="max-w-4xl space-y-6">
 
         <section className="space-y-1.5 rounded-xl border border-white/10 bg-white/5 p-3">
           <h2 className="text-base font-bold">{lang === 'ar' ? 'الاستخدام المقبول' : 'Acceptable Use'}</h2>

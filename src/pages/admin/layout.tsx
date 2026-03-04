@@ -53,6 +53,9 @@ const AdminLayout = () => {
               <NavLink to="/admin/add-movie" className={({ isActive }) => isActive ? 'flex items-center gap-2 text-green-400 font-bold bg-green-400/10 px-3 py-2 rounded-lg transition-all' : 'flex items-center gap-2 text-zinc-400 hover:text-green-400 px-3 py-2 hover:bg-white/5 rounded-lg transition-all'}>
                 🎬 إضافة فيلم
               </NavLink>
+              <NavLink to="/admin/content-health" className={({ isActive }) => isActive ? 'flex items-center gap-2 text-rose-500 font-bold bg-rose-500/10 px-3 py-2 rounded-lg transition-all' : 'flex items-center gap-2 text-zinc-400 hover:text-rose-500 px-3 py-2 hover:bg-white/5 rounded-lg transition-all'}>
+                ❤️ صحة المحتوى
+              </NavLink>
             </div>
             
             {/* Group 3: النظام */}

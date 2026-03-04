@@ -77,7 +77,7 @@ const ProfileErrorBoundary = ({ children }: { children: React.ReactNode }) => {
 
   if (hasError) {
     return (
-      <div className="mx-auto max-w-5xl space-y-4 p-4">
+      <div className="max-w-[2400px] mx-auto px-4 md:px-12 w-full space-y-4 p-4">
         <div className="rounded-lg border border-red-800 bg-red-900/20 p-6 text-center">
           <h2 className="text-xl font-bold text-red-400 mb-2">حدث خطأ في صفحة الملف الشخصي</h2>
           <p className="text-zinc-300 mb-4">نأسف للإزعاج، حدث خطأ غير متوقع</p>
@@ -352,7 +352,7 @@ export const Profile = () => {
     const displayError = error || (authError?.message ? getArabicErrorMessage(authError) : 'حدث خطأ أثناء تحميل البيانات. يرجى المحاولة مرة أخرى.');
     
     return (
-      <div className="mx-auto max-w-5xl space-y-4 p-4 pt-24">
+      <div className="max-w-[2400px] mx-auto px-4 md:px-12 w-full space-y-4 p-4 pt-24">
         <div className="rounded-lg border border-red-800 bg-red-900/20 p-6 text-center">
           <h2 className="text-xl font-bold text-red-400 mb-2">فشل تحميل الملف الشخصي</h2>
           <p className="text-zinc-300 mb-4">{displayError}</p>
@@ -463,7 +463,7 @@ export const Profile = () => {
   // Wrap content in error boundary
   return (
     <ProfileErrorBoundary>
-      <div className="mx-auto max-w-5xl space-y-8 p-4 pt-24 pb-20">
+      <div className="max-w-[2400px] mx-auto px-4 md:px-12 w-full space-y-8 pt-24 pb-20">
         <Helmet>
           <title>الملف الشخصي - {username || 'مستخدم'}</title>
         </Helmet>
@@ -568,8 +568,8 @@ export const Profile = () => {
             {activeTab === 'dashboard' && (
               <>
                 {/* Stats Grid */}
-                <div className="grid md:grid-cols-3 gap-6">
-                  <div className="md:col-span-2 grid grid-cols-2 gap-4">
+                <div className="grid md:grid-cols-2 lg:grid-cols-6 gap-6">
+                  <div className="md:col-span-2 lg:col-span-4 grid grid-cols-2 gap-4">
                     <StatCard 
                       icon={Film} 
                       label="تمت مشاهدته" 
@@ -599,31 +599,31 @@ export const Profile = () => {
                       color="text-red-400"
                     />
                   </div>
-                  <div className="rounded-3xl border border-white/5 bg-white/[0.02] p-6 backdrop-blur-md">
-                    <NotificationCenter />
-                  </div>
+                <div className="rounded-3xl border border-white/5 bg-white/[0.02] p-6 backdrop-blur-md lg:col-span-2">
+                  <NotificationCenter />
                 </div>
+              </div>
 
-                {/* AI Recommendations */}
-                <div className="rounded-[2.5rem] border border-lumen-gold/20 bg-lumen-gold/[0.02] p-8 backdrop-blur-md relative overflow-hidden group">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-lumen-gold/10 blur-3xl -mr-16 -mt-16 rounded-full group-hover:scale-150 transition-transform duration-700" />
-                  <div className="flex items-center justify-between mb-8">
-                    <div className="flex items-center gap-4">
-                      <div className="p-3 rounded-2xl bg-lumen-gold text-black shadow-lg shadow-lumen-gold/20">
-                        <Sparkles size={20} />
-                      </div>
-                      <div>
-                        <h3 className="text-xl font-black text-white tracking-tighter uppercase">توصيات الذكاء الاصطناعي</h3>
-                        <p className="text-[10px] text-lumen-gold/60 font-black uppercase tracking-[0.2em]">AI-Powered Intelligence</p>
-                      </div>
+              {/* AI Recommendations */}
+              <div className="rounded-[2.5rem] border border-lumen-gold/20 bg-lumen-gold/[0.02] p-8 backdrop-blur-md relative overflow-hidden group">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-lumen-gold/10 blur-3xl -mr-16 -mt-16 rounded-full group-hover:scale-150 transition-transform duration-700" />
+                <div className="flex items-center justify-between mb-8">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 rounded-2xl bg-lumen-gold text-black shadow-lg shadow-lumen-gold/20">
+                      <Sparkles size={20} />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-black text-white tracking-tighter uppercase">توصيات الذكاء الاصطناعي</h3>
+                      <p className="text-[10px] text-lumen-gold/60 font-black uppercase tracking-[0.2em]">AI-Powered Intelligence</p>
                     </div>
                   </div>
-                  <RecommendationsRow recommendations={recommendations} />
                 </div>
+                <RecommendationsRow recommendations={recommendations} />
+              </div>
 
-                {/* Social Feed & Lists */}
-                <div className="grid md:grid-cols-3 gap-8">
-                  <div className="md:col-span-2 space-y-8">
+              {/* Social Feed & Lists */}
+              <div className="grid md:grid-cols-2 lg:grid-cols-6 gap-8">
+                <div className="md:col-span-2 lg:col-span-4 space-y-8">
                     {/* Activity Feed */}
                     <div className="rounded-[2.5rem] border border-white/5 bg-white/[0.01] p-8 backdrop-blur-md">
                       <h3 className="text-xl font-black text-white mb-8 flex items-center gap-4 tracking-tighter uppercase">
@@ -763,22 +763,30 @@ export const Profile = () => {
                 </div>
 
                 {/* Content Sections */}
-                <div className="grid md:grid-cols-2 gap-6">
-                  <WatchlistSection />
-                  <ContinueWatchingSection />
+                <div className="grid md:grid-cols-2 lg:grid-cols-6 gap-6">
+                  <div className="lg:col-span-3">
+                    <WatchlistSection />
+                  </div>
+                  <div className="lg:col-span-3">
+                    <ContinueWatchingSection />
+                  </div>
                 </div>
                 
-                <div className="grid md:grid-cols-2 gap-6">
-                  <HistorySection />
-                  <AchievementsSection achievements={achievements} loading={loadingAchievements} />
+                <div className="grid md:grid-cols-2 lg:grid-cols-6 gap-6">
+                  <div className="lg:col-span-3">
+                    <HistorySection />
+                  </div>
+                  <div className="lg:col-span-3">
+                    <AchievementsSection achievements={achievements} loading={loadingAchievements} />
+                  </div>
                 </div>
               </>
             )}
 
             {activeTab === 'social' && (
-              <div className="grid md:grid-cols-3 gap-8">
+              <div className="grid md:grid-cols-2 lg:grid-cols-6 gap-8">
                 {/* Profile Edit & Social Lists */}
-                <div className="md:col-span-2 space-y-8">
+                <div className="md:col-span-2 lg:col-span-4 space-y-8">
                   {/* Social Sub-Tabs */}
                   <div className="flex p-1 rounded-2xl bg-white/[0.03] border border-white/5 w-fit">
                     {[
@@ -856,8 +864,8 @@ export const Profile = () => {
 
                         <div className="space-y-6">
                           <h4 className="text-[10px] font-black text-zinc-500 uppercase tracking-widest px-1 border-b border-white/5 pb-4">حسابات التواصل</h4>
-                          <div className="grid md:grid-cols-3 gap-4">
-                            <div className="relative">
+                          <div className="grid md:grid-cols-3 lg:grid-cols-6 gap-4">
+                            <div className="relative lg:col-span-2">
                               <Twitter size={18} className="absolute right-6 top-1/2 -translate-y-1/2 text-[#1DA1F2]" />
                               <input
                                 value={twitter}
@@ -866,7 +874,7 @@ export const Profile = () => {
                                 placeholder="Twitter"
                               />
                             </div>
-                            <div className="relative">
+                            <div className="relative lg:col-span-2">
                               <Instagram size={18} className="absolute right-6 top-1/2 -translate-y-1/2 text-[#E4405F]" />
                               <input
                                 value={instagram}
@@ -875,7 +883,7 @@ export const Profile = () => {
                                 placeholder="Instagram"
                               />
                             </div>
-                            <div className="relative">
+                            <div className="relative lg:col-span-2">
                               <Facebook size={18} className="absolute right-6 top-1/2 -translate-y-1/2 text-[#1877F2]" />
                               <input
                                 value={facebook}
@@ -989,7 +997,7 @@ export const Profile = () => {
                 </div>
 
                 {/* Sidebar Social Info */}
-                <div className="space-y-6">
+                <div className="space-y-6 lg:col-span-2">
                   <div className="rounded-[2rem] border border-white/5 bg-white/[0.02] p-6 backdrop-blur-md">
                     <h4 className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
                       <Users size={14} className="text-lumen-gold" />
@@ -1035,7 +1043,7 @@ export const Profile = () => {
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                className="max-w-4xl mx-auto"
+                className="max-w-[2400px] mx-auto px-4 md:px-12 w-full"
               >
                 <div className="flex items-center gap-4 mb-10">
                   <div className="p-4 rounded-3xl bg-lumen-gold text-black shadow-xl shadow-lumen-gold/20">
@@ -1051,7 +1059,7 @@ export const Profile = () => {
             )}
 
             {activeTab === 'security' && (
-              <div className="max-w-3xl mx-auto space-y-8">
+              <div className="max-w-[2400px] mx-auto px-4 md:px-12 w-full space-y-8">
                 <div className="rounded-[2.5rem] border border-white/5 bg-white/[0.02] p-8 backdrop-blur-xl">
                   <div className="flex items-center gap-4 mb-8">
                     <div className="p-3 rounded-2xl bg-lumen-gold/10 text-lumen-gold border border-lumen-gold/20">
@@ -1175,7 +1183,7 @@ export const Profile = () => {
             )}
 
             {activeTab === 'admin' && isAdmin && (
-              <div className="max-w-4xl mx-auto space-y-8">
+              <div className="max-w-[2400px] mx-auto px-4 md:px-12 w-full space-y-8">
                 <div className="rounded-[2.5rem] border border-red-500/20 bg-red-500/[0.02] p-8 backdrop-blur-xl relative overflow-hidden">
                   <div className="absolute top-0 right-0 w-64 h-64 bg-red-500/5 blur-[100px] -mr-32 -mt-32 rounded-full" />
                   

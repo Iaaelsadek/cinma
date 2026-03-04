@@ -171,8 +171,8 @@ const SeasonManage = () => {
         <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
           <Plus size={18} className="text-primary" /> Add New Episode
         </h2>
-        <form onSubmit={handleSubmit(handleAddEpisode)} className="grid gap-4 md:grid-cols-4">
-          <div>
+        <form onSubmit={handleSubmit(handleAddEpisode)} className="grid gap-4 md:grid-cols-2 lg:grid-cols-6 items-end">
+          <div className="lg:col-span-1">
             <label className="mb-1.5 block text-xs font-medium text-zinc-400">Episode Number</label>
             <input 
               type="number" 
@@ -181,7 +181,7 @@ const SeasonManage = () => {
               className="w-full rounded-lg border border-zinc-700 bg-zinc-900/50 p-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all" 
             />
           </div>
-          <div className="md:col-span-2">
+          <div className="lg:col-span-2">
             <label className="mb-1.5 block text-xs font-medium text-zinc-400">Title</label>
             <input 
               {...register('name')} 
@@ -189,7 +189,7 @@ const SeasonManage = () => {
               className="w-full rounded-lg border border-zinc-700 bg-zinc-900/50 p-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all" 
             />
           </div>
-          <div>
+          <div className="lg:col-span-2">
             <label className="mb-1.5 block text-xs font-medium text-zinc-400">Air Date</label>
             <input 
               type="date" 
@@ -198,7 +198,16 @@ const SeasonManage = () => {
             />
           </div>
           
-          <div className="md:col-span-4">
+          <div className="lg:col-span-1">
+             <button 
+               disabled={isSubmitting} 
+               className="w-full h-[38px] rounded-lg bg-primary text-sm font-bold text-white disabled:opacity-50 hover:bg-primary/90 transition-all flex items-center justify-center gap-2"
+             >
+                {isSubmitting ? 'Adding...' : <Plus size={16} />}
+              </button>
+          </div>
+
+          <div className="md:col-span-2 lg:col-span-6">
             <label className="mb-1.5 block text-xs font-medium text-zinc-400">Overview</label>
             <textarea 
               rows={2} 
@@ -208,7 +217,7 @@ const SeasonManage = () => {
             />
           </div>
 
-          <div className="md:col-span-2">
+          <div className="lg:col-span-1">
             <label className="mb-1.5 block text-xs font-medium text-zinc-400">Intro Start (sec)</label>
             <input 
               type="number" 
@@ -217,7 +226,7 @@ const SeasonManage = () => {
               className="w-full rounded-lg border border-zinc-700 bg-zinc-900/50 p-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all" 
             />
           </div>
-          <div className="md:col-span-2">
+          <div className="lg:col-span-1">
             <label className="mb-1.5 block text-xs font-medium text-zinc-400">Intro End (sec)</label>
             <input 
               type="number" 
@@ -227,7 +236,7 @@ const SeasonManage = () => {
             />
           </div>
           
-          <div className="md:col-span-2">
+          <div className="lg:col-span-2">
              <label className="mb-1.5 block text-xs font-medium text-zinc-400">Subtitles (JSON)</label>
              <textarea 
                rows={2} 
@@ -236,7 +245,7 @@ const SeasonManage = () => {
                className="w-full rounded-lg border border-zinc-700 bg-zinc-900/50 p-2 font-mono text-xs focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all resize-none" 
              />
           </div>
-          <div className="md:col-span-2">
+          <div className="lg:col-span-2">
              <label className="mb-1.5 block text-xs font-medium text-zinc-400">Download URLs (JSON)</label>
              <textarea 
                rows={2} 
@@ -245,20 +254,11 @@ const SeasonManage = () => {
                className="w-full rounded-lg border border-zinc-700 bg-zinc-900/50 p-2 font-mono text-xs focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all resize-none" 
              />
           </div>
-
-          <div className="md:col-span-4 flex justify-end mt-2">
-             <button 
-               disabled={isSubmitting} 
-               className="px-6 py-2 rounded-lg bg-primary text-sm font-bold text-white disabled:opacity-50 hover:bg-primary/90 transition-all flex items-center gap-2"
-             >
-                {isSubmitting ? 'Adding...' : <><Plus size={16} /> Add Episode</>}
-              </button>
-          </div>
         </form>
       </div>
 
       {/* Episodes List */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
         {sortedEpisodes.map((e) => (
           <div key={e.id} className="group rounded-xl border border-zinc-800 bg-zinc-900/30 p-4 transition-all hover:border-zinc-700 hover:bg-zinc-900/50">
             <div className="flex justify-between items-start mb-3">
