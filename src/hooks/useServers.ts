@@ -81,48 +81,19 @@ export const useServers = (tmdbId: number, type: 'movie' | 'tv', season?: number
   // content-specific statuses (for this specific movie/episode)
   const [contentStatuses, setContentStatuses] = useState<Record<string, Server['status']>>({})
 
-  // Function to check a single server for the current content
-  const checkContentAvailability = async (url: string, id: string) => {
-    try {
-      // Strategy: Use a timeout to avoid long waits
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 7000);
-
-      // We use no-cors to at least see if the domain is reachable
-      await fetch(url, { 
-        mode: 'no-cors', 
-        signal: controller.signal
-      });
-      
-      clearTimeout(timeoutId);
-      setContentStatuses(prev => ({ ...prev, [id]: 'online' }));
-    } catch (e: any) {
-      const isOffline = e.name !== 'AbortError';
-      const status = isOffline ? 'offline' : 'unknown';
-      
-      setContentStatuses(prev => ({ ...prev, [id]: status }));
-
-      // Log broken link to database if definitely offline
-      if (isOffline) {
-        supabase.from('link_checks').upsert({
-          content_id: tmdbId,
-          content_type: type,
-          season_number: season || null,
-          episode_number: episode || null,
-          source_name: id,
-          status_code: 0, // Mark as dead
-          last_checked: new Date().toISOString()
-        }, { onConflict: 'content_id,source_name,season_number,episode_number' }).then(({ error }) => {
-          if (error) console.error('Failed to log broken link:', error);
-        });
-      }
-    }
+  // Disable automatic availability check as it's unreliable and blocks working servers
+  const checkContentAvailability = async (_url: string, id: string) => {
+    setContentStatuses(prev => ({ ...prev, [id]: 'online' }));
   }
 
-  // Fetch server statuses on mount
+  // Reset content statuses on content change
   useEffect(() => {
-    // Reset content statuses when content changes
-    setContentStatuses({})
+    // Initialize all servers as online to avoid false negatives
+    const initialStatuses: Record<string, Server['status']> = {};
+    PROVIDERS.forEach(p => {
+      initialStatuses[p.id] = 'online';
+    });
+    setContentStatuses(initialStatuses);
   }, [tmdbId, type, season, episode])
 
   useEffect(() => {
