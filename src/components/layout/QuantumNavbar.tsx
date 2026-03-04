@@ -205,13 +205,13 @@ export const QuantumNavbar = memo(() => {
   }, [])
 
   return (
-    <div className="w-full flex justify-center">
+    <div className="w-full flex justify-center sticky top-0 z-[1000]">
       <nav
         className={`transition-all duration-300 w-full ${
-          scrolled ? 'bg-black/95 backdrop-blur-xl py-2 shadow-2xl border-x border-b border-white/10 rounded-b-2xl' : 'bg-gradient-to-b from-black/90 to-black/0 py-2'
+          scrolled ? 'bg-black/95 backdrop-blur-xl py-2 shadow-2xl border-b border-white/10' : 'bg-gradient-to-b from-black/90 to-black/0 py-2'
         }`}
       >
-        <div className="w-full mx-auto px-4 md:px-8 flex items-center justify-between transition-all duration-300 h-16">
+        <div className="max-w-[2400px] mx-auto px-4 md:px-12 flex items-center justify-between transition-all duration-300 h-16">
             
             {/* Logo */}
             <PrefetchLink to="/" target="_self" className="group flex items-center gap-2 shrink-0">
@@ -366,13 +366,6 @@ export const QuantumNavbar = memo(() => {
                   {lang === 'ar' ? 'تثبيت التطبيق' : 'Install App'}
                 </button>
               )}
-
-              <button 
-                onClick={toggle}
-                className="hidden xl:flex w-9 h-9 rounded-full border border-white/10 items-center justify-center text-[10px] font-black hover:border-cyan-400/50 hover:text-cyan-400 transition-colors"
-              >
-                {lang === 'ar' ? 'EN' : 'AR'}
-              </button>
 
               {user && continueCount > 0 && (
                 <PrefetchLink to="/" target="_self" className="relative p-1.5 rounded-full hover:bg-white/10 text-zinc-400 hover:text-cyan-400 transition-colors" title={lang === 'ar' ? 'تابع المشاهدة' : 'Continue Watching'}>
@@ -547,15 +540,6 @@ export const QuantumNavbar = memo(() => {
                     </button>
                   </div>
                 )}
-                
-                <div className="col-span-2 mt-2 mb-8">
-                  <button 
-                    onClick={() => { toggle(); setMenuOpen(false); }}
-                    className="w-full py-4 rounded-xl border border-white/10 flex items-center justify-center text-sm font-black hover:border-cyan-400/50 hover:text-cyan-400 hover:bg-white/5 transition-colors"
-                  >
-                    {lang === 'ar' ? 'English' : 'العربية'}
-                  </button>
-                </div>
               </div>
             </motion.div>
           )}

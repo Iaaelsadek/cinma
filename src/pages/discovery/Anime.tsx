@@ -9,6 +9,7 @@ import { QuantumTrain } from '../../components/features/media/QuantumTrain'
 import { useLang } from '../../state/useLang'
 import { Helmet } from 'react-helmet-async'
 import { getGenreSlug, slugify } from '../../lib/utils'
+import { useHiddenMedia } from '../../hooks/useHiddenMedia'
 
 type AnimeItem = {
   id: number
@@ -22,6 +23,7 @@ type AnimeItem = {
 
 export const AnimePage = () => {
   const { lang } = useLang()
+  const { filterMedia } = useHiddenMedia()
   const { genre: paramGenre, year: paramYear, rating: paramRating } = useParams()
 
   const { data: animeList, isLoading } = useQuery({
@@ -57,7 +59,7 @@ export const AnimePage = () => {
         dbItems = dbItems.filter((item: any) => item.vote_average >= Number(paramRating))
       }
 
-      if (dbItems.length > 0) return dbItems
+      if (dbItems.length > 0) return filterMedia(dbItems)
 
       // 2. Fetch from TMDB if Supabase is empty or no matches
       try {
@@ -96,11 +98,10 @@ export const AnimePage = () => {
             release_date: item.first_air_date,
             media_type: 'tv',
             original_language: 'ja',
-            category: 'Anime',
-            genre_ids: item.genre_ids
+            category: 'Anime'
         }))
-        
-        return tmdbItems
+
+        return filterMedia(tmdbItems)
       } catch (e) {
         errorLogger.logError({
           message: 'TMDB fetch failed',
@@ -155,7 +156,7 @@ export const AnimePage = () => {
   
   // If filtered, show all as one list. If not, show sections.
   const isFiltered = !!paramGenre || !!paramYear
-  const displayItems = animeList || []
+  const displayItems = filterMedia(animeList || [])
 
   // Hero Items
   const heroItems = displayItems.slice(0, 10)
@@ -172,7 +173,7 @@ export const AnimePage = () => {
         {isFiltered ? (
            <div className="px-4 md:px-12">
               <h2 className="text-xl font-bold mb-4 capitalize">{paramGenre || 'Anime'} {paramYear}</h2>
-              <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
                 {displayItems.map((item: any, idx: number) => (
                   <MovieCard key={item.id} movie={item} index={idx} />
                 ))}
@@ -193,67 +194,67 @@ export const AnimePage = () => {
             />
 
             <QuantumTrain 
-              items={shonen.data || []} 
+              items={filterMedia(shonen.data || [])} 
               title={lang === 'ar' ? 'شونين (أكشن ومغامرات)' : 'Shonen (Action & Adventure)'} 
               link="/search?types=anime&keywords=10472"
             />
 
             <QuantumTrain 
-              items={seinen.data || []} 
+              items={filterMedia(seinen.data || [])} 
               title={lang === 'ar' ? 'سينين (للشباب)' : 'Seinen (Young Adult)'} 
               link="/search?types=anime&keywords=10474"
             />
 
             <QuantumTrain 
-              items={isekai.data || []} 
+              items={filterMedia(isekai.data || [])} 
               title={lang === 'ar' ? 'إيسيكاي (عوالم أخرى)' : 'Isekai (Other Worlds)'} 
               link="/search?types=anime&keywords=227280"
             />
 
             <QuantumTrain 
-              items={shojo.data || []} 
+              items={filterMedia(shojo.data || [])} 
               title={lang === 'ar' ? 'شوجو (رومانسي)' : 'Shojo (Romance)'} 
               link="/search?types=anime&keywords=10473"
             />
 
             <QuantumTrain 
-              items={sports.data || []} 
+              items={filterMedia(sports.data || [])} 
               title={lang === 'ar' ? 'رياضي' : 'Sports'} 
               link="/search?types=anime&keywords=6075"
             />
 
             <QuantumTrain 
-              items={mecha.data || []} 
+              items={filterMedia(mecha.data || [])} 
               title={lang === 'ar' ? 'ميكا (آليين)' : 'Mecha (Robots)'} 
               link="/search?types=anime&keywords=10632"
             />
 
             <QuantumTrain 
-              items={fantasy.data || []} 
+              items={filterMedia(fantasy.data || [])} 
               title={lang === 'ar' ? 'أنمي خيالي' : 'Fantasy Anime'} 
               link="/search?types=anime&genres=16,14"
               color="purple"
             />
 
             <QuantumTrain 
-              items={sliceOfLife.data || []} 
+              items={filterMedia(sliceOfLife.data || [])} 
               title={lang === 'ar' ? 'شريحة من الحياة' : 'Slice of Life'} 
               link="/search?types=anime&keywords=9840"
               color="green"
             />
 
             <QuantumTrain 
-              items={psychological.data || []} 
+              items={filterMedia(psychological.data || [])} 
               title={lang === 'ar' ? 'أنمي نفسي' : 'Psychological Anime'} 
               link="/search?types=anime&keywords=9841"
-              color="indigo"
+              color="red"
             />
 
             <QuantumTrain 
-              items={horror.data || []} 
-              title={lang === 'ar' ? 'رعب وغموض' : 'Horror & Mystery'} 
+              items={filterMedia(horror.data || [])} 
+              title={lang === 'ar' ? 'أنمي رعب' : 'Horror Anime'} 
               link="/search?types=anime&genres=16,27"
-              color="red"
+              color="black"
             />
 
             {categories.map((cat: any) => (

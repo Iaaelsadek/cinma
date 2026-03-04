@@ -6,6 +6,7 @@ import { useLang } from '../../state/useLang'
 import { Helmet } from 'react-helmet-async'
 import { Moon } from 'lucide-react'
 import { PageLoader } from '../../components/common/PageLoader'
+import { useHiddenMedia } from '../../hooks/useHiddenMedia'
 
 // Fetch Arabic TV shows for a specific year (simulating Ramadan content)
 const fetchRamadanSeries = async (year: number) => {
@@ -86,31 +87,32 @@ const fetchRamadanHistorical = async () => {
 
 export const RamadanPage = () => {
   const { lang } = useLang()
+  const { filterMedia } = useHiddenMedia()
 
   // Pre-fetch multiple years to simulate a large library
-  const ramadan2026 = useQuery({ queryKey: ['ramadan-2026'], queryFn: () => fetchRamadanSeries(2026) })
-  const ramadan2025 = useQuery({ queryKey: ['ramadan-2025'], queryFn: () => fetchRamadanSeries(2025) })
-  const ramadan2024 = useQuery({ queryKey: ['ramadan-2024'], queryFn: () => fetchRamadanSeries(2024) })
-  const ramadan2023 = useQuery({ queryKey: ['ramadan-2023'], queryFn: () => fetchRamadanSeries(2023) })
-  const classics = useQuery({ queryKey: ['ramadan-classics'], queryFn: fetchClassicRamadan })
-  const trending = useQuery({ queryKey: ['ramadan-trending'], queryFn: fetchTrendingRamadan })
+  const ramadan2026 = useQuery({ queryKey: ['ramadan-2026'], queryFn: async () => filterMedia(await fetchRamadanSeries(2026)) })
+  const ramadan2025 = useQuery({ queryKey: ['ramadan-2025'], queryFn: async () => filterMedia(await fetchRamadanSeries(2025)) })
+  const ramadan2024 = useQuery({ queryKey: ['ramadan-2024'], queryFn: async () => filterMedia(await fetchRamadanSeries(2024)) })
+  const ramadan2023 = useQuery({ queryKey: ['ramadan-2023'], queryFn: async () => filterMedia(await fetchRamadanSeries(2023)) })
+  const classics = useQuery({ queryKey: ['ramadan-classics'], queryFn: async () => filterMedia(await fetchClassicRamadan()) })
+  const trending = useQuery({ queryKey: ['ramadan-trending'], queryFn: async () => filterMedia(await fetchTrendingRamadan()) })
   
-  const egyptian = useQuery({ queryKey: ['ramadan-egypt'], queryFn: () => fetchByCountry('EG') })
-  const syrian = useQuery({ queryKey: ['ramadan-syria'], queryFn: () => fetchByCountry('SY') })
-  const gulf = useQuery({ queryKey: ['ramadan-gulf'], queryFn: () => fetchByCountry('SA|KW|AE') }) // SA=Saudi, KW=Kuwait, AE=UAE
-  const comedy = useQuery({ queryKey: ['ramadan-comedy'], queryFn: fetchRamadanComedy })
-  const historical = useQuery({ queryKey: ['ramadan-historical'], queryFn: fetchRamadanHistorical })
+  const egyptian = useQuery({ queryKey: ['ramadan-egypt'], queryFn: async () => filterMedia(await fetchByCountry('EG')) })
+  const syrian = useQuery({ queryKey: ['ramadan-syria'], queryFn: async () => filterMedia(await fetchByCountry('SY')) })
+  const gulf = useQuery({ queryKey: ['ramadan-gulf'], queryFn: async () => filterMedia(await fetchByCountry('SA|KW|AE')) }) // SA=Saudi, KW=Kuwait, AE=UAE
+  const comedy = useQuery({ queryKey: ['ramadan-comedy'], queryFn: async () => filterMedia(await fetchRamadanComedy()) })
+  const historical = useQuery({ queryKey: ['ramadan-historical'], queryFn: async () => filterMedia(await fetchRamadanHistorical()) })
 
   const isLoading = ramadan2025.isLoading || ramadan2024.isLoading || classics.isLoading
 
   if (isLoading) return <PageLoader />
 
   // Hero items: Mix of trending and latest
-  const heroItems = [
+  const heroItems = filterMedia([
       ...(ramadan2025.data || []),
       ...(ramadan2024.data || []),
       ...(trending.data || [])
-  ].slice(0, 15)
+  ]).slice(0, 15)
 
   return (
     <div className="min-h-screen text-white pb-4 max-w-[2400px] mx-auto px-4 md:px-12 w-full">
@@ -138,61 +140,61 @@ export const RamadanPage = () => {
         </div>
 
         <QuantumTrain 
-          items={trending.data || []} 
+          items={filterMedia(trending.data || [])} 
           title={lang === 'ar' ? 'الأكثر رواجاً الآن' : 'Trending Now'} 
           link="/search?types=tv&lang=ar&sort=popularity.desc"
         />
 
         <QuantumTrain 
-          items={egyptian.data || []} 
+          items={filterMedia(egyptian.data || [])} 
           title={lang === 'ar' ? 'دراما مصرية' : 'Egyptian Drama'} 
           link="/search?types=tv&lang=ar&country=EG"
         />
 
         <QuantumTrain 
-          items={syrian.data || []} 
+          items={filterMedia(syrian.data || [])} 
           title={lang === 'ar' ? 'دراما سورية' : 'Syrian Drama'} 
           link="/search?types=tv&lang=ar&country=SY"
         />
 
         <QuantumTrain 
-          items={gulf.data || []} 
+          items={filterMedia(gulf.data || [])} 
           title={lang === 'ar' ? 'دراما خليجية' : 'Gulf Drama'} 
           link="/search?types=tv&lang=ar&keywords=gulf"
         />
 
         <QuantumTrain 
-          items={comedy.data || []} 
+          items={filterMedia(comedy.data || [])} 
           title={lang === 'ar' ? 'كوميديا رمضانية' : 'Ramadan Comedy'} 
           link="/search?types=tv&lang=ar&genres=35"
         />
 
         <QuantumTrain 
-          items={historical.data || []} 
+          items={filterMedia(historical.data || [])} 
           title={lang === 'ar' ? 'تاريخي وديني' : 'Historical & Religious'} 
           link="/search?types=tv&lang=ar&genres=36"
         />
 
         <QuantumTrain 
-          items={ramadan2025.data || []} 
+          items={filterMedia(ramadan2025.data || [])} 
           title={lang === 'ar' ? 'مسلسلات رمضان 2025' : 'Ramadan 2025 Series'} 
           link="/search?types=tv&year=2025&lang=ar"
         />
 
         <QuantumTrain 
-          items={ramadan2024.data || []} 
+          items={filterMedia(ramadan2024.data || [])} 
           title={lang === 'ar' ? 'مسلسلات رمضان 2024' : 'Ramadan 2024 Series'} 
           link="/search?types=tv&year=2024&lang=ar"
         />
 
         <QuantumTrain 
-          items={ramadan2023.data || []} 
+          items={filterMedia(ramadan2023.data || [])} 
           title={lang === 'ar' ? 'مسلسلات رمضان 2023' : 'Ramadan 2023 Series'} 
           link="/search?types=tv&year=2023&lang=ar"
         />
         
         <QuantumTrain 
-          items={ramadan2026.data || []} 
+          items={filterMedia(ramadan2026.data || [])} 
           title={lang === 'ar' ? 'مرتقب في رمضان 2026' : 'Coming in Ramadan 2026'} 
           link="/search?types=tv&year=2026&lang=ar"
         />

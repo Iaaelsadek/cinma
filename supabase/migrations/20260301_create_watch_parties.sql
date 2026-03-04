@@ -48,7 +48,13 @@ ALTER TABLE public.watch_party_participants ENABLE ROW LEVEL SECURITY;
 -- Policies for participants
 CREATE POLICY "Participants are viewable by room members" 
 ON public.watch_party_participants FOR SELECT 
-USING (true);
+USING (
+    EXISTS (
+        SELECT 1 FROM public.watch_party_participants 
+        WHERE party_id = public.watch_party_participants.party_id 
+        AND user_id = auth.uid()
+    )
+);
 
 CREATE POLICY "Authenticated users can join watch parties" 
 ON public.watch_party_participants FOR INSERT 

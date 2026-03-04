@@ -16,15 +16,16 @@ import { ReviewVotes } from '../../components/features/social/ReviewVotes'
 import { AddToListModal } from '../../components/features/social/AddToListModal'
 import { Helmet } from 'react-helmet-async'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Star, Eye, Heart as HeartIcon, Play, Download, Sparkles, MessageSquare, Trash2, List } from 'lucide-react'
+import { Star, Eye, Heart as HeartIcon, Play, Sparkles, MessageSquare, Trash2, List } from 'lucide-react'
 import { clsx } from 'clsx'
 import { ShareButton } from '../../components/common/ShareButton'
-import { AiInsights } from '../../components/features/media/AiInsights'
 import { useLang } from '../../state/useLang'
 import ReactPlayer from 'react-player'
 import { SeoHead } from '../../components/common/SeoHead'
 import { useDualTitles } from '../../hooks/useDualTitles'
 import { SectionHeader } from '../../components/common/SectionHeader'
+import { useHiddenMedia } from '../../hooks/useHiddenMedia'
+import { AlertTriangle } from 'lucide-react'
 
 type TmdbGenre = { id: number; name: string }
 type TmdbCrewMember = { id: number; job?: string; name?: string }
@@ -65,7 +66,29 @@ import { SkeletonDetails } from '../../components/common/Skeletons'
 export const MovieDetails = () => {
   const { id } = useParams()
   const movieId = Number(id)
-  const { user, loading } = useAuth()
+  const { user, loading: authLoading } = useAuth()
+  const { filterMedia, hiddenIds, isAdmin: isUserAdmin } = useHiddenMedia()
+  const { lang } = useLang()
+
+  // Hidden Content Check
+  const isHidden = hiddenIds.has(movieId)
+  if (isHidden && !isUserAdmin) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#050505] text-center p-6">
+        <div className="w-24 h-24 bg-rose-500/10 rounded-full flex items-center justify-center mb-6">
+          <AlertTriangle className="text-rose-500 w-12 h-12" />
+        </div>
+        <h1 className="text-3xl font-black mb-4">المحتوى غير متوفر حالياً</h1>
+        <p className="text-zinc-400 max-w-md mx-auto mb-8">
+          عذراً، هذا الفيلم تم إخفاؤه مؤقتاً بسبب تعطل السيرفرات الخاصة به. سنقوم بإعادة إظهاره فور توفر روابط جديدة.
+        </p>
+        <Link to="/" className="px-8 py-3 bg-primary text-black font-bold rounded-xl hover:scale-105 transition-transform">
+          العودة للرئيسية
+        </Link>
+      </div>
+    )
+  }
+
   const [isAdmin, setIsAdmin] = useState(false)
   const [aiSummary, setAiSummary] = useState<string | null>(null)
   const [dbTrailerUrl, setDbTrailerUrl] = useState<string | null>(null)
@@ -349,8 +372,27 @@ export const MovieDetails = () => {
 
   if (isLoading) {
     return (
-      <div className="max-w-7xl mx-auto px-4 pt-24 pb-12">
+      <div className="max-w-[2400px] mx-auto px-4 md:px-12 w-full pt-24 pb-12">
         <SkeletonDetails />
+      </div>
+    )
+  }
+
+  // Hidden Content Check
+  const isHidden = hiddenIds.has(movieId)
+  if (isHidden && !isUserAdmin) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#050505] text-center p-6">
+        <div className="w-24 h-24 bg-rose-500/10 rounded-full flex items-center justify-center mb-6">
+          <AlertTriangle className="text-rose-500 w-12 h-12" />
+        </div>
+        <h1 className="text-3xl font-black mb-4">المحتوى غير متوفر حالياً</h1>
+        <p className="text-zinc-400 max-w-md mx-auto mb-8">
+          عذراً، هذا العمل تم إخفاؤه مؤقتاً بسبب تعطل السيرفرات الخاصة به. سنقوم بإعادة إظهاره فور توفر روابط جديدة.
+        </p>
+        <Link to="/" className="px-8 py-3 bg-primary text-black font-bold rounded-xl hover:scale-105 transition-transform">
+          العودة للرئيسية
+        </Link>
       </div>
     )
   }
@@ -378,7 +420,8 @@ export const MovieDetails = () => {
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#050505]/60 to-[#050505]" />
         </div>
       )}
-      {isLoading ? (
+      <div className="max-w-[2400px] mx-auto px-4 md:px-12 w-full relative z-10 pt-6 space-y-3">
+        {isLoading ? (
         <SkeletonDetails />
       ) : (
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="grid grid-cols-1 gap-2 md:grid-cols-[1fr_200px]">
@@ -418,16 +461,6 @@ export const MovieDetails = () => {
                   <Play className="w-4 h-4 mr-2" fill="currentColor" />
                   {t('شاهد الآن', 'Watch Now')}
                 </Link>
-                <Link
-                  to={`/watch/movie/${id}#downloads`}
-                  onClick={() => {
-                    if (Number.isFinite(movieId)) incrementClicks('movies', movieId).catch(() => undefined)
-                  }}
-                  className="rounded-lg bg-emerald-600 px-6 h-10 flex items-center justify-center text-white font-bold shadow-md hover:brightness-110"
-                >
-                  <Download className="w-4 h-4 mr-2" />
-                  {t('تحميل', 'Download')}
-                </Link>
                 <ShareButton title={title} text={overview?.slice(0, 100)} />
                 <button onClick={() => toggleHeart.mutate()} className={`p-2 rounded-lg border border-white/10 ${heart ? 'bg-red-500/20 text-red-500' : 'bg-white/5 text-zinc-400'}`}>
                    <HeartIcon className={`w-5 h-5 ${heart ? 'fill-current' : ''}`} />
@@ -459,33 +492,7 @@ export const MovieDetails = () => {
               <p className="mt-4 text-sm leading-relaxed text-zinc-300 max-w-3xl">{overview}</p>
               
               {director && <div className="mt-3 text-xs text-zinc-400">{t('المخرج', 'Director')}: <span className="text-white">{director}</span></div>}
-
-              <AiInsights 
-                title={title} 
-                type="movie" 
-                overview={overview}
-                className="mt-6"
-              />
             </div>
-
-            {!!cast.length && (
-              <div className="rounded-xl border border-white/10 bg-white/5 p-3 backdrop-blur-md">
-                <div className="mb-2 text-xs font-semibold text-zinc-400 uppercase tracking-wider">{t('طاقم العمل', 'Cast')}</div>
-                <div className="no-scrollbar flex gap-2 overflow-x-auto pb-2">
-                  {cast.map((p) => {
-                    const img = p.profile_path ? `https://image.tmdb.org/t/p/w185${p.profile_path}` : ''
-                    return (
-                      <div key={p.id} className="w-16 shrink-0 text-center">
-                        <div className="mx-auto h-16 w-16 overflow-hidden rounded-full bg-zinc-800 border border-white/5">
-                          {img && <img src={img} alt={p.name} className="h-full w-full object-cover" loading="lazy" />}
-                        </div>
-                        <div className="mt-1 truncate text-[10px] text-zinc-300">{p.name}</div>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
           </div>
           
           {/* Right: Poster + Trailer */}
@@ -513,30 +520,9 @@ export const MovieDetails = () => {
       {!!(similar?.results?.length) && (
         <section>
           <SectionHeader title={t('مشابهة حسب التصنيف', 'Similar by Rating')} icon={<Sparkles />} />
-          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
-            {similar!.results.slice(0, 10).map((m) => (
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
+            {similar!.results.slice(0, 12).map((m) => (
               <MovieCard key={m.id} movie={m} />
-            ))}
-          </div>
-        </section>
-      )}
-      {downloadLinks.length > 0 && (
-        <section>
-          <SectionHeader title={t('روابط التحميل', 'Download Links')} icon={<Download />} />
-          <div className="flex flex-wrap gap-2">
-            {downloadLinks.map((d, i) => (
-              <a
-                key={`${d.url}-${i}`}
-                href={d.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => {
-                  if (Number.isFinite(movieId)) incrementClicks('movies', movieId).catch(() => undefined)
-                }}
-                className="rounded-md border border-zinc-700 px-3 py-1 text-sm text-primary"
-              >
-                {d.label || `رابط ${i + 1}`}
-              </a>
             ))}
           </div>
         </section>
@@ -704,7 +690,8 @@ export const MovieDetails = () => {
             </div>
           )}
         </div>
-      </section>
+        </section>
+      </div>
     </div>
   )
 }

@@ -11,6 +11,7 @@ import { Helmet } from 'react-helmet-async'
 import { BookOpen, Heart, Shield, Smile, Sparkles, Sun, Play } from 'lucide-react'
 import { SectionHeader } from '../../components/common/SectionHeader'
 import { QuantumHero } from '../../components/features/hero/QuantumHero'
+import { useHiddenMedia } from '../../hooks/useHiddenMedia'
 
 type AnimeRow = { id: number; title: string | null; category: string | null; image_url: string | null }
 type QuranRow = { id: number; name: string | null; category: string | null; image: string | null; rewaya: string | null; server: string | null }
@@ -18,6 +19,7 @@ type QuranRow = { id: number; name: string | null; category: string | null; imag
 export const CategoryPage = () => {
   const { category } = useParams()
   const { lang } = useLang()
+  const { filterMedia } = useHiddenMedia()
   const key = (category || '').toLowerCase()
   const isQuran = key === 'quran'
   const isAnime = key === 'anime'
@@ -52,15 +54,15 @@ export const CategoryPage = () => {
         .order('id', { ascending: false })
         .limit(60)
       if (error) throw error
-      if (data && data.length > 0) return data as AnimeRow[]
-      // Mock Data
-      return [
+      const results = (data && data.length > 0) ? (data as AnimeRow[]) : [
         { id: 101, title: 'Attack on Titan', category: 'Action', image_url: 'https://image.tmdb.org/t/p/w500/8C5gDxV5b1bYy72FNUYGBO2LbAt.jpg' },
         { id: 102, title: 'One Piece', category: 'Adventure', image_url: 'https://image.tmdb.org/t/p/w500/cMD9Ygz11VJmK195pHeV4Crghgy.jpg' },
         { id: 103, title: 'Demon Slayer', category: 'Fantasy', image_url: 'https://image.tmdb.org/t/p/w500/nTvM4mhq82TQNnf3RFULl4UB26b.jpg' },
         { id: 104, title: 'Jujutsu Kaisen', category: 'Supernatural', image_url: 'https://image.tmdb.org/t/p/w500/h8jGnEsL5QZc32l621f3jXf5j5.jpg' },
         { id: 105, title: 'Naruto Shippuden', category: 'Action', image_url: 'https://image.tmdb.org/t/p/w500/zAYRe2bJxpWTVrwwmBc00VFkAf4.jpg' }
       ] as AnimeRow[]
+      
+      return filterMedia(results.map(a => ({ ...a, media_type: 'anime', poster_path: a.image_url }))) as unknown as AnimeRow[]
     },
     enabled: isAnime
   })
@@ -84,7 +86,10 @@ export const CategoryPage = () => {
     enabled: isQuran
   })
 
-  const query = isClassics ? classicQuery : videoQuery
+  const filteredClassics = useMemo(() => isClassics ? filterMedia(classicQuery.data || []) : [], [isClassics, classicQuery.data, filterMedia])
+  const filteredVideos = useMemo(() => (!isQuran && !isAnime && !isClassics) ? filterMedia(videoQuery.data || []) : [], [isQuran, isAnime, isClassics, videoQuery.data, filterMedia])
+
+  const query = isClassics ? { ...classicQuery, data: filteredClassics } : { ...videoQuery, data: filteredVideos }
   const items = (query.data || []).map((video) => ({
     ...video,
     thumbnail: video.thumbnail ?? undefined
@@ -122,7 +127,7 @@ export const CategoryPage = () => {
     : `Explore ${title} with a luxury Arabic viewing experience.`
 
   return (
-    <div className="min-h-screen bg-luxury-obsidian pb-8">
+    <div className="min-h-screen bg-luxury-obsidian pb-8 max-w-[2400px] mx-auto px-4 md:px-12 w-full">
       <Helmet>
         <title>{`${title} | cinma.online`}</title>
         <meta name="description" content={description} />
@@ -133,7 +138,7 @@ export const CategoryPage = () => {
 
       <QuantumHero items={heroItems as any[]} />
       
-      <div className="px-4 lg:px-12 pt-4 relative z-10">
+      <div className="pt-4 relative z-10">
         <div className="mb-4 flex items-end justify-between">
           <div>
             <h1 className="text-2xl md:text-3xl font-black tracking-tight text-white">{title}</h1>
@@ -194,7 +199,7 @@ export const CategoryPage = () => {
             {query.isPending ? (
               <SkeletonGrid count={8} variant="video" />
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
                 {omarSondos.slice(0, 8).map((video: any, idx) => (
                   <MovieCard 
                     key={video.id} 
@@ -248,7 +253,7 @@ export const CategoryPage = () => {
         quranQuery.isPending ? (
           <SkeletonGrid count={12} variant="video" />
         ) : (
-          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
             {(quranQuery.data || []).map((r, idx) => (
               <MovieCard 
                 key={r.id} 
@@ -270,7 +275,7 @@ export const CategoryPage = () => {
         animeQuery.isPending ? (
           <SkeletonGrid count={12} variant="video" />
         ) : (
-          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
             {(animeQuery.data || []).map((a, idx) => (
               <MovieCard 
                 key={a.id} 
@@ -289,7 +294,7 @@ export const CategoryPage = () => {
         )
       )}
       {!isQuran && !isAnime && !isKids && !query.isPending ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
           {items.map((video, idx) => (
             <VideoCard key={video.id} video={video} index={idx} />
           ))}

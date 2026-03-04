@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { PrefetchLink } from '../components/common/PrefetchLink'
 import { useQuery, keepPreviousData } from '@tanstack/react-query'
 import { tmdb } from '../lib/tmdb'
@@ -55,10 +55,15 @@ import { isCJK } from '../lib/utils'
 import { useTranslatedContent } from '../hooks/useTranslatedContent'
 import { useDailyMotion } from '../hooks/useDailyMotion'
 
+import { useHiddenMedia } from '../hooks/useHiddenMedia'
+
 export const Home = () => {
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const { lang } = useLang()
   const { data: recommendations, isLoading: recommendationsLoading } = useRecommendations()
+  const { filterMedia } = useHiddenMedia()
+  const isAdmin = profile?.role === 'admin' || profile?.role === 'supervisor'
+  console.log('[Home Debug] Current Profile Role:', profile?.role)
 
   // --- DATA FETCHING (Optimized & Parallelized) ---
   // 1. DIVERSE HERO CONTENT
@@ -106,9 +111,22 @@ export const Home = () => {
             }
           }
 
+          // Log translation to database
+          try {
+            await supabase
+              .from('action_logs')
+              .insert([{ 
+                action: 'translation_check', 
+                content_id: Number(item.id),
+                details: `title=${title}, type=${ep.type}, lang=${ep.lang}` 
+              }])
+          } catch (e) {
+            // Silently fail if table missing or other error
+          }
+
           return { ...item, media_type: ep.type }
         } catch (e) {
-          // Silent fail for hero section
+          console.error(`Error fetching diverse content for ${ep.lang}:`, e)
           return null
         }
       })
@@ -116,7 +134,8 @@ export const Home = () => {
       const results = await Promise.all(promises)
       return { results: results.filter((i): i is TmdbMedia => !!i) }
     },
-    staleTime: 300000
+    staleTime: 1000 * 60 * 30, // 30 mins
+    placeholderData: keepPreviousData
   })
 
   // 2. CHINESE DRAMAS
@@ -237,16 +256,11 @@ export const Home = () => {
     staleTime: 300000
   })
 
-  const heroItems = useMemo(() => {
-    return diverseHero.data?.results || []
-  }, [diverseHero.data])
-
-  // Other Content
   const classics = useClassicVideos({ limit: 20 })
-  const plays = useCategoryVideos('plays', { limit: 20 }) // plays (99 items)
-  const goldenEra = useCategoryVideos('golden_era', { limit: 20 }) // golden_era (97 items)
-  const recaps = useCategoryVideos('recaps', { limit: 20 }) // recaps (34 items)
-  
+  const plays = useCategoryVideos('plays', { limit: 20 }) 
+  const goldenEra = useCategoryVideos('golden_era', { limit: 20 }) 
+  const recaps = useCategoryVideos('recaps', { limit: 20 }) 
+
   const animeHub = useQuery<any[]>({
     queryKey: ['home-anime'],
     queryFn: async () => {
@@ -258,17 +272,8 @@ export const Home = () => {
           .limit(12)
         
         if (error) {
-           // If 404/PGRST116 (relation not found), return empty gracefully
-           if (error.code === '42P01') {
-              console.warn('[Home] Anime table not found (42P01), returning empty.');
-              return [];
-           }
-           // Check for AbortError wrapped by Supabase
-           if (error.message?.includes('AbortError') || error.details?.includes('AbortError') || error.hint?.includes('timeout')) {
-              console.warn('[Home] Anime fetch timed out (Supabase wrapper).');
-              return [];
-           }
-           console.error('Error fetching anime:', error)
+           if (error.code === '42P01') return [];
+           if (error.message?.includes('AbortError')) return [];
            return []
          }
 
@@ -279,12 +284,6 @@ export const Home = () => {
           original_language: 'ja'
         }))
       } catch (err: any) {
-        // Handle AbortError or network failure gracefully
-        if (err.name === 'AbortError') {
-             console.warn('[Home] Anime fetch aborted/timed out.');
-             return [];
-        }
-        console.error('Unexpected error fetching anime:', err);
         return [];
       }
     },
@@ -303,18 +302,9 @@ export const Home = () => {
           .limit(10)
 
         if (error) {
-           // If 404/PGRST116 (relation not found), return empty gracefully
-           if (error.code === '42P01') {
-             console.warn('[Home] Quran table not found (42P01), returning empty.');
-             return [];
-          }
-          // Check for AbortError wrapped by Supabase
-          if (error.message?.includes('AbortError') || error.details?.includes('AbortError') || error.hint?.includes('timeout')) {
-             console.warn('[Home] Quran fetch timed out (Supabase wrapper).');
-             return [];
-          }
-          console.error('Error fetching quran:', error)
-          return []
+           if (error.code === '42P01') return [];
+           if (error.message?.includes('AbortError')) return [];
+           return []
         }
 
         return (data || []).map(item => ({
@@ -325,11 +315,6 @@ export const Home = () => {
           overview: item.rewaya
         }))
       } catch (err: any) {
-         if (err.name === 'AbortError') {
-             console.warn('[Home] Quran fetch aborted/timed out.');
-             return [];
-        }
-        console.error('Unexpected error fetching quran:', err);
         return [];
       }
     },
@@ -389,14 +374,6 @@ export const Home = () => {
     staleTime: 300000
   })
 
-  // --- CJK & Fallback Processing ---
-  
-  // Apply translations
-  const translatedKorean = useTranslatedContent(koreanSeries.data?.results)
-  const translatedTurkish = useTranslatedContent(turkishSeries.data?.results)
-  const translatedChinese = useTranslatedContent(chineseSeries.data?.results)
-  
-  // Fallbacks for empty sections
   const tmdbAnime = useQuery<any[]>({
     queryKey: ['home-anime-fallback'],
     queryFn: async () => {
@@ -421,10 +398,58 @@ export const Home = () => {
     staleTime: 300000
   })
 
+  // Other Content (Memoized filtered lists to avoid re-renders)
+  const filteredClassics = useMemo(() => filterMedia(classics.data), [filterMedia, classics.data])
+  const filteredPlays = useMemo(() => filterMedia(plays.data), [filterMedia, plays.data])
+  const filteredGoldenEra = useMemo(() => filterMedia(goldenEra.data), [filterMedia, goldenEra.data])
+  const filteredClassicsFallback = useMemo(() => filterMedia(tmdbClassics.data), [filterMedia, tmdbClassics.data])
+  const filteredRecaps = useMemo(() => filterMedia(recaps.data), [filterMedia, recaps.data])
+  const filteredRecommendations = useMemo(() => filterMedia(recommendations, 10), [filterMedia, recommendations])  
+
+  // Apply translations (ensure filtering is applied to the input of translations)
+  const filteredKorean = useMemo(() => filterMedia(koreanSeries.data?.results), [koreanSeries.data, filterMedia])
+  const filteredTurkish = useMemo(() => filterMedia(turkishSeries.data?.results), [turkishSeries.data, filterMedia])
+  const filteredChinese = useMemo(() => filterMedia(chineseSeries.data?.results), [chineseSeries.data, filterMedia])
+  const filteredPopular = useMemo(() => filterMedia(popularMovies.data?.results, 10), [filterMedia, popularMovies.data])
+  const filteredPopularAr = useMemo(() => filterMedia(popularAr.data?.results, 10), [filterMedia, popularAr.data])
+  const filteredArabicSeries = useMemo(() => filterMedia(arabicSeries.data?.results), [filterMedia, arabicSeries.data])
+  const filteredKids = useMemo(() => filterMedia(kidsContent.data?.results), [filterMedia, kidsContent.data])
+  const filteredAnime = useMemo(() => filterMedia(tmdbAnime.data), [filterMedia, tmdbAnime.data])
+  const filteredBollywood = useMemo(() => filterMedia(bollywoodMovies.data?.results), [filterMedia, bollywoodMovies.data])
+  const filteredDocumentaries = useMemo(() => filterMedia(documentaries.data?.results), [filterMedia, documentaries.data])
+  const filteredTopRated = useMemo(() => filterMedia(topRatedMovies.data?.results), [filterMedia, topRatedMovies.data])
+  const filteredAnimeHub = useMemo(() => filterMedia(animeHub.data && animeHub.data.length > 0 ? animeHub.data : tmdbAnime.data), [filterMedia, animeHub.data, tmdbAnime.data])
+  
+  const translatedKorean = useTranslatedContent(filteredKorean)
+  const translatedTurkish = useTranslatedContent(filteredTurkish)
+  const translatedChinese = useTranslatedContent(filteredChinese)
+
   const dmTrending = useDailyMotion()
 
   const canonicalUrl = typeof window !== 'undefined' ? `${location.origin}${location.pathname}` : ''
   const description = lang === 'ar' ? 'منصة أونلاين سينما - تجربة المستقبل' : 'Online Cinema - The Future Experience'
+
+  const heroItems = useMemo(() => {
+    const filtered = filterMedia(diverseHero.data?.results, 10)
+    console.log('[Home Debug] isAdmin:', isAdmin)
+    console.log('[Home Debug] Original items:', diverseHero.data?.results?.length || 0)
+    console.log('[Home Debug] Filtered items:', filtered.length)
+    console.log('[Home Debug] Filtered IDs:', filtered.map(i => i.id))
+    
+    if (filtered.some(i => i.id === 482600 || i.id === 705996)) {
+      console.error(`[Home Debug] MOVIE ${filtered.find(i => i.id === 482600 || i.id === 705996)?.id} IS STILL IN HERO ITEMS!`)
+    }
+    
+    // Check for "The Witch" in any title
+    filtered.forEach(item => {
+      const title = item.title || item.name || ''
+      if (title.toLowerCase().includes('witch') || title.includes('ساحرة')) {
+        console.warn(`[Home Debug] Found "The Witch" related content: ${title} (ID: ${item.id})`)
+      }
+    })
+    
+    return filtered
+  }, [diverseHero.data, filterMedia, isAdmin])
 
   return (
     <div className="min-h-screen text-white overflow-x-hidden selection:bg-cyan-500 selection:text-black">
@@ -440,7 +465,7 @@ export const Home = () => {
 
       <AdsManager type="banner" position="home-top" />
 
-      <div className="max-w-[2400px] mx-auto px-4 md:px-6 w-full">
+      <div className="max-w-[2400px] mx-auto px-4 md:px-12 w-full">
         {/* Continue Watching - for logged-in users */}
         {user && (
           <section className="relative z-20 pt-6 pb-2">
@@ -448,13 +473,13 @@ export const Home = () => {
           </section>
         )}
 
-        {/* Section: Picked for You (Auth only) - Recommendation System */}
-        {user && recommendations && recommendations.length > 0 && (
+        {/* AI Recommendations */}
+        {user && filteredRecommendations && filteredRecommendations.length > 0 && (
           <section className="relative overflow-hidden rounded-3xl border border-violet-500/20 bg-violet-950/10 mb-6">
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-violet-500/20 via-transparent to-transparent opacity-50 blur-3xl pointer-events-none" />
             <div className="relative z-10">
                <QuantumTrain 
-                 items={recommendations} 
+                 items={filteredRecommendations} 
                  title={lang === 'ar' ? 'مقترح لك' : 'Picked for You'}
                  icon={<Sparkles className="text-amber-400 animate-pulse" />}
                  badge={lang === 'ar' ? 'ذكاء اصطناعي' : 'AI Powered'}
@@ -472,7 +497,7 @@ export const Home = () => {
               <SkeletonGrid count={6} variant="poster" />
             </div>
           ) : (
-            <QuantumTrain items={popularMovies.data?.results || []} />
+            <QuantumTrain items={filteredPopular} />
           )}
         </section>
 
@@ -488,7 +513,7 @@ export const Home = () => {
             </>
           ) : (
             <QuantumTrain 
-              items={popularAr.data?.results || []} 
+              items={filteredPopularAr} 
               title={lang === 'ar' ? 'الأعلى مشاهدة في مصر' : 'Top Trending in Egypt'} 
               icon={<Zap />} 
               link="/movies" 
@@ -505,7 +530,7 @@ export const Home = () => {
             </>
           ) : (
             <QuantumTrain 
-              items={arabicSeries.data?.results || []} 
+              items={filteredArabicSeries} 
               title={lang === 'ar' ? 'مسلسلات عربية ورمضانية' : 'Arabic & Ramadan Series'} 
               icon={<Tv />} 
               link="/ramadan" 
@@ -522,7 +547,7 @@ export const Home = () => {
             </>
           ) : (
             <QuantumTrain 
-              items={kidsContent.data?.results || []} 
+              items={filteredKids} 
               title={lang === 'ar' ? 'أطفال وعائلة' : 'Kids & Family'} 
               icon={<Smile />} 
               link="/kids" 
@@ -530,7 +555,8 @@ export const Home = () => {
           )}
         </section>
 
-        {/* Section: Korean & Chinese Series (K-Drama & C-Drama) - Stacked for better UX */}
+
+        {/* Section: Korean & Chinese Series */}
         <section>
           {koreanSeries.isLoading ? (
             <>
@@ -539,7 +565,7 @@ export const Home = () => {
             </>
           ) : (
             <QuantumTrain 
-              items={translatedKorean.data || koreanSeries.data?.results || []} 
+              items={translatedKorean.data || []} 
               title={lang === 'ar' ? 'الدراما الكورية' : 'K-Drama'} 
               icon={<Film />} 
               link="/k-drama" 
@@ -556,7 +582,7 @@ export const Home = () => {
             </>
            ) : (
             <QuantumTrain 
-              items={translatedChinese.data || chineseSeries.data?.results || []} 
+              items={translatedChinese.data || []} 
               title={lang === 'ar' ? 'مسلسلات صينية قصيرة' : 'Chinese Short Series'} 
               icon={<Tv />} 
               link="/chinese" 
@@ -565,7 +591,6 @@ export const Home = () => {
            )}
         </section>
 
-        {/* Section: Turkish Drama */}
         <section>
           {turkishSeries.isLoading ? (
             <>
@@ -574,7 +599,7 @@ export const Home = () => {
             </>
           ) : (
             <QuantumTrain 
-              items={translatedTurkish.data || turkishSeries.data?.results || []} 
+              items={translatedTurkish.data || []} 
               title={lang === 'ar' ? 'الدراما التركية' : 'Turkish Drama'} 
               icon={<Film />} 
               link="/turkish" 
@@ -591,7 +616,7 @@ export const Home = () => {
             </>
           ) : (
             <QuantumTrain 
-              items={tmdbAnime.data || []} 
+              items={filteredAnime} 
               title={lang === 'ar' ? 'أحدث الأنمي' : 'Latest Anime'} 
               icon={<Zap />} 
               link="/anime" 
@@ -609,7 +634,7 @@ export const Home = () => {
             </>
           ) : (
             <QuantumTrain 
-              items={bollywoodMovies.data?.results || []} 
+              items={filteredBollywood} 
               title={lang === 'ar' ? 'أفلام بوليوود' : 'Bollywood Movies'} 
               icon={<Film />} 
               link="/bollywood" 
@@ -617,6 +642,7 @@ export const Home = () => {
             />
           )}
         </section>
+
         {/* Section: Masrahiyat (Plays) */}
         <section>
           {plays.isLoading ? (
@@ -626,7 +652,7 @@ export const Home = () => {
             </>
           ) : (
             <QuantumTrain 
-              items={plays.data || []} 
+              items={filteredPlays} 
               title={lang === 'ar' ? 'مسرحيات وكلاسيكيات' : 'Plays & Classics'} 
               icon={<Drama />} 
               link="/plays" 
@@ -635,29 +661,12 @@ export const Home = () => {
           )}
         </section>
 
-        {/* Section: Bollywood */}
-        <section>
-          {bollywoodMovies.isLoading ? (
-            <>
-              <SectionHeader title={lang === 'ar' ? 'أفلام هندية وبوليوود' : 'Bollywood Bonanza'} icon={<Globe />} link="/bollywood" />
-              <SkeletonGrid count={6} variant="poster" />
-            </>
-          ) : (
-            <QuantumTrain 
-              items={bollywoodMovies.data?.results || []} 
-              title={lang === 'ar' ? 'أفلام هندية وبوليوود' : 'Bollywood Bonanza'} 
-              icon={<Globe />} 
-              link="/bollywood" 
-            />
-          )}
-        </section>
-
         {/* Section: Global Trending */}
         <section>
           <SectionHeader title={lang === 'ar' ? 'الرائج عالمياً' : 'Global Trending'} icon={<Zap />} link="/top-watched" />
           {popularAr.isPending ? <SkeletonGrid count={10} variant="poster" /> : (
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6 perspective-1000">
-              {popularAr.data?.results?.slice(0, 12).map((movie, idx) => (
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6 perspective-1000">
+              {filteredPopularAr?.slice(0, 12).map((movie, idx) => (
                  <MovieCard key={movie.id} movie={movie} index={idx} />
               ))}
             </div>
@@ -673,7 +682,7 @@ export const Home = () => {
             </>
           ) : (
             <QuantumTrain 
-              items={documentaries.data?.results || []} 
+              items={filteredDocumentaries} 
               title={lang === 'ar' ? 'وثائقيات وواقع' : 'Documentaries'} 
               icon={<FileText />} 
               link="/docs" 
@@ -681,23 +690,24 @@ export const Home = () => {
           )}
         </section>
 
+
         {/* Section: Golden Era & Recaps (Bento Style) */}
         <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
            <BentoBox 
              title={lang === 'ar' ? 'العصر الذهبي' : 'Golden Era'} 
              icon={<Film />} 
-             items={goldenEra.data && goldenEra.data.length > 0 ? goldenEra.data : (tmdbClassics.data || [])}
+             items={filteredGoldenEra.length > 0 ? filteredGoldenEra : filteredClassicsFallback}
              color="gold"
            />
            <BentoBox 
              title={lang === 'ar' ? 'ملخصات الأفلام' : 'Movie Recaps'} 
              icon={<Zap />} 
-             items={recaps.data || []}
+             items={filteredRecaps}
              color="cyan"
            />
         </section>
 
-        {/* Section: DailyMotion Trending (New Diverse Source) */}
+        {/* Section: DailyMotion Trending */}
         {dmTrending.data && dmTrending.data.length > 0 && (
           <section>
             <SectionHeader 
@@ -706,28 +716,19 @@ export const Home = () => {
               badge="DailyMotion"
               color="purple"
             />
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
                {dmTrending.data.map((item, i) => (
                  <HolographicCard key={item.id} className="aspect-video group relative overflow-hidden rounded-xl border border-white/10 bg-black/40">
                     <a href={item.url} target="_blank" rel="noopener noreferrer" className="block h-full w-full">
                        <img 
                          src={item.thumbnail_720_url} 
                          alt={item.title}
-                         className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110 opacity-80 group-hover:opacity-100"
+                         className="h-full w-full object-cover opacity-80 group-hover:opacity-100"
                          loading="lazy"
-                         decoding="async"
                        />
                        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
                        <div className="absolute bottom-0 left-0 right-0 p-3">
                           <h3 className="text-xs font-bold text-white line-clamp-2 mb-1">{item.title}</h3>
-                          <div className="flex items-center justify-between text-[10px] text-zinc-400">
-                             <span>{Math.floor(item.duration / 60)}:{(item.duration % 60).toString().padStart(2, '0')}</span>
-                             <span>{item.owner}</span>
-                          </div>
-                       </div>
-                       <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-md px-1.5 py-0.5 rounded text-[10px] font-mono text-white flex items-center gap-1">
-                          <Play size={8} fill="currentColor" />
-                          DM
                        </div>
                     </a>
                  </HolographicCard>
@@ -740,11 +741,11 @@ export const Home = () => {
         <section>
           <SectionHeader title={lang === 'ar' ? 'أنمي مترجم' : 'Anime'} icon={<Tv />} link="/anime" />
           {animeHub.isLoading && tmdbAnime.isLoading ? <SkeletonGrid count={6} variant="poster" /> : (
-             <QuantumTrain items={(animeHub.data && animeHub.data.length > 0 ? animeHub.data : tmdbAnime.data) || []} />
+             <QuantumTrain items={filteredAnimeHub} />
           )}
         </section>
 
-        {/* Section: Quran (Hidden if empty) */}
+        {/* Section: Quran */}
         {quranHub.data && quranHub.data.length > 0 && (
           <section>
             <SectionHeader title={lang === 'ar' ? 'القرآن الكريم' : 'Holy Quran'} icon={<BookOpen />} link="/quran" />
@@ -754,7 +755,7 @@ export const Home = () => {
           </section>
         )}
 
-        {/* Section: Top Rated (Horizontal Scroll) */}
+        {/* Section: Top Rated */}
         <section>
            <SectionHeader 
              title={lang === 'ar' ? 'الأعلى تقييماً' : 'Top Rated'} 
@@ -763,13 +764,14 @@ export const Home = () => {
              badge="⭐ 9.0+"
            />
            <div className="flex gap-3 overflow-x-auto pb-4 snap-x scrollbar-none">
-              {topRatedMovies.data?.results?.slice(0, 10).map((movie, idx) => (
+              {filteredTopRated.slice(0, 10).map((movie, idx) => (
                 <div key={movie.id} className="snap-center shrink-0 w-[120px] md:w-[140px]">
                    <MovieCard movie={movie} index={idx} />
                 </div>
               ))}
            </div>
         </section>
+
 
         {/* AI Discovery */}
         {user && (
@@ -794,14 +796,17 @@ export const Home = () => {
 
 // --- SUB COMPONENTS ---
 
-import { ChevronLeft, ChevronRight } from 'lucide-react'
-
 const BentoBox = ({ title, icon, items, color }: { title: string, icon: any, items: any[], color: 'cyan' | 'purple' | 'gold' }) => {
+  const { filterMedia } = useHiddenMedia()
+  const filtered = useMemo(() => filterMedia(items), [filterMedia, items])
+  
+  if (filtered.length === 0) return null
+
   return (
     <div>
       <SectionHeader title={title} icon={icon} color={color} />
       <div className="grid grid-cols-2 gap-3">
-        {items.slice(0, 4).map((item, i) => {
+        {filtered.slice(0, 4).map((item, i) => {
           const isTmdb = !!item.poster_path || !!item.backdrop_path
           const img = item.thumbnail || (item.backdrop_path ? `https://image.tmdb.org/t/p/w500${item.backdrop_path}` : `https://image.tmdb.org/t/p/w500${item.poster_path}`)
           const link = isTmdb 
@@ -816,7 +821,6 @@ const BentoBox = ({ title, icon, items, color }: { title: string, icon: any, ite
                     className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" 
                     alt={item.title || item.name}
                     loading="lazy"
-                    decoding="async"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
                   <div className="absolute bottom-4 left-4 right-4">
@@ -832,17 +836,20 @@ const BentoBox = ({ title, icon, items, color }: { title: string, icon: any, ite
 }
 
 const AIRecommended = ({ userId }: { userId: string }) => {
+  const { filterMedia } = useHiddenMedia()
   const q = useQuery<RecommendationItem[]>({ 
     queryKey: ['recs', userId], 
     queryFn: () => getRecommendations(userId),
     staleTime: 1000 * 60 * 60
   })
 
-  if (!q.data?.length) return <div className="text-zinc-500">Initializing Neural Net...</div>
+  const filtered = useMemo(() => filterMedia(q.data), [filterMedia, q.data])
+
+  if (!filtered?.length) return <div className="text-zinc-500">Initializing Neural Net...</div>
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-      {q.data.slice(0, 5).map(m => (
+    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
+      {filtered.slice(0, 5).map(m => (
         <HolographicCard key={m.id} className="aspect-[2/3]">
            <PrefetchLink to={`/watch/movie/${m.id}`}>
              <img 
@@ -850,7 +857,6 @@ const AIRecommended = ({ userId }: { userId: string }) => {
                className="w-full h-full object-cover" 
                alt={m.title}
                loading="lazy" 
-               decoding="async"
              />
            </PrefetchLink>
         </HolographicCard>

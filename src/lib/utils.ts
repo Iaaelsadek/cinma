@@ -17,65 +17,18 @@ export const getGenreSlug = (genreId: number) => {
 }
 
 export const generateWatchPath = (item: any) => {
-  const title = slugify(item.title || item.name || 'untitled')
-  
-  // Handle YouTube/Video content separately
-  if (item.media_type === 'video' || item.is_video) {
-    let category = 'general'
-    if (item.category) category = slugify(item.category)
-    
-    // Special path for Summaries
-    if (category === 'summary' || category === 'summaries') {
-      return `/watch/arabic/summaries/${category}/${title}-${item.id}`
-    }
-    
-    // Generic Video Path
-    return `/watch/arabic/video/${category}/${category}/${title}-${item.id}`
-  }
-
-  // Handle Game/Software content
-  if (item.media_type === 'game') {
-    return `/game/${item.id}`
-  }
-  if (item.media_type === 'software') {
-    return `/software/${item.id}`
-  }
-  if (item.media_type === 'quran') {
-    return `/quran/reciter/${item.id}`
-  }
-
   // Determine Type
-  let type = 'movies'
-  if (item.media_type === 'tv' || item.media_type === 'anime') type = 'series'
+  let type = 'movie'
+  if (item.media_type === 'tv' || item.media_type === 'anime' || item.name) type = 'tv'
+  if (item.media_type === 'movie' || item.title) type = 'movie'
   
-  // Special Type: Plays (from TMDB)
-  if (item.is_play || (item.category && item.category.toLowerCase().includes('play'))) {
-    type = 'plays'
+  const id = item.id
+
+  if (type === 'tv') {
+    return `/watch/tv/${id}/s1/ep1`
   }
   
-  // Determine Language
-  let lang = 'english'
-  if (item.original_language === 'ar') lang = 'arabic'
-  else if (item.original_language === 'ja') lang = 'japanese'
-  else if (item.original_language === 'ko') lang = 'korean'
-  else if (item.original_language === 'tr') lang = 'turkish'
-  else if (item.original_language === 'hi') lang = 'indian'
-  else if (item.media_type === 'anime') lang = 'japanese' // Default to JA for anime if missing
-
-  // Determine Genre
-  let genre = 'general'
-  if (item.category && typeof item.category === 'string') {
-    genre = slugify(item.category)
-  } else {
-    const genreId = item.genre_ids?.[0] || item.genres?.[0]?.id
-    if (genreId) {
-      genre = getGenreSlug(genreId) || 'general'
-    }
-  }
-
-  // Return the SEO friendly path
-  // Format: /watch/english/movies/sci-fi/primate
-  return `/watch/${lang}/${type}/${genre}/${title}-${item.id}`
+  return `/watch/movie/${id}`
 }
 
 export const parseWatchPath = (slug: string) => {

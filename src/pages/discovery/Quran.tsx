@@ -281,7 +281,7 @@ export const QuranPage = () => {
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60vw] h-[60vw] bg-cyan-900/5 rounded-full blur-[150px] animate-pulse-slow delay-2000" />
       </div>
 
-      <div className="relative z-10 max-w-[1920px] mx-auto p-4 md:p-6 lg:p-8 flex flex-col h-[calc(100vh-100px)]">
+      <div className="relative z-10 max-w-[2400px] mx-auto p-4 md:p-6 lg:p-8 flex flex-col h-[calc(100vh-100px)]">
         
         {/* Header Section - Spiritual & Compact */}
         <div className="flex flex-col items-center justify-center mb-6 shrink-0 relative">
@@ -503,7 +503,7 @@ export const QuranPage = () => {
 
               {/* Surahs Grid/List (Scrollable) */}
               <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 pb-20">
-                <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3' : 'space-y-2'}>
+                <div className={viewMode === 'grid' ? 'grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6' : 'space-y-2'}>
                   {filteredSurahs.map((surah) => {
                     const active = isCurrentTrack(selectedReciter.id, surah.id)
                     return (

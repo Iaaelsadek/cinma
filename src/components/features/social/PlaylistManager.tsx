@@ -109,13 +109,13 @@ export const PlaylistManager = () => {
       </div>
 
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[1,2,3].map(i => (
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
+          {[1,2,3,4,5,6].map(i => (
             <div key={i} className="h-32 rounded-2xl bg-white/5 animate-pulse" />
           ))}
         </div>
       ) : playlists.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
           {playlists.map((playlist) => (
             <motion.div
               key={playlist.id}

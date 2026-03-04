@@ -55,12 +55,12 @@ const AdminAdsPage = () => {
   return (
     <div className="space-y-3">
       <h1 className="text-xl font-bold">إدارة الإعلانات</h1>
-      <form onSubmit={handleSubmit(v => addAd.mutate(v))} className="grid gap-2.5 rounded-lg border border-zinc-800 p-3 md:grid-cols-4 bg-zinc-900/30">
-        <div>
+      <form onSubmit={handleSubmit(v => addAd.mutate(v))} className="grid gap-2.5 rounded-lg border border-zinc-800 p-3 md:grid-cols-2 lg:grid-cols-6 bg-zinc-900/30">
+        <div className="lg:col-span-2">
           <label className="mb-1 block text-[10px] text-zinc-400">الاسم</label>
           <input {...register('name')} className="w-full rounded-md border border-zinc-700 bg-zinc-900 p-1.5 text-xs focus:border-primary outline-none" />
         </div>
-        <div>
+        <div className="lg:col-span-1">
           <label className="mb-1 block text-[10px] text-zinc-400">النوع</label>
           <select {...register('type')} className="w-full rounded-md border border-zinc-700 bg-zinc-900 text-white p-1.5 text-xs focus:border-primary outline-none">
             <option value="banner" className="bg-zinc-900 text-white">banner</option>
@@ -69,7 +69,7 @@ const AdminAdsPage = () => {
             <option value="midroll" className="bg-zinc-900 text-white">midroll</option>
           </select>
         </div>
-        <div>
+        <div className="lg:col-span-1">
           <label className="mb-1 block text-[10px] text-zinc-400">الموضع</label>
           <select {...register('position')} className="w-full rounded-md border border-zinc-700 bg-zinc-900 text-white p-1.5 text-xs focus:border-primary outline-none">
             <option value="top" className="bg-zinc-900 text-white">top</option>
@@ -78,16 +78,16 @@ const AdminAdsPage = () => {
             <option value="player" className="bg-zinc-900 text-white">player</option>
           </select>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="lg:col-span-1 flex items-center gap-2">
           <label className="text-xs text-zinc-300">نشط</label>
           <input type="checkbox" {...register('active')} className="rounded border-zinc-700 bg-zinc-900" />
         </div>
-        <div className="md:col-span-4">
+        <div className="lg:col-span-1 flex items-end">
+          <button className="w-full rounded-md bg-primary px-4 h-8 text-xs text-white hover:bg-primary/90 transition-colors">إضافة</button>
+        </div>
+        <div className="md:col-span-2 lg:col-span-6">
           <label className="mb-1 block text-[10px] text-zinc-400">الكود</label>
           <textarea rows={3} {...register('code')} className="w-full rounded-md border border-zinc-700 bg-zinc-900 p-1.5 font-mono text-[10px] focus:border-primary outline-none" />
-        </div>
-        <div className="md:col-span-4">
-          <button className="rounded-md bg-primary px-4 h-8 text-xs text-white hover:bg-primary/90 transition-colors">إضافة</button>
         </div>
       </form>
       <div className="space-y-2">

@@ -26,14 +26,14 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Star, List, MessageSquare, Play, Trash2 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { ShareButton } from '../../components/common/ShareButton'
-import { AiInsights } from '../../components/features/media/AiInsights'
-import { SectionHeader } from '../../components/common/SectionHeader'
 import { useLang } from '../../state/useLang'
 import React from 'react'
 import ReactPlayer from 'react-player'
 import { getEmbedUrlByIndex } from '../../services/embedService'
 import { SeoHead } from '../../components/common/SeoHead'
 import { useDualTitles } from '../../hooks/useDualTitles'
+import { useHiddenMedia } from '../../hooks/useHiddenMedia'
+import { AlertTriangle } from 'lucide-react'
 
 interface SeriesDetailsProps {
   id?: string
@@ -44,10 +44,30 @@ const SeriesDetails = ({ id: propId }: SeriesDetailsProps = {}) => {
   const id = propId || params.id
   const tvId = Number(id)
   const { user } = useAuth()
+  const { filterMedia, hiddenIds, isAdmin: isUserAdmin } = useHiddenMedia()
   const [seasonNumber, setSeasonNumber] = useState<number | null>(null)
   const [seasonId, setSeasonId] = useState<number | null>(null)
   const [heart, setHeart] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
+
+  // Hidden Content Check
+  const isHidden = hiddenIds.has(tvId)
+  if (isHidden && !isUserAdmin) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#050505] text-center p-6">
+        <div className="w-24 h-24 bg-rose-500/10 rounded-full flex items-center justify-center mb-6">
+          <AlertTriangle className="text-rose-500 w-12 h-12" />
+        </div>
+        <h1 className="text-3xl font-black mb-4">المحتوى غير متوفر حالياً</h1>
+        <p className="text-zinc-400 max-w-md mx-auto mb-8">
+          عذراً، هذا العمل تم إخفاؤه مؤقتاً بسبب تعطل السيرفرات الخاصة به. سنقوم بإعادة إظهاره فور توفر روابط جديدة.
+        </p>
+        <Link to="/" className="px-8 py-3 bg-primary text-black font-bold rounded-xl hover:scale-105 transition-transform">
+          العودة للرئيسية
+        </Link>
+      </div>
+    )
+  }
 
   const series = useQuery({
     queryKey: ['series', tvId],
@@ -324,7 +344,8 @@ const SeriesDetails = ({ id: propId }: SeriesDetailsProps = {}) => {
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#050505]/60 to-[#050505]" />
         </div>
       )}
-      <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="grid grid-cols-1 gap-2 md:grid-cols-[160px_1fr_240px]">
+      <div className="max-w-[2400px] mx-auto px-4 md:px-12 w-full relative z-10 pt-6">
+        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="grid grid-cols-1 gap-2 md:grid-cols-[160px_1fr_240px]">
         {/* Left: Poster & actions */}
         <div className="space-y-2 order-2 md:order-1">
           <div className="overflow-hidden rounded-xl border border-white/10 bg-white/5 shadow-2xl backdrop-blur-md">
@@ -376,13 +397,6 @@ const SeriesDetails = ({ id: propId }: SeriesDetailsProps = {}) => {
             
             <p className="mt-3 text-sm leading-relaxed text-zinc-300">{overview}</p>
             
-            <AiInsights 
-              title={series.data?.name || ''} 
-              type="tv" 
-              overview={series.data?.overview || ''}
-              className="mt-6"
-            />
-            
             <div className="mt-3 no-scrollbar flex gap-2 overflow-x-auto pb-1">
               {(seasons.data || [])
                 .filter((s: any) => (s.season_number ?? 0) >= 0)
@@ -402,25 +416,6 @@ const SeriesDetails = ({ id: propId }: SeriesDetailsProps = {}) => {
                 ))}
             </div>
           </div>
-          
-          {!!cast.length && (
-            <div className="rounded-xl border border-white/10 bg-white/5 p-3 backdrop-blur-md">
-              <div className="mb-2 text-xs font-semibold text-zinc-400 uppercase tracking-wider">{t('طاقم العمل', 'Cast')}</div>
-              <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1">
-                {cast.map((p) => {
-                  const img = p.profile_path ? `https://image.tmdb.org/t/p/w185${p.profile_path}` : ''
-                  return (
-                    <div key={p.id} className="w-16 shrink-0 text-center">
-                      <div className="mx-auto h-16 w-16 overflow-hidden rounded-full bg-zinc-800 border border-white/5">
-                        {img && <img src={img} alt={p.name} className="h-full w-full object-cover" loading="lazy" />}
-                      </div>
-                      <div className="mt-1 truncate text-[10px] text-zinc-300">{p.name}</div>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          )}
         </div>
         
         {/* Right: Trailer + actions */}
@@ -470,11 +465,8 @@ const SeriesDetails = ({ id: propId }: SeriesDetailsProps = {}) => {
                 <List className="w-5 h-5" />
               </button>
             )}
-            <Link to={`/watch/${id}?type=tv&season=${seasonNumber || 1}&episode=${playingEpisode || 1}`} className="flex-1 rounded-md bg-gradient-to-r from-primary to-luxury-purple h-10 flex items-center justify-center text-white font-bold min-w-[120px]">
+            <Link to={`/watch/tv/${id}/s${seasonNumber || 1}/ep${playingEpisode || 1}`} className="flex-1 rounded-md bg-gradient-to-r from-primary to-luxury-purple h-10 flex items-center justify-center text-white font-bold min-w-[120px]">
               {t('شاهد الآن', 'Watch Now')}
-            </Link>
-            <Link to={`/watch/${id}?type=tv&season=${seasonNumber || 1}&episode=1`} className="rounded-md border border-white/10 bg-white/10 px-4 h-10 flex items-center text-white hover:bg-white/20">
-              {t('تحميل', 'Download')}
             </Link>
           </div>
         </div>
@@ -482,7 +474,7 @@ const SeriesDetails = ({ id: propId }: SeriesDetailsProps = {}) => {
 
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">{t('الحلقات', 'Episodes')}</h2>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
           {(episodes.data || []).map((e: any) => {
             const still = e.still_path ? `https://image.tmdb.org/t/p/w300${e.still_path}` : ''
             return (

@@ -249,7 +249,7 @@ export const CategoryHub = ({ type: propsType = 'movie', category: propsCategory
   const hubDesc = `استكشف أفضل ${hubTitle} على سينما أونلاين - جودة عالية ومترجم`
 
   return (
-            <div className="min-h-screen pt-16 px-4 md:px-8 pb-8">
+    <div className="min-h-screen pt-16 max-w-[2400px] mx-auto px-4 md:px-12 w-full pb-8">
               <SeoHead
                 title={`${hubTitle} | سينما أونلاين`}
                 description={hubDesc}
@@ -323,7 +323,7 @@ export const CategoryHub = ({ type: propsType = 'movie', category: propsCategory
                     icon={<Star className="fill-current" />} 
                     color="gold"
                   />
-                  <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
                     {featuredContent.map((item, i) => (
                       <MovieCard key={`featured-${item.id}`} movie={item} index={i} />
                     ))}
@@ -364,7 +364,7 @@ export const CategoryHub = ({ type: propsType = 'movie', category: propsCategory
 
               {/* Grid */}
               {loading ? (
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2">
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
                   {Array.from({ length: 10 }).map((_, i) => (
                     <div key={i} className="aspect-[2/3] bg-white/5 rounded-xl animate-pulse" />
                   ))}
@@ -394,7 +394,7 @@ export const CategoryHub = ({ type: propsType = 'movie', category: propsCategory
         <>
           <motion.div 
             layout
-            className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3"
+            className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6"
           >
             {content.map((item, i) => (
               <MovieCard key={item.id} movie={item} index={i} />

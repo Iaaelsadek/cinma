@@ -63,7 +63,7 @@ export const SkeletonHero = memo(() => {
 export const SkeletonGrid = ({ count = 8, variant = 'video' }: { count?: number; variant?: 'video' | 'poster' }) => {
   const Item = variant === 'poster' ? SkeletonPosterCard : SkeletonVideoCard
   return (
-    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
       {Array.from({ length: count }).map((_, i) => (
         <Item key={i} />
       ))}
@@ -86,7 +86,7 @@ export const SkeletonDetails = memo(() => {
 
 export const SkeletonProfile = memo(() => {
   return (
-    <div className="mx-auto max-w-5xl space-y-4 animate-pulse">
+    <div className="max-w-[2400px] mx-auto px-4 md:px-12 w-full space-y-4 animate-pulse">
       <div className="h-10 w-48 bg-zinc-800 rounded mb-8"></div>
       <div className="rounded-lg border border-zinc-800 p-6 h-64 bg-zinc-900/50">
         <div className="flex items-center gap-4 mb-6">

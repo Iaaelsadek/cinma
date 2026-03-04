@@ -1,3 +1,4 @@
+import google.generativeai as genai
 import requests
 import time
 import os
@@ -6,8 +7,6 @@ from typing import Dict, List, Optional
 from datetime import datetime
 from supabase import create_client, Client
 from dotenv import load_dotenv
-# import google.generativeai as genai
-genai = None
 
 load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
 
@@ -23,7 +22,7 @@ SUPABASE_KEY = (
     or os.environ.get("VITE_SUPABASE_ANON_KEY")
 )
 
-if GEMINI_API_KEY and genai:
+if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
 
 class TMDBFetcher:
@@ -49,25 +48,37 @@ class TMDBFetcher:
             return self._fallback_slug(title, item_id)
             
         try:
-            if not genai:
-                 return self._fallback_slug(title, item_id)
-
-            model = genai.GenerativeModel('gemini-3.1-pro')
-            prompt = f"Create a clean, SEO-friendly URL slug for the movie/series title '{title}'. Return ONLY the slug (e.g., 'the-dark-knight'). No explanation."
+            # We use gemini-1.5-flash for faster and cheaper slug generation
+            model = genai.GenerativeModel('gemini-1.5-flash')
+            prompt = f"Create a clean, SEO-friendly English URL slug for the movie/series title '{title}'. Return ONLY the slug (e.g., 'the-dark-knight'). No explanation."
             response = model.generate_content(prompt)
             slug = response.text.strip().lower().replace(' ', '-')
+            
+            # Remove non-slug characters
+            slug = re.sub(r'[^a-z0-9-]', '', slug)
+            
             # Basic validation
-            if not re.match(r'^[a-z0-9-]+$', slug):
+            if not slug or len(slug) < 2:
                 return self._fallback_slug(title, item_id)
+            
             return f"{slug}-{item_id}"
         except Exception as e:
-            print(f"Gemini slug generation failed: {e}")
+            print(f"Gemini slug generation failed for '{title}': {e}")
             return self._fallback_slug(title, item_id)
 
     def _fallback_slug(self, title: str, item_id: int) -> str:
-        """Simple regex based slug generation."""
-        slug = re.sub(r'[^a-zA-Z0-9\s-]', '', title).strip().lower()
-        slug = re.sub(r'[\s]+', '-', slug)
+        """Simple regex based slug generation with English priority."""
+        # Remove special characters but keep alphanumeric
+        slug = re.sub(r'[^\w\s-]', '', title, flags=re.UNICODE).strip().lower()
+        # Replace spaces and underscores with hyphens
+        slug = re.sub(r'[-\s_]+', '-', slug)
+        
+        # If the title was mostly Arabic, the slug might be weird. 
+        # For better SEO, we should ideally translate to English, 
+        # but since we're here, we just ensure it's not empty.
+        if not slug or slug == '-':
+            return str(item_id)
+        
         return f"{slug}-{item_id}"
 
     def ensure_category(self, category_name: str):

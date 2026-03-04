@@ -8,7 +8,8 @@ import { slugify } from '../../lib/utils'
 import { SkeletonGrid } from '../../components/common/Skeletons'
 import { SectionHeader } from '../../components/common/SectionHeader'
 import { Tv, Film, Clapperboard, Globe, Moon, BookOpen, Baby, Sparkles } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
+import { useHiddenMedia } from '../../hooks/useHiddenMedia'
 
 export type ContentPreset = 
   | 'disney' 
@@ -27,6 +28,7 @@ interface Props {
 
 export const DynamicContentPage = ({ preset, type: propType }: Props) => {
   const { lang } = useLang()
+  const { filterMedia } = useHiddenMedia()
   const { genre: paramGenre, year: paramYear, rating: paramRating } = useParams()
   const [page, setPage] = useState(1)
 
@@ -192,6 +194,7 @@ export const DynamicContentPage = ({ preset, type: propType }: Props) => {
   }, [newItems, page])
 
   const title = lang === 'ar' ? config.titleAr : config.titleEn
+  const filteredContent = useMemo(() => filterMedia(contentList), [contentList, filterMedia])
 
   return (
     <>
@@ -199,7 +202,7 @@ export const DynamicContentPage = ({ preset, type: propType }: Props) => {
         <title>{title} | Cinema Online</title>
       </Helmet>
       
-      <div className="min-h-screen pt-24 pb-16 container mx-auto px-4">
+      <div className="min-h-screen pt-24 pb-16 max-w-[2400px] mx-auto px-4 md:px-12 w-full">
         <SectionHeader 
           title={title}
           icon={config.icon}
@@ -212,13 +215,13 @@ export const DynamicContentPage = ({ preset, type: propType }: Props) => {
           <SkeletonGrid />
         ) : (
           <>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mt-8">
-              {contentList.map((item: any) => (
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6 mt-8">
+              {filteredContent.map((item: any) => (
                 <MovieCard key={item.id} movie={item} />
               ))}
             </div>
             
-            {contentList.length === 0 && !isLoading && (
+            {filteredContent.length === 0 && !isLoading && (
               <div className="col-span-full text-center py-20 text-gray-500">
                 {lang === 'ar' ? 'لا توجد نتائج' : 'No results found'}
               </div>

@@ -188,7 +188,7 @@ const CinematicDetails = () => {
   if (detailsQuery.isLoading || !data) {
     return (
       <div className="min-h-[100svh] bg-[#050505] px-4 py-16 text-white">
-        <div className="mx-auto max-w-6xl rounded-2xl border border-white/10 bg-white/5 p-8 text-center text-sm text-zinc-400">
+        <div className="max-w-[2400px] mx-auto px-4 md:px-12 w-full rounded-2xl border border-white/10 bg-white/5 p-8 text-center text-sm text-zinc-400">
           {t('جارٍ تحميل التفاصيل السينمائية...', 'Loading cinematic details...')}
         </div>
       </div>
@@ -249,7 +249,7 @@ const CinematicDetails = () => {
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0.1)_0%,rgba(0,0,0,0.7)_60%,#0f0f0f_100%)]" />
         </motion.div>
       </AnimatePresence>
-      <div className="mx-auto max-w-7xl px-4 pt-4 pb-6">
+      <div className="mx-auto max-w-[2400px] px-4 md:px-12 w-full pt-4 pb-6">
         <div className="mb-4 flex items-center gap-2">
           <button
             onClick={() => {
@@ -378,7 +378,7 @@ const CinematicDetails = () => {
                       </button>
                     ))}
                   </div>
-                  <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
+                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2">
                     {(data.seasons?.[0]?.episodes || []).map((e) => (
                       <button
                         key={e.episode}

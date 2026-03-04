@@ -104,7 +104,10 @@ export const QuantumTrain = memo(({
   if (prev.title !== next.title) return false
   if (prev.items.length !== next.items.length) return false
   if (prev.items.length > 0 && next.items.length > 0) {
-    if (prev.items[0].id !== next.items[0].id) return false
+    // Check if any ID in the first 5 items changed (more robust than just the first)
+    for (let i = 0; i < Math.min(prev.items.length, 5); i++) {
+      if (prev.items[i].id !== next.items[i].id) return false
+    }
   }
   return true
 })

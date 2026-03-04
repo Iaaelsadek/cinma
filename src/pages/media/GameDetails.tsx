@@ -78,7 +78,7 @@ export const GameDetails = () => {
         )}
       </div>
 
-      <div className="relative z-20 px-4 md:px-8 max-w-[2400px] mx-auto">
+      <div className="relative z-20 px-4 md:px-12 max-w-[2400px] mx-auto">
         {/* Main Content */}
         <div className="grid grid-cols-1 lg:grid-cols-[160px_1fr] gap-2 pt-2">
           {/* Poster Column */}
@@ -168,7 +168,7 @@ export const GameDetails = () => {
                   icon={<ImageIcon />} 
                   color="cyan"
                 />
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
                   {screenshots.map((shot, idx) => (
                     <div key={idx} className="overflow-hidden rounded-xl border border-white/10 bg-zinc-900 aspect-video">
                       <img src={shot} alt={`Screenshot ${idx + 1}`} className="h-full w-full object-cover transition-transform hover:scale-105" loading="lazy" />

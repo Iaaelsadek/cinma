@@ -977,10 +977,16 @@ export async function createNotification(args: {
 export async function getParticipants(partyId: string) {
   const { data, error } = await supabase
     .from('watch_party_participants')
-    .select('user_id, joined_at')
+    .select('user_id, joined_at, profiles:user_id(username, avatar_url)')
     .eq('party_id', partyId)
+  
   if (error) throw error
-  return data as { user_id: string, joined_at: string }[]
+  return data.map(p => ({
+    user_id: p.user_id,
+    joined_at: p.joined_at,
+    username: (p.profiles as any)?.username || `User ${p.user_id.slice(0, 4)}`,
+    avatar_url: (p.profiles as any)?.avatar_url || null
+  }))
 }
 
 export async function getComments(contentId: number | string, contentType: string) {

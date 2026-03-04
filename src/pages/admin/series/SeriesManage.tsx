@@ -103,7 +103,7 @@ const SeriesManage = () => {
           </h2>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
           {(series.seasons || []).map((season) => (
             <div 
               key={season.id} 
@@ -157,8 +157,8 @@ const SeriesManage = () => {
           <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
             <Plus size={16} className="text-green-400" /> إضافة موسم جديد
           </h3>
-          <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 items-end">
-            <div className="space-y-1.5">
+          <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4 md:grid-cols-2 lg:grid-cols-6 items-end">
+            <div className="lg:col-span-1 space-y-1.5">
               <label className="text-[10px] text-zinc-400 font-medium">رقم الموسم</label>
               <input 
                 type="number" 
@@ -169,7 +169,7 @@ const SeriesManage = () => {
               />
             </div>
             
-            <div className="space-y-1.5">
+            <div className="lg:col-span-2 space-y-1.5">
               <label className="text-[10px] text-zinc-400 font-medium">اسم الموسم (اختياري)</label>
               <input 
                 {...register('name')} 
@@ -178,7 +178,7 @@ const SeriesManage = () => {
               />
             </div>
 
-            <div className="space-y-1.5">
+            <div className="lg:col-span-2 space-y-1.5">
               <label className="text-[10px] text-zinc-400 font-medium">تاريخ العرض</label>
               <input 
                 type="date" 
@@ -192,11 +192,11 @@ const SeriesManage = () => {
                 type="submit" 
                 className="w-full bg-primary hover:bg-primary/90 text-white font-medium py-2 px-4 rounded-lg text-sm transition-colors flex items-center justify-center gap-2"
               >
-                <Plus size={16} /> إضافة الموسم
+                <Plus size={16} /> إضافة
               </button>
             </div>
 
-            <div className="md:col-span-2 lg:col-span-4 space-y-1.5">
+            <div className="md:col-span-2 lg:col-span-6 space-y-1.5">
               <label className="text-[10px] text-zinc-400 font-medium">ملخص (Overview)</label>
               <textarea 
                 rows={2} 

@@ -74,7 +74,7 @@ export const UserListsTab = ({ userId, lang = 'ar' }: UserListsTabProps) => {
           <p className="text-zinc-500 text-sm">{t('لا توجد قوائم مخصصة بعد', 'No custom lists yet')}</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
           {lists.map((list, idx) => (
             <motion.div
               key={list.id}
