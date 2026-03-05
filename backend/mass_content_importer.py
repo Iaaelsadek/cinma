@@ -154,8 +154,8 @@ def generate_seo_content(title, original_overview, content_type='movie'):
 
     try:
         # 1. Primary Model (Flash - Efficient & High Limit)
-        # Using gemini-1.5-flash for better performance and limits
-        model = genai.GenerativeModel("gemini-1.5-flash")
+        # Using gemini-2.0-flash for better performance and limits
+        model = genai.GenerativeModel("gemini-2.0-flash")
         response = model.generate_content(prompt)
         data = process_response(response)
         if data:

@@ -93,8 +93,8 @@ class ScriptGenerator:
                 print(f"[LOG] Warning: Primary model failed ({e}). Switching to Fallback Model...")
                 try:
                     # 3. Fallback Model (Efficient/Free Tier friendly)
-                    print("Attempting with Fallback Model (gemini-1.5-flash)...")
-                    model = genai.GenerativeModel("gemini-1.5-flash")
+                    print("Attempting with Fallback Model (gemini-2.0-flash)...")
+                    model = genai.GenerativeModel("gemini-2.0-flash")
                     response = model.generate_content(prompt)
                     script_data = process_response(response)
                     if script_data:

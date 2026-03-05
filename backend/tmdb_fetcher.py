@@ -48,8 +48,8 @@ class TMDBFetcher:
             return self._fallback_slug(title, item_id)
             
         try:
-            # We use gemini-1.5-flash for faster and cheaper slug generation
-            model = genai.GenerativeModel('gemini-1.5-flash')
+            # We use gemini-2.0-flash for faster and cheaper slug generation
+            model = genai.GenerativeModel('gemini-2.0-flash')
             prompt = f"Create a clean, SEO-friendly English URL slug for the movie/series title '{title}'. Return ONLY the slug (e.g., 'the-dark-knight'). No explanation."
             response = model.generate_content(prompt)
             slug = response.text.strip().lower().replace(' ', '-')

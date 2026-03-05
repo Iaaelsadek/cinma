@@ -21,7 +21,7 @@ if (API_KEY) {
 export const callGeminiWithFallback = async (prompt: string, contextLabel: string): Promise<string | null> => {
   if (!genAI || isGeminiDisabled) return null;
 
-  const models = ["gemini-1.5-flash-001", "gemini-1.5-pro-001", "gemini-pro"];
+  const models = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"];
   
   for (const modelName of models) {
     try {
