@@ -282,7 +282,7 @@ export const Home = () => {
     staleTime: 300000
   })
 
-  const dmTrending = useDailyMotion('trending', { limit: 6 })
+  const dmTrending = useDailyMotion()
 
   // Apply translations directly
   const translatedKorean = useTranslatedContent(koreanSeries.data?.results)
@@ -339,7 +339,7 @@ export const Home = () => {
               <SkeletonGrid count={6} variant="poster" />
             </div>
           ) : (
-            <QuantumTrain items={popularMovies.data?.results} />
+            <QuantumTrain items={popularMovies.data?.results || []} />
           )}
         </section>
 
@@ -355,7 +355,7 @@ export const Home = () => {
             </>
           ) : (
             <QuantumTrain 
-              items={popularAr.data?.results} 
+              items={popularAr.data?.results || []} 
               title={lang === 'ar' ? 'الأعلى مشاهدة في مصر' : 'Top Trending in Egypt'} 
               icon={<Zap />} 
               link="/movies" 
@@ -372,7 +372,7 @@ export const Home = () => {
             </>
           ) : (
             <QuantumTrain 
-              items={arabicSeries.data?.results} 
+              items={arabicSeries.data?.results || []} 
               title={lang === 'ar' ? 'مسلسلات عربية ورمضانية' : 'Arabic & Ramadan Series'} 
               icon={<Tv />} 
               link="/ramadan" 
@@ -389,7 +389,7 @@ export const Home = () => {
             </>
           ) : (
             <QuantumTrain 
-              items={kidsContent.data?.results} 
+              items={kidsContent.data?.results || []} 
               title={lang === 'ar' ? 'أطفال وعائلة' : 'Kids & Family'} 
               icon={<Smile />} 
               link="/kids" 
