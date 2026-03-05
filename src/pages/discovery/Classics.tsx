@@ -5,7 +5,6 @@ import { QuantumTrain } from '../../components/features/media/QuantumTrain'
 import { useLang } from '../../state/useLang'
 import { Helmet } from 'react-helmet-async'
 import { useCategoryVideos } from '../../hooks/useFetchContent'
-import { useHiddenMedia } from '../../hooks/useHiddenMedia'
 
 const fetchClassics = async (yearLimit: number, sort: string = 'popularity.desc') => {
   const { data } = await tmdb.get('/discover/movie', {
@@ -31,7 +30,6 @@ const fetchByGenre = async (genreId: number) => {
 
 export const ClassicsPage = () => {
   const { lang } = useLang()
-  const { filterMedia } = useHiddenMedia()
 
   // YouTube/Archive Content
   const { data: ytClassics } = useCategoryVideos('classic', { limit: 20 })
@@ -47,25 +45,20 @@ export const ClassicsPage = () => {
   }))
 
   const goldenAge = useQuery({ queryKey: ['classics-golden'], queryFn: async () => {
-    const res = await fetchClassics(1970)
-    return filterMedia(res)
+    return await fetchClassics(1970)
   } })
   const eighties = useQuery({ queryKey: ['classics-80s'], queryFn: async () => {
-    const res = await fetchClassics(1989)
-    return filterMedia(res)
+    return await fetchClassics(1989)
   } })
   const nineties = useQuery({ queryKey: ['classics-90s'], queryFn: async () => {
-    const res = await fetchClassics(1999)
-    return filterMedia(res)
+    return await fetchClassics(1999)
   } })
   
   const classicAction = useQuery({ queryKey: ['classics-action'], queryFn: async () => {
-    const res = await fetchByGenre(28)
-    return filterMedia(res)
+    return await fetchByGenre(28)
   } })
   const classicRomance = useQuery({ queryKey: ['classics-romance'], queryFn: async () => {
-    const res = await fetchByGenre(10749)
-    return filterMedia(res)
+    return await fetchByGenre(10749)
   } })
 
   const heroItems = ytClassicsMapped.length > 0 ? ytClassicsMapped.slice(0, 10) : (goldenAge.data?.slice(0, 10) || [])

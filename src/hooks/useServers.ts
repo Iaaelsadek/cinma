@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { errorLogger } from '../services/errorLogging'
 
@@ -202,7 +202,22 @@ export const useServers = (tmdbId: number, type: 'movie' | 'tv', season?: number
     return () => { mounted = false }
   }, [tmdbId, type, season, episode, imdbId, statuses])
 
-  const reportBroken = async () => {
+  // Calculate final servers list with current statuses
+  const finalServers = useMemo(() => {
+    if (!baseServers.length) return []
+    
+    return baseServers.map((s) => ({
+      ...s,
+      status: s.status || 'online'
+    })).sort((a, b) => {
+      // Offline servers last
+      if (a.status === 'offline' && b.status !== 'offline') return 1
+      if (a.status !== 'offline' && b.status === 'offline') return -1
+      return b.priority - a.priority
+    })
+  }, [baseServers])
+
+  const reportBroken = useCallback(async () => {
     setReporting(true)
     const s = finalServers[active]
     try {
@@ -223,10 +238,10 @@ export const useServers = (tmdbId: number, type: 'movie' | 'tv', season?: number
       setActive(0) // Loop back to start
     }
     setReporting(false)
-  }
+  }, [active, finalServers, tmdbId, type])
 
   // Pre-check for multiple episodes availability (for lists)
-  const checkBatchAvailability = async (episodes: { s: number, e: number }[]) => {
+  const checkBatchAvailability = useCallback(async (episodes: { s: number, e: number }[]) => {
     const results: Record<string, boolean> = {}
     
     // Limit batch size to prevent overloading
@@ -267,42 +282,7 @@ export const useServers = (tmdbId: number, type: 'movie' | 'tv', season?: number
     }
     
     return results
-  }
-
-  // Calculate final servers list with current statuses
-  const finalServers = useMemo(() => {
-    if (!baseServers.length) return []
-    
-    return baseServers.map((s) => ({
-      ...s,
-      status: contentStatuses[s.id || s.name] || s.status
-    })).sort((a, b) => {
-      // Offline servers last
-      if (a.status === 'offline' && b.status !== 'offline') return 1
-      if (a.status !== 'offline' && b.status === 'offline') return -1
-      return b.priority - a.priority
-    })
-  }, [baseServers, contentStatuses])
-
-  // Trigger content checks for all servers in chunks
-  useEffect(() => {
-    if (finalServers.length > 0 && !loading) {
-      const checkAll = async () => {
-        // Filter out already checked servers
-        const unchecked = finalServers.filter(s => s.id && !contentStatuses[s.id])
-        if (unchecked.length === 0) return
-
-        // Check in chunks of 4 to balance speed and connection limits
-        const chunkSize = 4
-        for (let i = 0; i < unchecked.length; i += chunkSize) {
-          const chunk = unchecked.slice(i, i + chunkSize)
-          await Promise.all(chunk.map(s => checkContentAvailability(s.url, s.id!)))
-        }
-      }
-
-      checkAll()
-    }
-  }, [tmdbId, type, season, episode, finalServers.length, loading])
+  }, [tmdbId, type, imdbId])
 
   return {
     servers: finalServers,

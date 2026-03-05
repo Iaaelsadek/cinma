@@ -4,7 +4,6 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import { tmdb, getUsTvRating, getRatingColorFromCert } from '../../lib/tmdb'
 import {
   addToWatchlist,
-  deleteEpisode,
   getEpisodes,
   getSeasons,
   getSeriesById,
@@ -14,6 +13,7 @@ import {
   upsertSeason,
   upsertSeries
 } from '../../lib/supabase'
+import { translateTitleToArabic } from '../../lib/gemini'
 import { useAuth } from '../../hooks/useAuth'
 import { toast } from 'sonner'
 import { useForm } from 'react-hook-form'
@@ -23,18 +23,16 @@ import { AddToListModal } from '../../components/features/social/AddToListModal'
 import { getProfile } from '../../lib/supabase'
 import { Helmet } from 'react-helmet-async'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Star, List, MessageSquare, Play, Trash2, AlertTriangle } from 'lucide-react'
+import { Star, List, MessageSquare, Play, Trash2 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { ShareButton } from '../../components/common/ShareButton'
 import { AiInsights } from '../../components/features/media/AiInsights'
 import { SectionHeader } from '../../components/common/SectionHeader'
 import { useLang } from '../../state/useLang'
-import React from 'react'
 import ReactPlayer from 'react-player'
 import { getEmbedUrlByIndex } from '../../services/embedService'
 import { SeoHead } from '../../components/common/SeoHead'
 import { useDualTitles } from '../../hooks/useDualTitles'
-import { useHiddenMedia } from '../../hooks/useHiddenMedia'
 
 interface SeriesDetailsProps {
   id?: string
@@ -45,30 +43,10 @@ const SeriesDetails = ({ id: propId }: SeriesDetailsProps = {}) => {
   const id = propId || params.id
   const tvId = Number(id)
   const { user } = useAuth()
-  const { hiddenIds, isAdmin: isUserAdmin } = useHiddenMedia()
   const [seasonNumber, setSeasonNumber] = useState<number | null>(null)
   const [seasonId, setSeasonId] = useState<number | null>(null)
   const [heart, setHeart] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
-
-  // Hidden Content Check
-  const isHidden = hiddenIds.has(tvId)
-  if (isHidden && !isUserAdmin) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[#050505] text-center p-6">
-        <div className="w-24 h-24 bg-rose-500/10 rounded-full flex items-center justify-center mb-6">
-          <AlertTriangle className="text-rose-500 w-12 h-12" />
-        </div>
-        <h1 className="text-3xl font-black mb-4">المحتوى غير متوفر حالياً</h1>
-        <p className="text-zinc-400 max-w-md mx-auto mb-8">
-          عذراً، هذا العمل تم إخفاؤه مؤقتاً بسبب تعطل السيرفرات الخاصة به. سنقوم بإعادة إظهاره فور توفر روابط جديدة.
-        </p>
-        <Link to="/" className="px-8 py-3 bg-primary text-black font-bold rounded-xl hover:scale-105 transition-transform">
-          العودة للرئيسية
-        </Link>
-      </div>
-    )
-  }
 
   const series = useQuery({
     queryKey: ['series', tvId],
@@ -77,10 +55,11 @@ const SeriesDetails = ({ id: propId }: SeriesDetailsProps = {}) => {
       if (local) return local
       const { data } = await tmdb.get(`/tv/${tvId}`)
       const rating = await getUsTvRating(tvId)
+      const arabicName = await translateTitleToArabic(data.name)
       await upsertSeries({
         id: tvId,
         name: data.name || '',
-        arabic_name: data.name || '',
+        arabic_name: arabicName,
         overview: data.overview || '',
         ai_summary: null,
         rating_color: getRatingColorFromCert(rating),
@@ -209,9 +188,15 @@ const SeriesDetails = ({ id: propId }: SeriesDetailsProps = {}) => {
     },
     onSuccess: () => {
       setHeart((h) => !h)
-      toast.success(!heart ? 'تمت الإضافة إلى المفضلة' : 'تمت الإزالة من المفضلة')
+      toast.success(!heart ? 'تمت الإضافة إلى المفضلة' : 'تمت الإزالة من المفضلة', { id: 'watchlist-update' })
     },
-    onError: (e: any) => toast.error(e?.message || 'خطأ')
+    onError: (e: any) => {
+      if (e.message === 'auth') {
+        toast.error('يجب تسجيل الدخول للإضافة إلى المفضلة', { id: 'auth-required' })
+      } else {
+        toast.error(e?.message || 'خطأ', { id: 'watchlist-error' })
+      }
+    }
   })
 
   const poster = series.data?.poster_path ? `https://image.tmdb.org/t/p/w500${series.data.poster_path}` : ''
@@ -269,8 +254,14 @@ const SeriesDetails = ({ id: propId }: SeriesDetailsProps = {}) => {
   }, [comments.data])
 
   const { register, handleSubmit, reset } = useForm<{ text: string; title: string }>()
+  const [isAddingComment, setIsAddingComment] = useState(false)
   const onAddComment = async (v: { text: string; title: string }) => {
-    if (!user || !id) return
+    if (!user || !id) {
+      toast.error(t('يجب تسجيل الدخول لإضافة مراجعة', 'Login required to add review'), { id: 'auth-required' })
+      return
+    }
+    if (isAddingComment) return
+    setIsAddingComment(true)
     try {
       await addComment({
         userId: user.id,
@@ -283,9 +274,11 @@ const SeriesDetails = ({ id: propId }: SeriesDetailsProps = {}) => {
       reset({ text: '', title: '' })
       setUserRating(0)
       comments.refetch()
-      toast.success(t('تم إضافة المراجعة بنجاح', 'Review added successfully'))
+      toast.success(t('تم إضافة المراجعة بنجاح', 'Review added successfully'), { id: 'review-added' })
     } catch (e: any) {
-      toast.error(e?.message || 'فشل الإضافة')
+      toast.error(e?.message || 'فشل الإضافة', { id: 'review-error' })
+    } finally {
+      setIsAddingComment(false)
     }
   }
 
@@ -301,7 +294,6 @@ const SeriesDetails = ({ id: propId }: SeriesDetailsProps = {}) => {
 
   const { lang } = useLang()
   const t = (ar: string, en: string) => (lang === 'ar' ? ar : en)
-  const canonicalUrl = typeof window !== 'undefined' ? `${location.origin}${location.pathname}` : ''
   const jsonLdSeries = useMemo(() => {
     const agg: any = vote != null ? {
       '@type': 'AggregateRating',

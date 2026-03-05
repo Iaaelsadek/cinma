@@ -5,6 +5,7 @@ import { useAuth } from './useAuth'
 export function useInitAuth() {
   const refreshProfile = useAuth(s => s.refreshProfile)
   const setProfile = useAuth(s => s.setProfile)
+  const setSession = useAuth(s => s.setSession)
   const loading = useAuth(s => s.loading)
 
   useEffect(() => {
@@ -12,6 +13,13 @@ export function useInitAuth() {
 
     const init = async () => {
       try {
+        // First try to restore session from storage
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session && mounted) {
+          setSession(session)
+          // Profile will be refreshed in the background or via event
+        }
+        
         // Force timeout for initial auth check to prevent white screen
         const timeoutPromise = new Promise((_, reject) => 
           setTimeout(() => reject(new Error('Auth timeout')), 5000)
@@ -28,17 +36,23 @@ export function useInitAuth() {
 
     init()
 
-    const { data: sub } = supabase.auth.onAuthStateChange(async (event) => {
+    const { data: sub } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return
       
       if (event === 'SIGNED_OUT') {
-        setProfile(null)
-      } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        try {
-          await refreshProfile()
-        } catch {
-          // ignore
+        setSession(null)
+      } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+        if (session) {
+          setSession(session)
+          try {
+            // Profile is refreshed but doesn't block UI anymore
+            await refreshProfile(true) 
+          } catch {
+            // ignore profile refresh errors
+          }
         }
+      } else if (event === 'INITIAL_SESSION') {
+        if (session) setSession(session)
       }
     })
 

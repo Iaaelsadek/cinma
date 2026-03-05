@@ -16,7 +16,6 @@ import { SkeletonGrid } from '../../components/common/Skeletons'
 import { Button } from '../../components/common/Button'
 import { FileQuestion } from 'lucide-react'
 import { useLang } from '../../state/useLang'
-import { useHiddenMedia } from '../../hooks/useHiddenMedia'
 
 type SearchItem = {
   id: number
@@ -35,7 +34,6 @@ type AnimeRow = { id: number; title: string; image_url: string | null; category:
 type ReciterRow = { id: number; name: string; image: string | null; rewaya: string | null }
 
 export const Search = () => {
-  const { filterMedia } = useHiddenMedia()
   const [sp, setSp] = useSearchParams()
   const q = sp.get('q') || ''
   const types = (sp.get('types') || 'movie').split(',').filter(Boolean)
@@ -109,7 +107,7 @@ export const Search = () => {
           .limit(20)
         results = fallback || []
       }
-      return filterMedia(results)
+      return results
     },
     enabled: q.length >= 2
   })
@@ -129,7 +127,7 @@ export const Search = () => {
       }
 
       const { data } = await query.limit(20)
-      return filterMedia((data as GameRow[]) || [])
+      return (data as GameRow[]) || []
     },
     enabled: (q.length >= 2) || (types.includes('game') && (keywords.length > 0 || rawGenres.length > 0))
   })
@@ -149,7 +147,7 @@ export const Search = () => {
       }
 
       const { data } = await query.limit(20)
-      return filterMedia((data as SoftwareRow[]) || [])
+      return (data as SoftwareRow[]) || []
     },
     enabled: (q.length >= 2) || (types.includes('software') && (keywords.length > 0 || rawGenres.length > 0))
   })
@@ -169,7 +167,7 @@ export const Search = () => {
       }
 
       const { data } = await query.limit(20)
-      return filterMedia((data as AnimeRow[]) || [])
+      return (data as AnimeRow[]) || []
     },
     enabled: (q.length >= 2) || (types.includes('anime') && (keywords.length > 0 || rawGenres.length > 0))
   })
@@ -197,7 +195,7 @@ export const Search = () => {
       }
 
       const { data } = await query.limit(20)
-      return filterMedia((data as ReciterRow[]) || [])
+      return (data as ReciterRow[]) || []
     },
     enabled: (q.length >= 2) || (types.includes('quran') && keywords.length > 0),
   })
@@ -244,10 +242,10 @@ export const Search = () => {
   const hasMore = useMemo(() => page < totalPages, [page, totalPages])
   useEffect(() => {
     if (data?.results?.length) {
-      const filtered = filterMedia(data.results)
-      setItems(prev => (page === 1 ? filtered : [...prev, ...filtered]))
+      const results = data.results
+      setItems(prev => (page === 1 ? results : [...prev, ...results]))
     }
-  }, [data, page, filterMedia])
+  }, [data, page])
 
  
   const [searchText, setSearchText] = useState(q)

@@ -1,4 +1,4 @@
-import { Signal, Lightbulb, WifiOff, Wifi, SkipForward, AlertTriangle, Loader2, ExternalLink, RefreshCcw, Server as ServerIcon } from 'lucide-react'
+import { Signal, Lightbulb, WifiOff, Wifi, SkipForward, AlertTriangle, Loader2, RefreshCcw } from 'lucide-react'
 import { Server } from '../../../hooks/useServers'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useState, useEffect } from 'react'
@@ -12,12 +12,6 @@ type Props = {
   onNextServer: () => void
   onReport: () => void
   reporting: boolean
-  title?: string
-  onProgress?: (seconds: number) => void
-  onPlay?: () => void
-  onPause?: () => void
-  playing?: boolean
-  seekTo?: number
   lang?: 'ar' | 'en'
 }
 
@@ -29,18 +23,11 @@ export const EmbedPlayer = ({
   onNextServer, 
   onReport, 
   reporting, 
-  title, 
-  onProgress, 
-  onPlay, 
-  onPause, 
-  playing, 
-  seekTo,
   lang = 'ar'
 }: Props) => {
   const [isIframeLoading, setIsIframeLoading] = useState(true)
   const [retryCount, setRetryCount] = useState(0)
   const [isSlowConnection, setIsSlowConnection] = useState(false)
-  const [loadStartTime, setLoadStartTime] = useState<number>(0)
   const t = (ar: string, en: string) => (lang === 'ar' ? ar : en)
 
   // Connection Quality Detection
@@ -61,7 +48,6 @@ export const EmbedPlayer = ({
     let timeout: number | null = null
     
     if (isIframeLoading && server) {
-      setLoadStartTime(Date.now())
       // If server doesn't load in 15 seconds, consider it a failure and offer next
       timeout = window.setTimeout(() => {
         if (isIframeLoading) {

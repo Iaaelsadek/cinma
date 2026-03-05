@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react'
 import { tmdb } from '../../lib/tmdb'
 import { supabase } from '../../lib/supabase'
+import { translateTitleToArabic } from '../../lib/gemini'
 import { useAdmin } from '../../context/AdminContext'
 import { errorLogger } from '../../services/errorLogging'
 import { Search, Plus, Save, Trash2, Server, Film, Link as LinkIcon, CheckCircle, XCircle, Upload } from 'lucide-react'
@@ -112,8 +113,11 @@ export const AddMovie = () => {
       const genreId = selectedMovie.genre_ids?.[0]
       const category = GENRES[genreId] || 'Unknown'
 
+      const arabicTitle = await translateTitleToArabic(selectedMovie.title)
+
       await addMovie({
         title: selectedMovie.title,
+        arabic_title: arabicTitle,
         overview: selectedMovie.overview,
         poster_path: finalPosterPath,
         backdrop_path: selectedMovie.backdrop_path,

@@ -8,6 +8,7 @@ import { Helmet } from 'react-helmet-async'
 import { useLang } from '../../state/useLang'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../../hooks/useAuth'
+import { toast } from 'sonner'
 import { errorLogger } from '../../services/errorLogging'
 
 type VideoData = {
@@ -57,7 +58,7 @@ export const WatchVideo = () => {
   const [isChatOpen, setIsChatOpen] = useState(false)
   const [message, setMessage] = useState('')
   const [chatMessages, setChatMessages] = useState<any[]>([
-    { id: 1, user: 'System', text: lang === 'ar' ? 'مرحباً بك في حفلة المشاهدة!' : 'Welcome to the Watch Party!', time: '12:00' },
+    { id: 1, user: lang === 'ar' ? 'النظام' : 'System', text: lang === 'ar' ? 'مرحباً بكم في غرفة المشاهدة الجماعية!' : 'Welcome to the Group Watch Party!', time: '12:00' },
     { id: 2, user: 'Admin', text: lang === 'ar' ? 'استمتعوا بالمشاهدة يا شباب 🍿' : 'Enjoy the movie guys 🍿', time: '12:01' }
   ])
 
@@ -194,7 +195,13 @@ export const WatchVideo = () => {
                 </button>
 
                 <button 
-                  onClick={() => setIsChatOpen(!isChatOpen)}
+                  onClick={() => {
+                    if (!user) {
+                      toast.error(lang === 'ar' ? 'يجب تسجيل الدخول أولاً للمشاركة في غرفة المشاهدة الجماعية' : 'Please login first to join a group watch party', { id: 'auth-required' })
+                      return
+                    }
+                    setIsChatOpen(!isChatOpen)
+                  }}
                   className={`flex items-center gap-2 px-3 h-8 rounded-full border transition-all duration-300 ${
                     isChatOpen 
                       ? 'bg-luxury-purple text-white border-luxury-purple shadow-[0_0_20px_rgba(168,85,247,0.4)]' 
@@ -203,7 +210,7 @@ export const WatchVideo = () => {
                 >
                   <Users size={16} />
                   <span className="text-xs font-bold uppercase tracking-widest hidden md:block">
-                    {lang === 'ar' ? 'حفلة مشاهدة' : 'Watch Party'}
+                    {lang === 'ar' ? 'غرفة المشاهدة الجماعية' : 'Group Watch Party'}
                   </span>
                 </button>
               </div>
@@ -280,7 +287,7 @@ export const WatchVideo = () => {
           </div>
         </div>
 
-        {/* Watch Party Sidebar */}
+        {/* Group Watch Party Sidebar */}
         <AnimatePresence>
           {isChatOpen && (
             <motion.aside 
@@ -293,7 +300,7 @@ export const WatchVideo = () => {
                 <div className="flex items-center gap-3">
                   <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
                   <h2 className="font-black text-white uppercase tracking-widest text-sm">
-                    {lang === 'ar' ? 'دردشة الحفلة' : 'Party Chat'}
+                    {lang === 'ar' ? 'دردشة الغرفة الجماعية' : 'Group Chat'}
                   </h2>
                 </div>
                 <button onClick={() => setIsChatOpen(false)} className="text-zinc-500 hover:text-white transition-colors">

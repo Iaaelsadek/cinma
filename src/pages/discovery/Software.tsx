@@ -6,7 +6,6 @@ import { supabase } from '../../lib/supabase'
 import { useQuery } from '@tanstack/react-query'
 import { Download, Monitor, Smartphone, Apple, Terminal, Star, Search, Shield, Cpu, Grid, Filter } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useHiddenMedia } from '../../hooks/useHiddenMedia'
 
 type SoftwareRow = {
   id: number
@@ -24,7 +23,6 @@ type SoftwareRow = {
 
 export const Software = () => {
   const { lang } = useLang()
-  const { filterMedia } = useHiddenMedia()
   const [searchParams, setSearchParams] = useSearchParams()
   const currentCategory = searchParams.get('cat') || 'all'
   const [searchTerm, setSearchTerm] = useState('')
@@ -72,7 +70,7 @@ export const Software = () => {
         { id: 503, title: 'Neovim', poster_url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/Neovim-mark.svg/1200px-Neovim-mark.svg.png', rating: 9.9, category: 'Editor', description: 'Hyperextensible Vim-based text editor.', version: '0.9.5', size: '10 MB', platform: 'terminal' },
       ]
 
-      return filterMedia([...dbItems, ...mockItems])
+      return [...dbItems, ...mockItems]
     },
     staleTime: 1000 * 60 * 60
   })

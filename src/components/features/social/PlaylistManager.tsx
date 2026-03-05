@@ -34,10 +34,11 @@ export const PlaylistManager = () => {
 
   const handleGenerateAiPlaylist = async () => {
     if (!user) {
-      toast.error('يجب تسجيل الدخول لإنشاء قائمة تشغيل')
+      toast.error('يجب تسجيل الدخول لإنشاء قائمة تشغيل', { id: 'auth-required' })
       return
     }
 
+    if (generating) return
     setGenerating(true)
     try {
       const result = await generateAiPlaylist(theme || undefined)

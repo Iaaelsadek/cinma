@@ -4,7 +4,7 @@ import 'swiper/css'
 import 'swiper/css/navigation'
 import 'swiper/css/free-mode'
 import { Link, useParams, useSearchParams, useNavigate } from 'react-router-dom'
-import { useEffect, useMemo, useState, useRef, Fragment } from 'react'
+import { useEffect, useMemo, useState, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { supabase, createWatchParty, updateWatchParty, grantAchievement } from '../../lib/supabase'
@@ -12,7 +12,7 @@ import { AdsManager } from '../../components/features/system/AdsManager'
 import { tmdb } from '../../lib/tmdb'
 import { MovieCard } from '../../components/features/media/MovieCard'
 import { SeoHead } from '../../components/common/SeoHead'
-import { Calendar, Clock, Star, AlertTriangle, X, Users, Play as PlayIcon, Sparkles, Layers, Film, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react'
+import { AlertTriangle, X, Sparkles, Layers, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react'
 import { ShareButton } from '../../components/common/ShareButton'
 import { NotFound } from '../NotFound'
 import { SkeletonGrid } from '../../components/common/Skeletons'
@@ -20,6 +20,7 @@ import { SubtitleManager } from '../../components/features/media/SubtitleManager
 import { useServers } from '../../hooks/useServers'
 import { useWatchProgress } from '../../hooks/useWatchProgress'
 import { errorLogger } from '../../services/errorLogging'
+
 import { EmbedPlayer } from '../../components/features/media/EmbedPlayer'
 import { ServerSelector } from '../../components/features/media/ServerSelector'
 import { EpisodeSelector } from '../../components/features/media/EpisodeSelector'
@@ -60,43 +61,13 @@ type TmdbCrewMember = {
     seasons?: Array<{ season_number: number; episode_count: number; name: string }>
   }
 
-import { useHiddenMedia } from '../../hooks/useHiddenMedia'
-
 export const Watch = () => {
   const { type: typeParam, id: idParam, slug: slugParam, s, e, lang: langParam } = useParams()
   const [sp, setSp] = useSearchParams()
   const navigate = useNavigate()
   const [resolvedId, setResolvedId] = useState<string | null>(null)
-  const { user } = useAuth()
-  const { hiddenIds, hiddenIds10, isAdmin: isUserAdmin } = useHiddenMedia()
+  const { user, loading: authLoading } = useAuth()
 
-  // Hidden Content Check
-  const idToCheck = Number(idParam || resolvedId)
-  // Use stricter threshold (10) for specific content mentioned by user
-  const isHidden = !isNaN(idToCheck) && hiddenIds10.has(idToCheck)
-  
-  console.log(`[Watch Debug] idToCheck: ${idToCheck}, isHidden: ${isHidden}, isUserAdmin: ${isUserAdmin}`)
-  
-  if (isHidden && !isUserAdmin) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[#050505] text-center p-6">
-        <div className="w-24 h-24 bg-rose-500/10 rounded-full flex items-center justify-center mb-6">
-          <AlertTriangle className="text-rose-500 w-12 h-12" />
-        </div>
-        <h1 className="text-3xl font-black mb-4">المحتوى غير متوفر حالياً</h1>
-        <p className="text-zinc-400 max-w-md mx-auto mb-8">
-          عذراً، هذا العمل تم إخفاؤه مؤقتاً بسبب تعطل السيرفرات الخاصة به. سنقوم بإعادة إظهاره فور توفر روابط جديدة.
-        </p>
-        <Link to="/" className="px-8 py-3 bg-primary text-black font-bold rounded-xl hover:scale-105 transition-transform">
-          العودة للرئيسية
-        </Link>
-      </div>
-    )
-  }
-
-  // 1. Route Detection & Parameter Remapping
-  // Detect if we matched /watch/:lang/:type/:genre/:slug OR /watch/:type/:id/:s/:e
-  // If idParam is not numeric, we likely matched an SEO route where params are shifted.
   const isNumericId = useMemo(() => idParam && /^\d+$/.test(idParam), [idParam])
   
   const { initialType, initialId, initialSlug, initialSeason, initialEpisode, lang } = useMemo(() => {
@@ -155,6 +126,18 @@ export const Watch = () => {
     }
   }, [typeParam, idParam, slugParam, s, e, langParam, isNumericId])
 
+  // 1. Check for partyId in URL and verify user
+  useEffect(() => {
+    const urlPartyId = sp.get('partyId')
+    if (urlPartyId && !user && !authLoading) {
+      const newSp = new URLSearchParams(sp)
+      newSp.delete('partyId')
+      setSp(newSp, { replace: true })
+      setPartyId(null)
+      toast.error(lang === 'ar' ? 'يجب تسجيل الدخول للانضمام إلى غرفة المشاهدة الجماعية' : 'Please login to join the group watch party', { id: 'auth-required' })
+    }
+  }, [sp, user, authLoading, lang, setSp])
+
   const t = (ar: string, en: string) => (lang === 'ar' ? ar : en)
 
   // Clean s and e from "s1" or "ep1" format
@@ -201,15 +184,12 @@ export const Watch = () => {
   }, [])
 
   const handleSeasonChange = (newSeason: number) => {
-    setSeason(newSeason)
-    setEpisode(1)
     if (type === 'tv') {
       navigate(`/watch/tv/${id}/s${newSeason}/ep1`, { replace: true })
     }
   }
 
   const handleEpisodeChange = (newEpisode: number) => {
-    setEpisode(newEpisode)
     if (type === 'tv') {
       navigate(`/watch/tv/${id}/s${season}/ep${newEpisode}`, { replace: true })
     }
@@ -250,7 +230,7 @@ export const Watch = () => {
 
   const handleCreateParty = async () => {
     if (!user) {
-      toast.error(lang === 'ar' ? 'يجب تسجيل الدخول لإنشاء غرفة مشاهدة' : 'Please login to create a watch party')
+      toast.error(lang === 'ar' ? 'يجب تسجيل الدخول لإنشاء غرفة مشاهدة جماعية' : 'Please login to create a group watch party', { id: 'auth-required' })
       return
     }
     if (!roomName.trim()) {
@@ -260,15 +240,6 @@ export const Watch = () => {
 
     setIsCreating(true)
     try {
-      console.log('Attempting to create watch party...', {
-        room_name: roomName,
-        content_id: id || '',
-        content_type: type,
-        creator_id: user.id,
-        current_time: elapsed,
-        is_playing: isPlaying
-      })
-
       const party = await createWatchParty({
         room_name: roomName,
         content_id: id || '',
@@ -284,18 +255,18 @@ export const Watch = () => {
         return prev
       })
       setShowCreateParty(false)
-      toast.success(lang === 'ar' ? 'تم إنشاء غرفة المشاهدة بنجاح' : 'Watch party created successfully')
+      toast.success(lang === 'ar' ? 'تم إنشاء غرفة المشاهدة الجماعية بنجاح' : 'Group watch party created successfully')
       
       // Grant achievement
       try {
         const granted = await grantAchievement(user.id, 'party_host')
-        if (granted) toast.success(lang === 'ar' ? 'إنجاز جديد: صاحب المجلس 🏠' : 'New achievement: Party Host 🏠')
+        if (granted) toast.success(lang === 'ar' ? 'إنجاز جديد: صاحب المجلس 🏠' : 'New achievement: Group Watch Party Host 🏠')
       } catch (err) {
         console.error('Failed to grant achievement:', err)
       }
     } catch (err: any) {
-      console.error('Failed to create watch party:', err)
-      toast.error(lang === 'ar' ? `فشل إنشاء الغرفة: ${err.message || 'خطأ غير معروف'}` : `Failed to create party: ${err.message || 'Unknown error'}`)
+      console.error('Failed to create group watch party:', err)
+      toast.error(lang === 'ar' ? `فشل إنشاء الغرفة: ${err.message || 'خطأ غير معروف'}` : `Failed to create group watch party: ${err.message || 'Unknown error'}`)
     } finally {
       setIsCreating(false)
     }
@@ -345,20 +316,21 @@ export const Watch = () => {
     resolveSlug()
   }, [slug, initialId, type])
 
-  // Hook 1: Sync URL params
+  // Hook 1: Remove redundant SearchParams sync that causes infinite redirect loops
+  // Path params are already the primary source of truth.
   useEffect(() => {
+    // Only update SearchParams if we are using an ID route and need to preserve other query params
+    // But DON'T set season/episode if we are already using path params like /s1/ep1
+    if (sNum || eNum) return
+
     const p = new URLSearchParams(sp)
     if (type === 'tv') {
       p.set('season', String(season))
       p.set('episode', String(episode))
       p.set('type', 'tv')
-    } else {
-      p.delete('season')
-      p.delete('episode')
-      p.delete('type')
+      setSp(p, { replace: true })
     }
-    setSp(p, { replace: true })
-  }, [season, episode, type, setSp])
+  }, [season, episode, type, setSp, sNum, eNum])
 
   // Hook 2: Fetch Details
   useEffect(() => {
@@ -649,11 +621,17 @@ export const Watch = () => {
                 </button>
                 
                 <button
-                  onClick={() => setShowCreateParty(true)}
+                  onClick={() => {
+                      if (!user) {
+                        toast.error(lang === 'ar' ? 'يجب عليك تسجيل الدخول أولاً للمشاركة في غرفة المشاهدة الجماعية' : 'You must login first to join a group watch party', { id: 'auth-required' })
+                        return
+                      }
+                      setShowCreateParty(true)
+                    }}
                   className="rounded-2xl border border-primary/20 bg-primary/10 px-8 h-16 flex items-center justify-center text-primary text-sm font-black shadow-lg hover:bg-primary/20 transition-all gap-3"
                 >
                   <Users size={24} />
-                  غرفة المشاهدة
+                  غرفة المشاهدة الجماعية
                 </button>
 
                 <ShareButton 
@@ -987,7 +965,7 @@ export const Watch = () => {
             </div>
         </section>
       </div>
-      {/* Watch Party Component - Moved to Portal */}
+      {/* Group Watch Party Component - Moved to Portal */}
       {mounted && partyId && createPortal(
         <WatchParty 
           partyId={partyId}
@@ -1006,7 +984,7 @@ export const Watch = () => {
         document.body
       )}
 
-      {/* Create Watch Party Modal - Moved to Portal for fixed positioning */}
+      {/* Create Group Watch Party Modal - Moved to Portal for fixed positioning */}
       <AnimatePresence>
         {mounted && showCreateParty && createPortal(
           <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
@@ -1022,8 +1000,8 @@ export const Watch = () => {
                     <Users size={24} />
                   </div>
                   <div>
-                    <h2 className="text-xl font-black text-white">{lang === 'ar' ? 'إنشاء غرفة مشاهدة' : 'Create Watch Party'}</h2>
-                    <p className="text-xs text-zinc-400">{lang === 'ar' ? 'شاهد مع أصدقائك في نفس الوقت' : 'Watch with friends in sync'}</p>
+                    <h2 className="text-xl font-black text-white">{lang === 'ar' ? 'إنشاء غرفة مشاهدة جماعية' : 'Create Group Watch Party'}</h2>
+                    <p className="text-xs text-zinc-400">{lang === 'ar' ? 'شاهد مع أصدقائك في نفس الوقت وبشكل جماعي' : 'Watch with friends together in sync'}</p>
                   </div>
                 </div>
                 <button onClick={() => setShowCreateParty(false)} className="text-zinc-500 hover:text-white transition-colors">
@@ -1064,7 +1042,7 @@ export const Watch = () => {
                   ) : (
                     <>
                       <PlayIcon size={18} fill="currentColor" />
-                      {lang === 'ar' ? 'بدء الحفلة الآن' : 'Start Party Now'}
+                      {lang === 'ar' ? 'بدء الحفلة الآن' : 'Start Group Party Now'}
                     </>
                   )}
                 </button>

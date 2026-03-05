@@ -9,6 +9,11 @@ import { logAuthError, errorLogger } from '../services/errorLogging'
 import { Eye, EyeOff, Mail, Lock, User, Chrome, ArrowRight, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
 
+const FORBIDDEN_USERNAMES = [
+  'admin', 'administrator', 'cinema', 'online', 'system', 'moderator', 'support', 'cinima', 'سينما', 'اونلاين', 'أونلاين', 'ادمن', 'أدمن', 'مشرف', 'مدير', 'دعم', 'فني', 'staff', 'owner', 'root', 'superadmin',
+  'خرا', 'زق', 'حيوان', 'كلب', 'حمار', 'غبي', 'f*ck', 'sh*t', 'sex', 'porn', 'اباحي', 'جنس', 'نيك', 'قحبة', 'شرموطة', 'عرص', 'خول'
+];
+
 const Auth = () => {
   const [searchParams] = useSearchParams()
   const initialMode = searchParams.get('mode') === 'register' ? 'register' : 'login'
@@ -112,16 +117,19 @@ const Auth = () => {
     }
     setErrorMsg(null)
 
-    // تنظيف الجلسات العالقة عند فتح الصفحة
+    // تنظيف الجلسات العالقة فقط إذا لم يكن هناك مستخدم نشط
     const cleanupSession = async () => {
       try {
         const { data } = await supabase.auth.getSession()
+        // لا تسجل الخروج إذا كان هناك جلسة نشطة بالفعل، فقط وجهه للرئيسية
         if (data.session) {
-          await supabase.auth.signOut()
+          navigate('/', { replace: true })
+          return
         }
-        // تنظيف مفاتيح Supabase من التخزين المحلي لضمان بداية نظيفة
+        
+        // تنظيف المفاتيح القديمة المحتملة فقط
         Object.keys(localStorage).forEach(key => {
-          if (key.startsWith('sb-') && key.endsWith('-auth-token')) {
+          if (key.startsWith('sb-') && key.endsWith('-auth-token') && !key.includes('v2')) {
             localStorage.removeItem(key)
           }
         })
@@ -271,6 +279,16 @@ const Auth = () => {
           }
         }
       } else {
+        // Username filtering
+        const lowerName = username.toLowerCase().trim();
+        if (FORBIDDEN_USERNAMES.some(forbidden => lowerName.includes(forbidden.toLowerCase()))) {
+          throw new Error('هذا الاسم غير مسموح به (اسم محجوز للإدارة أو الموقع).');
+        }
+        
+        if (username.length < 3) {
+          throw new Error('اسم المستخدم قصير جداً.');
+        }
+
         const { data, error } = await runWithTimeout(
           supabase.auth.signUp({ 
             email, 
@@ -335,7 +353,7 @@ const Auth = () => {
       logAuthError('Google Auth Error:', err)
       let msg = err.message || 'فشل تسجيل الدخول بجوجل'
       if (err.message?.includes('provider is not enabled')) {
-        msg = 'تسجيل الدخول بجوجل غير مفعل حالياً. يرجى استخدام البريد الإلكتروني.'
+        msg = 'تسجيل الدخول بجوجل غير مفعل حالياً. يجب عليك تفعيله من لوحة تحكم Supabase في تبويب Authentication -> Providers -> Google.'
       } else if (err?.message === 'TIMEOUT') {
         msg = 'انتهت مهلة الاتصال. تحقق من إعدادات Supabase أو الشبكة ثم حاول مرة أخرى.'
       }

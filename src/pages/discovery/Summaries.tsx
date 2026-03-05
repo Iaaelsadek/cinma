@@ -2,7 +2,6 @@ import { Helmet } from 'react-helmet-async'
 import { useParams } from 'react-router-dom'
 import { useMemo } from 'react'
 import { useLang } from '../../state/useLang'
-import { useHiddenMedia } from '../../hooks/useHiddenMedia'
 import { QuantumHero } from '../../components/features/hero/QuantumHero'
 import { QuantumTrain } from '../../components/features/media/QuantumTrain'
 import { VideoCard } from '../../components/features/media/VideoCard'
@@ -11,7 +10,6 @@ import { PageLoader } from '../../components/common/PageLoader'
 
 export const SummariesPage = () => {
   const { lang } = useLang()
-  const { filterMedia } = useHiddenMedia()
   const { genre, year, rating } = useParams()
 
   // Fetch summaries from Supabase (populated from YouTube)
@@ -50,7 +48,7 @@ export const SummariesPage = () => {
         created_at: '2024-01-03',
         category: 'summary'
       },
-       {
+      {
         id: 's4',
         title: 'ملخص فيلم Oppenheimer',
         description: 'قصة مخترع القنبلة الذرية وصراعه النفسي.',
@@ -71,7 +69,6 @@ export const SummariesPage = () => {
     ]
 
   const summaries = (dbSummaries && dbSummaries.length > 0) ? dbSummaries : FALLBACK_SUMMARIES
-  const filteredData = useMemo(() => filterMedia<VideoItem>(summaries as VideoItem[] || []), [summaries, filterMedia])
 
   if (isLoading) return <PageLoader />
 
@@ -79,11 +76,11 @@ export const SummariesPage = () => {
   // This assumes the description or title might contain the genre or tags
   // Since we don't have explicit genre tags in the video table yet
   let filteredSummaries = genre 
-    ? (filteredData || []).filter(item => 
+    ? (summaries || []).filter(item => 
         item.title?.toLowerCase().includes(genre.toLowerCase()) || 
         item.description?.toLowerCase().includes(genre.toLowerCase())
       )
-    : (filteredData || [])
+    : (summaries || [])
   
   if (rating) {
       // Since rating is fake, we can't really filter by it accurately yet.

@@ -11,7 +11,6 @@ import { Helmet } from 'react-helmet-async'
 import { BookOpen, Heart, Shield, Smile, Sparkles, Sun, Play } from 'lucide-react'
 import { SectionHeader } from '../../components/common/SectionHeader'
 import { QuantumHero } from '../../components/features/hero/QuantumHero'
-import { useHiddenMedia } from '../../hooks/useHiddenMedia'
 
 type AnimeRow = { id: number; title: string | null; category: string | null; image_url: string | null }
 type QuranRow = { id: number; name: string | null; category: string | null; image: string | null; rewaya: string | null; server: string | null }
@@ -19,7 +18,6 @@ type QuranRow = { id: number; name: string | null; category: string | null; imag
 export const CategoryPage = () => {
   const { category } = useParams()
   const { lang } = useLang()
-  const { filterMedia } = useHiddenMedia()
   const key = (category || '').toLowerCase()
   const isQuran = key === 'quran'
   const isAnime = key === 'anime'
@@ -62,7 +60,7 @@ export const CategoryPage = () => {
         { id: 105, title: 'Naruto Shippuden', category: 'Action', image_url: 'https://image.tmdb.org/t/p/w500/zAYRe2bJxpWTVrwwmBc00VFkAf4.jpg' }
       ] as AnimeRow[]
       
-      return filterMedia(results.map(a => ({ ...a, media_type: 'anime', poster_path: a.image_url }))) as unknown as AnimeRow[]
+      return results.map(a => ({ ...a, media_type: 'anime', poster_path: a.image_url })) as unknown as AnimeRow[]
     },
     enabled: isAnime
   })
@@ -86,8 +84,8 @@ export const CategoryPage = () => {
     enabled: isQuran
   })
 
-  const filteredClassics = useMemo(() => isClassics ? filterMedia(classicQuery.data || []) : [], [isClassics, classicQuery.data, filterMedia])
-  const filteredVideos = useMemo(() => (!isQuran && !isAnime && !isClassics) ? filterMedia(videoQuery.data || []) : [], [isQuran, isAnime, isClassics, videoQuery.data, filterMedia])
+  const filteredClassics = isClassics ? (classicQuery.data || []) : []
+  const filteredVideos = (!isQuran && !isAnime && !isClassics) ? (videoQuery.data || []) : []
 
   const query = isClassics ? { ...classicQuery, data: filteredClassics } : { ...videoQuery, data: filteredVideos }
   const items = (query.data || []).map((video) => ({

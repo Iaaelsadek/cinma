@@ -1,24 +1,19 @@
 import { useMemo, useState, useEffect } from 'react'
-import { PrefetchLink } from '../components/common/PrefetchLink'
 import { useQuery, keepPreviousData } from '@tanstack/react-query'
 import { tmdb } from '../lib/tmdb'
 import { AdsManager } from '../components/features/system/AdsManager'
 import { useAuth } from '../hooks/useAuth'
 import { CONFIG } from '../lib/constants'
 import { useLang } from '../state/useLang'
-import { getRecommendations, RecommendationItem } from '../services/recommendations'
 import { useRecommendations } from '../hooks/useRecommendations'
-import { BrainCircuit, Play, Zap, Tv, Film, Drama, BookOpen, Sparkles, Globe, Smile, FileText } from 'lucide-react'
-import { MovieCard } from '../components/features/media/MovieCard'
-import { motion } from 'framer-motion'
-import { useCategoryVideos, useClassicVideos } from '../hooks/useFetchContent'
+import { Zap, Tv, Film, Drama, Sparkles, Smile } from 'lucide-react'
+import { useCategoryVideos } from '../hooks/useFetchContent'
 import { SkeletonGrid, SkeletonHero } from '../components/common/Skeletons'
-import { supabase, getContinueWatching } from '../lib/supabase'
+import { supabase } from '../lib/supabase'
 import { SeoHead } from '../components/common/SeoHead'
 import { QuantumHero } from '../components/features/hero/QuantumHero'
 import { QuantumTrain } from '../components/features/media/QuantumTrain'
 import { ContinueWatchingRow } from '../components/features/media/ContinueWatchingRow'
-import { HolographicCard } from '../components/effects/HolographicCard'
 import { SectionHeader } from '../components/common/SectionHeader'
 
 // Types (kept from original)
@@ -35,42 +30,16 @@ type TmdbMedia = {
   first_air_date?: string
 }
 
-type AnimeRow = {
-  id: number
-  title: string | null
-  category: string | null
-  image_url: string | null
-}
-
-type QuranRow = {
-  id: number
-  name: string | null
-  category: string | null
-  image: string | null
-  rewaya: string | null
-  server: string | null
-}
-
-import { isCJK } from '../lib/utils'
 import { useTranslatedContent } from '../hooks/useTranslatedContent'
 import { useDailyMotion } from '../hooks/useDailyMotion'
 
-import { useHiddenMedia } from '../hooks/useHiddenMedia'
-
 export const Home = () => {
-  const { user, profile } = useAuth()
+  const { user } = useAuth()
   const { lang } = useLang()
-  const { data: recommendations, isLoading: recommendationsLoading } = useRecommendations()
-  const { filterMedia } = useHiddenMedia()
-  const isAdmin = profile?.role === 'admin' || profile?.role === 'supervisor'
-
-  useEffect(() => {
-    console.log('[Home] Rendering main page');
-    if (isAdmin) console.log('[Home] Admin mode detected - showing all content');
-  }, [isAdmin]);
+  const { data: recommendations } = useRecommendations()
 
   // --- DATA FETCHING (Optimized & Parallelized) ---
-  // 1. DIVERSE HERO CONTENT
+  // 1. DIVERSE HERO CONTENT (Restored to 8 requests for maximum diversity)
   const diverseHero = useQuery<{ results: TmdbMedia[] }>({
     queryKey: ['diverse-hero-content'],
     queryFn: async () => {
@@ -79,58 +48,29 @@ export const Home = () => {
         { type: 'movie', lang: 'ar' }, // Arabic Movie
         { type: 'tv', lang: 'ar' },    // Arabic Series
         { type: 'tv', lang: 'en' },    // Foreign Series
-        { type: 'movie', lang: 'ko' }, // Korean Movie
-        { type: 'tv', lang: 'ko' },    // Korean Series
-        { type: 'tv', lang: 'zh' },    // Chinese Series
         { type: 'tv', lang: 'tr' },    // Turkish Series
+        { type: 'tv', lang: 'ko' },    // Korean Series
+        { type: 'movie', lang: 'hi' }, // Bollywood
+        { type: 'tv', lang: 'ja', genres: '16' } // Anime
       ] as const
 
       const promises = endpoints.map(async ep => {
         try {
-          const res = await tmdb.get(`/discover/${ep.type}`, { 
-            params: { 
-              with_original_language: ep.lang,
-              sort_by: 'popularity.desc',
-              page: 1,
-              language: 'ar-SA'
-            }
-          })
+          const params: any = { 
+            with_original_language: ep.lang,
+            sort_by: 'popularity.desc',
+            page: 1,
+            language: 'ar-SA'
+          }
+          if ('genres' in ep) params.with_genres = ep.genres
+
+          const res = await tmdb.get(`/discover/${ep.type}`, { params })
           
           let item = res.data.results?.[0]
           if (!item) return null
           
-          // Check for CJK characters in title/name
-          const title = item.title || item.name || ''
-          if (isCJK(title)) {
-             // Fallback to English
-             try {
-               const enRes = await tmdb.get(`/${ep.type}/${item.id}`, {
-                 params: { language: 'en-US' }
-               })
-               if (enRes.data) {
-                 item = { ...item, ...enRes.data }
-               }
-            } catch (e) {
-              // Ignore fallback error
-            }
-          }
-
-          // Log translation to database
-          try {
-            await supabase
-              .from('action_logs')
-              .insert([{ 
-                action: 'translation_check', 
-                content_id: Number(item.id),
-                details: `title=${title}, type=${ep.type}, lang=${ep.lang}` 
-              }])
-          } catch (e) {
-            // Silently fail if table missing or other error
-          }
-
           return { ...item, media_type: ep.type }
         } catch (e) {
-          console.error(`Error fetching diverse content for ${ep.lang}:`, e)
           return null
         }
       })
@@ -138,7 +78,7 @@ export const Home = () => {
       const results = await Promise.all(promises)
       return { results: results.filter((i): i is TmdbMedia => !!i) }
     },
-    staleTime: 1000 * 60 * 30, // 30 mins
+    staleTime: 1000 * 60 * 60, // 60 mins
     placeholderData: keepPreviousData
   })
 
@@ -250,81 +190,7 @@ export const Home = () => {
     staleTime: 300000
   })
 
-  const trendingMovies = useQuery<{ results: TmdbMedia[] }>({
-    queryKey: ['trending-week'],
-    queryFn: async () => {
-      const { data } = await tmdb.get('/trending/movie/week')
-      return data
-    },
-    enabled: !!CONFIG.TMDB_API_KEY,
-    staleTime: 300000
-  })
-
-  const classics = useClassicVideos({ limit: 20 })
   const plays = useCategoryVideos('plays', { limit: 20 }) 
-  const goldenEra = useCategoryVideos('golden_era', { limit: 20 }) 
-  const recaps = useCategoryVideos('recaps', { limit: 20 }) 
-
-  const animeHub = useQuery<any[]>({
-    queryKey: ['home-anime'],
-    queryFn: async () => {
-      try {
-        const { data, error } = await supabase
-          .from('anime')
-          .select('*')
-          .order('id', { ascending: false })
-          .limit(12)
-        
-        if (error) {
-           if (error.code === '42P01') return [];
-           if (error.message?.includes('AbortError')) return [];
-           return []
-         }
-
-        return (data || []).map(item => ({
-          ...item,
-          poster_path: item.image_url || item.poster_url || item.image,
-          media_type: 'tv',
-          original_language: 'ja'
-        }))
-      } catch (err: any) {
-        return [];
-      }
-    },
-    staleTime: 300000,
-    retry: 1
-  })
-
-  const quranHub = useQuery<any[]>({
-    queryKey: ['home-quran'],
-    queryFn: async () => {
-      try {
-        const { data, error } = await supabase
-          .from('quran_reciters')
-          .select('*')
-          .order('id', { ascending: false })
-          .limit(10)
-
-        if (error) {
-           if (error.code === '42P01') return [];
-           if (error.message?.includes('AbortError')) return [];
-           return []
-        }
-
-        return (data || []).map(item => ({
-          ...item,
-          title: item.name,
-          poster_path: item.image || item.image_url || item.poster_url,
-          media_type: 'quran',
-          overview: item.rewaya
-        }))
-      } catch (err: any) {
-        return [];
-      }
-    },
-    staleTime: 300000,
-    retry: 1
-  })
 
   const arabicSeries = useQuery<{ results: TmdbMedia[] }>({
     queryKey: ['home', 'arabic-series'],
@@ -368,16 +234,6 @@ export const Home = () => {
     staleTime: 300000
   })
 
-  const topRatedMovies = useQuery<{ results: TmdbMedia[] }>({
-    queryKey: ['home', 'top-rated-movies'],
-    queryFn: async () => {
-      const { data } = await tmdb.get('/movie/top_rated', { params: { page: 1 } })
-      return data
-    },
-    enabled: !!CONFIG.TMDB_API_KEY,
-    staleTime: 300000
-  })
-
   const tmdbAnime = useQuery<any[]>({
     queryKey: ['home-anime-fallback'],
     queryFn: async () => {
@@ -390,52 +246,14 @@ export const Home = () => {
     staleTime: 300000
   })
 
-  const tmdbClassics = useQuery<any[]>({
-    queryKey: ['home-classics-fallback'],
-    queryFn: async () => {
-      const { data } = await tmdb.get('/discover/movie', {
-        params: { 'release_date.lte': '1980-01-01', sort_by: 'popularity.desc' }
-      })
-      return data.results
-    },
-    enabled: !!CONFIG.TMDB_API_KEY,
-    staleTime: 300000
-  })
+  // Apply translations directly
+  const translatedKorean = useTranslatedContent(koreanSeries.data?.results)
+  const translatedTurkish = useTranslatedContent(turkishSeries.data?.results)
+  const translatedChinese = useTranslatedContent(chineseSeries.data?.results)
 
-  // Other Content (Memoized filtered lists to avoid re-renders)
-  const filteredClassics = useMemo(() => filterMedia(classics.data), [filterMedia, classics.data])
-  const filteredPlays = useMemo(() => filterMedia(plays.data), [filterMedia, plays.data])
-  const filteredGoldenEra = useMemo(() => filterMedia(goldenEra.data), [filterMedia, goldenEra.data])
-  const filteredClassicsFallback = useMemo(() => filterMedia(tmdbClassics.data), [filterMedia, tmdbClassics.data])
-  const filteredRecaps = useMemo(() => filterMedia(recaps.data), [filterMedia, recaps.data])
-  const filteredRecommendations = useMemo(() => filterMedia(recommendations, 10), [filterMedia, recommendations])  
-
-  // Apply translations (ensure filtering is applied to the input of translations)
-  const filteredKorean = useMemo(() => filterMedia(koreanSeries.data?.results), [koreanSeries.data, filterMedia])
-  const filteredTurkish = useMemo(() => filterMedia(turkishSeries.data?.results), [turkishSeries.data, filterMedia])
-  const filteredChinese = useMemo(() => filterMedia(chineseSeries.data?.results), [chineseSeries.data, filterMedia])
-  const filteredPopular = useMemo(() => filterMedia(popularMovies.data?.results, 10), [filterMedia, popularMovies.data])
-  const filteredPopularAr = useMemo(() => filterMedia(popularAr.data?.results, 10), [filterMedia, popularAr.data])
-  const filteredArabicSeries = useMemo(() => filterMedia(arabicSeries.data?.results), [filterMedia, arabicSeries.data])
-  const filteredKids = useMemo(() => filterMedia(kidsContent.data?.results), [filterMedia, kidsContent.data])
-  const filteredAnime = useMemo(() => filterMedia(tmdbAnime.data), [filterMedia, tmdbAnime.data])
-  const filteredBollywood = useMemo(() => filterMedia(bollywoodMovies.data?.results), [filterMedia, bollywoodMovies.data])
-  const filteredDocumentaries = useMemo(() => filterMedia(documentaries.data?.results), [filterMedia, documentaries.data])
-  const filteredTopRated = useMemo(() => filterMedia(topRatedMovies.data?.results), [filterMedia, topRatedMovies.data])
-  const filteredAnimeHub = useMemo(() => filterMedia(animeHub.data && animeHub.data.length > 0 ? animeHub.data : tmdbAnime.data), [filterMedia, animeHub.data, tmdbAnime.data])
-  
-  const translatedKorean = useTranslatedContent(filteredKorean)
-  const translatedTurkish = useTranslatedContent(filteredTurkish)
-  const translatedChinese = useTranslatedContent(filteredChinese)
-
-  const dmTrending = useDailyMotion()
-
-  const canonicalUrl = typeof window !== 'undefined' ? `${location.origin}${location.pathname}` : ''
   const description = lang === 'ar' ? 'منصة أونلاين سينما - تجربة المستقبل' : 'Online Cinema - The Future Experience'
 
-  const heroItems = useMemo(() => {
-    return filterMedia(diverseHero.data?.results, 10)
-  }, [diverseHero.data, filterMedia])
+  const heroItems = diverseHero.data?.results || []
 
   return (
     <div className="min-h-screen text-white overflow-x-hidden selection:bg-cyan-500 selection:text-black">
@@ -460,12 +278,12 @@ export const Home = () => {
         )}
 
         {/* AI Recommendations */}
-        {user && filteredRecommendations && filteredRecommendations.length > 0 && (
+        {user && recommendations && recommendations.length > 0 && (
           <section className="relative overflow-hidden rounded-3xl border border-violet-500/20 bg-violet-950/10 mb-6">
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-violet-500/20 via-transparent to-transparent opacity-50 blur-3xl pointer-events-none" />
             <div className="relative z-10">
                <QuantumTrain 
-                 items={filteredRecommendations} 
+                 items={recommendations} 
                  title={lang === 'ar' ? 'مقترح لك' : 'Picked for You'}
                  icon={<Sparkles className="text-amber-400 animate-pulse" />}
                  badge={lang === 'ar' ? 'ذكاء اصطناعي' : 'AI Powered'}
@@ -483,7 +301,7 @@ export const Home = () => {
               <SkeletonGrid count={6} variant="poster" />
             </div>
           ) : (
-            <QuantumTrain items={filteredPopular} />
+            <QuantumTrain items={popularMovies.data?.results} />
           )}
         </section>
 
@@ -499,7 +317,7 @@ export const Home = () => {
             </>
           ) : (
             <QuantumTrain 
-              items={filteredPopularAr} 
+              items={popularAr.data?.results} 
               title={lang === 'ar' ? 'الأعلى مشاهدة في مصر' : 'Top Trending in Egypt'} 
               icon={<Zap />} 
               link="/movies" 
@@ -516,7 +334,7 @@ export const Home = () => {
             </>
           ) : (
             <QuantumTrain 
-              items={filteredArabicSeries} 
+              items={arabicSeries.data?.results} 
               title={lang === 'ar' ? 'مسلسلات عربية ورمضانية' : 'Arabic & Ramadan Series'} 
               icon={<Tv />} 
               link="/ramadan" 
@@ -533,7 +351,7 @@ export const Home = () => {
             </>
           ) : (
             <QuantumTrain 
-              items={filteredKids} 
+              items={kidsContent.data?.results} 
               title={lang === 'ar' ? 'أطفال وعائلة' : 'Kids & Family'} 
               icon={<Smile />} 
               link="/kids" 
@@ -602,7 +420,7 @@ export const Home = () => {
             </>
           ) : (
             <QuantumTrain 
-              items={filteredAnime} 
+              items={tmdbAnime.data} 
               title={lang === 'ar' ? 'أحدث الأنمي' : 'Latest Anime'} 
               icon={<Zap />} 
               link="/anime" 
@@ -620,7 +438,7 @@ export const Home = () => {
             </>
           ) : (
             <QuantumTrain 
-              items={filteredBollywood} 
+              items={bollywoodMovies.data?.results} 
               title={lang === 'ar' ? 'أفلام بوليوود' : 'Bollywood Movies'} 
               icon={<Film />} 
               link="/bollywood" 
@@ -638,7 +456,7 @@ export const Home = () => {
             </>
           ) : (
             <QuantumTrain 
-              items={filteredPlays} 
+              items={plays.data} 
               title={lang === 'ar' ? 'مسرحيات وكلاسيكيات' : 'Plays & Classics'} 
               icon={<Drama />} 
               link="/plays" 
@@ -652,7 +470,7 @@ export const Home = () => {
           <SectionHeader title={lang === 'ar' ? 'الرائج عالمياً' : 'Global Trending'} icon={<Zap />} link="/top-watched" />
           {popularAr.isPending ? <SkeletonGrid count={10} variant="poster" /> : (
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6 perspective-1000">
-              {filteredPopularAr?.slice(0, 12).map((movie, idx) => (
+              {popularAr.data?.results?.slice(0, 12).map((movie, idx) => (
                  <MovieCard key={movie.id} movie={movie} index={idx} />
               ))}
             </div>
@@ -668,7 +486,7 @@ export const Home = () => {
             </>
           ) : (
             <QuantumTrain 
-              items={filteredDocumentaries} 
+              items={documentaries.data?.results} 
               title={lang === 'ar' ? 'وثائقيات وواقع' : 'Documentaries'} 
               icon={<FileText />} 
               link="/docs" 
@@ -682,13 +500,13 @@ export const Home = () => {
            <BentoBox 
              title={lang === 'ar' ? 'العصر الذهبي' : 'Golden Era'} 
              icon={<Film />} 
-             items={filteredGoldenEra.length > 0 ? filteredGoldenEra : filteredClassicsFallback}
+             items={(goldenEra.data && goldenEra.data.length > 0) ? goldenEra.data : tmdbClassics.data}
              color="gold"
            />
            <BentoBox 
              title={lang === 'ar' ? 'ملخصات الأفلام' : 'Movie Recaps'} 
              icon={<Zap />} 
-             items={filteredRecaps}
+             items={recaps.data}
              color="cyan"
            />
         </section>
@@ -727,7 +545,7 @@ export const Home = () => {
         <section>
           <SectionHeader title={lang === 'ar' ? 'أنمي مترجم' : 'Anime'} icon={<Tv />} link="/anime" />
           {animeHub.isLoading && tmdbAnime.isLoading ? <SkeletonGrid count={6} variant="poster" /> : (
-             <QuantumTrain items={filteredAnimeHub} />
+             <QuantumTrain items={animeHub.data && animeHub.data.length > 0 ? animeHub.data : tmdbAnime.data} />
           )}
         </section>
 
@@ -750,7 +568,7 @@ export const Home = () => {
              badge="⭐ 9.0+"
            />
            <div className="flex gap-3 overflow-x-auto pb-4 snap-x scrollbar-none">
-              {filteredTopRated.slice(0, 10).map((movie, idx) => (
+              {topRatedMovies.data?.results?.slice(0, 10).map((movie, idx) => (
                 <div key={movie.id} className="snap-center shrink-0 w-[120px] md:w-[140px]">
                    <MovieCard movie={movie} index={idx} />
                 </div>
@@ -783,16 +601,13 @@ export const Home = () => {
 // --- SUB COMPONENTS ---
 
 const BentoBox = ({ title, icon, items, color }: { title: string, icon: any, items: any[], color: 'cyan' | 'purple' | 'gold' }) => {
-  const { filterMedia } = useHiddenMedia()
-  const filtered = useMemo(() => filterMedia(items), [filterMedia, items])
-  
-  if (filtered.length === 0) return null
+  if (!items || items.length === 0) return null
 
   return (
     <div>
       <SectionHeader title={title} icon={icon} color={color} />
       <div className="grid grid-cols-2 gap-3">
-        {filtered.slice(0, 4).map((item, i) => {
+        {items.slice(0, 4).map((item, i) => {
           const isTmdb = !!item.poster_path || !!item.backdrop_path
           const img = item.thumbnail || (item.backdrop_path ? `https://image.tmdb.org/t/p/w500${item.backdrop_path}` : `https://image.tmdb.org/t/p/w500${item.poster_path}`)
           const link = isTmdb 
@@ -822,20 +637,17 @@ const BentoBox = ({ title, icon, items, color }: { title: string, icon: any, ite
 }
 
 const AIRecommended = ({ userId }: { userId: string }) => {
-  const { filterMedia } = useHiddenMedia()
   const q = useQuery<RecommendationItem[]>({ 
     queryKey: ['recs', userId], 
     queryFn: () => getRecommendations(userId),
     staleTime: 1000 * 60 * 60
   })
 
-  const filtered = useMemo(() => filterMedia(q.data), [filterMedia, q.data])
-
-  if (!filtered?.length) return <div className="text-zinc-500">Initializing Neural Net...</div>
+  if (!q.data?.length) return <div className="text-zinc-500">Initializing Neural Net...</div>
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
-      {filtered.slice(0, 5).map(m => (
+      {q.data.slice(0, 5).map(m => (
         <HolographicCard key={m.id} className="aspect-[2/3]">
            <PrefetchLink to={`/watch/movie/${m.id}`}>
              <img 

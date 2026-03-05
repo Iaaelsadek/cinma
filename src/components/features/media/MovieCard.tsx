@@ -60,8 +60,6 @@ export const MovieCard = memo(({ movie, index = 0 }: { movie: Movie; index?: num
   
   const mediaType = getMediaType()
   const watchUrl = generateWatchPath({ ...movie, media_type: mediaType })
-  const href = watchUrl
-  const contentType = mediaType
   const rating = typeof movie.vote_average === 'number' ? Math.round(movie.vote_average * 10) / 10 : null
   
   const genre = getGenreName(movie.genre_ids?.[0], lang) || (movie as any).category
@@ -77,6 +75,24 @@ export const MovieCard = memo(({ movie, index = 0 }: { movie: Movie; index?: num
   }
   const shortOverview = getShortOverview(movie.overview)
   
+  useEffect(() => {
+    if (!user) {
+      setInList(false)
+      return
+    }
+    let mounted = true
+    const checkStatus = async () => {
+      try {
+        const current = await isInWatchlist(user.id, movie.id, mediaType as any)
+        if (mounted) setInList(current)
+      } catch (e) {
+        // Silent fail
+      }
+    }
+    checkStatus()
+    return () => { mounted = false }
+  }, [user, movie.id, mediaType])
+
   useEffect(() => {
     let mounted = true
     let timeoutId: ReturnType<typeof setTimeout>
@@ -112,12 +128,12 @@ export const MovieCard = memo(({ movie, index = 0 }: { movie: Movie; index?: num
     }
     setListBusy(true)
     try {
-      const current = await isInWatchlist(user.id, movie.id, contentType as any)
+      const current = await isInWatchlist(user.id, movie.id, mediaType as any)
       if (current) {
-        await removeFromWatchlist(user.id, movie.id, contentType as any)
+        await removeFromWatchlist(user.id, movie.id, mediaType as any)
         setInList(false)
       } else {
-        await addToWatchlist(user.id, movie.id, contentType as any)
+        await addToWatchlist(user.id, movie.id, mediaType as any)
         setInList(true)
       }
     } finally {
@@ -131,6 +147,16 @@ export const MovieCard = memo(({ movie, index = 0 }: { movie: Movie; index?: num
     navigate(watchUrl)
   }
 
+  const getMediaLabel = () => {
+    const isAr = lang === 'ar'
+    if (isGame) return isAr ? 'لعبة' : 'Game'
+    if (isSoftware) return isAr ? 'برنامج' : 'Software'
+    if (isAnime) return isAr ? 'أنمي' : 'Anime'
+    if (isQuran) return isAr ? 'قارئ' : 'Reciter'
+    if (isTv) return isAr ? 'مسلسل' : 'Series'
+    return isAr ? 'فيلم' : 'Movie'
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
@@ -140,7 +166,7 @@ export const MovieCard = memo(({ movie, index = 0 }: { movie: Movie; index?: num
       className="relative z-0 group/card"
     >
       <PrefetchLink
-        to={href}
+        to={watchUrl}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         className="block relative h-full w-full lumen-focus-ring rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-lumen-gold focus-visible:outline-offset-2"
@@ -272,14 +298,7 @@ export const MovieCard = memo(({ movie, index = 0 }: { movie: Movie; index?: num
 
                {/* Type */}
                <span className="w-0.5 h-0.5 rounded-full bg-lumen-silver/50" />
-               <span>
-                  {isGame ? (lang === 'ar' ? 'لعبة' : 'Game') :
-                    isSoftware ? (lang === 'ar' ? 'برنامج' : 'Software') :
-                    isAnime ? (lang === 'ar' ? 'أنمي' : 'Anime') :
-                    isQuran ? (lang === 'ar' ? 'قارئ' : 'Reciter') :
-                    isTv ? (lang === 'ar' ? 'مسلسل' : 'Series') :
-                    (lang === 'ar' ? 'فيلم' : 'Movie')}
-                </span>
+               <span>{getMediaLabel()}</span>
             </div>
           </div>
         </div>

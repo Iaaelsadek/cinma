@@ -263,13 +263,6 @@ export const generateAiPlaylist = async (theme?: string, history?: string): Prom
 
 /**
  * Uses Gemini to translate a movie title to Arabic.
- * Features:
- * - Smart caching (localStorage)
- * - Intelligent transliteration (e.g. "Spider-Man" -> "سبايدر مان")
- * - Fallbacks to free APIs if Gemini is unavailable.
- * 
- * @param title The English title.
- * @returns The Arabic title or the original if failed.
  */
 export const translateTitleToArabic = async (title: string): Promise<string> => {
   if (!title) return '';
