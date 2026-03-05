@@ -670,7 +670,7 @@ const SeriesDetails = ({ id: propId }: SeriesDetailsProps = {}) => {
 
               <ReviewVotes
                 commentId={c.id}
-                userId={user?.id}
+                userId={user?.id || ''}
                 lang={lang}
               />
             </motion.div>
@@ -692,13 +692,14 @@ const SeriesDetails = ({ id: propId }: SeriesDetailsProps = {}) => {
         </div>
       </section>
 
-      {showListModal && (
+      {showListModal && user && (
         <AnimatePresence>
           <AddToListModal
             contentId={tvId}
             contentType="tv"
             onClose={() => setShowListModal(false)}
             lang={lang}
+            userId={user.id}
           />
         </AnimatePresence>
       )}
