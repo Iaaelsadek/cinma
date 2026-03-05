@@ -305,234 +305,234 @@ export const SeriesPage = () => {
 
       <div className="space-y-2 pt-4 relative z-10">
         <QuantumTrain 
-          items={onTheAir.data} 
+          items={onTheAir.data || []} 
           title={lang === 'ar' ? 'يعرض الآن' : 'On The Air'} 
           link="/search?types=tv&sort=first_air_date.desc"
         />
 
         <QuantumTrain 
-          items={trending.data} 
+          items={trending.data || []} 
           title={lang === 'ar' ? 'الرائج هذا الأسبوع' : 'Trending This Week'} 
           link="/search?types=tv&sort=popularity.desc"
         />
 
         <QuantumTrain 
-          items={arabic.data} 
+          items={arabic.data || []} 
           title={lang === 'ar' ? 'مسلسلات عربية ورمضانية' : 'Arabic & Ramadan Series'} 
           link="/ramadan"
         />
 
         <QuantumTrain 
-          items={turkish.data} 
+          items={turkish.data || []} 
           title={lang === 'ar' ? 'الدراما التركية' : 'Turkish Drama'} 
           link="/search?types=tv&lang=tr"
         />
 
         <QuantumTrain 
-          items={korean.data} 
+          items={korean.data || []} 
           title={lang === 'ar' ? 'الدراما الكورية' : 'K-Drama'} 
           link="/search?types=tv&lang=ko"
         />
 
         <QuantumTrain 
-          items={topRated.data} 
+          items={topRated.data || []} 
           title={lang === 'ar' ? 'الأعلى تقييماً' : 'Top Rated'} 
           link="/search?types=tv&sort=vote_average.desc"
         />
 
         <QuantumTrain 
-          items={popular.data} 
+          items={popular.data || []} 
           title={lang === 'ar' ? 'الأكثر مشاهدة' : 'Most Watched'} 
           link="/search?types=tv&sort=vote_count.desc"
         />
 
         <QuantumTrain 
-          items={classicTv.data} 
+          items={classicTv.data || []} 
           title={lang === 'ar' ? 'مسلسلات كلاسيكية' : 'Classic TV'} 
           link="/search?types=tv&year=1980"
           color="gold"
         />
 
         <QuantumTrain 
-          items={ninetiesTv.data} 
+          items={ninetiesTv.data || []} 
           title={lang === 'ar' ? 'مسلسلات التسعينات' : '90s TV Shows'} 
           link="/search?types=tv&year=1995"
           color="purple"
         />
 
         <QuantumTrain 
-          items={netflix.data} 
+          items={netflix.data || []} 
           title={lang === 'ar' ? 'أعمال نتفليكس الأصلية' : 'Netflix Originals'} 
           link="/search?types=tv&keywords=netflix"
         />
 
         <QuantumTrain 
-          items={hbo.data} 
+          items={hbo.data || []} 
           title={lang === 'ar' ? 'إنتاجات HBO' : 'HBO Productions'} 
           link="/search?types=tv&keywords=hbo"
         />
 
         <QuantumTrain 
-          items={apple.data} 
+          items={apple.data || []} 
           title={lang === 'ar' ? 'أبل تي في بلس' : 'Apple TV+'} 
           link="/search?types=tv&keywords=apple"
         />
 
         <QuantumTrain 
-          items={amazon.data} 
+          items={amazon.data || []} 
           title={lang === 'ar' ? 'أمازون برايم' : 'Amazon Prime'} 
           link="/search?types=tv&keywords=amazon"
         />
 
         <QuantumTrain 
-          items={disneyPlus.data} 
+          items={disneyPlus.data || []} 
           title={lang === 'ar' ? 'ديزني بلس' : 'Disney+'} 
           link="/search?types=tv&keywords=disney"
           color="blue"
         />
 
         <QuantumTrain 
-          items={hulu.data} 
+          items={hulu.data || []} 
           title={lang === 'ar' ? 'هولو' : 'Hulu'} 
           link="/search?types=tv&keywords=hulu"
           color="green"
         />
 
         <QuantumTrain 
-          items={peacock.data} 
+          items={peacock.data || []} 
           title={lang === 'ar' ? 'بيكوك' : 'Peacock'} 
           link="/search?types=tv&keywords=peacock"
           color="purple"
         />
 
         <QuantumTrain 
-          items={amc.data} 
+          items={amc.data || []} 
           title={lang === 'ar' ? 'أي إم سي (AMC)' : 'AMC'} 
           link="/search?types=tv&keywords=amc"
           color="gold"
         />
 
         <QuantumTrain 
-          items={showtime.data} 
+          items={showtime.data || []} 
           title={lang === 'ar' ? 'شوتايم' : 'Showtime'} 
           link="/search?types=tv&keywords=showtime"
           color="red"
         />
 
         <QuantumTrain 
-          items={fx.data} 
+          items={fx.data || []} 
           title={lang === 'ar' ? 'إف إكس' : 'FX'} 
           link="/search?types=tv&keywords=fx"
           color="cyan"
         />
 
         <QuantumTrain 
-          items={bbc.data} 
+          items={bbc.data || []} 
           title={lang === 'ar' ? 'بي بي سي' : 'BBC'} 
           link="/search?types=tv&keywords=bbc"
           color="gold"
         />
 
         <QuantumTrain 
-          items={cw.data} 
+          items={cw.data || []} 
           title={lang === 'ar' ? 'سي دبليو' : 'The CW'} 
           link="/search?types=tv&keywords=cw"
           color="green"
         />
 
         <QuantumTrain 
-          items={starz.data} 
+          items={starz.data || []} 
           title={lang === 'ar' ? 'ستارز' : 'Starz'} 
           link="/search?types=tv&keywords=starz"
           color="cyan"
         />
 
         <QuantumTrain 
-          items={syfy.data} 
+          items={syfy.data || []} 
           title={lang === 'ar' ? 'ساي فاي' : 'Syfy'} 
           link="/search?types=tv&keywords=syfy"
           color="purple"
         />
 
         <QuantumTrain 
-          items={comedyCentral.data} 
+          items={comedyCentral.data || []} 
           title={lang === 'ar' ? 'كوميدي سنترال' : 'Comedy Central'} 
           link="/search?types=tv&keywords=comedy"
           color="gold"
         />
 
         <QuantumTrain 
-          items={nickelodeon.data} 
+          items={nickelodeon.data || []} 
           title={lang === 'ar' ? 'نيكلوديون' : 'Nickelodeon'} 
           link="/search?types=tv&keywords=nickelodeon"
           color="orange"
         />
 
         <QuantumTrain 
-          items={cartoonNetwork.data} 
+          items={cartoonNetwork.data || []} 
           title={lang === 'ar' ? 'كرتون نتورك' : 'Cartoon Network'} 
           link="/search?types=tv&keywords=cartoon"
           color="cyan"
         />
 
         <QuantumTrain 
-          items={mtv.data} 
+          items={mtv.data || []} 
           title={lang === 'ar' ? 'إم تي في' : 'MTV'} 
           link="/search?types=tv&keywords=mtv"
           color="cyan"
         />
 
         <QuantumTrain 
-          items={natGeo.data} 
+          items={natGeo.data || []} 
           title={lang === 'ar' ? 'ناشيونال جيوغرافيك' : 'National Geographic'} 
           link="/search?types=tv&keywords=national"
           color="gold"
         />
 
         <QuantumTrain 
-          items={discovery.data} 
+          items={discovery.data || []} 
           title={lang === 'ar' ? 'ديسكفري' : 'Discovery Channel'} 
           link="/search?types=tv&keywords=discovery"
           color="blue"
         />
 
         <QuantumTrain 
-          items={history.data} 
+          items={history.data || []} 
           title={lang === 'ar' ? 'قناة التاريخ' : 'History Channel'} 
           link="/search?types=tv&keywords=history"
           color="gold"
         />
 
         <QuantumTrain 
-          items={anime.data} 
+          items={anime.data || []} 
           title={lang === 'ar' ? 'أنمي' : 'Anime'} 
           link="/anime"
           color="purple"
         />
 
         <QuantumTrain 
-          items={bollywood.data} 
+          items={bollywood.data || []} 
           title={lang === 'ar' ? 'بوليوود' : 'Bollywood'} 
           link="/search?types=tv&lang=hi"
           color="orange"
         />
 
         <QuantumTrain 
-          items={adultSwim.data} 
+          items={adultSwim.data || []} 
           title={lang === 'ar' ? 'أدولت سويم' : 'Adult Swim'} 
           link="/search?types=tv&keywords=adult"
           color="purple"
         />
 
         <QuantumTrain 
-          items={paramountPlus.data} 
+          items={paramountPlus.data || []} 
           title={lang === 'ar' ? 'باراماونت بلس' : 'Paramount+'} 
           link="/search?types=tv&keywords=paramount"
           color="blue"
         />
 
         <QuantumTrain 
-          items={actionAdventure.data} 
+          items={actionAdventure.data || []} 
           title={lang === 'ar' ? 'أكشن ومغامرة' : 'Action & Adventure'} 
           link="/search?types=tv&genres=10759"
         />

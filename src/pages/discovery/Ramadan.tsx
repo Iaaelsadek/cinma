@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueries } from '@tanstack/react-query'
 import { tmdb } from '../../lib/tmdb'
 import { QuantumHero } from '../../components/features/hero/QuantumHero'
 import { QuantumTrain } from '../../components/features/media/QuantumTrain'
@@ -87,29 +87,47 @@ const fetchRamadanHistorical = async () => {
 export const RamadanPage = () => {
   const { lang } = useLang()
 
-  // Pre-fetch multiple years to simulate a large library
-  const ramadan2026 = useQuery({ queryKey: ['ramadan-2026'], queryFn: async () => fetchRamadanSeries(2026) })
-  const ramadan2025 = useQuery({ queryKey: ['ramadan-2025'], queryFn: async () => fetchRamadanSeries(2025) })
-  const ramadan2024 = useQuery({ queryKey: ['ramadan-2024'], queryFn: async () => fetchRamadanSeries(2024) })
-  const ramadan2023 = useQuery({ queryKey: ['ramadan-2023'], queryFn: async () => fetchRamadanSeries(2023) })
-  const classics = useQuery({ queryKey: ['ramadan-classics'], queryFn: async () => fetchClassicRamadan() })
-  const trending = useQuery({ queryKey: ['ramadan-trending'], queryFn: async () => fetchTrendingRamadan() })
-  
-  const egyptian = useQuery({ queryKey: ['ramadan-egypt'], queryFn: async () => fetchByCountry('EG') })
-  const syrian = useQuery({ queryKey: ['ramadan-syria'], queryFn: async () => fetchByCountry('SY') })
-  const gulf = useQuery({ queryKey: ['ramadan-gulf'], queryFn: async () => fetchByCountry('SA|KW|AE') }) // SA=Saudi, KW=Kuwait, AE=UAE
-  const comedy = useQuery({ queryKey: ['ramadan-comedy'], queryFn: async () => fetchRamadanComedy() })
-  const historical = useQuery({ queryKey: ['ramadan-historical'], queryFn: async () => fetchRamadanHistorical() })
+  // Batch fetch all Ramadan content using useQueries for better performance
+  const results = useQueries({
+    queries: [
+      { queryKey: ['ramadan-2026'], queryFn: () => fetchRamadanSeries(2026) },
+      { queryKey: ['ramadan-2025'], queryFn: () => fetchRamadanSeries(2025) },
+      { queryKey: ['ramadan-2024'], queryFn: () => fetchRamadanSeries(2024) },
+      { queryKey: ['ramadan-2023'], queryFn: () => fetchRamadanSeries(2023) },
+      { queryKey: ['ramadan-classics'], queryFn: () => fetchClassicRamadan() },
+      { queryKey: ['ramadan-trending'], queryFn: () => fetchTrendingRamadan() },
+      { queryKey: ['ramadan-egypt'], queryFn: () => fetchByCountry('EG') },
+      { queryKey: ['ramadan-syria'], queryFn: () => fetchByCountry('SY') },
+      { queryKey: ['ramadan-gulf'], queryFn: () => fetchByCountry('SA|KW|AE') },
+      { queryKey: ['ramadan-comedy'], queryFn: () => fetchRamadanComedy() },
+      { queryKey: ['ramadan-historical'], queryFn: () => fetchRamadanHistorical() }
+    ]
+  })
 
-  const isLoading = ramadan2025.isLoading || ramadan2024.isLoading || classics.isLoading
+  // Destructure results for easier access
+  const [
+    ramadan2026,
+    ramadan2025,
+    ramadan2024,
+    ramadan2023,
+    classics,
+    trending,
+    egyptian,
+    syrian,
+    gulf,
+    comedy,
+    historical
+  ] = results
+
+  const isLoading = results.some(result => result.isLoading)
 
   if (isLoading) return <PageLoader />
 
   // Hero items: Mix of trending and latest
   const heroItems = [
-      ...(ramadan2025.data || []),
-      ...(ramadan2024.data || []),
-      ...(trending.data || [])
+    ...(ramadan2026.data || []),
+    ...(ramadan2025.data || []),
+    ...(trending.data || [])
   ].slice(0, 15)
 
   return (
@@ -174,6 +192,12 @@ export const RamadanPage = () => {
         />
 
         <QuantumTrain 
+          items={ramadan2026.data || []} 
+          title={lang === 'ar' ? 'مسلسلات رمضان 2026' : 'Ramadan 2026 Series'} 
+          link="/search?types=tv&year=2026&lang=ar"
+        />
+
+        <QuantumTrain 
           items={ramadan2025.data || []} 
           title={lang === 'ar' ? 'مسلسلات رمضان 2025' : 'Ramadan 2025 Series'} 
           link="/search?types=tv&year=2025&lang=ar"
@@ -189,12 +213,6 @@ export const RamadanPage = () => {
           items={ramadan2023.data || []} 
           title={lang === 'ar' ? 'مسلسلات رمضان 2023' : 'Ramadan 2023 Series'} 
           link="/search?types=tv&year=2023&lang=ar"
-        />
-        
-        <QuantumTrain 
-          items={ramadan2026.data || []} 
-          title={lang === 'ar' ? 'مرتقب في رمضان 2026' : 'Coming in Ramadan 2026'} 
-          link="/search?types=tv&year=2026&lang=ar"
         />
 
         <QuantumTrain 

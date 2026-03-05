@@ -12,7 +12,7 @@ import { AdsManager } from '../../components/features/system/AdsManager'
 import { tmdb } from '../../lib/tmdb'
 import { MovieCard } from '../../components/features/media/MovieCard'
 import { SeoHead } from '../../components/common/SeoHead'
-import { AlertTriangle, X, Sparkles, Layers, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react'
+import { AlertTriangle, X, Sparkles, Layers, ChevronLeft, ChevronRight, ExternalLink, Calendar, Clock, Star, Users, Play as PlayIcon } from 'lucide-react'
 import { ShareButton } from '../../components/common/ShareButton'
 import { NotFound } from '../NotFound'
 import { SkeletonGrid } from '../../components/common/Skeletons'
@@ -748,21 +748,6 @@ export const Watch = () => {
                             onNextServer={() => active < servers.length - 1 ? setActive(active + 1) : setActive(0)}
                             onReport={reportBroken}
                             reporting={reporting}
-                            onProgress={(seconds) => setElapsed(seconds)}
-                            onPlay={() => {
-                              setIsPlaying(true)
-                              if (partyId) {
-                                updateWatchParty(partyId, { is_playing: true, current_time: elapsed })
-                              }
-                            }}
-                            onPause={() => {
-                              setIsPlaying(false)
-                              if (partyId) {
-                                updateWatchParty(partyId, { is_playing: false, current_time: elapsed })
-                              }
-                            }}
-                            playing={isPlaying}
-                            seekTo={syncSeek}
                             lang={lang}
                         />
                         )}

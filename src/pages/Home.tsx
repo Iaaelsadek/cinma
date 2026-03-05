@@ -458,7 +458,7 @@ export const Home = () => {
             </>
           ) : (
             <QuantumTrain 
-              items={tmdbAnime.data} 
+              items={tmdbAnime.data || []} 
               title={lang === 'ar' ? 'أحدث الأنمي' : 'Latest Anime'} 
               icon={<Zap />} 
               link="/anime" 
@@ -476,7 +476,7 @@ export const Home = () => {
             </>
           ) : (
             <QuantumTrain 
-              items={bollywoodMovies.data?.results} 
+              items={bollywoodMovies.data?.results || []} 
               title={lang === 'ar' ? 'أفلام بوليوود' : 'Bollywood Movies'} 
               icon={<Film />} 
               link="/bollywood" 
@@ -494,7 +494,7 @@ export const Home = () => {
             </>
           ) : (
             <QuantumTrain 
-              items={plays.data} 
+              items={plays.data || []} 
               title={lang === 'ar' ? 'مسرحيات وكلاسيكيات' : 'Plays & Classics'} 
               icon={<Drama />} 
               link="/plays" 
@@ -524,7 +524,7 @@ export const Home = () => {
             </>
           ) : (
             <QuantumTrain 
-              items={documentaries.data?.results} 
+              items={documentaries.data?.results || []} 
               title={lang === 'ar' ? 'وثائقيات وواقع' : 'Documentaries'} 
               icon={<FileText />} 
               link="/docs" 
@@ -583,7 +583,7 @@ export const Home = () => {
         <section>
           <SectionHeader title={lang === 'ar' ? 'أنمي مترجم' : 'Anime'} icon={<Tv />} link="/anime" />
           {animeHub.isLoading && tmdbAnime.isLoading ? <SkeletonGrid count={6} variant="poster" /> : (
-             <QuantumTrain items={animeHub.data && animeHub.data.length > 0 ? animeHub.data : tmdbAnime.data} />
+             <QuantumTrain items={animeHub.data && animeHub.data.length > 0 ? animeHub.data : (tmdbAnime.data || [])} />
           )}
         </section>
 

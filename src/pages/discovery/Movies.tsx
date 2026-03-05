@@ -257,275 +257,275 @@ export const MoviesPage = () => {
 
       <div className="space-y-2 pt-4 relative z-10">
         <QuantumTrain 
-          items={nowPlaying.data} 
+          items={nowPlaying.data || []} 
           title={lang === 'ar' ? 'يعرض الآن في السينما' : 'Now Playing in Theaters'} 
           link="/search?types=movie&sort=release_date.desc"
         />
 
         <QuantumTrain 
-          items={upcoming.data} 
+          items={upcoming.data || []} 
           title={lang === 'ar' ? 'قريباً في السينما' : 'Coming Soon'} 
           link="/search?types=movie&year=2026"
         />
 
         <QuantumTrain 
-          items={arabic.data} 
+          items={arabic.data || []} 
           title={lang === 'ar' ? 'أفلام عربية' : 'Arabic Movies'} 
           link="/search?types=movie&lang=ar"
         />
 
         <QuantumTrain 
-          items={trending.data} 
+          items={trending.data || []} 
           title={lang === 'ar' ? 'الرائج هذا الأسبوع' : 'Trending This Week'} 
           link="/search?types=movie&sort=popularity.desc"
         />
         
         <QuantumTrain 
-          items={topRated.data} 
+          items={topRated.data || []} 
           title={lang === 'ar' ? 'الأعلى تقييماً' : 'Top Rated'} 
           link="/search?types=movie&sort=vote_average.desc"
         />
 
         <QuantumTrain 
-          items={popular.data} 
+          items={popular.data || []} 
           title={lang === 'ar' ? 'الأكثر مشاهدة' : 'Most Watched'} 
           link="/search?types=movie&sort=vote_count.desc"
         />
 
         <QuantumTrain 
-          items={classics.data} 
+          items={classics.data || []} 
           title={lang === 'ar' ? 'كلاسيكيات السينما' : 'Cinema Classics'} 
           link="/search?types=movie&year=1970"
           color="gold"
         />
 
         <QuantumTrain 
-          items={nineties.data} 
+          items={nineties.data || []} 
           title={lang === 'ar' ? 'أفلام التسعينات' : '90s Nostalgia'} 
           link="/search?types=movie&year=1995"
           color="purple"
         />
 
         <QuantumTrain 
-          items={action.data} 
+          items={action.data || []} 
           title={lang === 'ar' ? 'أكشن' : 'Action'} 
           link="/movies/genre/28"
         />
 
         <QuantumTrain 
-          items={adventure.data} 
+          items={adventure.data || []} 
           title={lang === 'ar' ? 'مغامرة' : 'Adventure'} 
           link="/movies/genre/12"
         />
 
         <QuantumTrain 
-          items={sciFi.data} 
+          items={sciFi.data || []} 
           title={lang === 'ar' ? 'خيال علمي' : 'Sci-Fi'} 
           link="/movies/genre/878"
         />
 
         <QuantumTrain 
-          items={fantasy.data} 
+          items={fantasy.data || []} 
           title={lang === 'ar' ? 'فانتازيا' : 'Fantasy'} 
           link="/movies/genre/14"
         />
 
         <QuantumTrain 
-          items={mystery.data} 
+          items={mystery.data || []} 
           title={lang === 'ar' ? 'غموض' : 'Mystery'} 
           link="/movies/genre/9648"
         />
 
         <QuantumTrain 
-          items={western.data} 
+          items={western.data || []} 
           title={lang === 'ar' ? 'ويسترن' : 'Western'} 
           link="/movies/genre/37"
         />
 
         <QuantumTrain 
-          items={music.data} 
+          items={music.data || []} 
           title={lang === 'ar' ? 'موسيقي' : 'Music'} 
           link="/movies/genre/10402"
         />
 
         <QuantumTrain 
-          items={marvel.data} 
+          items={marvel.data || []} 
           title={lang === 'ar' ? 'عالم مارفل السينمائي' : 'Marvel Cinematic Universe'} 
           link="/search?types=movie&keywords=marvel"
         />
 
         <QuantumTrain 
-          items={dc.data} 
+          items={dc.data || []} 
           title={lang === 'ar' ? 'عالم دي سي' : 'DC Universe'} 
           link="/search?types=movie&keywords=dc"
         />
 
         <QuantumTrain 
-          items={disney.data} 
+          items={disney.data || []} 
           title={lang === 'ar' ? 'ديزني' : 'Disney'} 
           link="/search?types=movie&keywords=disney"
           color="blue"
         />
 
         <QuantumTrain 
-          items={pixar.data} 
+          items={pixar.data || []} 
           title={lang === 'ar' ? 'بيكسار' : 'Pixar'} 
           link="/search?types=movie&keywords=pixar"
           color="cyan"
         />
 
         <QuantumTrain 
-          items={warner.data} 
+          items={warner.data || []} 
           title={lang === 'ar' ? 'وارنر بروس' : 'Warner Bros'} 
           link="/search?types=movie&keywords=warner"
           color="gold"
         />
 
         <QuantumTrain 
-          items={universal.data} 
+          items={universal.data || []} 
           title={lang === 'ar' ? 'يونيفرسال' : 'Universal Pictures'} 
           link="/search?types=movie&keywords=universal"
           color="indigo"
         />
 
         <QuantumTrain 
-          items={sony.data} 
+          items={sony.data || []} 
           title={lang === 'ar' ? 'سوني بيكتشرز' : 'Sony Pictures'} 
           link="/search?types=movie&keywords=sony"
           color="red"
         />
 
         <QuantumTrain 
-          items={ghibli.data} 
+          items={ghibli.data || []} 
           title={lang === 'ar' ? 'استوديو غيبلي' : 'Studio Ghibli'} 
           link="/search?types=movie&keywords=ghibli"
           color="green"
         />
 
         <QuantumTrain 
-          items={paramount.data} 
+          items={paramount.data || []} 
           title={lang === 'ar' ? 'باراماونت' : 'Paramount Pictures'} 
           link="/search?types=movie&keywords=paramount"
           color="blue"
         />
 
         <QuantumTrain 
-          items={lionsgate.data} 
+          items={lionsgate.data || []} 
           title={lang === 'ar' ? 'ليونزغيت' : 'Lionsgate'} 
           link="/search?types=movie&keywords=lionsgate"
           color="gold"
         />
 
         <QuantumTrain 
-          items={twentiethCentury.data} 
+          items={twentiethCentury.data || []} 
           title={lang === 'ar' ? 'استوديوهات القرن العشرين' : '20th Century Studios'} 
           link="/search?types=movie&keywords=20th"
           color="red"
         />
 
         <QuantumTrain 
-          items={dreamworks.data} 
+          items={dreamworks.data || []} 
           title={lang === 'ar' ? 'دريم ووركس أنيميشن' : 'DreamWorks Animation'} 
           link="/search?types=movie&keywords=dreamworks"
           color="blue"
         />
 
         <QuantumTrain 
-          items={illumination.data} 
+          items={illumination.data || []} 
           title={lang === 'ar' ? 'إليمونيشن' : 'Illumination'} 
           link="/search?types=movie&keywords=illumination"
           color="gold"
         />
 
         <QuantumTrain 
-          items={a24.data} 
+          items={a24.data || []} 
           title={lang === 'ar' ? 'أفلام A24' : 'A24 Movies'} 
           link="/search?types=movie&keywords=a24"
           color="cyan"
         />
 
         <QuantumTrain 
-          items={mgm.data} 
+          items={mgm.data || []} 
           title={lang === 'ar' ? 'مترو غولدوين ماير' : 'Metro-Goldwyn-Mayer'} 
           link="/search?types=movie&keywords=mgm"
           color="gold"
         />
 
         <QuantumTrain 
-          items={lucasfilm.data} 
+          items={lucasfilm.data || []} 
           title={lang === 'ar' ? 'لوكاس فيلم' : 'Lucasfilm'} 
           link="/search?types=movie&keywords=lucasfilm"
           color="green"
         />
 
         <QuantumTrain 
-          items={blumhouse.data} 
+          items={blumhouse.data || []} 
           title={lang === 'ar' ? 'بلامهاوس (رعب)' : 'Blumhouse (Horror)'} 
           link="/search?types=movie&keywords=blumhouse"
           color="red"
         />
 
         <QuantumTrain 
-          items={newLine.data} 
+          items={newLine.data || []} 
           title={lang === 'ar' ? 'نيو لاين سينما' : 'New Line Cinema'} 
           link="/search?types=movie&keywords=newline"
           color="blue"
         />
 
         <QuantumTrain 
-          items={columbia.data} 
+          items={columbia.data || []} 
           title={lang === 'ar' ? 'كولومبيا بيكتشرز' : 'Columbia Pictures'} 
           link="/search?types=movie&keywords=columbia"
           color="gold"
         />
 
         <QuantumTrain 
-          items={legendary.data} 
+          items={legendary.data || []} 
           title={lang === 'ar' ? 'ليجنداري بيكتشرز' : 'Legendary Pictures'} 
           link="/search?types=movie&keywords=legendary"
           color="indigo"
         />
 
         <QuantumTrain 
-          items={focus.data} 
+          items={focus.data || []} 
           title={lang === 'ar' ? 'فوكس فيتشرز' : 'Focus Features'} 
           link="/search?types=movie&keywords=focus"
-          color="red"
+          color="cyan"
         />
 
         <QuantumTrain 
-          items={summit.data} 
+          items={summit.data || []} 
           title={lang === 'ar' ? 'ساميت إنترتينمنت' : 'Summit Entertainment'} 
           link="/search?types=movie&keywords=summit"
           color="gold"
         />
 
         <QuantumTrain 
-          items={toho.data} 
-          title={lang === 'ar' ? 'توهو (اليابان)' : 'Toho (Japan)'} 
+          items={toho.data || []} 
+          title={lang === 'ar' ? 'توهو (أفلام يابانية)' : 'Toho (Japanese Movies)'} 
           link="/search?types=movie&keywords=toho"
           color="red"
         />
 
         <QuantumTrain 
-          items={netflixMovies.data} 
+          items={netflixMovies.data || []} 
           title={lang === 'ar' ? 'أفلام نتفليكس الأصلية' : 'Netflix Original Movies'} 
           link="/search?types=movie&keywords=netflix"
           color="red"
         />
 
         <QuantumTrain 
-          items={anime.data} 
-          title={lang === 'ar' ? 'أنمي ياباني' : 'Japanese Anime'} 
-          link="/search?types=movie&keywords=anime"
-          color="cyan"
+          items={anime.data || []} 
+          title={lang === 'ar' ? 'أفلام أنمي' : 'Anime Movies'} 
+          link="/anime"
+          color="purple"
         />
 
         <QuantumTrain 
-          items={bollywood.data} 
-          title={lang === 'ar' ? 'بوليوود (الهند)' : 'Bollywood (India)'} 
-          link="/search?types=movie&keywords=bollywood"
-          color="gold"
+          items={bollywood.data || []} 
+          title={lang === 'ar' ? 'أفلام هندية (بوليوود)' : 'Bollywood Movies'} 
+          link="/search?types=movie&lang=hi"
+          color="orange"
         />
       </div>
     </div>
