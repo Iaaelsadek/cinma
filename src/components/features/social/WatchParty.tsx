@@ -153,8 +153,7 @@ export const WatchParty = ({ partyId, onSync, onClose, currentVideoTime, isVideo
           })
           .subscribe()
       } catch (err) {
-        console.error('Watch party error:', err)
-        toast.error(t('فشل الاتصال بغرفة المشاهدة', 'Failed to connect to watch party'))
+        toast.error(t('فشل الاتصال بغرفة المشاهدة الجماعية', 'Failed to connect to group watch party'))
         onClose()
       }
     }

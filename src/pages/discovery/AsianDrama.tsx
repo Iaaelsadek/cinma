@@ -12,7 +12,6 @@ import { useTranslatedContent } from '../../hooks/useTranslatedContent'
 import { SkeletonGrid } from '../../components/common/Skeletons'
 import { SectionHeader } from '../../components/common/SectionHeader'
 import { Tv, Film } from 'lucide-react'
-import { useHiddenMedia } from '../../hooks/useHiddenMedia'
 
 type AsianDramaType = 'chinese' | 'korean' | 'turkish' | 'bollywood'
 
@@ -22,7 +21,6 @@ interface Props {
 
 export const AsianDramaPage = ({ type }: Props) => {
   const { lang } = useLang()
-  const { filterMedia } = useHiddenMedia()
   const { genre: paramGenre, year: paramYear, rating: paramRating } = useParams()
 
   const config = {
@@ -111,7 +109,7 @@ export const AsianDramaPage = ({ type }: Props) => {
             overview: item.overview
         }))
 
-        return filterMedia(tmdbItems)
+        return tmdbItems
       } catch (error) {
         // Silently fail
         return []
@@ -138,8 +136,7 @@ export const AsianDramaPage = ({ type }: Props) => {
   const topRated = useQuery({ 
     queryKey: [`${type}-top-rated`], 
     queryFn: async () => {
-      const res = await fetchHubSection(null, 'vote_average.desc')
-      return filterMedia(res)
+      return await fetchHubSection(null, 'vote_average.desc')
     },
     enabled: !paramGenre 
   })
@@ -147,8 +144,7 @@ export const AsianDramaPage = ({ type }: Props) => {
   const romance = useQuery({ 
     queryKey: [`${type}-romance`], 
     queryFn: async () => {
-      const res = await fetchHubSection(10749)
-      return filterMedia(res)
+      return await fetchHubSection(10749)
     },
     enabled: !paramGenre 
   })
@@ -156,8 +152,7 @@ export const AsianDramaPage = ({ type }: Props) => {
   const action = useQuery({ 
     queryKey: [`${type}-action`], 
     queryFn: async () => {
-      const res = await fetchHubSection(config.mediaType === 'movie' ? 28 : 10759)
-      return filterMedia(res)
+      return await fetchHubSection(config.mediaType === 'movie' ? 28 : 10759)
     },
     enabled: !paramGenre 
   })
@@ -165,8 +160,7 @@ export const AsianDramaPage = ({ type }: Props) => {
   const comedy = useQuery({ 
     queryKey: [`${type}-comedy`], 
     queryFn: async () => {
-      const res = await fetchHubSection(35)
-      return filterMedia(res)
+      return await fetchHubSection(35)
     },
     enabled: !paramGenre 
   })
@@ -174,8 +168,7 @@ export const AsianDramaPage = ({ type }: Props) => {
   const crime = useQuery({ 
     queryKey: [`${type}-crime`], 
     queryFn: async () => {
-      const res = await fetchHubSection(80)
-      return filterMedia(res)
+      return await fetchHubSection(80)
     },
     enabled: !paramGenre 
   })
@@ -183,8 +176,7 @@ export const AsianDramaPage = ({ type }: Props) => {
   const fantasy = useQuery({ 
     queryKey: [`${type}-fantasy`], 
     queryFn: async () => {
-      const res = await fetchHubSection(14)
-      return filterMedia(res)
+      return await fetchHubSection(14)
     },
     enabled: !paramGenre 
   })
@@ -192,8 +184,7 @@ export const AsianDramaPage = ({ type }: Props) => {
   const history = useQuery({ 
     queryKey: [`${type}-history`], 
     queryFn: async () => {
-      const res = await fetchHubSection(36)
-      return filterMedia(res)
+      return await fetchHubSection(36)
     },
     enabled: !paramGenre 
   })
@@ -201,8 +192,7 @@ export const AsianDramaPage = ({ type }: Props) => {
   const thriller = useQuery({ 
     queryKey: [`${type}-thriller`], 
     queryFn: async () => {
-      const res = await fetchHubSection(53)
-      return filterMedia(res)
+      return await fetchHubSection(53)
     },
     enabled: !paramGenre 
   })
@@ -210,8 +200,7 @@ export const AsianDramaPage = ({ type }: Props) => {
   const family = useQuery({ 
     queryKey: [`${type}-family`], 
     queryFn: async () => {
-      const res = await fetchHubSection(10751)
-      return filterMedia(res)
+      return await fetchHubSection(10751)
     },
     enabled: !paramGenre 
   })
@@ -219,14 +208,13 @@ export const AsianDramaPage = ({ type }: Props) => {
   const music = useQuery({ 
     queryKey: [`${type}-music`], 
     queryFn: async () => {
-      const res = await fetchHubSection(10402)
-      return filterMedia(res)
+      return await fetchHubSection(10402)
     },
     enabled: !paramGenre 
   })
 
   // Apply translation hook
-  const filteredDramaList = useMemo(() => filterMedia(dramaList || []), [dramaList, filterMedia])
+  const filteredDramaList = dramaList || []
   const translatedContent = useTranslatedContent(filteredDramaList)
   
   const displayItems = translatedContent.data || filteredDramaList
@@ -252,25 +240,25 @@ export const AsianDramaPage = ({ type }: Props) => {
              />
 
              <QuantumTrain 
-               items={filterMedia(topRated.data || [])} 
+               items={topRated.data || []} 
                title={lang === 'ar' ? 'الأعلى تقييماً' : 'Top Rated'} 
                link={`/${type}/top-rated`}
              />
 
              <QuantumTrain 
-               items={filterMedia(romance.data || [])} 
+               items={romance.data || []} 
                title={lang === 'ar' ? 'رومانسي ودراما' : 'Romance & Drama'} 
                link={`/${type}/romance`}
              />
 
              <QuantumTrain 
-               items={filterMedia(action.data || [])} 
+               items={action.data || []} 
                title={lang === 'ar' ? 'أكشن وإثارة' : 'Action & Thriller'} 
                link={`/${type}/action`}
              />
 
              <QuantumTrain 
-               items={filterMedia(comedy.data || [])} 
+               items={comedy.data || []} 
                title={lang === 'ar' ? 'كوميديا' : 'Comedy'} 
                link={`/${type}/comedy`}
              />
@@ -278,13 +266,13 @@ export const AsianDramaPage = ({ type }: Props) => {
              {type === 'chinese' && (
                <>
                  <QuantumTrain 
-                   items={filterMedia(fantasy.data || [])} 
+                   items={fantasy.data || []} 
                    title={lang === 'ar' ? 'خيال وأساطير (Wuxia)' : 'Fantasy & Myth (Wuxia)'} 
                    link={`/${type}/fantasy`}
                    color="purple"
                  />
                  <QuantumTrain 
-                   items={filterMedia(history.data || [])} 
+                   items={history.data || []} 
                    title={lang === 'ar' ? 'دراما تاريخية' : 'Historical Drama'} 
                    link={`/${type}/history`}
                    color="gold"
@@ -295,19 +283,19 @@ export const AsianDramaPage = ({ type }: Props) => {
              {type === 'korean' && (
                <>
                  <QuantumTrain 
-                   items={filterMedia(history.data || [])} 
+                   items={history.data || []} 
                    title={lang === 'ar' ? 'تاريخي (Sageuk)' : 'Historical (Sageuk)'} 
                    link={`/${type}/history`}
                    color="gold"
                  />
                  <QuantumTrain 
-                   items={filterMedia(thriller.data || [])} 
+                   items={thriller.data || []} 
                    title={lang === 'ar' ? 'غموض وتشويق' : 'Mystery & Thriller'} 
                    link={`/${type}/thriller`}
                    color="red"
                  />
                  <QuantumTrain 
-                   items={filterMedia(family.data || [])} 
+                   items={family.data || []} 
                    title={lang === 'ar' ? 'دراما عائلية' : 'Family Drama'} 
                    link={`/${type}/family`}
                    color="green"
@@ -318,19 +306,19 @@ export const AsianDramaPage = ({ type }: Props) => {
              {type === 'turkish' && (
                <>
                  <QuantumTrain 
-                   items={filterMedia(history.data || [])} 
+                   items={history.data || []} 
                    title={lang === 'ar' ? 'تاريخي (Ertugrul)' : 'Historical (Ertugrul)'} 
                    link={`/${type}/history`}
                    color="gold"
                  />
                  <QuantumTrain 
-                   items={filterMedia(crime.data || [])} 
+                   items={crime.data || []} 
                    title={lang === 'ar' ? 'أكشن ومافيا' : 'Action & Mafia'} 
                    link={`/${type}/crime`}
                    color="red"
                  />
                  <QuantumTrain 
-                   items={filterMedia(family.data || [])} 
+                   items={family.data || []} 
                    title={lang === 'ar' ? 'دراما عائلية' : 'Family Drama'} 
                    link={`/${type}/family`}
                    color="green"
@@ -341,25 +329,25 @@ export const AsianDramaPage = ({ type }: Props) => {
              {type === 'bollywood' && (
                <>
                  <QuantumTrain 
-                   items={filterMedia(romance.data || [])} 
+                   items={romance.data || []} 
                    title={lang === 'ar' ? 'رومانسي' : 'Romance'} 
                    link={`/${type}/romance`}
                    color="red"
                  />
                  <QuantumTrain 
-                   items={filterMedia(action.data || [])} 
+                   items={action.data || []} 
                    title={lang === 'ar' ? 'أكشن' : 'Action'} 
                    link={`/${type}/action`}
                    color="blue"
                  />
                  <QuantumTrain 
-                   items={filterMedia(comedy.data || [])} 
+                   items={comedy.data || []} 
                    title={lang === 'ar' ? 'كوميديا' : 'Comedy'} 
                    link={`/${type}/comedy`}
                    color="orange"
                  />
                  <QuantumTrain 
-                   items={filterMedia(music.data || [])} 
+                   items={music.data || []} 
                    title={lang === 'ar' ? 'موسيقي واستعراضي' : 'Musical'} 
                    link={`/${type}/music`}
                    color="pink"

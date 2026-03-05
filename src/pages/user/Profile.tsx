@@ -4,7 +4,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { updateProfile, uploadAvatar, supabase, getWatchlist, getContinueWatching, getHistory, removeFromWatchlist, getUserAchievements, type UserAchievement, getFollowers, getFollowing, type Profile as ProfileType, followUser, unfollowUser, getActivityFeed, removeFollower } from '../../lib/supabase'
 import { Link, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
-import { useQuery as useRQ, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query'
+import { useQuery as useRQ, useQueryClient, useInfiniteQuery } from '@tanstack/react-query'
 import { getRecommendations, RecommendationItem } from '../../services/recommendations'
 import { Helmet } from 'react-helmet-async'
 import { SkeletonGrid, SkeletonProfile } from '../../components/common/Skeletons'
@@ -13,7 +13,7 @@ import { errorLogger } from '../../services/errorLogging'
 import { motion, AnimatePresence } from 'framer-motion'
 
 import { QRCodeSVG } from 'qrcode.react'
-import { Shield, Smartphone, Key, AlertCircle, CheckCircle2, Trash2, Award, Star, Zap, Film, Share2, Moon, Trophy, Activity, Clock, Heart, PlayCircle, Twitter, Instagram, Facebook, Globe, Users, Settings, User as UserIcon, LogOut, Sparkles, UserPlus, UserMinus, ExternalLink } from 'lucide-react'
+import { Shield, Smartphone, AlertCircle, CheckCircle2, Award, Star, Zap, Film, Trophy, Activity, Clock, Heart, Twitter, Instagram, Facebook, Globe, Users, Settings, User as UserIcon, LogOut, Sparkles, Trash2, Share2, Moon, PlayCircle } from 'lucide-react'
 import { PlaylistManager } from '../../components/features/social/PlaylistManager'
 import { FollowList } from '../../components/features/social/FollowList'
 import { UserListsTab } from '../../components/features/social/UserListsTab'
@@ -21,12 +21,19 @@ import { Challenges } from '../../components/features/social/Challenges'
 import { Leaderboard } from '../../components/features/social/Leaderboard'
 import { ActivityItem } from '../../components/features/social/ActivityItem'
 import { NotificationCenter } from '../../components/features/user/NotificationCenter'
-import { getProfile } from '../../lib/supabase'
 import clsx from 'clsx'
 
 const ICON_MAP: Record<string, any> = {
   Award, Star, Zap, Film, Share2, Moon, Trophy, Users: Shield, Activity, Clock, Heart, PlayCircle
 }
+
+const NEUTRAL_AVATARS = [
+  { id: 'cam1', url: 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=200&h=200&fit=crop', label: 'كاميرا سينمائية' },
+  { id: 'reel1', url: 'https://images.unsplash.com/photo-1485846234645-a62644f84728?w=200&h=200&fit=crop', label: 'بكرة فيلم' },
+  { id: 'pop1', url: 'https://images.unsplash.com/photo-1512149177596-f817c7ef5d4c?w=200&h=200&fit=crop', label: 'فشار' },
+  { id: 'clap1', url: 'https://images.unsplash.com/photo-1515634928627-2a4e0dae26fd?w=200&h=200&fit=crop', label: 'كلاكيت' },
+  { id: 'seat1', url: 'https://images.unsplash.com/photo-1517604401807-930f782c5897?w=200&h=200&fit=crop', label: 'مقعد سينما' },
+]
 
 // StatCard Component for Dashboard
 const StatCard = ({ icon: Icon, label, value, unit, color }: any) => (
@@ -203,7 +210,6 @@ export const Profile = () => {
   const [showMfaEnroll, setShowMfaEnroll] = useState(false)
   const [enrollData, setEnrollData] = useState<any>(null)
   const [enrollCode, setEnrollCode] = useState('')
-  const [enrollChallenge, setEnrollChallenge] = useState<any>(null)
 
   const isAdmin = role === 'admin'
   const isSupervisor = role === 'supervisor'
@@ -310,12 +316,6 @@ export const Profile = () => {
     enabled: !!user
   })
 
-  const { data: continueWatching } = useRQ({
-    queryKey: ['continue-watching', user?.id],
-    queryFn: () => getContinueWatching(user!.id),
-    enabled: !!user
-  })
-
   // Force refresh profile on mount to ensure role is up to date
   // REMOVED: Managed by useInitAuth globally to prevent duplicate fetches
 
@@ -389,13 +389,13 @@ export const Profile = () => {
         is_public: isPublic
       })
       setMsg(getArabicSuccessMessage('Profile updated'))
-      toast.success(getArabicSuccessMessage('Profile updated'))
+      toast.success(getArabicSuccessMessage('Profile updated'), { id: 'profile-update' })
       await refreshProfile()
     } catch (e: any) {
       const errorMsg = getArabicErrorMessage(e)
       setMsg(`فشل حفظ البيانات: ${errorMsg}`)
       setError(errorMsg)
-      toast.error(`فشل حفظ البيانات: ${errorMsg}`)
+      toast.error(`فشل حفظ البيانات: ${errorMsg}`, { id: 'profile-update-error' })
     } finally {
       setBusy(false)
     }
@@ -412,14 +412,36 @@ export const Profile = () => {
       const url = await uploadAvatar(f, user.id)
       setAvatar(url)
       setMsg(getArabicSuccessMessage('Avatar updated'))
-      toast.success(getArabicSuccessMessage('Avatar updated'))
+      toast.success(getArabicSuccessMessage('Avatar updated'), { id: 'avatar-update' })
       // Refresh profile to update avatar in auth context
       await refreshProfile()
     } catch (e: any) {
       const errorMsg = getArabicErrorMessage(e)
       setMsg(`فشل رفع الصورة: ${errorMsg}`)
       setError(errorMsg)
-      toast.error(`فشل رفع الصورة: ${errorMsg}`)
+      toast.error(`فشل رفع الصورة: ${errorMsg}`, { id: 'avatar-update-error' })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const onSelectNeutralAvatar = async (url: string) => {
+    if (!user) return
+    setBusy(true)
+    setMsg(null)
+    setError(null)
+    try {
+      const { error } = await supabase.from('profiles').update({ avatar_url: url }).eq('id', user.id)
+      if (error) throw error
+      setAvatar(url)
+      setMsg(getArabicSuccessMessage('Avatar updated'))
+      toast.success(getArabicSuccessMessage('Avatar updated'), { id: 'avatar-update' })
+      await refreshProfile()
+    } catch (e: any) {
+      const errorMsg = getArabicErrorMessage(e)
+      setMsg(`فشل تحديث الصورة: ${errorMsg}`)
+      setError(errorMsg)
+      toast.error(`فشل تحديث الصورة: ${errorMsg}`, { id: 'avatar-update-error' })
     } finally {
       setBusy(false)
     }
@@ -482,16 +504,43 @@ export const Profile = () => {
                   className="w-full h-full rounded-full object-cover border-4 border-[#0f0f0f]"
                   onError={(e) => { e.currentTarget.src = '/default-avatar.png' }}
                 />
-                <label className="absolute bottom-1 right-1 bg-lumen-gold text-black p-2 rounded-full cursor-pointer hover:scale-110 active:scale-95 transition-all shadow-xl">
-                  <input type="file" accept="image/*" onChange={onUpload} className="hidden" />
-                  <Settings size={16} className="animate-spin-slow" />
-                </label>
+                {(role === 'admin' || role === 'supervisor') && (
+                  <label className="absolute bottom-1 right-1 bg-lumen-gold text-black p-2 rounded-full cursor-pointer hover:scale-110 active:scale-95 transition-all shadow-xl">
+                    <input type="file" accept="image/*" onChange={onUpload} className="hidden" disabled={busy} />
+                    <Settings size={16} className={clsx("animate-spin-slow", busy && "opacity-50")} />
+                  </label>
+                )}
               </div>
             </div>
 
             <div className="flex-1 text-center md:text-right">
               <div className="flex flex-col md:flex-row items-center gap-4 mb-4">
-                <h2 className="text-4xl font-black text-white tracking-tighter">{username || 'مستخدم'}</h2>
+                <div className="flex flex-col gap-2">
+                  <h2 className="text-4xl font-black text-white tracking-tighter">{username || 'مستخدم'}</h2>
+                  
+                  {/* Neutral Avatars Selection */}
+                  <div className="flex flex-wrap gap-2 mt-2 justify-center md:justify-start">
+                    {NEUTRAL_AVATARS.map((navatar) => (
+                      <button
+                        key={navatar.id}
+                        onClick={() => onSelectNeutralAvatar(navatar.url)}
+                        disabled={busy}
+                        className={clsx(
+                          "relative w-10 h-10 rounded-full overflow-hidden border-2 transition-all hover:scale-110 active:scale-95",
+                          avatar === navatar.url ? "border-lumen-gold scale-110 shadow-[0_0_15px_rgba(255,191,0,0.3)]" : "border-white/10 grayscale hover:grayscale-0"
+                        )}
+                        title={navatar.label}
+                      >
+                        <img src={navatar.url} alt={navatar.label} className="w-full h-full object-cover" />
+                        {avatar === navatar.url && (
+                          <div className="absolute inset-0 bg-lumen-gold/20 flex items-center justify-center">
+                            <CheckCircle2 size={12} className="text-lumen-gold" />
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <span className={clsx(
                   "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border",
                   role === 'admin' ? "bg-red-500/10 text-red-500 border-red-500/20" : 
@@ -860,6 +909,33 @@ export const Profile = () => {
                             className="w-full min-h-[120px] p-6 rounded-2xl bg-white/[0.03] border border-white/10 text-white focus:outline-none focus:border-lumen-gold transition-all font-medium resize-none"
                             placeholder="اخبرنا عن نفسك..."
                           />
+                        </div>
+
+                        <div className="space-y-4">
+                          <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest px-1">اختر صورة رمزية محايدة</label>
+                          <div className="grid grid-cols-5 gap-4">
+                            {NEUTRAL_AVATARS.map((nav) => (
+                              <button
+                                key={nav.id}
+                                onClick={() => onSelectNeutralAvatar(nav.url)}
+                                className={clsx(
+                                  "relative aspect-square rounded-2xl overflow-hidden border-2 transition-all hover:scale-105 active:scale-95 group",
+                                  avatar === nav.url ? "border-lumen-gold shadow-[0_0_20px_rgba(245,197,24,0.3)]" : "border-white/5 grayscale hover:grayscale-0 hover:border-white/20"
+                                )}
+                                title={nav.label}
+                              >
+                                <img src={nav.url} alt={nav.label} className="w-full h-full object-cover" />
+                                {avatar === nav.url && (
+                                  <div className="absolute inset-0 bg-lumen-gold/20 flex items-center justify-center">
+                                    <CheckCircle2 size={24} className="text-lumen-gold" />
+                                  </div>
+                                )}
+                                <div className="absolute inset-x-0 bottom-0 bg-black/60 p-1 text-[8px] text-white text-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                  {nav.label}
+                                </div>
+                              </button>
+                            ))}
+                          </div>
                         </div>
 
                         <div className="space-y-6">
@@ -1550,70 +1626,6 @@ const HistorySection = () => {
         </div>
       ) : (
         <p className="text-zinc-400 text-sm">لا يوجد سجل مشاهدة</p>
-      )}
-    </div>
-  )
-}
-
-// Recommendations Section Component
-const RecommendationsSection = () => {
-  const { user } = useAuth()
-  const { data: recommendations, isLoading, error } = useRQ({
-    queryKey: ['recommendations', user?.id],
-    queryFn: () => getRecommendations(user!.id),
-    enabled: !!user
-  })
-
-  if (isLoading) return (
-    <div className="rounded-lg border border-zinc-800 p-4 bg-zinc-900/50">
-      <div className="h-6 w-24 bg-zinc-800 rounded mb-4"></div>
-      <SkeletonGrid count={3} />
-    </div>
-  )
-
-  if (error) return (
-    <div className="rounded-lg border border-red-800 bg-red-900/20 p-4">
-      <h3 className="text-lg font-semibold text-red-400 mb-2">التوصيات</h3>
-      <p className="text-red-300 text-sm">{getArabicErrorMessage(error)}</p>
-    </div>
-  )
-
-  return (
-    <div className="rounded-lg border border-zinc-800 p-4 bg-zinc-900/50 backdrop-blur-sm">
-      <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-        💡 توصيات مخصصة
-      </h3>
-      {recommendations && recommendations.length > 0 ? (
-        <div className="space-y-2">
-          {recommendations.slice(0, 5).map((item: RecommendationItem) => (
-            <div key={item.id} className="flex items-center gap-3 p-2 bg-zinc-800/50 rounded-lg">
-              <img 
-                src={item.poster_path || '/default-poster.jpg'} 
-                alt={item.title} 
-                className="w-12 h-16 object-cover rounded"
-                onError={(e) => e.currentTarget.src = '/default-poster.jpg'}
-                loading="lazy"
-                decoding="async"
-              />
-              <div className="flex-1">
-                <h4 className="text-sm font-medium text-white">{item.title}</h4>
-                <p className="text-xs text-zinc-400">{(item as any).category || 'غير مصنف'}</p>
-                <div className="flex items-center gap-1 mt-1">
-                  <span className="text-yellow-400 text-xs">⭐</span>
-                  <span className="text-xs text-zinc-300">{(item as any).rating?.toFixed(1)}</span>
-                </div>
-              </div>
-              <Link
-                to={`/watch/${(item as any).type}/${item.id}`}
-                className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs transition-colors"
-              >
-                مشاهدة
-              </Link>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <p className="text-zinc-400 text-sm">لا توجد توصيات حالياً</p>
       )}
     </div>
   )

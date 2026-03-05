@@ -11,10 +11,7 @@ export const supabase = createClient(sbUrl, sbKey, {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
-    storageKey: 'supabase-auth-token-v2' // Unique key to prevent conflicts
-  },
-  global: {
-    fetch: (input, init) => fetchWithTimeout(input, init)
+    storageKey: 'cinema-online-auth-v3' // مفتاح فريد لضمان عدم تعارض الجلسات
   },
   db: {
     schema: 'public'

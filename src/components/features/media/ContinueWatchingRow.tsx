@@ -5,7 +5,6 @@ import { tmdb } from '../../../lib/tmdb'
 import { Clock } from 'lucide-react'
 import { SectionHeader } from '../../common/SectionHeader'
 import { useLang } from '../../../state/useLang'
-import { useHiddenMedia } from '../../../hooks/useHiddenMedia'
 
 type CwItem = {
   content_id: number
@@ -27,7 +26,6 @@ type EnrichedCwItem = CwItem & {
 
 export const ContinueWatchingRow = ({ userId }: { userId: string }) => {
   const { lang } = useLang()
-  const { filterMedia } = useHiddenMedia()
   const cwQuery = useQuery<CwItem[]>({
     queryKey: ['continue', userId],
     queryFn: () => getContinueWatching(userId),
@@ -52,8 +50,7 @@ export const ContinueWatchingRow = ({ userId }: { userId: string }) => {
     enabled: !!cwQuery.data?.length
   })
 
-  const rawData = enriched.data || []
-  const data = filterMedia<EnrichedCwItem>(rawData)
+  const data = enriched.data || []
 
   if (!cwQuery.data?.length) return null
   if (cwQuery.isPending) {

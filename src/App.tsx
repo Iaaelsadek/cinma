@@ -144,10 +144,6 @@ const App = () => {
     setTmdbLanguage(lang === 'ar' ? 'ar-SA' : 'en-US')
   }, [lang])
   const navigate = useNavigate()
-  const logout = async () => {
-    await supabase.auth.signOut()
-    navigate('/', { replace: true })
-  }
   return (
     <PwaProvider>
       <QuranPlayerProvider>

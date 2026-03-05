@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import { Play, Info, Plus, Check } from 'lucide-react'
+import { Play, Plus, Check } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useLang } from '../../../state/useLang'
 import { useEffect, useState, type MouseEvent, memo } from 'react'
@@ -18,8 +18,6 @@ export type VideoItem = {
   views?: number | null
   duration?: number | null
   category?: string | null
-  created_at?: string | null
-  description?: string | null
   quality?: string | null
   year?: number | null
 }

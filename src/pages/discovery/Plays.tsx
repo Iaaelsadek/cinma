@@ -11,7 +11,6 @@ import { useLang } from '../../state/useLang'
 import { Helmet } from 'react-helmet-async'
 import { useCategoryVideos } from '../../hooks/useFetchContent'
 import { PageLoader } from '../../components/common/PageLoader'
-import { useHiddenMedia } from '../../hooks/useHiddenMedia'
 
 // Fallback data for plays to ensure sections are not empty
 const FALLBACK_PLAYS: Record<string, any[]> = {
@@ -139,13 +138,12 @@ const fetchPlays = async (query: string, year?: string) => {
 export const PlaysPage = () => {
   const { lang } = useLang()
   const { genre, year, rating } = useParams()
-  const { filterMedia } = useHiddenMedia()
 
   // YouTube Content
   const { data: ytPlays, isLoading: ytLoading } = useCategoryVideos('plays', { limit: 20 })
   
   const ytPlaysMapped = useMemo(() => {
-    const mapped = (ytPlays || []).map(item => ({
+    return (ytPlays || []).map(item => ({
       id: item.id,
       title: item.title,
       overview: item.description,
@@ -157,8 +155,7 @@ export const PlaysPage = () => {
       original_language: 'ar',
       category: 'plays'
     }))
-    return filterMedia(mapped)
-  }, [ytPlays, filterMedia])
+  }, [ytPlays])
 
   // If a genre is selected, we only show that genre
   const query = genre ? CATEGORY_QUERIES[genre] : null
@@ -170,8 +167,7 @@ export const PlaysPage = () => {
     queryFn: async () => {
        if (!query || query === 'full') return []
        const res = await fetchPlays(query, year)
-       const finalRes = res.length > 0 ? res : (genre && FALLBACK_PLAYS[genre] ? FALLBACK_PLAYS[genre] : [])
-       return filterMedia(finalRes)
+       return res.length > 0 ? res : (genre && FALLBACK_PLAYS[genre] ? FALLBACK_PLAYS[genre] : [])
     },
     enabled: !!query && query !== 'full'
   })
@@ -191,32 +187,32 @@ export const PlaysPage = () => {
    // Prefetch sections if not filtered
    const adelImam = useQuery({ queryKey: ['plays-adel-imam'], queryFn: async () => {
       const res = await fetchPlays('مسرحية عادل امام')
-      return filterMedia(res.length > 0 ? res : (FALLBACK_PLAYS['adel-imam'] || []))
+      return res.length > 0 ? res : (FALLBACK_PLAYS['adel-imam'] || [])
    }, enabled: !isFiltered })
 
    const mohamedSobhy = useQuery({ queryKey: ['plays-mohamed-sobhy'], queryFn: async () => {
       const res = await fetchPlays('مسرحية محمد صبحي')
-      return filterMedia(res.length > 0 ? res : (FALLBACK_PLAYS['mohamed-sobhy'] || []))
+      return res.length > 0 ? res : (FALLBACK_PLAYS['mohamed-sobhy'] || [])
    }, enabled: !isFiltered })
 
    const samirGhanem = useQuery({ queryKey: ['plays-samir-ghanem'], queryFn: async () => {
       const res = await fetchPlays('مسرحية سمير غانم')
-      return filterMedia(res.length > 0 ? res : (FALLBACK_PLAYS['samir-ghanem'] || []))
+      return res.length > 0 ? res : (FALLBACK_PLAYS['samir-ghanem'] || [])
    }, enabled: !isFiltered })
 
    const classics = useQuery({ queryKey: ['plays-classics'], queryFn: async () => {
       const res = await fetchPlays('مسرحية')
-      return filterMedia(res.length > 0 ? res : (FALLBACK_PLAYS['classics'] || []))
+      return res.length > 0 ? res : (FALLBACK_PLAYS['classics'] || [])
    }, enabled: !isFiltered })
 
    const gulf = useQuery({ queryKey: ['plays-gulf'], queryFn: async () => {
       const res = await fetchPlays('مسرحية طارق العلي|مسرحية عبدالحسين عبدالرضا')
-      return filterMedia(res.length > 0 ? res : (FALLBACK_PLAYS['gulf'] || []))
+      return res.length > 0 ? res : (FALLBACK_PLAYS['gulf'] || [])
    }, enabled: !isFiltered })
 
    const masrahMasr = useQuery({ queryKey: ['plays-masrah-masr'], queryFn: async () => {
       const res = await fetchPlays('مسرح مصر')
-      return filterMedia(res.length > 0 ? res : (FALLBACK_PLAYS['masrah-masr'] || []))
+      return res.length > 0 ? res : (FALLBACK_PLAYS['masrah-masr'] || [])
    }, enabled: !isFiltered })
 
    const isLoading = ytLoading || (isFiltered ? filteredLoading : (adelImam.isLoading || mohamedSobhy.isLoading || samirGhanem.isLoading || classics.isLoading || gulf.isLoading || masrahMasr.isLoading))

@@ -34,7 +34,7 @@ export const ReviewVotes = ({ commentId, userId, lang = 'ar' }: ReviewVotesProps
 
   const handleVote = async (type: 'up' | 'down') => {
     if (!userId) {
-      toast.error(lang === 'ar' ? 'يجب تسجيل الدخول للتصويت' : 'You must sign in to vote')
+      toast.error(lang === 'ar' ? 'يجب تسجيل الدخول للتصويت' : 'You must sign in to vote', { id: 'auth-required' })
       return
     }
 

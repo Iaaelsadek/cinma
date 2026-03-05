@@ -16,6 +16,7 @@ type AuthState = {
   refreshProfile: (silent?: boolean) => Promise<void>
   setProfile: (p: Profile | null) => void
   setLoading: (loading: boolean) => void
+  setSession: (session: Session | null) => void
   syncLocalData: () => Promise<void>
 }
 
@@ -26,6 +27,11 @@ export const useAuth = create<AuthState>((set, get) => ({
   loading: true,
   error: null,
   setLoading: (loading) => set({ loading }),
+  setSession: (session) => {
+    const user = session?.user ?? null
+    set({ session, user })
+    if (!user) set({ profile: null })
+  },
   async login(email: string, password: string) {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) throw error

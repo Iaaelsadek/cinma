@@ -6,17 +6,16 @@ import { TrafficLightBadge } from '../../components/common/TrafficLightBadge'
 import { MovieCard } from '../../components/features/media/MovieCard'
 import { useAuth } from '../../hooks/useAuth'
 import { getProfile, incrementClicks, supabase } from '../../lib/supabase'
-import { generateArabicSummary } from '../../lib/gemini'
 import { addToWatchlist, isInWatchlist, removeFromWatchlist } from '../../lib/supabase'
 import { useMutation } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useForm } from 'react-hook-form'
-import { addComment, deleteComment, getComments, updateComment } from '../../lib/supabase'
+import { addComment, deleteComment, getComments } from '../../lib/supabase'
 import { ReviewVotes } from '../../components/features/social/ReviewVotes'
 import { AddToListModal } from '../../components/features/social/AddToListModal'
 import { Helmet } from 'react-helmet-async'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Star, Eye, Heart as HeartIcon, Play, Sparkles, MessageSquare, Trash2, List } from 'lucide-react'
+import { Star, Heart as HeartIcon, Play, Sparkles, MessageSquare, Trash2, List } from 'lucide-react'
 import { clsx } from 'clsx'
 import { ShareButton } from '../../components/common/ShareButton'
 import { useLang } from '../../state/useLang'
@@ -24,8 +23,6 @@ import ReactPlayer from 'react-player'
 import { SeoHead } from '../../components/common/SeoHead'
 import { useDualTitles } from '../../hooks/useDualTitles'
 import { SectionHeader } from '../../components/common/SectionHeader'
-import { useHiddenMedia } from '../../hooks/useHiddenMedia'
-import { AlertTriangle } from 'lucide-react'
 
 type TmdbGenre = { id: number; name: string }
 type TmdbCrewMember = { id: number; job?: string; name?: string }
@@ -66,33 +63,12 @@ import { SkeletonDetails } from '../../components/common/Skeletons'
 export const MovieDetails = () => {
   const { id } = useParams()
   const movieId = Number(id)
-  const { user, loading: authLoading } = useAuth()
-  const { filterMedia, hiddenIds, isAdmin: isUserAdmin } = useHiddenMedia()
-  const { lang: currentLang } = useLang()
-
-  // Hidden Content Check
-  const isHiddenFromStart = hiddenIds.has(movieId)
-  if (isHiddenFromStart && !isUserAdmin) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[#050505] text-center p-6">
-        <div className="w-24 h-24 bg-rose-500/10 rounded-full flex items-center justify-center mb-6">
-          <AlertTriangle className="text-rose-500 w-12 h-12" />
-        </div>
-        <h1 className="text-3xl font-black mb-4">المحتوى غير متوفر حالياً</h1>
-        <p className="text-zinc-400 max-w-md mx-auto mb-8">
-          عذراً، هذا الفيلم تم إخفاؤه مؤقتاً بسبب تعطل السيرفرات الخاصة به. سنقوم بإعادة إظهاره فور توفر روابط جديدة.
-        </p>
-        <Link to="/" className="px-8 py-3 bg-primary text-black font-bold rounded-xl hover:scale-105 transition-transform">
-          العودة للرئيسية
-        </Link>
-      </div>
-    )
-  }
+  const { user } = useAuth()
+  const { lang: currentLangForT } = useLang()
 
   const [isAdmin, setIsAdmin] = useState(false)
   const [aiSummary, setAiSummary] = useState<string | null>(null)
   const [dbTrailerUrl, setDbTrailerUrl] = useState<string | null>(null)
-  const [genLoading, setGenLoading] = useState(false)
   const [heart, setHeart] = useState(false)
   const [showTrailer, setShowTrailer] = useState(false)
   const [showListModal, setShowListModal] = useState(false)
@@ -265,8 +241,14 @@ export const MovieDetails = () => {
   }, [comments.data])
 
   const { register, handleSubmit, reset } = useForm<{ text: string; title: string }>()
+  const [isAddingComment, setIsAddingComment] = useState(false)
   const onAddComment = async (v: { text: string; title: string }) => {
-    if (!user || !id) return
+    if (!user || !id) {
+      toast.error(t('يجب تسجيل الدخول لإضافة مراجعة', 'Login required to add review'), { id: 'auth-required' })
+      return
+    }
+    if (isAddingComment) return
+    setIsAddingComment(true)
     try {
       await addComment({
         userId: user.id,
@@ -279,22 +261,12 @@ export const MovieDetails = () => {
       reset({ text: '', title: '' })
       setUserRating(0)
       comments.refetch()
-      toast.success(t('تم إضافة المراجعة بنجاح', 'Review added successfully'))
+      toast.success(t('تم إضافة المراجعة بنجاح', 'Review added successfully'), { id: 'review-added' })
     } catch (error) {
       const message = error instanceof Error ? error.message : 'فشل الإضافة'
-      toast.error(message)
-    }
-  }
-
-  const onGenerate = async () => {
-    if (!id) return
-    setGenLoading(true)
-    try {
-      const text = await generateArabicSummary(title, overview)
-      setAiSummary(text)
-      await supabase.from('movies').update({ ai_summary: text }).eq('id', String(id))
+      toast.error(message, { id: 'review-error' })
     } finally {
-      setGenLoading(false)
+      setIsAddingComment(false)
     }
   }
 
@@ -309,15 +281,18 @@ export const MovieDetails = () => {
     },
     onSuccess: () => {
       setHeart((h) => !h)
-      toast.success(!heart ? 'تمت الإضافة إلى المفضلة' : 'تمت الإزالة من المفضلة')
+      toast.success(!heart ? 'تمت الإضافة إلى المفضلة' : 'تمت الإزالة من المفضلة', { id: 'watchlist-update' })
     },
-    onError: (error) => {
-      const message = error instanceof Error ? error.message : 'خطأ'
-      toast.error(message)
+    onError: (error: any) => {
+      if (error.message === 'auth') {
+        toast.error('يجب تسجيل الدخول للإضافة إلى المفضلة', { id: 'auth-required' })
+      } else {
+        const message = error instanceof Error ? error.message : 'خطأ'
+        toast.error(message, { id: 'watchlist-error' })
+      }
     }
   })
 
-  const { lang: currentLangForT } = useLang()
   const t = (ar: string, en: string) => (currentLangForT === 'ar' ? ar : en)
   const quality = '1080p'
   const canonicalUrl = typeof window !== 'undefined' ? `${location.origin}${location.pathname}` : ''
@@ -374,25 +349,6 @@ export const MovieDetails = () => {
     return (
       <div className="max-w-[2400px] mx-auto px-4 md:px-12 w-full pt-24 pb-12">
         <SkeletonDetails />
-      </div>
-    )
-  }
-
-  // Hidden Content Check
-  const isHiddenAfterLoad = hiddenIds.has(movieId)
-  if (isHiddenAfterLoad && !isUserAdmin) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[#050505] text-center p-6">
-        <div className="w-24 h-24 bg-rose-500/10 rounded-full flex items-center justify-center mb-6">
-          <AlertTriangle className="text-rose-500 w-12 h-12" />
-        </div>
-        <h1 className="text-3xl font-black mb-4">المحتوى غير متوفر حالياً</h1>
-        <p className="text-zinc-400 max-w-md mx-auto mb-8">
-          عذراً، هذا العمل تم إخفاؤه مؤقتاً بسبب تعطل السيرفرات الخاصة به. سنقوم بإعادة إظهاره فور توفر روابط جديدة.
-        </p>
-        <Link to="/" className="px-8 py-3 bg-primary text-black font-bold rounded-xl hover:scale-105 transition-transform">
-          العودة للرئيسية
-        </Link>
       </div>
     )
   }

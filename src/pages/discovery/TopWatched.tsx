@@ -6,11 +6,8 @@ import { fetchTrending } from '../../lib/tmdb'
 import { supabase } from '../../lib/supabase'
 import { QuantumHero } from '../../components/features/hero/QuantumHero'
 
-import { useHiddenMedia } from '../../hooks/useHiddenMedia'
-
 export const TopWatched = () => {
   const { lang } = useLang()
-  const { filterMedia } = useHiddenMedia()
 
   const { data: trendingMovies } = useQuery({
     queryKey: ['trending-movies-page'],
@@ -34,7 +31,7 @@ export const TopWatched = () => {
     }
   })
 
-  const heroItems = filterMedia((trendingMovies?.results || []).slice(0, 10).map((item: any) => ({ ...item, media_type: 'movie' })))
+  const heroItems = (trendingMovies?.results || []).slice(0, 10).map((item: any) => ({ ...item, media_type: 'movie' }))
 
   return (
     <div className="min-h-screen text-white pb-4 max-w-[2400px] mx-auto px-4 md:px-12 w-full">
@@ -55,19 +52,19 @@ export const TopWatched = () => {
         </div>
 
         <QuantumTrain 
-          items={filterMedia(trendingMovies?.results || [])} 
+          items={trendingMovies?.results || []} 
           title={lang === 'ar' ? 'أفلام رائجة' : 'Trending Movies'} 
           link="/search?types=movie&sort=trending"
         />
         
         <QuantumTrain 
-          items={filterMedia(trendingSeries?.results || [])} 
+          items={trendingSeries?.results || []} 
           title={lang === 'ar' ? 'مسلسلات رائجة' : 'Trending Series'} 
           link="/search?types=tv&sort=trending"
         />
 
         <QuantumTrain 
-            items={filterMedia(topRatedMovies || [])}
+            items={topRatedMovies || []}
             title={lang === 'ar' ? 'الأعلى تقييماً' : 'Top Rated'}
             link="/search?types=movie&sort=top_rated"
         />

@@ -43,7 +43,7 @@ INSERT INTO public.achievements (id, title, description, icon, category, points)
 ('first_movie', 'أول فشار 🍿', 'شاهدت أول فيلم لك على المنصة', 'Film', 'watch', 10),
 ('movie_critic', 'ناقد سينمائي 🎭', 'قمت بتقييم 5 أفلام أو مسلسلات', 'Star', 'social', 20),
 ('social_butterfly', 'فراشة اجتماعية 🦋', 'شاركت 10 روابط مع أصدقائك', 'Share2', 'social', 30),
-('party_host', 'صاحب المجلس 🏠', 'أنشأت أول غرفة مشاهدة لك', 'Users', 'social', 25),
+('party_host', 'صاحب المجلس 🏠', 'أنشأت أول غرفة مشاهدة جماعية لك', 'Users', 'social', 25),
 ('night_owl', 'بومة الليل 🦉', 'شاهدت محتوى بعد منتصف الليل', 'Moon', 'watch', 15),
 ('marathon_runner', 'عداء الماراثون 🏃‍♂️', 'شاهدت 3 حلقات متتالية من مسلسل', 'Zap', 'watch', 50),
 ('cinema_legend', 'أسطورة السينما 👑', 'شاهدت أكثر من 100 ساعة من المحتوى', 'Trophy', 'watch', 100)

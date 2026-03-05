@@ -116,10 +116,13 @@ export const ActivityItem = ({ activity, currentUserId, currentUserRole }: Activ
 
   const handleReaction = async (type: string) => {
     if (!currentUserId) {
-      toast.error('يجب تسجيل الدخول للتفاعل')
+      toast.error('يجب تسجيل الدخول للتفاعل', { id: 'auth-required' })
       return
     }
 
+    if (isBusy) return
+    setIsBusy(true)
+    
     const myExistingReaction = reactions.find(r => r.user_id === currentUserId)
     
     try {
@@ -135,7 +138,9 @@ export const ActivityItem = ({ activity, currentUserId, currentUserRole }: Activ
       }
       setShowReactionPicker(false)
     } catch (e) {
-      toast.error('حدث خطأ أثناء التفاعل')
+      toast.error('حدث خطأ أثناء التفاعل', { id: 'reaction-error' })
+    } finally {
+      setIsBusy(false)
     }
   }
 

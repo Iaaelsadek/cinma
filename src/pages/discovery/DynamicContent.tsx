@@ -9,7 +9,6 @@ import { SkeletonGrid } from '../../components/common/Skeletons'
 import { SectionHeader } from '../../components/common/SectionHeader'
 import { Tv, Film, Clapperboard, Globe, Moon, BookOpen, Baby, Sparkles } from 'lucide-react'
 import { useState, useEffect, useMemo } from 'react'
-import { useHiddenMedia } from '../../hooks/useHiddenMedia'
 
 export type ContentPreset = 
   | 'disney' 
@@ -28,7 +27,6 @@ interface Props {
 
 export const DynamicContentPage = ({ preset, type: propType }: Props) => {
   const { lang } = useLang()
-  const { filterMedia } = useHiddenMedia()
   const { genre: paramGenre, year: paramYear, rating: paramRating } = useParams()
   const [page, setPage] = useState(1)
 
@@ -194,7 +192,6 @@ export const DynamicContentPage = ({ preset, type: propType }: Props) => {
   }, [newItems, page])
 
   const title = lang === 'ar' ? config.titleAr : config.titleEn
-  const filteredContent = useMemo(() => filterMedia(contentList), [contentList, filterMedia])
 
   return (
     <>
@@ -216,12 +213,12 @@ export const DynamicContentPage = ({ preset, type: propType }: Props) => {
         ) : (
           <>
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6 mt-8">
-              {filteredContent.map((item: any) => (
+              {contentList.map((item: any) => (
                 <MovieCard key={item.id} movie={item} />
               ))}
             </div>
             
-            {filteredContent.length === 0 && !isLoading && (
+            {contentList.length === 0 && !isLoading && (
               <div className="col-span-full text-center py-20 text-gray-500">
                 {lang === 'ar' ? 'لا توجد نتائج' : 'No results found'}
               </div>
