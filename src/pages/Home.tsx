@@ -250,6 +250,40 @@ export const Home = () => {
     staleTime: 300000
   })
 
+  // --- RESTORED QUERIES ---
+  const goldenEra = useCategoryVideos('golden-era', { limit: 10 })
+  const recaps = useCategoryVideos('recaps', { limit: 10 })
+  const animeHub = useCategoryVideos('anime', { limit: 20 })
+  const quranHub = useCategoryVideos('quran', { limit: 20 })
+
+  const tmdbClassics = useQuery<{ results: TmdbMedia[] }>({
+    queryKey: ['home', 'classics'],
+    queryFn: async () => {
+      const { data } = await tmdb.get('/discover/movie', { 
+        params: { 
+          'release_date.lte': '1980-01-01', 
+          sort_by: 'popularity.desc', 
+          page: 1 
+        } 
+      })
+      return data
+    },
+    enabled: !!CONFIG.TMDB_API_KEY,
+    staleTime: 300000
+  })
+
+  const topRatedMovies = useQuery<{ results: TmdbMedia[] }>({
+    queryKey: ['home', 'top-rated'],
+    queryFn: async () => {
+      const { data } = await tmdb.get('/movie/top_rated', { params: { page: 1 } })
+      return data
+    },
+    enabled: !!CONFIG.TMDB_API_KEY,
+    staleTime: 300000
+  })
+
+  const dmTrending = useDailyMotion('trending', { limit: 6 })
+
   // Apply translations directly
   const translatedKorean = useTranslatedContent(koreanSeries.data?.results)
   const translatedTurkish = useTranslatedContent(turkishSeries.data?.results)
@@ -504,13 +538,13 @@ export const Home = () => {
            <BentoBox 
              title={lang === 'ar' ? 'العصر الذهبي' : 'Golden Era'} 
              icon={<Film />} 
-             items={(goldenEra.data && goldenEra.data.length > 0) ? goldenEra.data : tmdbClassics.data}
+             items={(goldenEra.data && goldenEra.data.length > 0) ? goldenEra.data : (tmdbClassics.data?.results || [])}
              color="gold"
            />
            <BentoBox 
              title={lang === 'ar' ? 'ملخصات الأفلام' : 'Movie Recaps'} 
              icon={<Zap />} 
-             items={recaps.data}
+             items={recaps.data || []}
              color="cyan"
            />
         </section>
