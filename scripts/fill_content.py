@@ -49,8 +49,8 @@ def gemini_sum(text):
         if "ResourceExhausted" in error_str or "429" in error_str or "Quota" in error_str:
             print(f"[LOG] Warning: Primary model exhausted or rate limited. Switching to fallback model... Error: {e}")
             try:
-                # 3. Fallback Model (Older/Cheaper)
-                model = genai.GenerativeModel("gemini-pro")
+                # 3. Fallback Model (Efficient/Paid Tier friendly)
+                model = genai.GenerativeModel("gemini-1.5-flash")
                 prompt = "لخص النص التالي في 3 جمل عربية قصيرة:\n\n" + text
                 resp = model.generate_content(prompt)
                 return getattr(resp, "text", None)

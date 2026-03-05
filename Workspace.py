@@ -84,8 +84,8 @@ def classify_content_gemini(title: str, description: str) -> str:
         return 'unknown'
     try:
         genai.configure(api_key=os.getenv('GEMINI_API_KEY'))
-        # Use gemini-1.5-flash for efficiency
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        # Use gemini-2.0-flash for efficiency
+        model = genai.GenerativeModel('gemini-2.0-flash')
         prompt = f"""
         Analyze the following video title and description and categorize it into EXACTLY one of these tags: ['movie', 'play', 'gaming', 'programming', 'trending', 'music'].
         
