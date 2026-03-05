@@ -161,7 +161,7 @@ export const QuranRadio = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#111] flex items-center justify-center p-4 relative overflow-hidden font-mono select-none">
+    <div className="fixed inset-0 bg-[#111] flex items-center justify-center p-2 sm:p-4 overflow-hidden font-mono select-none">
       <Helmet>
         <title>Quran Radio</title>
         <style>{`
@@ -184,7 +184,7 @@ export const QuranRadio = () => {
       </div>
 
       {/* Main Radio Body */}
-      <div className="relative z-10 w-full max-w-[320px] bg-[#1a1a1a] rounded-3xl p-6 shadow-[0_20px_50px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.1)] border-4 border-[#2a2a2a] flex flex-col gap-5">
+      <div className="relative z-10 w-full max-w-[320px] max-h-[95vh] overflow-y-auto sm:overflow-visible bg-[#1a1a1a] rounded-3xl p-4 sm:p-6 shadow-[0_20px_50px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.1)] border-4 border-[#2a2a2a] flex flex-col gap-3 sm:gap-5">
         
         {/* Texture Overlay */}
         <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/black-scales.png')] opacity-20 pointer-events-none mix-blend-overlay rounded-2xl" />
