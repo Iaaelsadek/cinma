@@ -1,8 +1,9 @@
 import { createContext, ReactNode, useContext, useEffect, useMemo, useRef, useState } from 'react'
-import { Pause, Play, Volume2, VolumeX, SkipBack, SkipForward, X, Share2 } from 'lucide-react'
+import { Pause, Play, Volume2, VolumeX, SkipBack, SkipForward, X, Share2, Music } from 'lucide-react'
 import { useLang } from '../state/useLang'
 import { toast } from 'sonner'
 import { SURAHS, NATURE_IMAGES } from '../data/quran'
+import { motion, AnimatePresence } from 'framer-motion'
 
 type QuranTrack = {
   id: number | string
@@ -289,17 +290,14 @@ export const QuranPlayerBar = () => {
     setIsVisible(true)
     if (hideTimerRef.current) clearTimeout(hideTimerRef.current)
     if (isPlaying) {
-      hideTimerRef.current = setTimeout(() => setIsVisible(false), 5000)
+      hideTimerRef.current = setTimeout(() => setIsVisible(false), 8000)
     }
   }
 
   useEffect(() => {
-    const events = ['mousemove', 'click', 'keydown', 'scroll']
+    const events = ['mousemove', 'click', 'keydown', 'scroll', 'touchstart']
     events.forEach(e => window.addEventListener(e, resetTimer))
-    
-    // Initial timer
     resetTimer()
-
     return () => {
       events.forEach(e => window.removeEventListener(e, resetTimer))
       if (hideTimerRef.current) clearTimeout(hideTimerRef.current)
@@ -309,7 +307,7 @@ export const QuranPlayerBar = () => {
   if (!currentTrack) return null
 
   const formatTime = (time: number) => {
-    if (!time) return '0:00'
+    if (!time || isNaN(time)) return '0:00'
     const m = Math.floor(time / 60)
     const s = Math.floor(time % 60)
     return `${m}:${s.toString().padStart(2, '0')}`
@@ -317,140 +315,174 @@ export const QuranPlayerBar = () => {
 
   const handleShare = () => {
     navigator.clipboard.writeText(window.location.href)
-    toast.success(lang === 'ar' ? 'تم نسخ الرابط' : 'Link copied')
+    toast.success(lang === 'ar' ? 'تم نسخ الرابط بنجاح' : 'Link copied successfully')
   }
 
-  // Determine image source
   const reciterId = parseInt(currentTrack.id.toString().split('-')[0]) || 0
   const fallbackImage = NATURE_IMAGES[reciterId % NATURE_IMAGES.length]
   const finalImage = (imgError || !currentTrack.image) ? fallbackImage : currentTrack.image
 
-  const renderImage = () => {
-    if (fallbackError) {
-       return (
-         <div className="w-full h-full bg-gradient-to-br from-emerald-900 to-teal-900 flex items-center justify-center">
-             <div className="w-1/2 h-1/2 rounded-full bg-emerald-500/20 animate-pulse" />
-         </div>
-       )
-    }
-    return (
-      <img 
-        src={finalImage} 
-        alt={currentTrack.reciter} 
-        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" 
-        onError={() => {
-            if (!imgError && currentTrack.image) {
-                setImgError(true)
-            } else {
-                setFallbackError(true)
-            }
-        }}
-        loading="lazy"
-      />
-    )
-  }
-
   return (
-    <div 
-      className={`fixed bottom-0 left-0 right-0 z-[200] border-t border-white/10 bg-[#0a0a0a]/95 backdrop-blur-xl shadow-[0_-5px_20px_rgba(0,0,0,0.5)] transition-transform duration-500 ease-in-out ${
-        isVisible ? 'translate-y-0' : 'translate-y-[85%]'
-      } hover:translate-y-0`}
-      onMouseEnter={() => setIsVisible(true)}
-    >
-      {/* Floating Track Info (Compact & Above) */}
-      <div className={`absolute bottom-full left-4 mb-4 z-50 transition-all duration-500 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-        <div className="flex items-center gap-3 bg-black/80 backdrop-blur-md border border-white/10 px-4 py-2 rounded-full shadow-xl">
-            <div className={`relative w-10 h-10 rounded-full overflow-hidden border border-emerald-500/30 shrink-0 group`}>
-              {renderImage()}
-              <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${isPlaying ? 'opacity-100' : 'opacity-0'}`}>
-                <div className="flex gap-0.5 items-end h-3">
-                  {[1,2,3].map(i => (
-                    <div key={i} className="w-0.5 bg-white animate-music-bar" style={{ animationDelay: `${i * 0.1}s` }} />
-                  ))}
+    <AnimatePresence>
+      <motion.div 
+        initial={{ y: 100, opacity: 0 }}
+        animate={{ y: isVisible ? 0 : '80%', opacity: 1 }}
+        exit={{ y: 100, opacity: 0 }}
+        transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+        onMouseEnter={() => setIsVisible(true)}
+        className="fixed bottom-0 left-0 right-0 z-[200] pb-safe"
+      >
+        {/* Main Player Container */}
+        <div className="relative mx-auto max-w-6xl mb-4 px-4">
+          <div className="relative overflow-hidden rounded-[2.5rem] bg-emerald-950/40 backdrop-blur-3xl border border-emerald-500/20 shadow-[0_20px_50px_rgba(0,0,0,0.5)] group">
+            
+            {/* Islamic Geometric Background Pattern */}
+            <div className="absolute inset-0 opacity-[0.03] pointer-events-none mix-blend-overlay" 
+                 style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 0l5 15h15l-12 9 5 16-13-10-13 10 5-16-12-9h15z' fill='%2310b981'/%3E%3C/svg%3E")` }} />
+            
+            {/* Progress Bar (Top) */}
+            <div className="absolute top-0 left-0 right-0 h-1 bg-emerald-500/10 cursor-pointer group/progress"
+                 onClick={(e) => {
+                   const rect = e.currentTarget.getBoundingClientRect()
+                   const p = (e.clientX - rect.left) / rect.width
+                   seek(p * duration)
+                 }}>
+              <motion.div 
+                className="h-full bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-500 relative"
+                style={{ width: `${(currentTime / (duration || 1)) * 100}%` }}
+              >
+                <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow-[0_0_15px_rgba(16,185,129,0.8)] opacity-0 group-hover/progress:opacity-100 transition-opacity" />
+              </motion.div>
+            </div>
+
+            <div className="flex items-center justify-between gap-4 p-4 md:p-6">
+              
+              {/* Left: Track Info */}
+              <div className="flex items-center gap-4 w-1/3 min-w-0">
+                <div className="relative w-14 h-14 md:w-16 md:h-16 rounded-2xl overflow-hidden border-2 border-emerald-500/20 shrink-0 group/img">
+                  {fallbackError ? (
+                    <div className="w-full h-full bg-emerald-900/40 flex items-center justify-center">
+                      <Music className="text-emerald-500/40" />
+                    </div>
+                  ) : (
+                    <img 
+                      src={finalImage} 
+                      alt={currentTrack.reciter} 
+                      className="w-full h-full object-cover transition-transform duration-700 group-hover/img:scale-110" 
+                      onError={() => imgError ? setFallbackError(true) : setImgError(true)}
+                    />
+                  )}
+                  {isPlaying && (
+                    <div className="absolute inset-0 bg-emerald-950/40 flex items-center justify-center">
+                      <div className="flex gap-1 items-end h-4">
+                        {[0.1, 0.3, 0.2, 0.4].map((delay, i) => (
+                          <motion.div 
+                            key={i}
+                            animate={{ height: [4, 16, 8, 12, 4] }}
+                            transition={{ duration: 1, repeat: Infinity, delay }}
+                            className="w-1 bg-emerald-400 rounded-full" 
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div className="flex flex-col min-w-0">
+                  <h3 className="text-white font-bold text-lg md:text-xl font-amiri truncate leading-tight group-hover:text-emerald-400 transition-colors">
+                    سورة {currentTrack.title}
+                  </h3>
+                  <p className="text-emerald-500/70 text-sm font-amiri truncate leading-tight">
+                    {currentTrack.reciter}
+                  </p>
                 </div>
               </div>
+
+              {/* Center: Controls */}
+              <div className="flex flex-col items-center gap-2 flex-1 max-w-sm">
+                <div className="flex items-center gap-6 md:gap-8">
+                  <button 
+                    onClick={skipPrev} 
+                    className="text-emerald-500/40 hover:text-emerald-400 transition-all hover:scale-110 active:scale-95"
+                  >
+                    <SkipBack size={24} fill="currentColor" />
+                  </button>
+                  
+                  <motion.button 
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={toggle}
+                    className="w-14 h-14 rounded-full bg-emerald-500 text-black flex items-center justify-center shadow-[0_0_30px_rgba(16,185,129,0.3)] hover:shadow-[0_0_40px_rgba(16,185,129,0.5)] transition-all"
+                  >
+                    {isPlaying ? (
+                      <Pause size={28} fill="currentColor" />
+                    ) : (
+                      <Play size={28} fill="currentColor" className="ml-1" />
+                    )}
+                  </motion.button>
+
+                  <button 
+                    onClick={skipNext} 
+                    className="text-emerald-500/40 hover:text-emerald-400 transition-all hover:scale-110 active:scale-95"
+                  >
+                    <SkipForward size={24} fill="currentColor" />
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-3 w-full text-[10px] md:text-xs font-mono text-emerald-500/40">
+                  <span className="w-10 text-right">{formatTime(currentTime)}</span>
+                  <div className="flex-1 h-1 bg-emerald-500/5 rounded-full overflow-hidden">
+                    <motion.div 
+                      className="h-full bg-emerald-500/40" 
+                      style={{ width: `${(currentTime / (duration || 1)) * 100}%` }} 
+                    />
+                  </div>
+                  <span className="w-10">{formatTime(duration)}</span>
+                </div>
+              </div>
+
+              {/* Right: Actions */}
+              <div className="flex items-center justify-end gap-3 md:gap-5 w-1/3">
+                <div className="hidden lg:flex items-center gap-3 group/vol">
+                  <button 
+                    onClick={() => setVolume(volume === 0 ? 0.8 : 0)}
+                    className="text-emerald-500/40 hover:text-emerald-400 transition-colors"
+                  >
+                    {volume === 0 ? <VolumeX size={20} /> : <Volume2 size={20} />}
+                  </button>
+                  <div className="w-20 h-1 bg-emerald-500/10 rounded-full overflow-hidden relative">
+                    <input
+                      type="range" min="0" max="1" step="0.01" value={volume}
+                      onChange={(e) => setVolume(Number(e.target.value))}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                    />
+                    <div 
+                      className="h-full bg-emerald-500/40 transition-all"
+                      style={{ width: `${volume * 100}%` }}
+                    />
+                  </div>
+                </div>
+
+                <button 
+                  onClick={handleShare} 
+                  className="p-2.5 text-emerald-500/40 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-xl transition-all"
+                  title={lang === 'ar' ? 'مشاركة' : 'Share'}
+                >
+                  <Share2 size={20} />
+                </button>
+                
+                <button 
+                  onClick={stop} 
+                  className="p-2.5 text-emerald-500/40 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-all"
+                  title={lang === 'ar' ? 'إغلاق' : 'Close'}
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
             </div>
-            <div className="flex flex-col min-w-[100px] max-w-[200px]">
-              <h3 className="text-white font-bold text-xs truncate leading-tight">{currentTrack.title}</h3>
-              <p className="text-emerald-400 text-[10px] truncate leading-tight">{currentTrack.reciter}</p>
-            </div>
-        </div>
-      </div>
-
-      {/* Progress Bar (Interactive) */}
-      <div className="absolute -top-1 left-0 right-0 h-1.5 group cursor-pointer">
-        <div className="absolute inset-0 bg-white/10" />
-        <div 
-          className="absolute inset-0 z-10"
-          onClick={(e) => {
-            const rect = e.currentTarget.getBoundingClientRect()
-            const p = (e.clientX - rect.left) / rect.width
-            seek(p * duration)
-          }}
-        />
-        <div 
-          className="h-full bg-emerald-500 relative transition-all duration-100 group-hover:h-2.5 -top-0.5"
-          style={{ width: `${(currentTime / duration) * 100}%` }}
-        >
-          <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity" />
-        </div>
-      </div>
-
-      <div className="max-w-[1800px] mx-auto px-4 py-3 flex items-center justify-between gap-4">
-        
-        {/* Left Side (Empty now, or simplified) */}
-        <div className="hidden md:block w-1/4"></div>
-
-        {/* Controls */}
-        <div className="flex flex-col items-center gap-1 flex-1 max-w-md">
-          <div className="flex items-center gap-6">
-            <button onClick={skipPrev} className="text-zinc-400 hover:text-white transition-colors">
-              <SkipBack size={20} />
-            </button>
-            <button 
-              onClick={toggle}
-              className="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center hover:scale-105 transition-transform shadow-lg shadow-white/10"
-            >
-              {isPlaying ? <Pause size={20} fill="currentColor" /> : <Play size={20} fill="currentColor" className="ml-0.5" />}
-            </button>
-            <button onClick={skipNext} className="text-zinc-400 hover:text-white transition-colors">
-              <SkipForward size={20} />
-            </button>
-          </div>
-          <div className="flex items-center gap-2 text-xs text-zinc-500 w-full font-mono">
-            <span className="min-w-[40px] text-right">{formatTime(currentTime)}</span>
-            <div className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden">
-               <div className="h-full bg-white/30" style={{ width: `${(currentTime / duration) * 100}%` }} />
-            </div>
-            <span className="min-w-[40px]">{formatTime(duration)}</span>
           </div>
         </div>
-
-        {/* Volume & Actions */}
-        <div className="flex items-center justify-end gap-4 w-1/4 min-w-[150px]">
-          <div className="hidden md:flex items-center gap-2 group">
-            <button onClick={() => setVolume(volume === 0 ? 0.8 : 0)}>
-              {volume === 0 ? <VolumeX size={18} className="text-zinc-400" /> : <Volume2 size={18} className="text-zinc-400 group-hover:text-white" />}
-            </button>
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.01"
-              value={volume}
-              onChange={(e) => setVolume(Number(e.target.value))}
-              className="w-20 h-1 bg-white/10 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:opacity-0 group-hover:[&::-webkit-slider-thumb]:opacity-100"
-            />
-          </div>
-          <button onClick={handleShare} className="p-2 text-zinc-400 hover:text-white hover:bg-white/5 rounded-full transition-colors hidden sm:block">
-            <Share2 size={20} />
-          </button>
-          <button onClick={stop} className="text-zinc-400 hover:text-red-400 transition-colors p-2 rounded-full hover:bg-white/5">
-            <X size={20} />
-          </button>
-        </div>
-
-      </div>
-    </div>
+      </motion.div>
+    </AnimatePresence>
   )
 }

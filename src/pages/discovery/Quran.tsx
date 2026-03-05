@@ -8,6 +8,7 @@ import { Helmet } from 'react-helmet-async'
 import { Search, Play, Pause, Volume2, User, Heart, Radio, BookOpen, Star, Filter, Grid, List, Download } from 'lucide-react'
 import { SURAHS, NATURE_IMAGES } from '../../data/quran'
 import { motion, AnimatePresence } from 'framer-motion'
+import { advancedSearchMatch } from '../../lib/utils'
 
 type QuranReciter = {
   id: number
@@ -179,10 +180,9 @@ export const QuranPage = () => {
     }
     
     if (searchQuery) {
-      const q = searchQuery.toLowerCase()
       filtered = filtered.filter(r => 
-        r.name.toLowerCase().includes(q) || 
-        (r.rewaya && r.rewaya.toLowerCase().includes(q))
+        advancedSearchMatch(r.name, searchQuery) || 
+        (r.rewaya && advancedSearchMatch(r.rewaya, searchQuery))
       )
     }
     
@@ -199,11 +199,10 @@ export const QuranPage = () => {
     }
     
     if (surahSearch) {
-      const q = surahSearch.toLowerCase()
       filtered = filtered.filter(s => 
-        s.name.toLowerCase().includes(q) || 
-        s.englishName.toLowerCase().includes(q) ||
-        s.id.toString().includes(q)
+        advancedSearchMatch(s.name, surahSearch) || 
+        advancedSearchMatch(s.englishName, surahSearch) ||
+        s.id.toString().includes(surahSearch)
       )
     }
     
@@ -276,118 +275,195 @@ export const QuranPage = () => {
 
       {/* Background Ambience */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-[-20%] right-[-10%] w-[70vw] h-[70vw] bg-emerald-900/10 rounded-full blur-[120px] animate-pulse-slow" />
-        <div className="absolute bottom-[-20%] left-[-10%] w-[50vw] h-[50vw] bg-teal-900/10 rounded-full blur-[100px] animate-pulse-slow delay-1000" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60vw] h-[60vw] bg-cyan-900/5 rounded-full blur-[150px] animate-pulse-slow delay-2000" />
+        {/* Deep Islamic Background with Patterns */}
+        <div className="absolute inset-0 bg-[#020d0a] opacity-60" />
+        
+        {/* Animated Islamic Geometric Pattern Overlay */}
+        <div className="absolute inset-0 opacity-[0.03] mix-blend-overlay" 
+             style={{ 
+               backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0l15 15v15l-15 15-15-15V15z' fill='%2310b981' fill-opacity='0.4' fill-rule='evenodd'/%3E%3C/svg%3E")`,
+               backgroundSize: '80px 80px'
+             }} 
+        />
+
+        {/* Spiritual Glows */}
+        <div className="absolute top-[-20%] right-[-10%] w-[80vw] h-[80vw] bg-emerald-600/10 rounded-full blur-[120px] animate-pulse-slow" />
+        <div className="absolute bottom-[-20%] left-[-10%] w-[60vw] h-[60vw] bg-teal-600/10 rounded-full blur-[100px] animate-pulse-slow delay-1000" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[70vw] h-[70vw] bg-cyan-600/5 rounded-full blur-[150px] animate-pulse-slow delay-2000" />
+        
+        {/* Floating Particles/Stars for Spiritual Vibe */}
+        <div className="absolute inset-0 overflow-hidden">
+          {[...Array(20)].map((_, i) => (
+            <motion.div
+              key={i}
+              className="absolute w-1 h-1 bg-emerald-400/20 rounded-full"
+              initial={{ 
+                x: Math.random() * 100 + '%', 
+                y: Math.random() * 100 + '%',
+                opacity: 0 
+              }}
+              animate={{ 
+                y: [null, Math.random() * -100 + 'px'],
+                opacity: [0, 0.5, 0],
+                scale: [0, 1.5, 0]
+              }}
+              transition={{ 
+                duration: 5 + Math.random() * 10, 
+                repeat: Infinity,
+                delay: Math.random() * 10
+              }}
+            />
+          ))}
+        </div>
       </div>
 
       <div className="relative z-10 max-w-[2400px] mx-auto p-4 md:p-6 lg:p-8 flex flex-col h-[calc(100vh-100px)]">
         
         {/* Header Section - Spiritual & Compact */}
-        <div className="flex flex-col items-center justify-center mb-6 shrink-0 relative">
-          {/* Page Title */}
-          <div className="text-center mb-6">
-            <h1 className="text-4xl md:text-5xl font-bold font-amiri text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 mb-2 drop-shadow-[0_0_30px_rgba(16,185,129,0.3)]">
-              {lang === 'ar' ? 'القرآن الكريم' : 'Holy Quran'}
-            </h1>
-            <p className="text-zinc-400 text-sm md:text-base">
-              {lang === 'ar' ? 'استمع إلى القرآن الكريم بأصوات نخبة من القراء' : 'Listen to the Holy Quran by elite reciters'}
-            </p>
+        <div className="flex flex-col items-center justify-center mb-10 shrink-0 relative">
+          {/* Islamic Geometric Frame Decoration */}
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-px bg-gradient-to-r from-transparent via-emerald-500/50 to-transparent" />
+          <div className="absolute top-1/2 left-0 w-12 h-12 -translate-y-1/2 opacity-20 hidden md:block" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M50 0 L61 39 L100 50 L61 61 L50 100 L39 61 L0 50 L39 39 Z' fill='%2310b981'/%3E%3C/svg%3E")` }} />
+          <div className="absolute top-1/2 right-0 w-12 h-12 -translate-y-1/2 opacity-20 hidden md:block" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M50 0 L61 39 L100 50 L61 61 L50 100 L39 61 L0 50 L39 39 Z' fill='%2310b981'/%3E%3C/svg%3E")` }} />
+          
+          {/* Page Title with Islamic Styling */}
+          <div className="text-center mb-8 relative">
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8 }}
+            >
+              <h1 className="text-5xl md:text-7xl font-bold font-amiri text-transparent bg-clip-text bg-gradient-to-b from-emerald-200 via-emerald-400 to-teal-600 mb-4 drop-shadow-[0_0_30px_rgba(16,185,129,0.4)] tracking-wide">
+                {lang === 'ar' ? 'القرآن الكريم' : 'Holy Quran'}
+              </h1>
+              <div className="flex items-center justify-center gap-4 mb-4">
+                <div className="h-px w-12 md:w-24 bg-gradient-to-r from-transparent to-emerald-500/50" />
+                <BookOpen className="text-emerald-500/70" size={24} />
+                <div className="h-px w-12 md:w-24 bg-gradient-to-l from-transparent to-emerald-500/50" />
+              </div>
+              <p className="text-emerald-200/60 text-base md:text-lg font-amiri max-w-2xl mx-auto italic">
+                {lang === 'ar' ? '«الَّذِينَ آمَنُوا وَتَطْمَئِنُّ قُلُوبُهُم بِذِكْرِ اللَّهِ ۗ أَلَا بِذِكْرِ اللَّهِ تَطْمَئِنُّ الْقُلُوبُ»' : 'Verily, in the remembrance of Allah do hearts find rest'}
+              </p>
+            </motion.div>
           </div>
           
-          <button 
+          <motion.button 
+            whileHover={{ scale: 1.05, boxShadow: "0 0 40px rgba(16,185,129,0.4)" }}
+            whileTap={{ scale: 0.95 }}
             onClick={() => window.open('/quran/radio', 'QuranRadio', 'width=320,height=450,menubar=no,toolbar=no,location=no,status=no')}
-            className="group relative flex items-center gap-4 px-8 py-4 rounded-2xl bg-gradient-to-r from-emerald-900/40 to-teal-900/40 border border-emerald-500/30 text-emerald-300 hover:text-white hover:border-emerald-400 hover:bg-emerald-800/40 transition-all duration-300 shadow-[0_0_20px_rgba(16,185,129,0.1)] hover:shadow-[0_0_30px_rgba(16,185,129,0.3)] hover:scale-105 active:scale-95"
+            className="group relative flex items-center gap-6 px-10 py-5 rounded-[2rem] bg-gradient-to-br from-emerald-900/60 to-teal-900/60 border border-emerald-500/40 text-emerald-100 transition-all duration-500 shadow-[0_0_25px_rgba(16,185,129,0.2)] overflow-hidden"
           >
-            <div className="absolute inset-0 rounded-2xl bg-emerald-500/5 animate-pulse-slow group-hover:animate-none" />
-            <div className="w-12 h-12 rounded-full bg-emerald-500/20 flex items-center justify-center border border-emerald-500/30 group-hover:bg-emerald-500/30 group-hover:border-emerald-400 transition-colors">
-              <Radio size={24} className="animate-pulse group-hover:animate-none" />
+            {/* Shimmering Effect */}
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-emerald-400/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+            
+            <div className="w-14 h-14 rounded-full bg-emerald-500/20 flex items-center justify-center border border-emerald-500/40 group-hover:bg-emerald-500/30 group-hover:border-emerald-300 transition-all duration-300">
+              <Radio size={28} className="animate-pulse text-emerald-400" />
             </div>
-            <div className="flex flex-col items-start">
-              <span className="text-xl md:text-2xl font-bold font-amiri leading-none mb-1">
+            <div className="flex flex-col items-start relative z-10">
+              <span className="text-2xl md:text-3xl font-bold font-amiri leading-none mb-1 text-white group-hover:text-emerald-300 transition-colors">
                 {lang === 'ar' ? 'إذاعة القرآن الكريم' : 'Quran Radio'}
               </span>
-              <span className="text-xs md:text-sm text-emerald-400/70 font-normal">
-                {lang === 'ar' ? 'بث مباشر 24 ساعة' : 'Live 24/7 Broadcast'}
+              <span className="text-xs md:text-sm text-emerald-400/80 font-normal flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                {lang === 'ar' ? 'بث مباشر على مدار الساعة' : 'Live 24/7 Spiritual Broadcast'}
               </span>
             </div>
-          </button>
+          </motion.button>
         </div>
 
         <div className="flex flex-col lg:flex-row gap-6 flex-1 min-h-0">
           
           {/* Sidebar: Reciters List */}
-          <div className="w-full lg:w-80 xl:w-96 shrink-0 flex flex-col bg-[#0a0a0a]/80 backdrop-blur-xl border border-white/5 rounded-2xl overflow-hidden h-full shadow-2xl">
-          <div className="p-4 border-b border-white/5 bg-gradient-to-b from-white/5 to-transparent">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold flex items-center gap-2 text-emerald-400">
-                <User size={18} />
+          <div className="w-full lg:w-80 xl:w-96 shrink-0 flex flex-col bg-emerald-950/20 backdrop-blur-2xl border border-emerald-500/10 rounded-3xl overflow-hidden h-full shadow-[0_0_40px_rgba(0,0,0,0.5)]">
+          <div className="p-5 border-b border-emerald-500/10 bg-gradient-to-b from-emerald-500/5 to-transparent">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-xl font-bold font-amiri flex items-center gap-3 text-emerald-400">
+                <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
+                  <User size={18} />
+                </div>
                 {lang === 'ar' ? 'القراء' : 'Reciters'}
-                <span className="text-xs text-zinc-500">({filteredReciters.length})</span>
+                <span className="text-xs text-emerald-600/60 font-sans">({filteredReciters.length})</span>
               </h2>
               <button
                 onClick={() => setShowFeaturedOnly(!showFeaturedOnly)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${showFeaturedOnly ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-white/5 text-zinc-400 border border-white/10 hover:border-emerald-500/30'}`}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold transition-all duration-300 ${showFeaturedOnly ? 'bg-emerald-500 text-black shadow-[0_0_15px_rgba(16,185,129,0.4)]' : 'bg-emerald-500/5 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/10'}`}
               >
-                <Star size={12} className={showFeaturedOnly ? 'fill-emerald-400' : ''} />
-                {lang === 'ar' ? 'مميز' : 'Featured'}
+                <Star size={12} className={showFeaturedOnly ? 'fill-black' : 'fill-none'} />
+                {lang === 'ar' ? 'المفضلين' : 'Featured'}
               </button>
             </div>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={16} />
+            <div className="relative group">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-600 group-focus-within:text-emerald-400 transition-colors" size={18} />
               <input
                 type="text"
                 placeholder={lang === 'ar' ? 'بحث عن قارئ...' : 'Search reciter...'}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-black/40 border border-white/10 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50 transition-colors placeholder:text-zinc-600"
+                className="w-full bg-emerald-950/40 border border-emerald-500/20 rounded-2xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20 transition-all placeholder:text-emerald-800"
               />
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-1">
+          <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2">
             {isLoading ? (
-              <div className="flex flex-col items-center justify-center h-40 text-zinc-500 gap-2">
-                <div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
-                <span className="text-sm">{lang === 'ar' ? 'جاري التحميل...' : 'Loading...'}</span>
+              <div className="flex flex-col items-center justify-center h-40 text-emerald-500/50 gap-4">
+                <div className="w-10 h-10 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+                <span className="text-xs font-bold uppercase tracking-widest">{lang === 'ar' ? 'جاري التحميل...' : 'Loading...'}</span>
               </div>
             ) : filteredReciters.length > 0 ? (
-              filteredReciters.map((reciter) => (
-                <button
-                  key={reciter.id}
-                  onClick={() => setSelectedReciter(reciter)}
-                  className={`w-full flex items-center gap-3 p-2 rounded-xl transition-all duration-200 group ${
-                    selectedReciter?.id === reciter.id 
-                      ? 'bg-emerald-900/20 border border-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.1)]' 
-                      : 'hover:bg-white/5 border border-transparent'
-                  }`}
-                >
-                  <div className={`relative w-10 h-10 rounded-full overflow-hidden border-2 shrink-0 ${
-                    selectedReciter?.id === reciter.id ? 'border-emerald-500' : 'border-zinc-700 group-hover:border-zinc-500'
-                  }`}>
-                    <ReciterImage 
-                      src={reciter.image} 
-                      alt={reciter.name} 
-                      className="w-full h-full object-cover"
-                      id={reciter.id}
-                    />
-                  </div>
-                  <div className="flex-1 text-left overflow-hidden">
-                    <h3 className={`font-bold truncate text-sm ${selectedReciter?.id === reciter.id ? 'text-emerald-400' : 'text-zinc-300 group-hover:text-white'}`}>
-                      {reciter.name}
-                    </h3>
-                    {reciter.rewaya && (
-                      <p className="text-[10px] text-zinc-500 truncate">{reciter.rewaya}</p>
+              <AnimatePresence mode="popLayout">
+                {filteredReciters.map((reciter, idx) => (
+                  <motion.button
+                    layout
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: idx * 0.03 }}
+                    key={reciter.id}
+                    onClick={() => setSelectedReciter(reciter)}
+                    className={`w-full flex items-center gap-4 p-3 rounded-2xl transition-all duration-300 group relative overflow-hidden ${
+                      selectedReciter?.id === reciter.id 
+                        ? 'bg-emerald-500/10 border border-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.05)]' 
+                        : 'hover:bg-emerald-500/5 border border-transparent'
+                    }`}
+                  >
+                    {selectedReciter?.id === reciter.id && (
+                      <motion.div 
+                        layoutId="active-reciter"
+                        className="absolute left-0 top-0 w-1 h-full bg-emerald-500"
+                      />
                     )}
-                  </div>
-                  {reciter.featured && (
-                    <Heart size={12} className="text-emerald-500 fill-emerald-500/20 shrink-0" />
-                  )}
-                </button>
-              ))
+                    
+                    <div className={`relative w-12 h-12 rounded-xl overflow-hidden border-2 transition-all duration-500 shrink-0 ${
+                      selectedReciter?.id === reciter.id ? 'border-emerald-500 rotate-3 scale-110 shadow-lg' : 'border-emerald-500/10 group-hover:border-emerald-500/30'
+                    }`}>
+                      <ReciterImage 
+                        src={reciter.image} 
+                        alt={reciter.name} 
+                        className="w-full h-full object-cover"
+                        id={reciter.id}
+                      />
+                      <div className="absolute inset-0 bg-emerald-900/10 group-hover:bg-transparent transition-colors" />
+                    </div>
+                    
+                    <div className="flex-1 text-left overflow-hidden">
+                      <h3 className={`font-bold font-amiri truncate text-base ${selectedReciter?.id === reciter.id ? 'text-emerald-400' : 'text-emerald-100/70 group-hover:text-white'}`}>
+                        {reciter.name}
+                      </h3>
+                      <p className={`text-[10px] font-sans truncate transition-colors ${selectedReciter?.id === reciter.id ? 'text-emerald-500/60' : 'text-emerald-900'}`}>
+                        {reciter.rewaya || (lang === 'ar' ? 'رواية حفص عن عاصم' : 'Hafs an Asim')}
+                      </p>
+                    </div>
+                    
+                    {reciter.featured && (
+                      <Heart size={14} className={`shrink-0 transition-colors ${selectedReciter?.id === reciter.id ? 'text-emerald-400 fill-emerald-400' : 'text-emerald-900 group-hover:text-emerald-500'}`} />
+                    )}
+                  </motion.button>
+                ))}
+              </AnimatePresence>
             ) : (
-              <div className="text-center py-8 text-zinc-500 text-sm">
-                {lang === 'ar' ? 'لا يوجد قراء' : 'No reciters found'}
+              <div className="flex flex-col items-center justify-center py-12 text-emerald-900 gap-3">
+                <Search size={32} strokeWidth={1} />
+                <span className="text-sm font-amiri">{lang === 'ar' ? 'لم يتم العثور على القارئ' : 'Reciter not found'}</span>
               </div>
             )}
           </div>
@@ -397,154 +473,229 @@ export const QuranPage = () => {
         <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
           {selectedReciter ? (
             <div className="flex flex-col h-full">
-              {/* Reciter Header (Compact) */}
-              <div className="relative shrink-0 mb-4 rounded-2xl overflow-hidden bg-zinc-900/50 border border-white/5 shadow-2xl h-[20vh] min-h-[160px] group">
-                {/* Background Image with Blur */}
+              {/* Reciter Header (Spiritual) */}
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="relative shrink-0 mb-6 rounded-3xl overflow-hidden bg-emerald-950/20 border border-emerald-500/10 shadow-[0_20px_50px_rgba(0,0,0,0.3)] h-[25vh] min-h-[180px] group"
+              >
+                {/* Background with Islamic Pattern & Blur */}
                 <div className="absolute inset-0 z-0">
                   <ReciterImage 
                     src={selectedReciter.image} 
                     alt={selectedReciter.name} 
-                    className="w-full h-full object-cover opacity-40 blur-sm scale-110 group-hover:scale-100 transition-transform duration-700"
+                    className="w-full h-full object-cover opacity-20 blur-md scale-110 group-hover:scale-100 transition-transform duration-1000"
                     id={selectedReciter.id}
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#020202] via-[#020202]/80 to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-emerald-950 via-emerald-950/60 to-transparent" />
+                  <div className="absolute inset-0 opacity-10 mix-blend-overlay" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 0l10 10v10l-10 10-10-10V10z' fill='%2310b981' fill-opacity='0.2'/%3E%3C/svg%3E")` }} />
                 </div>
 
-                <div className="relative z-10 h-full flex items-end p-6">
-                  <div className="flex items-end gap-5 w-full">
-                    <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl overflow-hidden border-2 border-emerald-500/50 shadow-2xl shrink-0 bg-zinc-800">
+                <div className="relative z-10 h-full flex items-end p-8">
+                  <div className="flex items-center gap-8 w-full">
+                    <motion.div 
+                      whileHover={{ rotate: 5, scale: 1.05 }}
+                      className="w-24 h-24 md:w-32 md:h-32 rounded-3xl overflow-hidden border-2 border-emerald-500/30 shadow-2xl shrink-0 bg-emerald-900/20 relative group-hover:border-emerald-500/60 transition-colors duration-500"
+                    >
                       <ReciterImage 
                         src={selectedReciter.image} 
                         alt={selectedReciter.name} 
                         className="w-full h-full object-cover"
                         id={selectedReciter.id}
                       />
-                    </div>
-                    <div className="flex-1 pb-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-bold uppercase tracking-wider border border-emerald-500/20">
-                          {selectedReciter.rewaya || 'Reciter'}
+                      <div className="absolute inset-0 bg-gradient-to-t from-emerald-900/40 to-transparent" />
+                    </motion.div>
+                    
+                    <div className="flex-1">
+                      <motion.div 
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.2 }}
+                        className="flex items-center gap-3 mb-2"
+                      >
+                        <span className="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-bold uppercase tracking-widest border border-emerald-500/20 backdrop-blur-md">
+                          {selectedReciter.rewaya || (lang === 'ar' ? 'رواية حفص عن عاصم' : 'Hafs an Asim')}
                         </span>
-                      </div>
-                      <h1 className="text-2xl md:text-3xl font-bold text-white mb-1 drop-shadow-lg leading-tight">
+                        {selectedReciter.featured && (
+                          <div className="flex items-center gap-1 text-yellow-500/80 text-[10px] font-bold">
+                            <Star size={12} fill="currentColor" />
+                            {lang === 'ar' ? 'قارئ معتمد' : 'Verified Reciter'}
+                          </div>
+                        )}
+                      </motion.div>
+                      
+                      <motion.h1 
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.3 }}
+                        className="text-3xl md:text-5xl font-bold text-white mb-2 drop-shadow-2xl font-amiri tracking-tight"
+                      >
                         {selectedReciter.name}
-                      </h1>
-                      <p className="text-zinc-400 text-xs md:text-sm line-clamp-1">
+                      </motion.h1>
+                      
+                      <motion.p 
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.4 }}
+                        className="text-emerald-200/50 text-sm md:text-base font-amiri italic"
+                      >
                         {lang === 'ar' 
-                          ? 'استمع إلى التلاوة الكاملة بجودة عالية' 
-                          : 'Listen to full recitation in high quality'}
-                      </p>
+                          ? 'تلاوة عطرة خاشعة بجودة صوتية فائقة' 
+                          : 'Fragrant and humble recitation in superior audio quality'}
+                      </motion.p>
+                    </div>
+                    
+                    {/* Visualizer Decoration */}
+                    <div className="hidden lg:flex items-end gap-1 h-12">
+                      {[...Array(8)].map((_, i) => (
+                        <motion.div
+                          key={i}
+                          className="w-1 bg-emerald-500/30 rounded-full"
+                          animate={{ height: [10, 40, 20, 35, 15] }}
+                          transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.1 }}
+                        />
+                      ))}
                     </div>
                   </div>
                 </div>
-              </div>
+              </motion.div>
 
-              {/* Filters & Search */}
-              <div className="shrink-0 mb-4 space-y-3">
-                <div className="flex flex-wrap items-center gap-3">
-                  <div className="relative flex-1 min-w-[200px]">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={16} />
+              {/* Filters & Search (Modern & Glassy) */}
+              <div className="shrink-0 mb-6 space-y-4">
+                <div className="flex flex-wrap items-center gap-4">
+                  <div className="relative flex-1 min-w-[280px] group">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-600 group-focus-within:text-emerald-400 transition-colors" size={20} />
                     <input
                       type="text"
-                      placeholder={lang === 'ar' ? 'بحث في السور...' : 'Search surahs...'}
+                      placeholder={lang === 'ar' ? 'بحث عن سورة (اسم، رقم، إنجليزية)...' : 'Search Surah (Name, Number, English)...'}
                       value={surahSearch}
                       onChange={(e) => setSurahSearch(e.target.value)}
-                      className="w-full bg-black/40 border border-white/10 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50 transition-colors placeholder:text-zinc-600"
+                      className="w-full bg-emerald-950/40 border border-emerald-500/10 rounded-2xl pl-12 pr-4 py-3.5 text-sm focus:outline-none focus:border-emerald-500/40 focus:ring-1 focus:ring-emerald-500/10 transition-all placeholder:text-emerald-800 backdrop-blur-md"
                     />
                   </div>
                   
-                  <div className="flex items-center gap-2 bg-black/40 border border-white/10 rounded-xl p-1">
+                  <div className="flex items-center gap-2 bg-emerald-950/40 border border-emerald-500/10 rounded-2xl p-1.5 backdrop-blur-md">
                     <button
                       onClick={() => setFilterType('all')}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${filterType === 'all' ? 'bg-emerald-500/20 text-emerald-400' : 'text-zinc-400 hover:text-white'}`}
+                      className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-300 ${filterType === 'all' ? 'bg-emerald-500 text-black shadow-lg' : 'text-emerald-500/60 hover:text-emerald-300'}`}
                     >
                       {lang === 'ar' ? 'الكل' : 'All'}
                     </button>
                     <button
                       onClick={() => setFilterType('meccan')}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${filterType === 'meccan' ? 'bg-emerald-500/20 text-emerald-400' : 'text-zinc-400 hover:text-white'}`}
+                      className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-300 ${filterType === 'meccan' ? 'bg-emerald-500 text-black shadow-lg' : 'text-emerald-500/60 hover:text-emerald-300'}`}
                     >
                       {lang === 'ar' ? 'مكية' : 'Meccan'}
                     </button>
                     <button
                       onClick={() => setFilterType('medinan')}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${filterType === 'medinan' ? 'bg-emerald-500/20 text-emerald-400' : 'text-zinc-400 hover:text-white'}`}
+                      className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-300 ${filterType === 'medinan' ? 'bg-emerald-500 text-black shadow-lg' : 'text-emerald-500/60 hover:text-emerald-300'}`}
                     >
                       {lang === 'ar' ? 'مدنية' : 'Medinan'}
                     </button>
                   </div>
                   
-                  <div className="flex items-center gap-1 bg-black/40 border border-white/10 rounded-xl p-1">
+                  <div className="flex items-center gap-1 bg-emerald-950/40 border border-emerald-500/10 rounded-2xl p-1.5 backdrop-blur-md">
                     <button
                       onClick={() => setViewMode('grid')}
-                      className={`p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-emerald-500/20 text-emerald-400' : 'text-zinc-400 hover:text-white'}`}
+                      className={`p-2.5 rounded-xl transition-all duration-300 ${viewMode === 'grid' ? 'bg-emerald-500 text-black shadow-lg' : 'text-emerald-500/60 hover:text-emerald-300'}`}
                       title="Grid View"
                     >
-                      <Grid size={16} />
+                      <Grid size={18} />
                     </button>
                     <button
                       onClick={() => setViewMode('list')}
-                      className={`p-2 rounded-lg transition-all ${viewMode === 'list' ? 'bg-emerald-500/20 text-emerald-400' : 'text-zinc-400 hover:text-white'}`}
+                      className={`p-2.5 rounded-xl transition-all duration-300 ${viewMode === 'list' ? 'bg-emerald-500 text-black shadow-lg' : 'text-emerald-500/60 hover:text-emerald-300'}`}
                       title="List View"
                     >
-                      <List size={16} />
+                      <List size={18} />
                     </button>
                   </div>
                 </div>
                 
-                <div className="flex items-center justify-between text-xs text-zinc-500">
-                  <span>{filteredSurahs.length} {lang === 'ar' ? 'سورة' : 'Surahs'}</span>
-                  <span className="flex items-center gap-1">
+                <div className="flex items-center justify-between text-xs text-emerald-700/60 font-amiri px-1">
+                  <span className="flex items-center gap-2">
+                    <Filter size={12} />
+                    {filteredSurahs.length} {lang === 'ar' ? 'سورة مباركة' : 'Blessed Surahs'}
+                  </span>
+                  <span className="flex items-center gap-2">
                     <BookOpen size={12} />
-                    114 {lang === 'ar' ? 'سورة في القرآن الكريم' : 'Surahs in the Quran'}
+                    {lang === 'ar' ? '١١٤ سورة في المصحف الشريف' : '114 Surahs in the Holy Quran'}
                   </span>
                 </div>
               </div>
 
-              {/* Surahs Grid/List (Scrollable) */}
+              {/* Surahs Grid/List (Spiritual & Animated) */}
               <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 pb-20">
-                <div className={viewMode === 'grid' ? 'grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6' : 'space-y-2'}>
-                  {filteredSurahs.map((surah) => {
-                    const active = isCurrentTrack(selectedReciter.id, surah.id)
-                    return (
-                      <button
-                        key={surah.id}
-                        onClick={() => handlePlaySurah(surah.id, surah.name)}
-                        className={`relative flex items-center gap-3 p-3 rounded-xl border transition-all duration-200 group overflow-hidden ${
-                          active 
-                            ? 'bg-emerald-900/20 border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.1)]' 
-                            : 'bg-[#0a0a0a] border-white/5 hover:border-emerald-500/30 hover:bg-[#0f0f0f]'
-                        }`}
-                      >
-                        {/* Number Badge */}
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm border transition-colors shrink-0 ${
-                          active 
-                            ? 'bg-emerald-500 text-black border-emerald-400' 
-                            : 'bg-white/5 text-zinc-500 border-white/5 group-hover:text-emerald-400 group-hover:border-emerald-500/30'
-                        }`}>
-                          {surah.id}
-                        </div>
+                <motion.div 
+                  layout
+                  className={viewMode === 'grid' ? 'grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-5' : 'space-y-3'}
+                >
+                  <AnimatePresence mode="popLayout">
+                    {filteredSurahs.map((surah, idx) => {
+                      const active = isCurrentTrack(selectedReciter.id, surah.id)
+                      return (
+                        <motion.button
+                          layout
+                          initial={{ opacity: 0, scale: 0.9 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ delay: idx * 0.01 }}
+                          key={surah.id}
+                          onClick={() => handlePlaySurah(surah.id, surah.name)}
+                          className={`relative flex items-center gap-4 p-4 rounded-3xl border transition-all duration-500 group overflow-hidden ${
+                            active 
+                              ? 'bg-emerald-500/10 border-emerald-500/40 shadow-[0_0_30px_rgba(16,185,129,0.1)] scale-[1.02]' 
+                              : 'bg-emerald-950/10 border-emerald-500/5 hover:border-emerald-500/30 hover:bg-emerald-500/5 hover:scale-[1.02]'
+                          }`}
+                        >
+                          {/* Islamic Geometric Pattern Background for each card */}
+                          <div className="absolute inset-0 opacity-[0.02] pointer-events-none" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 0l5 15h15l-12 9 5 16-13-10-13 10 5-16-12-9h15z' fill='%2310b981'/%3E%3C/svg%3E")` }} />
+                          
+                          {/* Number Badge (Modern Islamic Style) */}
+                          <div className={`w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-sm border-2 transition-all duration-500 shrink-0 relative ${
+                            active 
+                              ? 'bg-emerald-500 text-black border-emerald-400 rotate-[360deg]' 
+                              : 'bg-emerald-500/5 text-emerald-500 border-emerald-500/20 group-hover:bg-emerald-500/20 group-hover:border-emerald-500/40 group-hover:rotate-12'
+                          }`}>
+                            <span className="relative z-10">{surah.id}</span>
+                          </div>
 
-                        {/* Info */}
-                        <div className="flex-1 text-right min-w-0">
-                          <h4 className={`text-base font-bold font-amiri truncate ${active ? 'text-emerald-400' : 'text-zinc-200 group-hover:text-white'}`}>
-                            سورة {surah.name}
-                          </h4>
-                          <span className="text-[10px] text-zinc-500 group-hover:text-zinc-400 transition-colors block truncate">
-                            {surah.englishName} • {surah.ayahs} {lang === 'ar' ? 'آية' : 'Verses'}
-                          </span>
-                        </div>
+                          {/* Info */}
+                          <div className="flex-1 text-right min-w-0 relative z-10">
+                            <h4 className={`text-xl font-bold font-amiri truncate mb-0.5 ${active ? 'text-emerald-400' : 'text-emerald-50/90 group-hover:text-white'}`}>
+                              سورة {surah.name}
+                            </h4>
+                            <div className="flex items-center justify-end gap-2">
+                              <span className={`text-[10px] font-sans transition-colors ${active ? 'text-emerald-500/60' : 'text-emerald-900 group-hover:text-emerald-600'}`}>
+                                {surah.englishName}
+                              </span>
+                              <span className="w-1 h-1 rounded-full bg-emerald-900/40" />
+                              <span className={`text-[10px] font-sans transition-colors ${active ? 'text-emerald-500/60' : 'text-emerald-900 group-hover:text-emerald-600'}`}>
+                                {surah.ayahs} {lang === 'ar' ? 'آية' : 'Ayahs'}
+                              </span>
+                            </div>
+                          </div>
 
-                        {/* Play Icon */}
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 shrink-0 ${
-                           active ? 'bg-emerald-500 text-black scale-100' : 'bg-white/5 text-zinc-500 scale-90 opacity-0 group-hover:opacity-100 group-hover:scale-100'
-                        }`}>
-                          {active && isPlaying ? <Pause size={14} fill="currentColor" /> : <Play size={14} fill="currentColor" className="ml-0.5" />}
-                        </div>
-                      </button>
-                    )
-                  })}
-                </div>
+                          {/* Play/Pause Animation */}
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-500 shrink-0 relative z-10 ${
+                             active ? 'bg-emerald-500 text-black scale-110 shadow-[0_0_20px_rgba(16,185,129,0.5)]' : 'bg-emerald-500/10 text-emerald-500 scale-90 opacity-0 group-hover:opacity-100 group-hover:scale-100 group-hover:bg-emerald-500/20'
+                          }`}>
+                            {active && isPlaying ? (
+                              <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 1 }}>
+                                <Pause size={18} fill="currentColor" />
+                              </motion.div>
+                            ) : (
+                              <Play size={18} fill="currentColor" className="ml-0.5" />
+                            )}
+                          </div>
+                          
+                          {/* Type Indicator (Meccan/Medinan) Dot */}
+                          <div className={`absolute top-2 right-2 w-1.5 h-1.5 rounded-full ${surah.type === 'Meccan' ? 'bg-amber-500/40' : 'bg-emerald-500/40'}`} title={surah.type} />
+                        </motion.button>
+                      )
+                    })}
+                  </AnimatePresence>
+                </motion.div>
               </div>
             </div>
           ) : (
