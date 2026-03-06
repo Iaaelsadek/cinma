@@ -664,6 +664,117 @@ app.get('/api/check-link', linkLimiter, async (req, res) => {
   }
 });
 
+app.get('/api/radio/cairo', linkLimiter, async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+
+  const candidates = [
+    'https://n09.radiojar.com/8s5u5tpdtwzuv?rj-ttl=5&rj-tok=AAABnL1sTdIAdrvVVnc42TdU_Q',
+    'https://stream.radiojar.com/8s5u5tpdtwzuv',
+    'https://n09.radiojar.com/8s5u5tpdtwzuv?rj-ttl=5'
+  ];
+
+  for (const url of candidates) {
+    try {
+      const upstream = await axios.get(url, {
+        responseType: 'stream',
+        timeout: 20000,
+        maxRedirects: 8,
+        headers: {
+          'User-Agent': 'Mozilla/5.0',
+          Accept: '*/*'
+        },
+        validateStatus: (status) => status >= 200 && status < 400
+      });
+
+      const contentType = upstream.headers?.['content-type'];
+      if (contentType) res.setHeader('Content-Type', contentType);
+
+      req.on('close', () => {
+        try {
+          upstream.data?.destroy();
+        } catch {}
+      });
+
+      upstream.data.on('error', () => {
+        if (!res.headersSent) res.status(502);
+        res.end();
+      });
+
+      upstream.data.pipe(res);
+      return;
+    } catch {
+      continue;
+    }
+  }
+
+  res.status(502).json({ error: 'radio_unavailable' });
+});
+
+app.get('/api/prayer/timings', linkLimiter, async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+
+  const lat = Number(req.query.lat);
+  const lon = Number(req.query.lon);
+
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+    return res.status(400).json({ error: 'invalid_coords' });
+  }
+  if (Math.abs(lat) > 90 || Math.abs(lon) > 180) {
+    return res.status(400).json({ error: 'invalid_coords' });
+  }
+
+  try {
+    const upstream = await axios.get('https://api.aladhan.com/v1/timings', {
+      params: {
+        latitude: lat,
+        longitude: lon,
+        method: 5,
+        midnightMode: 0,
+        tune: '0,0,0,0,0,0,0,0,0'
+      },
+      timeout: 10000,
+      headers: { 'User-Agent': 'CinemaOnline/1.0', Accept: 'application/json' },
+      validateStatus: (status) => status >= 200 && status < 400
+    });
+
+    return res.json(upstream.data);
+  } catch (error) {
+    return res.status(502).json({ error: 'upstream_error' });
+  }
+});
+
+app.get('/api/weather/current', linkLimiter, async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+
+  const lat = Number(req.query.lat);
+  const lon = Number(req.query.lon);
+
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+    return res.status(400).json({ error: 'invalid_coords' });
+  }
+  if (Math.abs(lat) > 90 || Math.abs(lon) > 180) {
+    return res.status(400).json({ error: 'invalid_coords' });
+  }
+
+  try {
+    const upstream = await axios.get('https://api.open-meteo.com/v1/forecast', {
+      params: {
+        latitude: lat,
+        longitude: lon,
+        current_weather: true,
+        timezone: 'Africa/Cairo'
+      },
+      timeout: 10000,
+      headers: { 'User-Agent': 'CinemaOnline/1.0', Accept: 'application/json' },
+      validateStatus: (status) => status >= 200 && status < 400
+    });
+
+    return res.json(upstream.data);
+  } catch {
+    return res.status(502).json({ error: 'upstream_error' });
+  }
+});
+
 app.get('/api/admin/health', apiLimiter, async (req, res) => {
   if (!ensureAdminToken(req, res)) return;
   res.json({ lastSyncAt, lastSyncStatus });

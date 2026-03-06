@@ -7,6 +7,7 @@ import { QuantumTrain } from '../../components/features/media/QuantumTrain'
 import { VideoCard } from '../../components/features/media/VideoCard'
 import { useCategoryVideos, VideoItem } from '../../hooks/useFetchContent'
 import { PageLoader } from '../../components/common/PageLoader'
+import { FALLBACK_SUMMARIES } from '../../lib/constants'
 
 export const SummariesPage = () => {
   const { lang } = useLang()
@@ -19,62 +20,11 @@ export const SummariesPage = () => {
     year: year ? Number(year) : undefined
   })
 
-  // Fallback data
-  const FALLBACK_SUMMARIES = [
-      {
-        id: 's1',
-        title: 'ملخص فيلم Interstellar',
-        description: 'ملخص فيلم الخيال العلمي الملحمي Interstellar للمخرج كريستوفر نولان.',
-        thumbnail: 'https://image.tmdb.org/t/p/w500/rAiYTfKGqDCRIIqo664sY9XZIvQ.jpg',
-        url: 'https://www.youtube.com/watch?v=zSWdZVtXT7E',
-        created_at: '2024-01-01',
-        category: 'summary'
-      },
-      {
-        id: 's2',
-        title: 'ملخص فيلم Inception',
-        description: 'رحلة في عالم الأحلام مع فيلم Inception.',
-        thumbnail: 'https://image.tmdb.org/t/p/w500/9gk7adHYeDvHkCSEqAvQNLV5Uge.jpg',
-        url: 'https://www.youtube.com/watch?v=YoHD9XEInc0',
-        created_at: '2024-01-02',
-        category: 'summary'
-      },
-      {
-        id: 's3',
-        title: 'ملخص فيلم The Dark Knight',
-        description: 'قصة باتمان والجوكر في تحفة نولان الخالدة.',
-        thumbnail: 'https://image.tmdb.org/t/p/w500/nMKdUUepR0i5zn0y1T4CsSB5chy.jpg',
-        url: 'https://www.youtube.com/watch?v=EXeTwQWrcwY',
-        created_at: '2024-01-03',
-        category: 'summary'
-      },
-      {
-        id: 's4',
-        title: 'ملخص فيلم Oppenheimer',
-        description: 'قصة مخترع القنبلة الذرية وصراعه النفسي.',
-        thumbnail: 'https://image.tmdb.org/t/p/w500/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg',
-        url: 'https://www.youtube.com/watch?v=uYPbbksJxIg',
-        created_at: '2024-01-04',
-        category: 'summary'
-      },
-       {
-        id: 's5',
-        title: 'ملخص فيلم Dune: Part Two',
-        description: 'تكملة ملحمة بول أتريديس في صحراء أراكيس.',
-        thumbnail: 'https://image.tmdb.org/t/p/w500/1pdfLvkbY9ohJlCjQH2CZjjYVvJ.jpg',
-        url: 'https://www.youtube.com/watch?v=Way9Dexny3w',
-        created_at: '2024-01-05',
-        category: 'summary'
-      }
-    ]
-
   const summaries = (dbSummaries && dbSummaries.length > 0) ? dbSummaries : FALLBACK_SUMMARIES
 
   if (isLoading) return <PageLoader />
 
   // Filter if genre is present (simple client-side filter for now)
-  // This assumes the description or title might contain the genre or tags
-  // Since we don't have explicit genre tags in the video table yet
   let filteredSummaries = genre 
     ? (summaries || []).filter(item => 
         item.title?.toLowerCase().includes(genre.toLowerCase()) || 
@@ -82,13 +32,6 @@ export const SummariesPage = () => {
       )
     : (summaries || [])
   
-  if (rating) {
-      // Since rating is fake, we can't really filter by it accurately yet.
-      // But for consistency, let's say we filter if we had real ratings.
-      // For now, we'll just ignore it or show all, or maybe filter by views?
-      // filteredSummaries = filteredSummaries.filter(...)
-  }
-
   // Map to QuantumHero format
   const heroItems = (filteredSummaries.slice(0, 5) || []).map(item => ({
     id: item.id,
@@ -133,20 +76,20 @@ export const SummariesPage = () => {
 
       <div className={`space-y-2 relative z-10 pt-4`}>
         {isFiltered ? (
-           <div>
-              <h2 className="text-xl font-bold mb-4 capitalize">{genre}</h2>
-              {displayItems.length > 0 ? (
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
-                  {displayItems.map((item, idx) => (
-                    <VideoCard key={item.id} video={item} index={idx} />
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center text-zinc-500 py-12">
-                  {lang === 'ar' ? 'لا توجد نتائج' : 'No results found'}
-                </div>
-              )}
-           </div>
+          <div>
+             <h2 className="text-xl font-bold mb-4 capitalize">{genre}</h2>
+             {displayItems.length > 0 ? (
+               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
+                 {displayItems.map((item, idx) => (
+                   <VideoCard key={item.id} video={item} index={idx} />
+                 ))}
+               </div>
+             ) : (
+               <div className="text-center text-zinc-500 py-12">
+                 {lang === 'ar' ? 'لا توجد نتائج' : 'No results found'}
+               </div>
+             )}
+          </div>
         ) : (
           <QuantumTrain 
             items={displayItems} 

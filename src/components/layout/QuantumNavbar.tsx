@@ -42,17 +42,91 @@ export const QuantumNavbar = memo(() => {
       hasMega: false
     },
     { 
-      to: '/top-watched', 
-      label: lang === 'ar' ? 'الأكثر مشاهدة' : 'Top Watched', 
-      icon: Zap, 
-      color: '#ff4400',
+      to: '/movies', 
+      label: lang === 'ar' ? 'أفلام' : 'Movies', 
+      icon: Film, 
+      color: '#00ccff',
+      hasMega: true,
+      featuredImage: 'https://image.tmdb.org/t/p/w1280/pwsD91G2R6r8keDrx6u7hOEZhXp.jpg',
+      subLinks: [
+        { to: '/movies/popular', label: lang === 'ar' ? 'الأكثر شعبية' : 'Popular', icon: Zap },
+        { to: '/movies/top_rated', label: lang === 'ar' ? 'الأعلى تقييماً' : 'Top Rated', icon: Star },
+        { to: '/movies/now_playing', label: lang === 'ar' ? 'يعرض حالياً' : 'Now Playing', icon: Film },
+        { to: '/search?types=movie&lang=ar', label: lang === 'ar' ? 'أفلام عربية' : 'Arabic Movies', icon: Film },
+        { to: '/search?types=movie&lang=en', label: lang === 'ar' ? 'أفلام أجنبية' : 'Foreign Movies', icon: Film },
+        { to: '/search?types=movie&lang=hi', label: lang === 'ar' ? 'أفلام هندية' : 'Indian Movies', icon: Film },
+        { to: '/classics', label: lang === 'ar' ? 'كلاسيكيات' : 'Classics', icon: History },
+      ],
+      categories: [
+        { id: 'Action', label: { en: 'Action', ar: 'أكشن' } },
+        { id: 'Comedy', label: { en: 'Comedy', ar: 'كوميديا' } },
+        { id: 'Horror', label: { en: 'Horror', ar: 'رعب' } },
+        { id: 'Sci-Fi', label: { en: 'Sci-Fi', ar: 'خيال علمي' } },
+        { id: 'Drama', label: { en: 'Drama', ar: 'دراما' } },
+        { id: 'Animation', label: { en: 'Animation', ar: 'انميشن' } }
+      ]
+    },
+    { 
+      to: '/series', 
+      label: lang === 'ar' ? 'مسلسلات' : 'Series', 
+      icon: Tv, 
+      color: '#aa00ff',
+      hasMega: true,
+      featuredImage: 'https://image.tmdb.org/t/p/w1280/2rmK7mnchw9Xr3XdiTFSxTTlxI.jpg',
+      subLinks: [
+        { to: '/ramadan', label: lang === 'ar' ? 'مسلسلات رمضان' : 'Ramadan Series', icon: Moon },
+        { to: '/series/popular', label: lang === 'ar' ? 'الأكثر شعبية' : 'Popular', icon: Zap },
+        { to: '/series/top_rated', label: lang === 'ar' ? 'الأعلى تقييماً' : 'Top Rated', icon: Star },
+        { to: '/search?types=tv&lang=ar', label: lang === 'ar' ? 'مسلسلات عربية' : 'Arabic Series', icon: Tv },
+        { to: '/search?types=tv&lang=tr', label: lang === 'ar' ? 'مسلسلات تركية' : 'Turkish Series', icon: Tv },
+        { to: '/search?types=tv&lang=en', label: lang === 'ar' ? 'مسلسلات أجنبية' : 'Foreign Series', icon: Tv },
+        { to: '/search?types=tv&lang=ko', label: lang === 'ar' ? 'مسلسلات كورية' : 'Korean Series', icon: Tv },
+      ],
+      categories: [
+        { id: 'Drama', label: { en: 'Drama', ar: 'دراما' } },
+        { id: 'Comedy', label: { en: 'Comedy', ar: 'كوميديا' } },
+        { id: 'Action', label: { en: 'Action', ar: 'أكشن' } },
+        { id: 'Romance', label: { en: 'Romance', ar: 'رومانسي' } },
+        { id: 'Sci-Fi', label: { en: 'Sci-Fi', ar: 'خيال علمي' } }
+      ]
+    },
+    { 
+      to: '/plays', 
+      label: lang === 'ar' ? 'مسرحيات' : 'Plays', 
+      icon: Drama, 
+      color: '#ef4444',
       hasMega: true,
       subLinks: [
-        { to: '/top-watched', label: lang === 'ar' ? 'الكل' : 'All Trending', icon: Zap },
-        { to: '/movies/popular', label: lang === 'ar' ? 'أفلام رائجة' : 'Popular Movies', icon: Film },
-        { to: '/series/popular', label: lang === 'ar' ? 'مسلسلات رائجة' : 'Popular Series', icon: Tv },
-        { to: '/movies/top_rated', label: lang === 'ar' ? 'أعلى الأفلام تقييماً' : 'Top Rated Movies', icon: Star },
-        { to: '/series/top_rated', label: lang === 'ar' ? 'أعلى المسلسلات تقييماً' : 'Top Rated Series', icon: Star }
+        { to: '/plays/masrah-masr', label: lang === 'ar' ? 'مسرح مصر' : 'Masrah Masr', icon: Smile },
+        { to: '/plays/adel-imam', label: lang === 'ar' ? 'عادل إمام' : 'Adel Imam', icon: User },
+        { to: '/plays/gulf', label: lang === 'ar' ? 'مسرحيات خليجية' : 'Gulf Plays', icon: MapPin },
+        { to: '/plays/classics', label: lang === 'ar' ? 'كلاسيكيات' : 'Classics', icon: History }
+      ]
+    },
+    { 
+      to: '/ramadan', 
+      label: lang === 'ar' ? 'اسلاميات' : 'Islamics', 
+      icon: Moon, 
+      color: '#ffd700',
+      hasMega: true,
+      subLinks: [
+        { to: '/search?category=quran', label: lang === 'ar' ? 'القرآن الكريم' : 'Holy Quran', icon: BookOpen },
+        { to: '/search?category=prophets', label: lang === 'ar' ? 'قصص الأنبياء' : 'Prophets Stories', icon: History },
+        { to: '/search?category=fatwa', label: lang === 'ar' ? 'فتاوى' : 'Fatwas', icon: ListVideo },
+        { to: '/ramadan', label: lang === 'ar' ? 'برامج دينية' : 'Religious Programs', icon: Moon }
+      ]
+    },
+    { 
+      to: '/kids', 
+      label: lang === 'ar' ? 'أطفال' : 'Kids', 
+      icon: Smile, 
+      color: '#ffcc00',
+      hasMega: true,
+      subLinks: [
+        { to: '/search?types=movie&genres=16', label: lang === 'ar' ? 'أفلام كرتون' : 'Animation Movies', icon: Film },
+        { to: '/anime', label: lang === 'ar' ? 'أنمي' : 'Anime', icon: Gamepad2 },
+        { to: '/search?types=movie&company=disney', label: lang === 'ar' ? 'ديزني' : 'Disney', icon: Zap },
+        { to: '/search?types=tv&genres=10762', label: lang === 'ar' ? 'مسلسلات كرتون' : 'Cartoon Series', icon: Tv }
       ]
     },
     { 
@@ -65,87 +139,22 @@ export const QuantumNavbar = memo(() => {
         { to: '/software?cat=pc', label: lang === 'ar' ? 'كمبيوتر' : 'PC', icon: Monitor },
         { to: '/software?cat=android', label: lang === 'ar' ? 'أندرويد' : 'Android', icon: Smartphone },
         { to: '/software?cat=apple', label: lang === 'ar' ? 'أبل' : 'Apple', icon: Apple },
-        { to: '/software?cat=terminal', label: lang === 'ar' ? 'تيرمينال' : 'Terminal', icon: Terminal }
+        { to: '/software?cat=terminal', label: lang === 'ar' ? 'أدوات المطورين' : 'Dev Tools', icon: Terminal }
       ]
     },
     { 
-      to: '/ramadan', 
-      label: lang === 'ar' ? 'رمضانيات' : 'Ramadan', 
-      icon: Moon, 
-      color: '#ffd700',
-      hasMega: true,
-      subLinks: [
-        { to: '/quran', label: lang === 'ar' ? 'القرآن الكريم' : 'Holy Quran', icon: BookOpen },
-        { to: '/search?types=tv&keywords=ramadan', label: lang === 'ar' ? 'مسلسلات رمضان' : 'Ramadan Series', icon: Tv },
-        { to: '/search?types=tv&lang=ar', label: lang === 'ar' ? 'برامج دينية' : 'Religious Shows', icon: BookOpen }
-      ]
+      to: '/summaries', 
+      label: lang === 'ar' ? 'ملخصات' : 'Summaries', 
+      icon: ListVideo, 
+      color: '#ff00ff',
+      hasMega: false
     },
     { 
-      to: '/plays', 
-      label: lang === 'ar' ? 'مسرحيات' : 'Plays', 
-      icon: Drama, 
-      color: '#ef4444',
-      hasMega: true,
-      subLinks: [
-        { to: '/plays/adel-imam', label: lang === 'ar' ? 'عادل إمام' : 'Adel Imam', icon: Smile },
-        { to: '/plays/masrah-masr', label: lang === 'ar' ? 'مسرح مصر' : 'Masrah Masr', icon: User },
-        { to: '/plays/classics', label: lang === 'ar' ? 'كلاسيكيات' : 'Classics', icon: Radio },
-        { to: '/plays/gulf', label: lang === 'ar' ? 'خليجي' : 'Gulf Plays', icon: MapPin }
-      ]
-    },
-    { 
-      to: '/series', 
-      label: lang === 'ar' ? 'مسلسلات' : 'Series', 
-      icon: Tv, 
-      color: '#aa00ff',
-      hasMega: true,
-      featuredImage: 'https://image.tmdb.org/t/p/w1280/2rmK7mnchw9Xr3XdiTFSxTTlxI.jpg',
-      subLinks: [
-        { to: '/search?types=tv&lang=tr', label: lang === 'ar' ? 'تركي (مدبلج/مترجم)' : 'Turkish', icon: Film },
-        { to: '/search?types=tv&lang=ar', label: lang === 'ar' ? 'عربي (مصري/شامي)' : 'Arabic', icon: Tv },
-        { to: '/search?types=tv&lang=en', label: lang === 'ar' ? 'أجنبي' : 'Foreign', icon: Zap },
-        { to: '/search?types=tv&lang=ko', label: lang === 'ar' ? 'دراما كورية' : 'Korean Drama', icon: Film },
-      ],
-      categories: [
-        { id: 'Drama', label: { en: 'Drama', ar: 'دراما' } },
-        { id: 'Comedy', label: { en: 'Comedy', ar: 'كوميديا' } },
-        { id: 'Action', label: { en: 'Action', ar: 'أكشن' } },
-        { id: 'Romance', label: { en: 'Romance', ar: 'رومانسي' } },
-      ]
-    },
-    { 
-      to: '/movies', 
-      label: lang === 'ar' ? 'أفلام' : 'Movies', 
-      icon: Film, 
-      color: '#00ccff',
-      hasMega: true,
-      featuredImage: 'https://image.tmdb.org/t/p/w1280/pwsD91G2R6r8keDrx6u7hOEZhXp.jpg',
-      subLinks: [
-        { to: '/search?types=movie&lang=ar', label: lang === 'ar' ? 'عربي' : 'Arabic', icon: Film },
-        { to: '/search?types=movie&lang=en&genres=28,878,27', label: lang === 'ar' ? 'أجنبي (أكشن/رعب)' : 'Foreign (Action/Horror)', icon: Zap },
-        { to: '/search?types=movie&lang=hi', label: lang === 'ar' ? 'هندي' : 'Indian', icon: Smile },
-        { to: '/classics', label: lang === 'ar' ? 'كلاسيكيات' : 'Classics', icon: Radio },
-        { to: '/summaries', label: lang === 'ar' ? 'ملخصات' : 'Summaries', icon: ListVideo },
-      ],
-      categories: [
-        { id: 'Action', label: { en: 'Action', ar: 'أكشن' } },
-        { id: 'Comedy', label: { en: 'Comedy', ar: 'كوميديا' } },
-        { id: 'Horror', label: { en: 'Horror', ar: 'رعب' } },
-        { id: 'Sci-Fi', label: { en: 'Sci-Fi', ar: 'خيال علمي' } }
-      ]
-    },
-    { 
-      to: '/kids', 
-      label: lang === 'ar' ? 'أطفال' : 'Kids', 
-      icon: Smile, 
-      color: '#ffcc00',
-      hasMega: true,
-      subLinks: [
-        { to: '/search?types=movie&genres=16', label: lang === 'ar' ? 'ديزني' : 'Disney', icon: Zap },
-        { to: '/anime', label: lang === 'ar' ? 'أنمي' : 'Anime', icon: Gamepad2 },
-        { to: '/search?types=tv&keywords=spacetoon', label: lang === 'ar' ? 'سبيستون' : 'Spacetoon', icon: Smile },
-        { to: '/search?types=movie&genres=16', label: lang === 'ar' ? 'أفلام كرتون' : 'Animation', icon: Film }
-      ]
+      to: '/top-watched', 
+      label: lang === 'ar' ? 'الأكثر مشاهدة' : 'Trending', 
+      icon: Zap, 
+      color: '#ff4400',
+      hasMega: false
     }
   ], [lang])
 

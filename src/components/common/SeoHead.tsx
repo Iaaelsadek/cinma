@@ -29,6 +29,31 @@ export const SeoHead = ({
   const url = `${siteUrl}${pathname}`
   const fullTitle = `${title} | أونلاين سينما`
 
+  // Breadcrumb Schema
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": pathname.split('/').filter(Boolean).map((segment, index, arr) => ({
+      "@type": "ListItem",
+      "position": index + 1,
+      "name": segment.charAt(0).toUpperCase() + segment.slice(1),
+      "item": `${siteUrl}/${arr.slice(0, index + 1).join('/')}`
+    }))
+  }
+
+  // Organization Schema (Brand Entity)
+  const organizationSchema = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "Online Cinema",
+    "url": siteUrl,
+    "logo": `${siteUrl}/logo.svg`,
+    "sameAs": [
+      "https://twitter.com/cinemaonline",
+      "https://facebook.com/cinemaonline"
+    ]
+  }
+
   // Schema.org VideoObject for Google Rich Results
   const videoSchema = type.startsWith('video') ? {
     "@context": "https://schema.org",
@@ -40,6 +65,11 @@ export const SeoHead = ({
     "duration": duration || "PT2H", // Default fallback
     "contentUrl": url,
     "embedUrl": url,
+    "interactionStatistic": {
+      "@type": "InteractionCounter",
+      "interactionType": { "@type": "WatchAction" },
+      "userInteractionCount": 10000
+    },
     "aggregateRating": rating ? {
       "@type": "AggregateRating",
       "ratingValue": rating,
@@ -49,7 +79,11 @@ export const SeoHead = ({
     "genre": genres
   } : null
 
-  const finalSchema = schema || videoSchema
+  const schemas = [
+    breadcrumbSchema,
+    type === 'website' ? organizationSchema : null,
+    schema || videoSchema
+  ].filter(Boolean)
 
   return (
     <Helmet>
@@ -75,11 +109,11 @@ export const SeoHead = ({
       <meta name="twitter:image" content={image} />
 
       {/* Structured Data */}
-      {finalSchema && (
-        <script type="application/ld+json">
-          {JSON.stringify(finalSchema)}
+      {schemas.map((s, i) => (
+        <script key={i} type="application/ld+json">
+          {JSON.stringify(s)}
         </script>
-      )}
+      ))}
     </Helmet>
   )
 }

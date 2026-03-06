@@ -193,7 +193,17 @@ export const Software = () => {
                     <div className="flex items-start justify-between mb-6">
                       <div className="w-16 h-16 rounded-2xl bg-white/5 p-2 border border-white/5 group-hover:scale-110 transition-transform duration-300 shadow-lg shadow-black/50 overflow-hidden">
                         {item.poster_url ? (
-                          <img src={item.poster_url} alt={item.title} className="w-full h-full object-contain" loading="lazy" />
+                          <img
+                            src={item.poster_url}
+                            alt={item.title}
+                            className="w-full h-full object-contain"
+                            loading="lazy"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.src = 'https://upload.wikimedia.org/wikipedia/commons/e/e4/Infobox_info_icon.svg';
+                              target.onerror = null;
+                            }}
+                          />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-zinc-500">
                             <Cpu />

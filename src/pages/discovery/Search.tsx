@@ -93,6 +93,16 @@ export const Search = () => {
   const supabaseQuery = useQuery<VideoItem[]>({
     queryKey: ['search-supabase', q],
     queryFn: async () => {
+      // Special handling for Spacetoon
+      if (q.toLowerCase().includes('spacetoon') || q.includes('سبيستون')) {
+         const { data } = await supabase
+          .from('videos')
+          .select('*')
+          .or('category.ilike.%spacetoon%,category.ilike.%kids%,tags.cs.{"spacetoon"}')
+          .limit(50)
+         return (data as VideoItem[]) || []
+      }
+
       if (!q || q.length < 2) return []
       // Use fuzzy search RPC function
       const { data, error } = await supabase.rpc('fuzzy_search_videos', { query_text: q })

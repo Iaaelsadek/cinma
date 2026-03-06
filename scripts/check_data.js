@@ -22,7 +22,7 @@ try {
 } catch (e) {}
 
 const supabaseUrl = envConfig.VITE_SUPABASE_URL
-const supabaseKey = envConfig.SUPABASE_SERVICE_ROLE_KEY || envConfig.VITE_SUPABASE_ANON_KEY
+const supabaseKey = envConfig.VITE_SUPABASE_SERVICE_ROLE_KEY || envConfig.SUPABASE_SERVICE_ROLE_KEY || envConfig.VITE_SUPABASE_ANON_KEY
 
 const supabase = createClient(supabaseUrl, supabaseKey)
 

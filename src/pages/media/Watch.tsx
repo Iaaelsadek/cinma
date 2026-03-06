@@ -411,9 +411,9 @@ export const Watch = () => {
         .map(p => ({
           id: p.id,
           title: p.title,
-          poster: p.poster_path ? `https://image.tmdb.org/t/p/w342${p.poster_path}` : '',
-          year: p.release_date ? new Date(p.release_date).getFullYear() : null,
-          type: 'movie'
+          poster_path: p.poster_path,
+          release_date: p.release_date,
+          media_type: 'movie'
         }))
       
       if (collectionParts.length > 0) return collectionParts
@@ -475,6 +475,31 @@ export const Watch = () => {
 
   const [availableEpisodes, setAvailableEpisodes] = useState<Record<string, boolean>>({})
   const [availableSeasonsMap, setAvailableSeasonsMap] = useState<Record<number, boolean>>({})
+  const [summaryId, setSummaryId] = useState<string | null>(null)
+
+  // Fetch Summary if available
+  useEffect(() => {
+    if (!title) return
+    const fetchSummary = async () => {
+      // Try to find a summary that contains the title
+      // Clean title from special chars to improve matching
+      const cleanTitle = title.replace(/[^\w\s\u0600-\u06FF]/g, '').trim()
+      if (!cleanTitle) return
+
+      const { data } = await supabase
+        .from('videos')
+        .select('id')
+        .eq('category', 'summary')
+        .ilike('title', `%${cleanTitle}%`)
+        .limit(1)
+        .maybeSingle()
+      
+      if (data) {
+        setSummaryId(data.id)
+      }
+    }
+    fetchSummary()
+  }, [title])
 
   const episodesCount = useMemo(() => {
     return details?.seasons?.find(s => s.season_number === season)?.episode_count || 0
@@ -776,26 +801,27 @@ export const Watch = () => {
 
                 {/* Sidebar: Servers, Seasons, and Episodes */}
                 <div className="space-y-4">
-                    {/* External Source Tool (Diagnostics) */}
-                    <div className="p-3 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-2">
-                        <div className="p-1.5 rounded-lg bg-primary/20 text-primary">
-                          <ExternalLink size={14} />
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-black text-white uppercase tracking-tight">External Check</p>
-                          <p className="text-[8px] text-zinc-500 font-bold">Verify source status</p>
-                        </div>
-                      </div>
-                      <a 
-                        href={servers[active]?.url} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="px-3 py-1.5 rounded-lg bg-primary text-black text-[9px] font-black uppercase tracking-widest hover:scale-105 transition-transform"
-                      >
-                        Open Source
-                      </a>
-                    </div>
+                    {/* Summary Button */}
+                    {summaryId && (
+                        <Link 
+                            to={`/watch/video/${summaryId}`}
+                            className="w-full flex items-center justify-between gap-3 px-5 py-4 rounded-2xl bg-[#e50914] text-white shadow-lg hover:scale-[1.02] transition-all group overflow-hidden relative"
+                        >
+                            <div className="absolute inset-0 bg-gradient-to-r from-black/20 to-transparent" />
+                            <div className="relative z-10 flex items-center gap-3">
+                                <div className="p-2 rounded-xl bg-white/20 backdrop-blur-sm">
+                                    <Sparkles size={20} className="fill-white text-white" />
+                                </div>
+                                <div className="flex flex-col items-start text-start">
+                                    <span className="text-[10px] font-black uppercase tracking-widest opacity-90">{t('ملخص القصة', 'Story Summary')}</span>
+                                    <span className="text-sm font-black">{t('شاهد ملخص الفيلم/المسلسل', 'Watch Full Summary')}</span>
+                                </div>
+                            </div>
+                            <ChevronLeft size={20} className={`relative z-10 ${lang === 'ar' ? '' : 'rotate-180'} group-hover:-translate-x-1 transition-transform`} />
+                        </Link>
+                    )}
+
+
 
                     {/* Server Selector */}
                     <div className="bg-black/40 border border-white/5 rounded-2xl p-4 backdrop-blur-sm">
