@@ -49,7 +49,7 @@ const PlaysPage = lazy(() => import('./pages/discovery/Plays').then(m => ({ defa
 const ClassicsPage = lazy(() => import('./pages/discovery/Classics').then(m => ({ default: m.ClassicsPage })))
 const SummariesPage = lazy(() => import('./pages/discovery/Summaries').then(m => ({ default: m.SummariesPage })))
 const QuranPage = lazy(() => import('./pages/discovery/Quran').then(m => ({ default: m.QuranPage })))
-const QuranRadio = lazy(() => import('./pages/discovery/QuranRadio').then(m => ({ default: m.QuranRadio })))
+const QuranRadio = lazy(() => import('./pages/discovery/QuranRadio'))
 const RamadanPage = lazy(() => import('./pages/discovery/Ramadan').then(m => ({ default: m.RamadanPage })))
 const ReciterDetails = lazy(() => import('./pages/media/ReciterDetails').then(m => ({ default: m.ReciterDetails })))
 
@@ -146,7 +146,6 @@ const App = () => {
   const navigate = useNavigate()
   return (
     <PwaProvider>
-      <QuranPlayerProvider>
         <MainLayout>
           <ScrollToTop />
           <NetworkStatus />
@@ -331,7 +330,6 @@ const App = () => {
         <AdsManager type="popunder" position="global" />
         <Toaster richColors position="top-center" toastOptions={{ style: { zIndex: 999999 } }} />
         </MainLayout>
-      </QuranPlayerProvider>
     </PwaProvider>
   )
 }

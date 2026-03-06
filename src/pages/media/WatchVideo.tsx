@@ -2,7 +2,6 @@ import { useEffect, useState, useRef } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { VideoPlayer } from '../../components/features/media/VideoPlayer'
-import { SubtitleManager } from '../../components/features/media/SubtitleManager'
 import { ChevronLeft, Eye, Clock, Calendar, Users, Send, X, Sparkles } from 'lucide-react'
 import { Helmet } from 'react-helmet-async'
 import { useLang } from '../../state/useLang'
@@ -10,6 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../../hooks/useAuth'
 import { toast } from 'sonner'
 import { errorLogger } from '../../services/errorLogging'
+import { FALLBACK_SUMMARIES, LEGACY_ID_MAP } from '../../lib/constants'
 
 type VideoData = {
   id: string
@@ -32,7 +32,6 @@ export const WatchVideo = () => {
   const { lang } = useLang()
   const { user } = useAuth()
   const [resolvedId, setResolvedId] = useState<string | null>(null)
-  const [subtitles, setSubtitles] = useState<{ label: string, src: string, srcLang: string, default?: boolean }[]>([])
   
   // Resolve ID from slug if needed
   useEffect(() => {
@@ -100,63 +99,95 @@ export const WatchVideo = () => {
                 }
             }
         }
-
+        
         if (error) throw error
-        if (mounted) setVideo(data)
+        if (mounted) {
+          setVideo(data)
+          setLoading(false)
+        }
       } catch (err) {
-        console.error('Error loading video:', err)
-      } finally {
         if (mounted) setLoading(false)
+        console.error('Video load error', err)
       }
     }
-    
     load()
     return () => { mounted = false }
   }, [id, slug])
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-luxury-obsidian">
-        <div className="mx-auto max-w-[2400px] px-4 md:px-12 w-full py-6">
-          <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-black">
-            <div className="aspect-video w-full">
-              <div className="h-full w-full animate-pulse bg-gradient-to-r from-zinc-900 via-zinc-800/60 to-zinc-900" />
-            </div>
-          </div>
-          <div className="mt-6 space-y-3">
-            <div className="h-6 w-2/3 animate-pulse rounded bg-zinc-800" />
-            <div className="h-4 w-1/3 animate-pulse rounded bg-zinc-800" />
-            <div className="h-4 w-1/2 animate-pulse rounded bg-zinc-800" />
-          </div>
+      <div className="flex items-center justify-center min-h-screen bg-black text-white">
+        <div className="animate-pulse flex flex-col items-center">
+          <div className="w-12 h-12 rounded-full border-4 border-lumen-400 border-t-transparent animate-spin mb-4" />
+          <p>{lang === 'ar' ? 'جاري تحميل الفيديو...' : 'Loading video...'}</p>
         </div>
       </div>
     )
   }
 
-  const ytFallback = id && /^[A-Za-z0-9_-]{11}$/.test(id) ? { id, title: 'YouTube', url: `https://www.youtube.com/embed/${id}` } as VideoData : null
-  const effectiveVideo = video || ytFallback
-
-  if (!effectiveVideo) {
+  if (!video) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-zinc-950 text-white">
-        <h1 className="text-2xl font-bold">{lang === 'ar' ? 'الفيديو غير موجود' : 'Video not found'}</h1>
-        <Link to="/" className="rounded bg-primary px-4 py-2 text-white hover:bg-primary/90">
-          {lang === 'ar' ? 'العودة للرئيسية' : 'Go Home'}
-        </Link>
+      <div className="flex items-center justify-center min-h-screen bg-black text-white">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-4">{lang === 'ar' ? 'عذراً، الفيديو غير موجود' : 'Video Not Found'}</h1>
+          <Link to="/" className="text-lumen-400 hover:text-lumen-300 underline">
+            {lang === 'ar' ? 'العودة للصفحة الرئيسية' : 'Back to Home'}
+          </Link>
+        </div>
       </div>
     )
   }
 
+  const title = video.title || 'Untitled Video'
+  const description = video.description || ''
+  const poster = video.thumbnail || '/placeholder.jpg'
+  const videoUrl = video.url || '' // Make sure we have a URL
+
+  // Schema for VideoObject
+  const schemaData = {
+    "@context": "https://schema.org",
+    "@type": "VideoObject",
+    "name": title,
+    "description": description,
+    "thumbnailUrl": [poster],
+    "uploadDate": video.created_at || new Date().toISOString(),
+    "duration": video.duration ? `PT${Math.floor(video.duration / 60)}M${video.duration % 60}S` : undefined,
+    "contentUrl": videoUrl,
+    "embedUrl": videoUrl, // Assuming direct link or embeddable
+    "interactionStatistic": {
+      "@type": "InteractionCounter",
+      "interactionType": { "@type": "WatchAction" },
+      "userInteractionCount": video.views || 0
+    }
+  }
+
   return (
-    <div className={`min-h-screen transition-colors duration-700 ${isCinemaMode ? 'bg-black' : 'bg-luxury-obsidian'} overflow-x-hidden`}>
+    <div className={`min-h-screen bg-black text-white ${isCinemaMode ? 'overflow-hidden' : ''}`}>
       <Helmet>
-        <title>{effectiveVideo.title} | {lang === 'ar' ? 'سينما أونلاين' : 'Cinema Online'}</title>
-        <meta name="description" content={(effectiveVideo.description || effectiveVideo.title).slice(0, 160)} />
-        <meta property="og:title" content={effectiveVideo.title} />
-        <meta property="og:description" content={(effectiveVideo.description || effectiveVideo.title).slice(0, 160)} />
-        <meta property="og:image" content={effectiveVideo.thumbnail || '/og-image.jpg'} />
-        <link rel="canonical" href={typeof window !== 'undefined' ? `${location.origin}${location.pathname}` : ''} />
+        <title>{title} - Cinema Online</title>
+        <meta name="description" content={description.slice(0, 160)} />
+        
+        {/* Open Graph */}
+        <meta property="og:type" content="video.other" />
+        <meta property="og:url" content={window.location.href} />
+        <meta property="og:title" content={title} />
+        <meta property="og:description" content={description.slice(0, 200)} />
+        <meta property="og:image" content={poster} />
+        <meta property="og:video" content={videoUrl} />
+
+        {/* Twitter */}
+        <meta property="twitter:card" content="player" />
+        <meta property="twitter:url" content={window.location.href} />
+        <meta property="twitter:title" content={title} />
+        <meta property="twitter:description" content={description.slice(0, 200)} />
+        <meta property="twitter:image" content={poster} />
+        <meta property="twitter:player" content={videoUrl} />
+
+        {/* Schema */}
+        <script type="application/ld+json">{JSON.stringify(schemaData)}</script>
       </Helmet>
+
+      {/* Navbar (Hidden in Cinema Mode) */}
 
       {/* Cinema Mode Overlay */}
       <AnimatePresence>
@@ -172,7 +203,7 @@ export const WatchVideo = () => {
 
       <div className={`relative z-50 transition-all duration-500 flex ${isChatOpen ? 'mr-0 lg:mr-80' : ''}`}>
         <div className="flex-1">
-          <div className={`mx-auto max-w-[2400px] px-4 md:px-12 w-full py-4 ${isCinemaMode ? 'lg:py-6' : 'py-4'}`}>
+          <div className={`mx-auto w-full px-4 md:px-12 py-4 transition-all duration-700 ${isCinemaMode ? 'max-w-[2400px] lg:py-6' : 'max-w-3xl'}`}>
             <div className="flex items-center justify-between mb-3">
               <Link to="/" className={`inline-flex items-center gap-2 transition-colors text-sm ${isCinemaMode ? 'text-zinc-600 hover:text-zinc-400' : 'text-zinc-400 hover:text-white'}`}>
                 <ChevronLeft size={16} className={lang === 'ar' ? 'rotate-180' : ''} />
@@ -224,24 +255,12 @@ export const WatchVideo = () => {
                 <div className="aspect-video w-full">
                   <VideoPlayer 
                     url={effectiveVideo.url} 
-                    subtitles={subtitles} 
                     introStart={effectiveVideo.intro_start}
                     introEnd={effectiveVideo.intro_end}
                   />
                 </div>
               </div>
             </div>
-
-            <SubtitleManager 
-              tmdbId={effectiveVideo.tmdb_id || 0} 
-              title={effectiveVideo.title} 
-              currentLanguage={lang}
-              onSelect={(track) => setSubtitles(prev => {
-                // Avoid duplicates
-                if (prev.find(s => s.src === track.src)) return prev
-                return [...prev, { ...track, default: true }]
-              })}
-            />
 
             <motion.div 
               layout

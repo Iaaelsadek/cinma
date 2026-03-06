@@ -155,7 +155,7 @@ export const EmbedPlayer = ({
               </div>
               <div className="text-center space-y-1">
                 <span className="block text-[10px] text-zinc-500 font-bold uppercase tracking-widest">
-                  {t('جاري إنشاء اتصال آمن...', 'ESTABLISHING SECURE CONNECTION...')}
+                  {t('جاري تحميل الفيديو...', 'LOADING VIDEO...')}
                 </span>
               </div>
             </motion.div>

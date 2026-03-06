@@ -1,7 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
-import { tmdb } from '../../lib/tmdb'
+import { useSearchParams } from 'react-router-dom'
+import { supabase } from '../../lib/supabase'
+import { tmdb, advancedSearch } from '../../lib/tmdb'
 import { QuantumHero } from '../../components/features/hero/QuantumHero'
 import { QuantumTrain } from '../../components/features/media/QuantumTrain'
+import { MovieCard } from '../../components/features/media/MovieCard'
+import { SkeletonGrid } from '../../components/common/Skeletons'
 import { useLang } from '../../state/useLang'
 import { Helmet } from 'react-helmet-async'
 
@@ -16,32 +20,71 @@ const fetchByGenre = async (genreId: number, type: 'movie' | 'tv' = 'movie') => 
   return data.results.map((item: any) => ({ ...item, media_type: type }))
 }
 
-const fetchTrending = async (type: 'movie' | 'tv' = 'movie') => {
-  const { data } = await tmdb.get(`/trending/${type}/week`)
-  return data.results.map((item: any) => ({ ...item, media_type: type }))
+// --- Database Fetchers (Preferred) ---
+
+const fetchTrendingDB = async () => {
+  const { data, error } = await supabase
+    .from('movies')
+    .select('id, title, poster_path, backdrop_path, vote_average, release_date, genre_ids, overview')
+    .order('popularity', { ascending: false })
+    .limit(20)
+  
+  if (error || !data || data.length === 0) return fetchTrendingTMDB()
+  return data.map((item: any) => ({ ...item, media_type: 'movie' }))
 }
 
-const fetchTopRated = async (type: 'movie' | 'tv' = 'movie') => {
-  const { data } = await tmdb.get(`/${type}/top_rated`)
-  return data.results.map((item: any) => ({ ...item, media_type: type }))
+const fetchTopRatedDB = async () => {
+  const { data, error } = await supabase
+    .from('movies')
+    .select('id, title, poster_path, backdrop_path, vote_average, release_date, genre_ids, overview')
+    .gte('vote_average', 8)
+    .order('vote_average', { ascending: false })
+    .limit(20)
+
+  if (error || !data || data.length === 0) return fetchTopRatedTMDB()
+  return data.map((item: any) => ({ ...item, media_type: 'movie' }))
 }
 
-const fetchPopular = async (type: 'movie' | 'tv' = 'movie') => {
-  const { data } = await tmdb.get(`/${type}/popular`)
-  return data.results.map((item: any) => ({ ...item, media_type: type }))
+const fetchArabicMoviesDB = async () => {
+  const { data, error } = await supabase
+    .from('movies')
+    .select('id, title, poster_path, backdrop_path, vote_average, release_date, genre_ids, overview')
+    .eq('original_language', 'ar')
+    .order('release_date', { ascending: false })
+    .limit(20)
+
+  if (error || !data || data.length === 0) return fetchArabicMoviesTMDB()
+  return data.map((item: any) => ({ ...item, media_type: 'movie' }))
 }
 
-const fetchNowPlaying = async () => {
+const fetchLatestDB = async () => {
+  const { data, error } = await supabase
+    .from('movies')
+    .select('id, title, poster_path, backdrop_path, vote_average, release_date, genre_ids, overview')
+    .order('release_date', { ascending: false })
+    .limit(20)
+    
+  if (error || !data || data.length === 0) return fetchNowPlayingTMDB()
+  return data.map((item: any) => ({ ...item, media_type: 'movie' }))
+}
+
+// --- TMDB Fallbacks ---
+const fetchTrendingTMDB = async () => {
+  const { data } = await tmdb.get(`/trending/movie/week`)
+  return data.results.map((item: any) => ({ ...item, media_type: 'movie' }))
+}
+
+const fetchTopRatedTMDB = async () => {
+  const { data } = await tmdb.get(`/movie/top_rated`)
+  return data.results.map((item: any) => ({ ...item, media_type: 'movie' }))
+}
+
+const fetchNowPlayingTMDB = async () => {
   const { data } = await tmdb.get('/movie/now_playing')
   return data.results.map((item: any) => ({ ...item, media_type: 'movie' }))
 }
 
-const fetchUpcoming = async () => {
-  const { data } = await tmdb.get('/movie/upcoming')
-  return data.results.map((item: any) => ({ ...item, media_type: 'movie' }))
-}
-
-const fetchArabicMovies = async () => {
+const fetchArabicMoviesTMDB = async () => {
   const { data } = await tmdb.get('/discover/movie', {
     params: {
       with_original_language: 'ar',
@@ -51,15 +94,78 @@ const fetchArabicMovies = async () => {
   return data.results.map((item: any) => ({ ...item, media_type: 'movie' }))
 }
 
+const fetchPopular = async (type: 'movie' | 'tv' = 'movie') => {
+  const { data } = await tmdb.get(`/${type}/popular`)
+  return data.results.map((item: any) => ({ ...item, media_type: type }))
+}
+
+const fetchUpcoming = async () => {
+  const { data } = await tmdb.get('/movie/upcoming')
+  return data.results.map((item: any) => ({ ...item, media_type: 'movie' }))
+}
+
 export const MoviesPage = () => {
   const { lang } = useLang()
+  const [sp] = useSearchParams()
+  const cat = sp.get('cat')
 
-  const trending = useQuery({ queryKey: ['movies-trending'], queryFn: async () => await fetchTrending('movie') })
-  const nowPlaying = useQuery({ queryKey: ['movies-now-playing'], queryFn: async () => await fetchNowPlaying() })
-  const upcoming = useQuery({ queryKey: ['movies-upcoming'], queryFn: async () => await fetchUpcoming() })
-  const arabic = useQuery({ queryKey: ['movies-arabic'], queryFn: async () => await fetchArabicMovies() })
-  const topRated = useQuery({ queryKey: ['movies-top-rated'], queryFn: async () => await fetchTopRated('movie') })
-  const popular = useQuery({ queryKey: ['movies-popular'], queryFn: async () => await fetchPopular('movie') })
+  // --- Category Mode ---
+  const categoryQuery = useQuery({
+    queryKey: ['movies-category-full', cat],
+    queryFn: async () => {
+      if (!cat) return { results: [] }
+      
+      const genreMap: Record<string, number> = {
+        'action': 28, 'adventure': 12, 'animation': 16, 'comedy': 35, 'crime': 80,
+        'documentary': 99, 'drama': 18, 'family': 10751, 'fantasy': 14, 'history': 36,
+        'horror': 27, 'music': 10402, 'mystery': 9648, 'romance': 10749, 'scifi': 878,
+        'sci-fi': 878, 'science-fiction': 878, 'thriller': 53, 'war': 10752, 'western': 37
+      }
+      const lowerCat = cat.toLowerCase()
+      const genreId = genreMap[lowerCat]
+
+      // Try DB first for genre
+      if (genreId) {
+          const { data } = await supabase
+            .from('movies')
+            .select('id, title, poster_path, backdrop_path, vote_average, release_date, genre_ids, overview')
+            .contains('genre_ids', [genreId])
+            .order('popularity', { ascending: false })
+            .limit(40)
+            
+          if (data && data.length > 0) {
+              return { results: data.map(item => ({...item, media_type: 'movie'})) }
+          }
+      }
+      
+      // Fallback to TMDB
+      if (genreId) {
+         const res = await advancedSearch({ types: ['movie'], genres: [genreId], page: 1 })
+         return res
+      }
+      
+      // Check for Companies/Keywords if needed (e.g. marvel, dc)
+      if (lowerCat === 'marvel') return (await tmdb.get('/discover/movie', { params: { with_companies: 420, sort_by: 'popularity.desc' } })).data
+      if (lowerCat === 'dc') return (await tmdb.get('/discover/movie', { params: { with_companies: 9993, sort_by: 'popularity.desc' } })).data
+      if (lowerCat === 'disney') return (await tmdb.get('/discover/movie', { params: { with_companies: 2, sort_by: 'popularity.desc' } })).data
+      if (lowerCat === 'pixar') return (await tmdb.get('/discover/movie', { params: { with_companies: 3, sort_by: 'popularity.desc' } })).data
+      if (lowerCat === 'netflix') return (await tmdb.get('/discover/movie', { params: { with_companies: 20580, sort_by: 'popularity.desc' } })).data
+
+      return { results: [] }
+    },
+    enabled: !!cat
+  })
+
+  // --- Discovery Mode (Home) ---
+  const enabled = !cat
+
+  const trending = useQuery({ queryKey: ['movies-trending-db'], queryFn: fetchTrendingDB, enabled })
+  const topRated = useQuery({ queryKey: ['movies-top-db'], queryFn: fetchTopRatedDB, enabled })
+  const arabic = useQuery({ queryKey: ['movies-arabic-db'], queryFn: fetchArabicMoviesDB, enabled })
+  const nowPlaying = useQuery({ queryKey: ['movies-latest-db'], queryFn: fetchLatestDB, enabled })
+  
+  const upcoming = useQuery({ queryKey: ['movies-upcoming'], queryFn: async () => await fetchUpcoming(), enabled })
+  const popular = useQuery({ queryKey: ['movies-popular'], queryFn: async () => await fetchPopular('movie'), enabled })
   
   const classics = useQuery({ queryKey: ['movies-classics'], queryFn: async () => {
     const { data } = await tmdb.get('/discover/movie', {
@@ -70,7 +176,7 @@ export const MoviesPage = () => {
       }
     })
     return data.results.map((item: any) => ({ ...item, media_type: 'movie' }))
-  }})
+  }, enabled })
 
   const nineties = useQuery({ queryKey: ['movies-90s'], queryFn: async () => {
     const { data } = await tmdb.get('/discover/movie', {
@@ -82,170 +188,78 @@ export const MoviesPage = () => {
       }
     })
     return data.results.map((item: any) => ({ ...item, media_type: 'movie' }))
-  }})
+  }, enabled })
 
-  const action = useQuery({ queryKey: ['movies-action'], queryFn: async () => await fetchByGenre(28, 'movie') })
-  const adventure = useQuery({ queryKey: ['movies-adventure'], queryFn: async () => await fetchByGenre(12, 'movie') })
-  const sciFi = useQuery({ queryKey: ['movies-scifi'], queryFn: async () => await fetchByGenre(878, 'movie') })
-  const animation = useQuery({ queryKey: ['movies-animation'], queryFn: async () => await fetchByGenre(16, 'movie') })
-  const comedy = useQuery({ queryKey: ['movies-comedy'], queryFn: async () => await fetchByGenre(35, 'movie') })
-  const horror = useQuery({ queryKey: ['movies-horror'], queryFn: async () => await fetchByGenre(27, 'movie') })
-  const drama = useQuery({ queryKey: ['movies-drama'], queryFn: async () => await fetchByGenre(18, 'movie') })
-  const crime = useQuery({ queryKey: ['movies-crime'], queryFn: async () => await fetchByGenre(80, 'movie') })
-  const romance = useQuery({ queryKey: ['movies-romance'], queryFn: async () => await fetchByGenre(10749, 'movie') })
-  const thriller = useQuery({ queryKey: ['movies-thriller'], queryFn: async () => await fetchByGenre(53, 'movie') })
-  const family = useQuery({ queryKey: ['movies-family'], queryFn: async () => await fetchByGenre(10751, 'movie') })
-  const documentary = useQuery({ queryKey: ['movies-documentary'], queryFn: async () => await fetchByGenre(99, 'movie') })
-  const history = useQuery({ queryKey: ['movies-history'], queryFn: async () => await fetchByGenre(36, 'movie') })
-  const war = useQuery({ queryKey: ['movies-war'], queryFn: async () => await fetchByGenre(10752, 'movie') })
-  const western = useQuery({ queryKey: ['movies-western'], queryFn: async () => await fetchByGenre(37, 'movie') })
-  const music = useQuery({ queryKey: ['movies-music'], queryFn: async () => await fetchByGenre(10402, 'movie') })
-  const mystery = useQuery({ queryKey: ['movies-mystery'], queryFn: async () => await fetchByGenre(9648, 'movie') })
-  const fantasy = useQuery({ queryKey: ['movies-fantasy'], queryFn: async () => await fetchByGenre(14, 'movie') })
+  // Re-add genre queries for Discovery Mode
+  const action = useQuery({ queryKey: ['movies-action'], queryFn: async () => await fetchByGenre(28, 'movie'), enabled })
+  const adventure = useQuery({ queryKey: ['movies-adventure'], queryFn: async () => await fetchByGenre(12, 'movie'), enabled })
+  const sciFi = useQuery({ queryKey: ['movies-scifi'], queryFn: async () => await fetchByGenre(878, 'movie'), enabled })
+  const animation = useQuery({ queryKey: ['movies-animation'], queryFn: async () => await fetchByGenre(16, 'movie'), enabled })
+  const comedy = useQuery({ queryKey: ['movies-comedy'], queryFn: async () => await fetchByGenre(35, 'movie'), enabled })
+  const horror = useQuery({ queryKey: ['movies-horror'], queryFn: async () => await fetchByGenre(27, 'movie'), enabled })
   
   const anime = useQuery({ queryKey: ['movies-anime'], queryFn: async () => {
     const { data } = await tmdb.get('/discover/movie', {
       params: { with_genres: 16, with_original_language: 'ja', sort_by: 'popularity.desc' }
     })
     return data.results.map((item: any) => ({ ...item, media_type: 'movie' }))
-  }})
+  }, enabled })
 
   const bollywood = useQuery({ queryKey: ['movies-bollywood'], queryFn: async () => {
     const { data } = await tmdb.get('/discover/movie', {
       params: { with_original_language: 'hi', sort_by: 'popularity.desc' }
     })
     return data.results.map((item: any) => ({ ...item, media_type: 'movie' }))
-  }})
+  }, enabled })
 
   const marvel = useQuery({ queryKey: ['movies-marvel'], queryFn: async () => {
-    const { data } = await tmdb.get('/discover/movie', {
-      params: { with_companies: 420, sort_by: 'popularity.desc' }
-    })
+    const { data } = await tmdb.get('/discover/movie', { params: { with_companies: 420, sort_by: 'popularity.desc' } })
     return data.results.map((item: any) => ({ ...item, media_type: 'movie' }))
-  }})
+  }, enabled })
 
   const dc = useQuery({ queryKey: ['movies-dc'], queryFn: async () => {
-    const { data } = await tmdb.get('/discover/movie', {
-      params: { with_companies: 9993, sort_by: 'popularity.desc' }
-    })
+    const { data } = await tmdb.get('/discover/movie', { params: { with_companies: 9993, sort_by: 'popularity.desc' } })
     return data.results.map((item: any) => ({ ...item, media_type: 'movie' }))
-  }})
-
-  const pixar = useQuery({ queryKey: ['movies-pixar'], queryFn: async () => {
-    const { data } = await tmdb.get('/discover/movie', {
-      params: { with_companies: 3, sort_by: 'popularity.desc' }
-    })
-    return data.results.map((item: any) => ({ ...item, media_type: 'movie' }))
-  }})
-
-  const disney = useQuery({ queryKey: ['movies-disney'], queryFn: async () => {
-    const { data } = await tmdb.get('/discover/movie', {
-      params: { with_companies: 2, sort_by: 'popularity.desc' }
-    })
-    return data.results.map((item: any) => ({ ...item, media_type: 'movie' }))
-  }})
-
-  const warner = useQuery({ queryKey: ['movies-warner'], queryFn: async () => {
-    const { data } = await tmdb.get('/discover/movie', {
-      params: { with_companies: 174, sort_by: 'popularity.desc' }
-    })
-    return data.results.map((item: any) => ({ ...item, media_type: 'movie' }))
-  }})
-
-  const universal = useQuery({ queryKey: ['movies-universal'], queryFn: async () => {
-    const { data } = await tmdb.get('/discover/movie', {
-      params: { with_companies: 33, sort_by: 'popularity.desc' }
-    })
-    return data.results.map((item: any) => ({ ...item, media_type: 'movie' }))
-  }})
-
-  const sony = useQuery({ queryKey: ['movies-sony'], queryFn: async () => {
-    const { data } = await tmdb.get('/discover/movie', {
-      params: { with_companies: 5, sort_by: 'popularity.desc' }
-    })
-    return data.results.map((item: any) => ({ ...item, media_type: 'movie' }))
-  }})
-
-  const ghibli = useQuery({ queryKey: ['movies-ghibli'], queryFn: async () => {
-    const { data } = await tmdb.get('/discover/movie', {
-      params: { with_companies: 10342, sort_by: 'popularity.desc' }
-    })
-    return data.results.map((item: any) => ({ ...item, media_type: 'movie' }))
-  }})
-
-  const paramount = useQuery({ queryKey: ['movies-paramount'], queryFn: async () => {
-    const { data } = await tmdb.get('/discover/movie', {
-      params: { with_companies: 4, sort_by: 'popularity.desc' }
-    })
-    return data.results.map((item: any) => ({ ...item, media_type: 'movie' }))
-  }})
-
-  const lionsgate = useQuery({ queryKey: ['movies-lionsgate'], queryFn: async () => {
-    const { data } = await tmdb.get('/discover/movie', {
-      params: { with_companies: 35, sort_by: 'popularity.desc' }
-    })
-    return data.results.map((item: any) => ({ ...item, media_type: 'movie' }))
-  }})
-
-  const twentiethCentury = useQuery({ queryKey: ['movies-20th'], queryFn: async () => {
-    const { data } = await tmdb.get('/discover/movie', {
-      params: { with_companies: 25, sort_by: 'popularity.desc' }
-    })
-    return data.results.map((item: any) => ({ ...item, media_type: 'movie' }))
-  }})
-
-  const dreamworks = useQuery({ queryKey: ['movies-dreamworks'], queryFn: async () => (await tmdb.get('/discover/movie', {
-    params: { with_companies: 521, sort_by: 'popularity.desc' }
-  })).data.results.map((item: any) => ({ ...item, media_type: 'movie' })) })
-
-  const illumination = useQuery({ queryKey: ['movies-illumination'], queryFn: async () => (await tmdb.get('/discover/movie', {
-    params: { with_companies: 6704, sort_by: 'popularity.desc' }
-  })).data.results.map((item: any) => ({ ...item, media_type: 'movie' })) })
-
-  const a24 = useQuery({ queryKey: ['movies-a24'], queryFn: async () => (await tmdb.get('/discover/movie', {
-    params: { with_companies: 41077, sort_by: 'popularity.desc' }
-  })).data.results.map((item: any) => ({ ...item, media_type: 'movie' })) })
-
-  const mgm = useQuery({ queryKey: ['movies-mgm'], queryFn: async () => (await tmdb.get('/discover/movie', {
-    params: { with_companies: 8411, sort_by: 'popularity.desc' }
-  })).data.results.map((item: any) => ({ ...item, media_type: 'movie' })) })
-
-  const lucasfilm = useQuery({ queryKey: ['movies-lucasfilm'], queryFn: async () => (await tmdb.get('/discover/movie', {
-    params: { with_companies: 1, sort_by: 'popularity.desc' }
-  })).data.results.map((item: any) => ({ ...item, media_type: 'movie' })) })
-
-  const blumhouse = useQuery({ queryKey: ['movies-blumhouse'], queryFn: async () => (await tmdb.get('/discover/movie', {
-    params: { with_companies: 3172, sort_by: 'popularity.desc' }
-  })).data.results.map((item: any) => ({ ...item, media_type: 'movie' })) })
-
-  const newLine = useQuery({ queryKey: ['movies-newline'], queryFn: async () => (await tmdb.get('/discover/movie', {
-    params: { with_companies: 12, sort_by: 'popularity.desc' }
-  })).data.results.map((item: any) => ({ ...item, media_type: 'movie' })) })
-
-  const columbia = useQuery({ queryKey: ['movies-columbia'], queryFn: async () => (await tmdb.get('/discover/movie', {
-    params: { with_companies: 5, sort_by: 'popularity.desc' }
-  })).data.results.map((item: any) => ({ ...item, media_type: 'movie' })) })
-  const legendary = useQuery({ queryKey: ['movies-legendary'], queryFn: async () => (await tmdb.get('/discover/movie', {
-    params: { with_companies: 923, sort_by: 'popularity.desc' }
-  })).data.results.map((item: any) => ({ ...item, media_type: 'movie' })) })
-
-  const focus = useQuery({ queryKey: ['movies-focus'], queryFn: async () => (await tmdb.get('/discover/movie', {
-    params: { with_companies: 10146, sort_by: 'popularity.desc' }
-  })).data.results.map((item: any) => ({ ...item, media_type: 'movie' })) })
-
-  const summit = useQuery({ queryKey: ['movies-summit'], queryFn: async () => (await tmdb.get('/discover/movie', {
-    params: { with_companies: 491, sort_by: 'popularity.desc' }
-  })).data.results.map((item: any) => ({ ...item, media_type: 'movie' })) })
-
-  const toho = useQuery({ queryKey: ['movies-toho'], queryFn: async () => (await tmdb.get('/discover/movie', {
-    params: { with_companies: 882, sort_by: 'popularity.desc' }
-  })).data.results.map((item: any) => ({ ...item, media_type: 'movie' })) })
-
-  const netflixMovies = useQuery({ queryKey: ['movies-netflix'], queryFn: async () => (await tmdb.get('/discover/movie', {
-    params: { with_companies: 20580, sort_by: 'popularity.desc' }
-  })).data.results.map((item: any) => ({ ...item, media_type: 'movie' })) })
+  }, enabled })
 
   const heroItems = trending.data?.slice(0, 10) || []
+
+  if (cat) {
+    return (
+      <div className="min-h-screen text-white pb-4 max-w-[2400px] mx-auto px-4 md:px-12 w-full">
+        <Helmet>
+          <title>{`${cat} | ${lang === 'ar' ? 'الأفلام' : 'Movies'}`}</title>
+        </Helmet>
+        
+        <div className="pt-24 relative z-10">
+          <div className="mb-6">
+            <h1 className="text-3xl font-black capitalize">{cat.replace('-', ' ')}</h1>
+            <div className="mt-2 h-1 w-16 rounded-full bg-primary" />
+          </div>
+
+          {categoryQuery.isLoading ? (
+            <SkeletonGrid count={20} variant="poster" />
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
+              {(categoryQuery.data?.results || []).map((item: any, idx: number) => (
+                <MovieCard 
+                  key={item.id} 
+                  movie={{ ...item, media_type: 'movie' }} 
+                  index={idx} 
+                />
+              ))}
+            </div>
+          )}
+          
+          {categoryQuery.data?.results?.length === 0 && (
+            <div className="text-center py-20 text-zinc-500">
+              {lang === 'ar' ? 'لا توجد نتائج' : 'No results found'}
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen text-white pb-4 max-w-[2400px] mx-auto px-4 md:px-12 w-full">
@@ -309,209 +323,49 @@ export const MoviesPage = () => {
         <QuantumTrain 
           items={action.data || []} 
           title={lang === 'ar' ? 'أكشن' : 'Action'} 
-          link="/movies/genre/28"
+          link="/movies?cat=action"
         />
 
         <QuantumTrain 
           items={adventure.data || []} 
           title={lang === 'ar' ? 'مغامرة' : 'Adventure'} 
-          link="/movies/genre/12"
+          link="/movies?cat=adventure"
         />
 
         <QuantumTrain 
           items={sciFi.data || []} 
           title={lang === 'ar' ? 'خيال علمي' : 'Sci-Fi'} 
-          link="/movies/genre/878"
+          link="/movies?cat=scifi"
         />
 
         <QuantumTrain 
-          items={fantasy.data || []} 
-          title={lang === 'ar' ? 'فانتازيا' : 'Fantasy'} 
-          link="/movies/genre/14"
+          items={animation.data || []} 
+          title={lang === 'ar' ? 'رسوم متحركة' : 'Animation'} 
+          link="/movies?cat=animation"
         />
 
         <QuantumTrain 
-          items={mystery.data || []} 
-          title={lang === 'ar' ? 'غموض' : 'Mystery'} 
-          link="/movies/genre/9648"
+          items={comedy.data || []} 
+          title={lang === 'ar' ? 'كوميديا' : 'Comedy'} 
+          link="/movies?cat=comedy"
         />
 
         <QuantumTrain 
-          items={western.data || []} 
-          title={lang === 'ar' ? 'ويسترن' : 'Western'} 
-          link="/movies/genre/37"
-        />
-
-        <QuantumTrain 
-          items={music.data || []} 
-          title={lang === 'ar' ? 'موسيقي' : 'Music'} 
-          link="/movies/genre/10402"
+          items={horror.data || []} 
+          title={lang === 'ar' ? 'رعب' : 'Horror'} 
+          link="/movies?cat=horror"
         />
 
         <QuantumTrain 
           items={marvel.data || []} 
           title={lang === 'ar' ? 'عالم مارفل السينمائي' : 'Marvel Cinematic Universe'} 
-          link="/search?types=movie&keywords=marvel"
+          link="/movies?cat=marvel"
         />
 
         <QuantumTrain 
           items={dc.data || []} 
           title={lang === 'ar' ? 'عالم دي سي' : 'DC Universe'} 
-          link="/search?types=movie&keywords=dc"
-        />
-
-        <QuantumTrain 
-          items={disney.data || []} 
-          title={lang === 'ar' ? 'ديزني' : 'Disney'} 
-          link="/search?types=movie&keywords=disney"
-          color="blue"
-        />
-
-        <QuantumTrain 
-          items={pixar.data || []} 
-          title={lang === 'ar' ? 'بيكسار' : 'Pixar'} 
-          link="/search?types=movie&keywords=pixar"
-          color="cyan"
-        />
-
-        <QuantumTrain 
-          items={warner.data || []} 
-          title={lang === 'ar' ? 'وارنر بروس' : 'Warner Bros'} 
-          link="/search?types=movie&keywords=warner"
-          color="gold"
-        />
-
-        <QuantumTrain 
-          items={universal.data || []} 
-          title={lang === 'ar' ? 'يونيفرسال' : 'Universal Pictures'} 
-          link="/search?types=movie&keywords=universal"
-          color="indigo"
-        />
-
-        <QuantumTrain 
-          items={sony.data || []} 
-          title={lang === 'ar' ? 'سوني بيكتشرز' : 'Sony Pictures'} 
-          link="/search?types=movie&keywords=sony"
-          color="red"
-        />
-
-        <QuantumTrain 
-          items={ghibli.data || []} 
-          title={lang === 'ar' ? 'استوديو غيبلي' : 'Studio Ghibli'} 
-          link="/search?types=movie&keywords=ghibli"
-          color="green"
-        />
-
-        <QuantumTrain 
-          items={paramount.data || []} 
-          title={lang === 'ar' ? 'باراماونت' : 'Paramount Pictures'} 
-          link="/search?types=movie&keywords=paramount"
-          color="blue"
-        />
-
-        <QuantumTrain 
-          items={lionsgate.data || []} 
-          title={lang === 'ar' ? 'ليونزغيت' : 'Lionsgate'} 
-          link="/search?types=movie&keywords=lionsgate"
-          color="gold"
-        />
-
-        <QuantumTrain 
-          items={twentiethCentury.data || []} 
-          title={lang === 'ar' ? 'استوديوهات القرن العشرين' : '20th Century Studios'} 
-          link="/search?types=movie&keywords=20th"
-          color="red"
-        />
-
-        <QuantumTrain 
-          items={dreamworks.data || []} 
-          title={lang === 'ar' ? 'دريم ووركس أنيميشن' : 'DreamWorks Animation'} 
-          link="/search?types=movie&keywords=dreamworks"
-          color="blue"
-        />
-
-        <QuantumTrain 
-          items={illumination.data || []} 
-          title={lang === 'ar' ? 'إليمونيشن' : 'Illumination'} 
-          link="/search?types=movie&keywords=illumination"
-          color="gold"
-        />
-
-        <QuantumTrain 
-          items={a24.data || []} 
-          title={lang === 'ar' ? 'أفلام A24' : 'A24 Movies'} 
-          link="/search?types=movie&keywords=a24"
-          color="cyan"
-        />
-
-        <QuantumTrain 
-          items={mgm.data || []} 
-          title={lang === 'ar' ? 'مترو غولدوين ماير' : 'Metro-Goldwyn-Mayer'} 
-          link="/search?types=movie&keywords=mgm"
-          color="gold"
-        />
-
-        <QuantumTrain 
-          items={lucasfilm.data || []} 
-          title={lang === 'ar' ? 'لوكاس فيلم' : 'Lucasfilm'} 
-          link="/search?types=movie&keywords=lucasfilm"
-          color="green"
-        />
-
-        <QuantumTrain 
-          items={blumhouse.data || []} 
-          title={lang === 'ar' ? 'بلامهاوس (رعب)' : 'Blumhouse (Horror)'} 
-          link="/search?types=movie&keywords=blumhouse"
-          color="red"
-        />
-
-        <QuantumTrain 
-          items={newLine.data || []} 
-          title={lang === 'ar' ? 'نيو لاين سينما' : 'New Line Cinema'} 
-          link="/search?types=movie&keywords=newline"
-          color="blue"
-        />
-
-        <QuantumTrain 
-          items={columbia.data || []} 
-          title={lang === 'ar' ? 'كولومبيا بيكتشرز' : 'Columbia Pictures'} 
-          link="/search?types=movie&keywords=columbia"
-          color="gold"
-        />
-
-        <QuantumTrain 
-          items={legendary.data || []} 
-          title={lang === 'ar' ? 'ليجنداري بيكتشرز' : 'Legendary Pictures'} 
-          link="/search?types=movie&keywords=legendary"
-          color="indigo"
-        />
-
-        <QuantumTrain 
-          items={focus.data || []} 
-          title={lang === 'ar' ? 'فوكس فيتشرز' : 'Focus Features'} 
-          link="/search?types=movie&keywords=focus"
-          color="cyan"
-        />
-
-        <QuantumTrain 
-          items={summit.data || []} 
-          title={lang === 'ar' ? 'ساميت إنترتينمنت' : 'Summit Entertainment'} 
-          link="/search?types=movie&keywords=summit"
-          color="gold"
-        />
-
-        <QuantumTrain 
-          items={toho.data || []} 
-          title={lang === 'ar' ? 'توهو (أفلام يابانية)' : 'Toho (Japanese Movies)'} 
-          link="/search?types=movie&keywords=toho"
-          color="red"
-        />
-
-        <QuantumTrain 
-          items={netflixMovies.data || []} 
-          title={lang === 'ar' ? 'أفلام نتفليكس الأصلية' : 'Netflix Original Movies'} 
-          link="/search?types=movie&keywords=netflix"
-          color="red"
+          link="/movies?cat=dc"
         />
 
         <QuantumTrain 

@@ -1,226 +1,82 @@
-import { useQuery, useQueries } from '@tanstack/react-query'
-import { tmdb } from '../../lib/tmdb'
+import { useCategoryVideos } from '../../hooks/useFetchContent'
 import { QuantumHero } from '../../components/features/hero/QuantumHero'
 import { QuantumTrain } from '../../components/features/media/QuantumTrain'
 import { useLang } from '../../state/useLang'
 import { Helmet } from 'react-helmet-async'
-import { Moon } from 'lucide-react'
+import { Moon, BookOpen, History, ListVideo } from 'lucide-react'
 import { PageLoader } from '../../components/common/PageLoader'
-
-// Fetch Arabic TV shows for a specific year (simulating Ramadan content)
-const fetchRamadanSeries = async (year: number) => {
-  // Ramadan roughly shifts back 11 days each year.
-  // 2026: Feb-Mar
-  // 2025: Feb-Mar
-  // 2024: Mar-Apr
-  // 2023: Mar-Apr
-  // We'll just fetch popular Arabic shows from that year to be safe and inclusive.
-  const { data } = await tmdb.get('/discover/tv', {
-    params: {
-      with_original_language: 'ar',
-      first_air_date_year: year,
-      sort_by: 'popularity.desc',
-      'vote_count.gte': 0 // Include everything to reach "20000" potential
-    }
-  })
-  return data.results.map((item: any) => ({ ...item, media_type: 'tv' }))
-}
-
-// Fetch highly rated Arabic shows (Classics)
-const fetchClassicRamadan = async () => {
-    const { data } = await tmdb.get('/discover/tv', {
-      params: {
-        with_original_language: 'ar',
-        'first_air_date.lte': '2015-12-31',
-        sort_by: 'vote_average.desc',
-        'vote_count.gte': 20
-      }
-    })
-    return data.results.map((item: any) => ({ ...item, media_type: 'tv' }))
-}
-
-// Fetch trending Arabic shows (Current "Ramadan" vibe)
-const fetchTrendingRamadan = async () => {
-  const { data } = await tmdb.get('/discover/tv', {
-    params: {
-      with_original_language: 'ar',
-      sort_by: 'popularity.desc'
-    }
-  })
-  return data.results.map((item: any) => ({ ...item, media_type: 'tv' }))
-}
-
-const fetchByCountry = async (country: string) => {
-  const { data } = await tmdb.get('/discover/tv', {
-    params: {
-      with_original_language: 'ar',
-      with_origin_country: country,
-      sort_by: 'popularity.desc',
-      'vote_count.gte': 0
-    }
-  })
-  return data.results.map((item: any) => ({ ...item, media_type: 'tv' }))
-}
-
-const fetchRamadanComedy = async () => {
-  const { data } = await tmdb.get('/discover/tv', {
-    params: {
-      with_original_language: 'ar',
-      with_genres: 35,
-      sort_by: 'popularity.desc'
-    }
-  })
-  return data.results.map((item: any) => ({ ...item, media_type: 'tv' }))
-}
-
-const fetchRamadanHistorical = async () => {
-  const { data } = await tmdb.get('/discover/tv', {
-    params: {
-      with_original_language: 'ar',
-      with_genres: '36|10768', // History or War & Politics
-      sort_by: 'popularity.desc'
-    }
-  })
-  return data.results.map((item: any) => ({ ...item, media_type: 'tv' }))
-}
 
 export const RamadanPage = () => {
   const { lang } = useLang()
 
-  // Batch fetch all Ramadan content using useQueries for better performance
-  const results = useQueries({
-    queries: [
-      { queryKey: ['ramadan-2026'], queryFn: () => fetchRamadanSeries(2026) },
-      { queryKey: ['ramadan-2025'], queryFn: () => fetchRamadanSeries(2025) },
-      { queryKey: ['ramadan-2024'], queryFn: () => fetchRamadanSeries(2024) },
-      { queryKey: ['ramadan-2023'], queryFn: () => fetchRamadanSeries(2023) },
-      { queryKey: ['ramadan-classics'], queryFn: () => fetchClassicRamadan() },
-      { queryKey: ['ramadan-trending'], queryFn: () => fetchTrendingRamadan() },
-      { queryKey: ['ramadan-egypt'], queryFn: () => fetchByCountry('EG') },
-      { queryKey: ['ramadan-syria'], queryFn: () => fetchByCountry('SY') },
-      { queryKey: ['ramadan-gulf'], queryFn: () => fetchByCountry('SA|KW|AE') },
-      { queryKey: ['ramadan-comedy'], queryFn: () => fetchRamadanComedy() },
-      { queryKey: ['ramadan-historical'], queryFn: () => fetchRamadanHistorical() }
-    ]
-  })
+  // Fetch Islamic Content from Supabase
+  const quran = useCategoryVideos('quran', { limit: 20 })
+  const prophets = useCategoryVideos('prophets', { limit: 20 })
+  const fatwa = useCategoryVideos('fatwa', { limit: 20 })
 
-  // Destructure results for easier access
-  const [
-    ramadan2026,
-    ramadan2025,
-    ramadan2024,
-    ramadan2023,
-    classics,
-    trending,
-    egyptian,
-    syrian,
-    gulf,
-    comedy,
-    historical
-  ] = results
-
-  const isLoading = results.some(result => result.isLoading)
+  const isLoading = quran.isLoading || prophets.isLoading || fatwa.isLoading
 
   if (isLoading) return <PageLoader />
 
-  // Hero items: Mix of trending and latest
+  // Hero items: Mix of content
   const heroItems = [
-    ...(ramadan2026.data || []),
-    ...(ramadan2025.data || []),
-    ...(trending.data || [])
-  ].slice(0, 15)
+    ...(quran.data || []),
+    ...(prophets.data || [])
+  ].slice(0, 10)
 
   return (
     <div className="min-h-screen text-white pb-4 max-w-[2400px] mx-auto px-4 md:px-12 w-full">
       <Helmet>
-        <title>{lang === 'ar' ? 'رمضانيات - سينما أونلاين' : 'Ramadan - Cinema Online'}</title>
+        <title>{lang === 'ar' ? 'اسلاميات - سينما أونلاين' : 'Islamics - Cinema Online'}</title>
       </Helmet>
 
-      <QuantumHero items={heroItems} />
-
-      <div className="space-y-2 pt-4 relative z-10">
-        
-        {/* Header Section */}
-        <div className="flex items-center gap-3 mb-3 border-b border-amber-500/20 pb-2">
-             <div className="p-1.5 bg-amber-500/10 rounded-full border border-amber-500/20 shadow-[0_0_15px_rgba(245,158,11,0.2)]">
-                <Moon size={28} className="text-amber-400 fill-amber-400 drop-shadow-[0_0_10px_rgba(245,158,11,0.5)]" />
+      {/* Hero Section */}
+      <section className="relative z-10 w-full mb-8">
+          <QuantumHero items={heroItems} />
+      </section>
+      
+      {/* Header Section */}
+      <div className="flex items-center gap-4 mb-8 border-b border-amber-500/20 pb-6 px-2">
+             <div className="p-3 bg-amber-500/10 rounded-2xl border border-amber-500/20 shadow-[0_0_15px_rgba(245,158,11,0.2)]">
+                <Moon size={32} className="text-amber-400 fill-amber-400/20 drop-shadow-[0_0_10px_rgba(245,158,11,0.5)]" />
              </div>
              <div>
-                <h1 className="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-amber-400 to-amber-600">
-                  {lang === 'ar' ? 'الخيمة الرمضانية' : 'Ramadan Tent'}
+                <h1 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-amber-400 to-amber-600">
+                  {lang === 'ar' ? 'واحة الإيمان' : 'Faith Oasis'}
                 </h1>
-                <p className="text-amber-200/60 text-sm mt-1">
-                  {lang === 'ar' ? 'أقوى المسلسلات والبرامج الرمضانية في مكان واحد' : 'The best Ramadan series and shows in one place'}
+                <p className="text-amber-200/60 text-sm mt-1 font-medium">
+                  {lang === 'ar' ? 'القرآن الكريم، قصص الأنبياء، وفتاوى العلماء' : 'Quran, Prophets Stories, and Fatwas'}
                 </p>
              </div>
-        </div>
+      </div>
 
+      <div className="space-y-8 relative z-10">
         <QuantumTrain 
-          items={trending.data || []} 
-          title={lang === 'ar' ? 'الأكثر رواجاً الآن' : 'Trending Now'} 
-          link="/search?types=tv&lang=ar&sort=popularity.desc"
+          items={quran.data || []} 
+          title={lang === 'ar' ? 'القرآن الكريم' : 'The Holy Quran'} 
+          link="/search?category=quran"
+          icon={<BookOpen size={24} className="text-amber-400" />}
+          color="gold"
+          type="video"
         />
 
         <QuantumTrain 
-          items={egyptian.data || []} 
-          title={lang === 'ar' ? 'دراما مصرية' : 'Egyptian Drama'} 
-          link="/search?types=tv&lang=ar&country=EG"
+          items={prophets.data || []} 
+          title={lang === 'ar' ? 'قصص الأنبياء' : 'Stories of Prophets'} 
+          link="/search?category=prophets"
+          icon={<History size={24} className="text-amber-400" />}
+          color="gold"
+          type="video"
         />
 
         <QuantumTrain 
-          items={syrian.data || []} 
-          title={lang === 'ar' ? 'دراما سورية' : 'Syrian Drama'} 
-          link="/search?types=tv&lang=ar&country=SY"
+          items={fatwa.data || []} 
+          title={lang === 'ar' ? 'فتاوى وأحكام' : 'Fatwas & Rulings'} 
+          link="/search?category=fatwa"
+          icon={<ListVideo size={24} className="text-amber-400" />}
+          color="gold"
+          type="video"
         />
-
-        <QuantumTrain 
-          items={gulf.data || []} 
-          title={lang === 'ar' ? 'دراما خليجية' : 'Gulf Drama'} 
-          link="/search?types=tv&lang=ar&keywords=gulf"
-        />
-
-        <QuantumTrain 
-          items={comedy.data || []} 
-          title={lang === 'ar' ? 'كوميديا رمضانية' : 'Ramadan Comedy'} 
-          link="/search?types=tv&lang=ar&genres=35"
-        />
-
-        <QuantumTrain 
-          items={historical.data || []} 
-          title={lang === 'ar' ? 'تاريخي وديني' : 'Historical & Religious'} 
-          link="/search?types=tv&lang=ar&genres=36"
-        />
-
-        <QuantumTrain 
-          items={ramadan2026.data || []} 
-          title={lang === 'ar' ? 'مسلسلات رمضان 2026' : 'Ramadan 2026 Series'} 
-          link="/search?types=tv&year=2026&lang=ar"
-        />
-
-        <QuantumTrain 
-          items={ramadan2025.data || []} 
-          title={lang === 'ar' ? 'مسلسلات رمضان 2025' : 'Ramadan 2025 Series'} 
-          link="/search?types=tv&year=2025&lang=ar"
-        />
-
-        <QuantumTrain 
-          items={ramadan2024.data || []} 
-          title={lang === 'ar' ? 'مسلسلات رمضان 2024' : 'Ramadan 2024 Series'} 
-          link="/search?types=tv&year=2024&lang=ar"
-        />
-
-        <QuantumTrain 
-          items={ramadan2023.data || []} 
-          title={lang === 'ar' ? 'مسلسلات رمضان 2023' : 'Ramadan 2023 Series'} 
-          link="/search?types=tv&year=2023&lang=ar"
-        />
-
-        <QuantumTrain 
-          items={classics.data || []} 
-          title={lang === 'ar' ? 'كلاسيكيات رمضان' : 'Ramadan Classics'} 
-          link="/search?types=tv&lang=ar&sort=vote_average.desc"
-        />
-
       </div>
     </div>
   )

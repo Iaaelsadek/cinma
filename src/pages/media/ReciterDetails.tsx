@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { useLang } from '../../state/useLang'
-import { useQuranPlayer } from '../../context/QuranPlayerContext'
+import { useQuranPlayerStore } from '../../state/useQuranPlayerStore'
 import { SURAHS } from '../../data/quran'
 import { Play, Share2, ArrowLeft, ArrowRight, Pause } from 'lucide-react'
 import { motion } from 'framer-motion'
@@ -21,7 +21,7 @@ type Reciter = {
 export const ReciterDetails = () => {
   const { id } = useParams()
   const { lang } = useLang()
-  const { playTrack, currentTrack, isPlaying, toggle } = useQuranPlayer()
+  const { playTrack, currentTrack, isPlaying, toggle } = useQuranPlayerStore()
 
   const { data: reciter, isLoading } = useQuery<Reciter>({
     queryKey: ['reciter', id],

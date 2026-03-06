@@ -43,10 +43,41 @@ export const Home = () => {
   const { data: recommendations } = useRecommendations()
 
   // --- DATA FETCHING (Optimized & Parallelized) ---
-  // 1. DIVERSE HERO CONTENT (Restored to 8 requests for maximum diversity)
+  // 1. DIVERSE HERO CONTENT (Optimized with Static Cache)
   const diverseHero = useQuery<{ results: TmdbMedia[] }>({
     queryKey: ['diverse-hero-content'],
     queryFn: async () => {
+      // Try Static Cache First
+      try {
+        const res = await fetch('/data/homepage_cache.json')
+        if (res.ok) {
+          const cache = await res.json()
+          if (cache.trending && cache.trending.length > 0) {
+             // Transform if necessary to match TmdbMedia type
+             // The cache contains Supabase 'movies'/'series' rows.
+             // We need to map them to TmdbMedia shape (id, title, poster_path...)
+             // Supabase columns: tmdb_id, title, poster_path, backdrop_path, vote_average, overview...
+             
+             return {
+               results: cache.trending.map((item: any) => ({
+                 id: item.tmdb_id,
+                 title: item.title || item.name,
+                 name: item.name || item.title,
+                 media_type: item.media_type || (item.title ? 'movie' : 'tv'),
+                 poster_path: item.poster_path,
+                 backdrop_path: item.backdrop_path,
+                 vote_average: item.vote_average,
+                 overview: item.overview,
+                 release_date: item.release_date || item.first_air_date
+               }))
+             }
+          }
+        }
+      } catch (e) {
+        console.warn('Static cache miss for hero')
+      }
+
+      // Fallback to TMDB API (Original Logic)
       const endpoints = [
         { type: 'movie', lang: 'en' }, // Foreign Movie
         { type: 'movie', lang: 'ar' }, // Arabic Movie
@@ -300,14 +331,14 @@ export const Home = () => {
         description={description}
       />
 
-      {/* 1. QUANTUM HERO PORTAL */}
-      <section className="relative z-10 w-full">
-         {popularMovies.isLoading ? <SkeletonHero /> : <QuantumHero items={heroItems} />}
-      </section>
-
-      <AdsManager type="banner" position="home-top" />
-
       <div className="max-w-[2400px] mx-auto px-4 md:px-12 w-full">
+        {/* 1. QUANTUM HERO PORTAL */}
+        <section className="relative z-10 w-full">
+           {popularMovies.isLoading ? <SkeletonHero /> : <QuantumHero items={heroItems} />}
+        </section>
+
+        <AdsManager type="banner" position="home-top" />
+
         {/* Continue Watching - for logged-in users */}
         {user && (
           <section className="relative z-20 pt-6 pb-2">

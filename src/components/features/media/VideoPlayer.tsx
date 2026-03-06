@@ -71,11 +71,15 @@ export const VideoPlayer = ({ url, subtitles = [], introStart, introEnd, title, 
   const [showSettings, setShowSettings] = useState(false)
   const [showSubtitlesMenu, setShowSubtitlesMenu] = useState(false)
   const [activeSubtitle, setActiveSubtitle] = useState<number>(-1) // -1 for none
+  const [fallbackToIframe, setFallbackToIframe] = useState(false)
   
   // Refs
   const playerRef = useRef<ReactPlayer>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const controlsTimeoutRef = useRef<any>(null)
+
+  const CONTROLS_HIDE_DELAY_MS = 5000
+  const CONTROLS_HOTZONE_PX = 140
   
   const { lang } = useLang()
 
@@ -157,12 +161,37 @@ export const VideoPlayer = ({ url, subtitles = [], introStart, introEnd, title, 
     return `${mm}:${ss}`
   }
 
-  const handleMouseMove = () => {
-    setShowControls(true)
-    if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current)
+  const clearControlsTimeout = useCallback(() => {
+    if (!controlsTimeoutRef.current) return
+    clearTimeout(controlsTimeoutRef.current)
+    controlsTimeoutRef.current = null
+  }, [])
+
+  const scheduleHideControls = useCallback(() => {
+    clearControlsTimeout()
     controlsTimeoutRef.current = setTimeout(() => {
       if (playing) setShowControls(false)
-    }, 3000)
+    }, CONTROLS_HIDE_DELAY_MS)
+  }, [clearControlsTimeout, playing])
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const el = containerRef.current
+    if (!el) return
+
+    const rect = el.getBoundingClientRect()
+    const isNearBottom = e.clientY >= rect.bottom - CONTROLS_HOTZONE_PX
+
+    if (isNearBottom) {
+      setShowControls(true)
+      scheduleHideControls()
+      return
+    }
+
+    if (showControls) scheduleHideControls()
+  }
+
+  const handleMouseLeave = () => {
+    scheduleHideControls()
   }
 
   // Keyboard Shortcuts
@@ -208,6 +237,12 @@ export const VideoPlayer = ({ url, subtitles = [], introStart, introEnd, title, 
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [playing, muted, isFullscreen])
 
+  useEffect(() => {
+    return () => {
+      clearControlsTimeout()
+    }
+  }, [clearControlsTimeout])
+
   // Fullscreen Listener
   useEffect(() => {
     const handleFsChange = () => {
@@ -218,18 +253,41 @@ export const VideoPlayer = ({ url, subtitles = [], introStart, introEnd, title, 
   }, [])
 
   if (error) {
+    const isYouTube = url.includes('youtube.com') || url.includes('youtu.be')
+    const watchUrl = (() => {
+      if (!isYouTube) return url
+      if (url.includes('/embed/')) {
+        const parts = url.split('/embed/')
+        const idAndQuery = parts[1]
+        const [id, query] = idAndQuery.split('?')
+        return `https://www.youtube.com/watch?v=${id}${query ? '&' + query : ''}`
+      }
+      return url
+    })()
+
     return (
       <div className="flex h-full w-full flex-col items-center justify-center bg-zinc-950 text-zinc-500 rounded-3xl border border-white/5">
         <AlertTriangle size={48} className="mb-4 text-red-500 opacity-50" />
         <p className="font-bold">{lang === 'ar' ? 'خطأ في التشغيل' : 'Playback Error'}</p>
         <p className="text-xs">{lang === 'ar' ? 'قد يكون المصدر غير متاح حالياً.' : 'The source might be unavailable.'}</p>
-        <Button 
-          variant="secondary" 
-          className="mt-4" 
-          onClick={() => window.location.reload()}
-        >
-          {lang === 'ar' ? 'إعادة المحاولة' : 'Retry'}
-        </Button>
+        
+        <div className="flex flex-wrap items-center justify-center gap-3 mt-4">
+          <Button 
+            variant="secondary" 
+            onClick={() => window.location.reload()}
+          >
+            {lang === 'ar' ? 'إعادة المحاولة' : 'Retry'}
+          </Button>
+          
+          {isYouTube && (
+            <Button 
+              variant="primary"
+              onClick={() => window.open(watchUrl, '_blank')}
+            >
+              {lang === 'ar' ? 'المشاهدة على يوتيوب' : 'Watch on YouTube'}
+            </Button>
+          )}
+        </div>
       </div>
     )
   }
@@ -238,6 +296,7 @@ export const VideoPlayer = ({ url, subtitles = [], introStart, introEnd, title, 
     <div 
       ref={containerRef}
       onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
       className={clsx(
         "relative h-full w-full group bg-black overflow-hidden transition-all duration-500",
         isFullscreen ? "rounded-0" : "rounded-3xl border border-white/10"
@@ -257,6 +316,25 @@ export const VideoPlayer = ({ url, subtitles = [], introStart, introEnd, title, 
         )}
       </AnimatePresence>
 
+      {fallbackToIframe ? (
+        <iframe
+          src={(() => {
+            if (url.includes('youtube.com/watch')) {
+              const videoId = url.split('v=')[1]?.split('&')[0]
+              return `https://www.youtube.com/embed/${videoId}?autoplay=1&origin=${window.location.origin}`
+            }
+            if (url.includes('youtu.be/')) {
+              const videoId = url.split('youtu.be/')[1]?.split('?')[0]
+              return `https://www.youtube.com/embed/${videoId}?autoplay=1&origin=${window.location.origin}`
+            }
+            return url
+          })()}
+          className="h-full w-full"
+          allowFullScreen
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          title={title || "Video"}
+        />
+      ) : (
       <ReactPlayer
         key={`${url}-${activeSubtitle}`}
         ref={playerRef}
@@ -270,11 +348,28 @@ export const VideoPlayer = ({ url, subtitles = [], introStart, introEnd, title, 
         onReady={() => setLoading(false)}
         onBuffer={() => setLoading(true)}
         onBufferEnd={() => setLoading(false)}
-        onError={() => setError(true)}
+        onError={(e) => {
+          const isYouTube = url.includes('youtube.com') || url.includes('youtu.be')
+          if (isYouTube && !fallbackToIframe) {
+            console.log('ReactPlayer failed, falling back to raw iframe')
+            setFallbackToIframe(true)
+            setLoading(false)
+            return
+          }
+          console.error('Playback error:', e)
+          setError(true)
+        }}
         onProgress={handleProgress}
         onDuration={(d) => setDuration(d)}
         onClick={() => handlePlayPause()}
         config={{ 
+          youtube: {
+            playerVars: { 
+              origin: window.location.origin,
+              modestbranding: 1,
+              rel: 0
+            }
+          },
           file: { 
             attributes: { 
               crossOrigin: 'anonymous',
@@ -291,10 +386,11 @@ export const VideoPlayer = ({ url, subtitles = [], introStart, introEnd, title, 
           }
         }}
       />
+      )}
 
       {/* Custom Controls Overlay */}
       <AnimatePresence>
-        {showControls && (
+        {showControls && !fallbackToIframe && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -306,17 +402,6 @@ export const VideoPlayer = ({ url, subtitles = [], introStart, introEnd, title, 
               <h3 className="text-white font-bold text-lg drop-shadow-lg opacity-80">
                 {title || (lang === 'ar' ? 'مشغل سينما أونلاين' : 'Cinema Online Player')}
               </h3>
-            </div>
-
-            {/* Center: Play/Pause Large Icon */}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-               <motion.div
-                 initial={{ scale: 0.8, opacity: 0 }}
-                 animate={{ scale: 1, opacity: playing ? 0 : 1 }}
-                 className="p-8 rounded-full bg-white/10 backdrop-blur-xl border border-white/20 text-white"
-               >
-                 {playing ? <Pause size={48} /> : <Play size={48} className="ml-2" />}
-               </motion.div>
             </div>
 
             {/* Bottom Controls */}
