@@ -3,7 +3,7 @@ import { Navigation, FreeMode } from 'swiper/modules'
 import 'swiper/css'
 import 'swiper/css/navigation'
 import 'swiper/css/free-mode'
-import { Link, useParams, useSearchParams, useNavigate } from 'react-router-dom'
+import { Link, useParams, useSearchParams, useNavigate, useLocation } from 'react-router-dom'
 import { useEffect, useMemo, useState, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useAuth } from '../../hooks/useAuth'
@@ -68,6 +68,7 @@ export const Watch = () => {
   const { type: typeParam, id: idParam, slug: slugParam, s, e, lang: langParam } = useParams()
   const [sp, setSp] = useSearchParams()
   const navigate = useNavigate()
+  const location = useLocation()
   const [resolvedId, setResolvedId] = useState<string | null>(null)
   const { user, loading: authLoading } = useAuth()
 
@@ -79,7 +80,7 @@ export const Watch = () => {
     if (langParam === 'ar' || langParam === 'en' || typeParam === 'ar' || typeParam === 'en') {
       const actualLang = (langParam === 'ar' || langParam === 'en') ? langParam : typeParam as 'ar' | 'en'
       const actualTypeParam = (langParam === 'ar' || langParam === 'en') ? typeParam : idParam
-      const actualSlug = (langParam === 'ar' || langParam === 'en') ? e : s // Shifted depending on which route matched
+      const actualSlug = slugParam
       
       let t = actualTypeParam || 'movie'
       if (t === 'series' || t === 'anime') t = 'tv'
@@ -116,6 +117,9 @@ export const Watch = () => {
 
     // Default Fallback
     let t = typeParam || 'movie'
+    if (!typeParam && /^\/series\/\d+\/season\/\w+\/episode\/\w+$/i.test(location.pathname)) {
+      t = 'tv'
+    }
     if (t === 'series' || t === 'anime') t = 'tv'
     if (t === 'movies' || t === 'plays') t = 'movie'
 
@@ -127,7 +131,7 @@ export const Watch = () => {
       initialEpisode: null,
       lang: 'ar' as 'ar' | 'en'
     }
-  }, [typeParam, idParam, slugParam, s, e, langParam, isNumericId])
+  }, [typeParam, idParam, slugParam, s, e, langParam, isNumericId, location.pathname])
 
   // 1. Check for partyId in URL and verify user
   useEffect(() => {
@@ -158,6 +162,10 @@ export const Watch = () => {
     return Number(e)
   }, [e, initialEpisode])
 
+  const type = initialType
+  const id = resolvedId || initialId
+  const slug = initialSlug
+
   // Initial Sync from URL or SearchParams
   useEffect(() => {
     const sFromQuery = Number(sp.get('season'))
@@ -181,6 +189,13 @@ export const Watch = () => {
     if (eNum) setEpisode(eNum)
   }, [sNum, eNum])
 
+  useEffect(() => {
+    if (type !== 'tv') return
+    if (!id) return
+    if (sNum && eNum) return
+    navigate(`/watch/tv/${id}/s${season || 1}/ep${episode || 1}`, { replace: true })
+  }, [type, id, sNum, eNum, season, episode, navigate])
+
   const [mounted, setMounted] = useState(false)
   
   useEffect(() => {
@@ -198,10 +213,6 @@ export const Watch = () => {
       navigate(`/watch/tv/${id}/s${season}/ep${newEpisode}`, { replace: true })
     }
   }
-
-  const type = initialType
-  const id = resolvedId || initialId
-  const slug = initialSlug
 
   const { elapsed, setElapsed } = useWatchProgress({ user, id: id || null, type, season, episode })
   

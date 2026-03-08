@@ -5,6 +5,7 @@ import { Play, ExternalLink, Monitor, Trash2, Copy } from 'lucide-react'
 import { toast } from 'sonner'
 import { logger } from '../../lib/logger'
 import { tmdb } from '../../lib/tmdb'
+import { SERVER_PROVIDERS, buildDlVidsrcUrl, generateServerUrl } from '../../lib/serverCatalog'
 
 type ServerStatus = 'unknown' | 'clean' | 'broken' | 'ads_1' | 'ads_2' | 'ads_3' | 'ads_4' | 'ads_5' | 'ads_6' | 'ads_7' | 'ads_8' | 'ads_9'
 
@@ -33,134 +34,7 @@ const serverFamily = (name: string) => {
   return 'Other'
 }
 
-const buildAutoEmbedUrl = (type: 'movie' | 'tv', tmdbId: string, season: number, episode: number) => {
-  if (type === 'movie') return `https://autoembed.co/movie/tmdb/${tmdbId}`
-  return `https://autoembed.co/tv/tmdb/${tmdbId}-${season}-${episode}`
-}
-
-const buildDlVidsrcUrl = (type: 'movie' | 'tv', tmdbId: string, season: number, episode: number) => {
-  if (type === 'movie') return `https://dl.vidsrc.vip/movie/${tmdbId}`
-  return `https://dl.vidsrc.vip/tv/${tmdbId}/${season}/${episode}`
-}
-
-const addParamIfMissing = (url: string, key: string, value: string) => {
-  const hasParam = new RegExp(`([?&])${key}=`, 'i').test(url)
-  if (hasParam) return url
-  const sep = url.includes('?') ? '&' : (url.includes('&season=') && !url.includes('?') ? '&' : '?')
-  return `${url}${sep}${key}=${value}`
-}
-
-const withArabicSubtitleHint = (url: string, providerName: string) => {
-  const lower = providerName.toLowerCase()
-  const isTvUrl = url.includes('/tv/') || url.includes('&season=') || url.includes('s=') || url.includes('{season}')
-  if (!isTvUrl) {
-    if (lower.includes('autoembed') || lower.includes('111movies')) {
-      return addParamIfMissing(url, 'lang', 'ar')
-    }
-    return url
-  }
-  if (providerName.toLowerCase().includes('smashy') && url.includes('&season=') && !url.includes('?')) {
-    return `${url}&sub=ar`
-  }
-  if (lower.includes('vidsrc')) {
-    let next = url
-    next = addParamIfMissing(next, 'subtitles', 'ar')
-    next = addParamIfMissing(next, 'lang', 'ar')
-    return next
-  }
-  if (lower.includes('autoembed')) {
-    let next = url
-    next = addParamIfMissing(next, 'lang', 'ar')
-    next = addParamIfMissing(next, 'subtitles', 'ar')
-    return next
-  }
-  if (lower.includes('2embed')) {
-    let next = url
-    next = addParamIfMissing(next, 'subtitles', 'ar')
-    next = addParamIfMissing(next, 'lang', 'ar')
-    return next
-  }
-  if (lower.includes('111movies')) return addParamIfMissing(url, 'lang', 'ar')
-  if (lower.includes('smashy') || lower.includes('streamwish')) {
-    let next = url
-    next = addParamIfMissing(next, 'sub', 'ar')
-    next = addParamIfMissing(next, 'lang', 'ar')
-    return next
-  }
-  return url
-}
-
-const buildTestUrl = (
-  name: string,
-  pattern: string,
-  type: 'movie' | 'tv',
-  tmdbId: string,
-  imdbId: string,
-  season: number,
-  episode: number
-) => {
-  let normalizedPattern = pattern
-  const isAutoEmbed = name.toLowerCase().includes('autoembed')
-  const isVidsrc = name.toLowerCase().includes('vidsrc')
-  const isSmashy = name.toLowerCase().includes('smashy')
-  const is111Movies = name.toLowerCase().includes('111movies')
-  const isMovieBox = name.toLowerCase().includes('moviebox')
-  const isStreamWish = name.toLowerCase().includes('streamwish')
-
-  if (type === 'tv') {
-    if (name.toLowerCase().includes('vidsrc.cc')) {
-      const tvId = imdbId || tmdbId
-      return withArabicSubtitleHint(`https://vidsrc.cc/v2/embed/tv/${tvId}?autoPlay=false&s=${season}&e=${episode}`, name)
-    }
-    if (name.toLowerCase().includes('2embed')) {
-      const origin = new URL(pattern).origin
-      return withArabicSubtitleHint(`${origin}/embedtv/${tmdbId}&s=${season}&e=${episode}`, name)
-    }
-    if (isAutoEmbed) return withArabicSubtitleHint(buildAutoEmbedUrl('tv', tmdbId, season, episode), name)
-    if (isSmashy) return withArabicSubtitleHint(`https://player.smashy.stream/tv/${tmdbId}&season=${season}&episode=${episode}`, name)
-    if (is111Movies) return withArabicSubtitleHint(`https://111movies.net/tv/${tmdbId}/${season}/${episode}`, name)
-    if (isMovieBox) return withArabicSubtitleHint(`https://moviebox.xyz/embed/tv/${tmdbId}/${season}/${episode}`, name)
-    if (isStreamWish) return withArabicSubtitleHint(`https://streamwish.to/e/${tmdbId}?season=${season}&episode=${episode}`, name)
-    if (isVidsrc) {
-      const domain = new URL(pattern).origin
-      return withArabicSubtitleHint(`${domain}/embed/tv/${tmdbId}/${season}/${episode}`, name)
-    }
-
-    normalizedPattern = normalizedPattern
-      .replace('/movie/', '/tv/')
-      .replace('tmdb-movie-', 'tmdb-tv-')
-      .replace('movie/tmdb/{id}', 'tv/tmdb/{id}-{season}-{episode}')
-      .replace('/movie/{id}', '/tv/{id}/{season}/{episode}')
-      .replace('/embed/{id}', '/embed/tv/{id}/{season}/{episode}')
-      .replace('video_id={id}&tmdb=1', 'video_id={id}&tmdb=1&s={season}&e={episode}')
-    if (!normalizedPattern.includes('{season}') && !normalizedPattern.includes('{episode}')) {
-      const sep = normalizedPattern.includes('?') ? '&' : '?'
-      normalizedPattern = `${normalizedPattern}${sep}season={season}&episode={episode}`
-    }
-  }
-  if (type === 'movie' && isSmashy) return withArabicSubtitleHint(`https://player.smashy.stream/movie/${tmdbId}`, name)
-  if (type === 'movie' && is111Movies) return withArabicSubtitleHint(`https://111movies.com/movie/${tmdbId}`, name)
-  if (type === 'movie' && isAutoEmbed) return withArabicSubtitleHint(buildAutoEmbedUrl('movie', tmdbId, season, episode), name)
-  const built = normalizedPattern
-    .replace('{id}', tmdbId)
-    .replace('{imdb}', '')
-    .replace('{season}', String(season))
-    .replace('{episode}', String(episode))
-  return withArabicSubtitleHint(built, name)
-}
-
-const DEFAULT_SERVER_PATTERNS = [
-  { name: 'AutoEmbed Co', pattern: 'https://autoembed.co/movie/tmdb/{id}' },
-  { name: 'VidSrc.net', pattern: 'https://vidsrc.net/embed/movie/{id}' },
-  { name: '2Embed.cc', pattern: 'https://www.2embed.cc/embed/{id}' },
-  { name: '111Movies', pattern: 'https://111movies.com/movie/{id}' },
-  { name: 'VidSrc.io', pattern: 'https://vidsrc.io/embed/movie/{id}' },
-  { name: 'VidSrc.cc', pattern: 'https://vidsrc.cc/v2/embed/movie/{id}' },
-  { name: 'VidSrc.xyz', pattern: 'https://vidsrc.xyz/embed/movie/{id}' },
-  { name: '2Embed.skin', pattern: 'https://www.2embed.skin/embed/{id}' },
-  { name: 'VidSrc.me', pattern: 'https://vidsrc.me/embed/movie/{id}' },
-  { name: 'VidSrc.vip', pattern: 'https://vidsrc.vip/embed/movie/{id}' },
-]
+const DEFAULT_SERVER_PATTERNS = SERVER_PROVIDERS
 
 export const ServerTester = () => {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -233,10 +107,11 @@ export const ServerTester = () => {
       const seen = nameCount.get(p.name) || 0
       nameCount.set(p.name, seen + 1)
       const mappedName = p.name === 'VidSrc.net' && seen > 0 ? 'VidSrc.net (Alt)' : p.name
+      const safeTmdbId = Number(tmdbId) || 0
       return {
         id: `server-${idx}`,
         name: mappedName,
-        url: buildTestUrl(mappedName, p.pattern, type, tmdbId, imdbId, s, e),
+        url: generateServerUrl(p, type, safeTmdbId, s, e, imdbId),
         status: savedMap[mappedName] || 'unknown'
       }
     })
@@ -358,9 +233,10 @@ export const ServerTester = () => {
   const downloadLinks = useMemo(() => {
     const s = Math.max(1, Number(season) || 1)
     const e = Math.max(1, Number(episode) || 1)
+    const safeTmdbId = Number(tmdbId) || 0
     return [{
       name: 'VidSrc DL',
-      url: buildDlVidsrcUrl(type, tmdbId, s, e)
+      url: buildDlVidsrcUrl(type, safeTmdbId, s, e)
     }]
   }, [tmdbId, type, season, episode])
 
@@ -530,7 +406,8 @@ export const ServerTester = () => {
                          e.stopPropagation()
                          const s = Math.max(1, Number(season) || 1)
                          const ep = Math.max(1, Number(episode) || 1)
-                         window.open(buildDlVidsrcUrl(type, tmdbId, s, ep), '_blank', 'noopener,noreferrer')
+                         const safeTmdbId = Number(tmdbId) || 0
+                         window.open(buildDlVidsrcUrl(type, safeTmdbId, s, ep), '_blank', 'noopener,noreferrer')
                        }}
                        className="p-1 px-2 rounded-md bg-zinc-800 hover:bg-zinc-700 text-zinc-300 transition-colors text-[11px] font-bold"
                        title="تحميل"
