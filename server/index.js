@@ -774,6 +774,145 @@ app.get('/api/admin/logs', sensitiveLimiter, async (req, res) => {
   res.json({ logs });
 });
 
+app.get('/api/admin/ops/status', regularLimiter, async (req, res) => {
+  if (!(await ensureAdminJwtRole(req, res, ['admin', 'supervisor']))) return;
+  const startedAt = new Date().toISOString();
+  const websiteDomain = process.env.WEBSITE_DOMAIN || process.env.VITE_DOMAIN || 'https://cinma.online';
+  const apiBase = process.env.API_BASE || process.env.VITE_API_BASE || '';
+  const githubRepo = process.env.GITHUB_REPO || 'Iaaelsadek/cinma';
+  const githubBranch = process.env.GITHUB_BRANCH || 'main';
+
+  const result = {
+    ok: true,
+    generatedAt: startedAt,
+    website: {
+      domain: websiteDomain,
+      apiBase,
+    },
+    env: {
+      hasSupabaseUrl: Boolean(process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL),
+      hasSupabaseAnon: Boolean(process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY),
+      hasSupabaseServiceRole: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY),
+      hasTmdb: Boolean(process.env.VITE_TMDB_API_KEY || process.env.TMDB_API_KEY),
+      hasCloudflareToken: Boolean(process.env.CLOUDFLARE_API_TOKEN),
+      hasKoyebToken: Boolean(process.env.KOYEB_API_TOKEN),
+    },
+    github: {
+      repo: githubRepo,
+      branch: githubBranch,
+      status: 'unavailable',
+    },
+    cloudflare: {
+      status: 'unavailable',
+    },
+    koyeb: {
+      status: 'unavailable',
+    },
+    database: {
+      status: 'unavailable',
+    },
+  };
+
+  try {
+    if (supabase) {
+      const start = Date.now();
+      const { error } = await supabase
+        .from('profiles')
+        .select('id', { head: true, count: 'exact' })
+        .limit(1);
+      result.database = {
+        status: error ? 'error' : 'ok',
+        latencyMs: Date.now() - start,
+        error: error?.message || null,
+      };
+    }
+  } catch (error) {
+    result.database = { status: 'error', error: String(error?.message || error) };
+  }
+
+  try {
+    const ghHeaders = { Accept: 'application/vnd.github+json' };
+    if (process.env.GITHUB_TOKEN) ghHeaders.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
+    const { data } = await axios.get(`https://api.github.com/repos/${githubRepo}/commits/${githubBranch}`, {
+      headers: ghHeaders,
+      timeout: 10000,
+    });
+    result.github = {
+      repo: githubRepo,
+      branch: githubBranch,
+      status: 'ok',
+      commit: data?.sha || null,
+      message: data?.commit?.message || null,
+      authorDate: data?.commit?.author?.date || null,
+      htmlUrl: data?.html_url || null,
+    };
+  } catch (error) {
+    result.github = {
+      repo: githubRepo,
+      branch: githubBranch,
+      status: 'error',
+      error: String(error?.response?.data?.message || error?.message || error),
+    };
+  }
+
+  try {
+    const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+    const projectName = process.env.CLOUDFLARE_PAGES_PROJECT;
+    const token = process.env.CLOUDFLARE_API_TOKEN;
+    if (accountId && projectName && token) {
+      const { data } = await axios.get(
+        `https://api.cloudflare.com/client/v4/accounts/${accountId}/pages/projects/${projectName}/deployments`,
+        {
+          params: { per_page: 1 },
+          headers: { Authorization: `Bearer ${token}` },
+          timeout: 10000,
+        }
+      );
+      const latest = data?.result?.[0] || null;
+      result.cloudflare = {
+        status: latest ? 'ok' : 'unavailable',
+        project: projectName,
+        latestDeploymentId: latest?.id || null,
+        latestDeploymentCreatedOn: latest?.created_on || null,
+        latestDeploymentUrl: latest?.url || null,
+        latestDeploymentState: latest?.latest_stage?.status || latest?.deployment_trigger?.type || null,
+      };
+    }
+  } catch (error) {
+    result.cloudflare = {
+      status: 'error',
+      error: String(error?.response?.data?.errors?.[0]?.message || error?.message || error),
+    };
+  }
+
+  try {
+    const token = process.env.KOYEB_API_TOKEN;
+    const serviceId = process.env.KOYEB_SERVICE_ID;
+    if (token && serviceId) {
+      const { data } = await axios.get(`https://app.koyeb.com/v1/services/${serviceId}/deployments`, {
+        headers: { Authorization: `Bearer ${token}` },
+        params: { limit: 1 },
+        timeout: 10000,
+      });
+      const latest = data?.deployments?.[0] || data?.items?.[0] || null;
+      result.koyeb = {
+        status: latest ? 'ok' : 'unavailable',
+        serviceId,
+        latestDeploymentId: latest?.id || null,
+        latestDeploymentCreatedAt: latest?.created_at || latest?.createdAt || null,
+        latestDeploymentStatus: latest?.status || latest?.state || null,
+      };
+    }
+  } catch (error) {
+    result.koyeb = {
+      status: 'error',
+      error: String(error?.response?.data?.message || error?.message || error),
+    };
+  }
+
+  res.json(result);
+});
+
 app.post('/api/admin/sync', sensitiveLimiter, async (req, res) => {
   if (!ensureAdminToken(req, res)) return;
   lastSyncStatus = 'running';

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Terminal, Database, FileCode, Play, Server, Save, RefreshCw, HardDrive, Command, Folder, File, ChevronRight, ChevronDown, Trash, Upload } from 'lucide-react';
+import { Terminal, Database, FileCode, Play, Server, Save, RefreshCw, HardDrive, Command, Folder, File, ChevronRight, ChevronDown, Trash, Upload, Activity } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../../../lib/supabase';
 
@@ -29,6 +29,7 @@ const SystemControl = () => {
           <TabButton id="files" icon={FileCode} label="Files" active={activeTab} set={setActiveTab} />
           <TabButton id="database" icon={Database} label="Database" active={activeTab} set={setActiveTab} />
           <TabButton id="engines" icon={Play} label="Engines" active={activeTab} set={setActiveTab} />
+          <TabButton id="ops" icon={Activity} label="Ops" active={activeTab} set={setActiveTab} />
         </div>
       </div>
 
@@ -37,6 +38,7 @@ const SystemControl = () => {
         {activeTab === 'files' && <FileManager token={token} />}
         {activeTab === 'database' && <DatabaseManager token={token} />}
         {activeTab === 'engines' && <EngineManager token={token} />}
+        {activeTab === 'ops' && <OpsStatusPanel token={token} />}
       </div>
     </div>
   );
@@ -410,5 +412,99 @@ const EngineCard = ({ title, desc, onClick, running }: any) => (
     <div className="text-sm text-gray-400">{desc}</div>
   </button>
 );
+
+const OpsStatusPanel = ({ token }: { token: string }) => {
+  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/ops/status`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'x-admin-token': token
+        }
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body?.error || 'Failed to load ops status');
+      setData(body);
+    } catch (err: any) {
+      setError(err?.message || 'Failed to load ops status');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  const statusClass = (s: string) => {
+    if (s === 'ok') return 'text-emerald-400';
+    if (s === 'error') return 'text-red-400';
+    return 'text-zinc-400';
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-bold text-cyan-300">Operations Status</h2>
+        <button
+          onClick={load}
+          disabled={loading}
+          className="rounded border border-cyan-600/40 bg-cyan-700/20 px-3 py-1.5 text-xs font-bold text-cyan-300 hover:bg-cyan-700/30 disabled:opacity-50"
+        >
+          {loading ? 'Refreshing...' : 'Refresh'}
+        </button>
+      </div>
+
+      {error && (
+        <div className="rounded border border-red-700/40 bg-red-900/20 p-3 text-sm text-red-300">{error}</div>
+      )}
+
+      {data && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="rounded border border-gray-700 bg-black/40 p-3">
+            <div className="text-xs text-zinc-400 mb-1">GitHub</div>
+            <div className={`text-sm font-bold ${statusClass(data.github?.status)}`}>{data.github?.status || 'unavailable'}</div>
+            <div className="text-xs text-zinc-300 break-all mt-1">{data.github?.repo || '—'}</div>
+            <div className="text-xs text-zinc-500 break-all">{data.github?.commit || '—'}</div>
+          </div>
+
+          <div className="rounded border border-gray-700 bg-black/40 p-3">
+            <div className="text-xs text-zinc-400 mb-1">Cloudflare</div>
+            <div className={`text-sm font-bold ${statusClass(data.cloudflare?.status)}`}>{data.cloudflare?.status || 'unavailable'}</div>
+            <div className="text-xs text-zinc-300 break-all mt-1">{data.cloudflare?.project || '—'}</div>
+            <div className="text-xs text-zinc-500 break-all">{data.cloudflare?.latestDeploymentId || '—'}</div>
+          </div>
+
+          <div className="rounded border border-gray-700 bg-black/40 p-3">
+            <div className="text-xs text-zinc-400 mb-1">Koyeb</div>
+            <div className={`text-sm font-bold ${statusClass(data.koyeb?.status)}`}>{data.koyeb?.status || 'unavailable'}</div>
+            <div className="text-xs text-zinc-300 break-all mt-1">{data.koyeb?.serviceId || '—'}</div>
+            <div className="text-xs text-zinc-500 break-all">{data.koyeb?.latestDeploymentId || '—'}</div>
+          </div>
+
+          <div className="rounded border border-gray-700 bg-black/40 p-3">
+            <div className="text-xs text-zinc-400 mb-1">Database</div>
+            <div className={`text-sm font-bold ${statusClass(data.database?.status)}`}>{data.database?.status || 'unavailable'}</div>
+            <div className="text-xs text-zinc-300 mt-1">Latency: {data.database?.latencyMs ?? '—'} ms</div>
+            <div className="text-xs text-zinc-500 break-all">{data.database?.error || '—'}</div>
+          </div>
+
+          <div className="rounded border border-gray-700 bg-black/40 p-3 md:col-span-2">
+            <div className="text-xs text-zinc-400 mb-1">Website</div>
+            <div className="text-xs text-zinc-300 break-all">Domain: {data.website?.domain || '—'}</div>
+            <div className="text-xs text-zinc-300 break-all">API Base: {data.website?.apiBase || '—'}</div>
+            <div className="text-xs text-zinc-500 break-all mt-1">Generated At: {data.generatedAt || '—'}</div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 export default SystemControl;
