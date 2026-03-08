@@ -4,6 +4,7 @@ import { getUserLists, createUserList, addItemToList, removeItemFromList, getLis
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import { clsx } from 'clsx'
+import { logger } from '../../../lib/logger'
 
 interface AddToListModalProps {
   userId: string
@@ -36,7 +37,7 @@ export const AddToListModal = ({ userId, contentId, contentType, onClose, lang =
       }
       setItemInLists(listsWithItem)
     } catch (error) {
-      console.error('Error fetching lists:', error)
+      logger.error('Error fetching lists:', error)
     } finally {
       setLoading(false)
     }

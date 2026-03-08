@@ -9,7 +9,6 @@ import { getProfile } from './lib/supabase'
 import { useLang } from './state/useLang'
 import { setTmdbLanguage } from './lib/tmdb'
 import { useInitAuth } from './hooks/useInitAuth'
-import { QuranPlayerProvider } from './context/QuranPlayerContext'
 import { PwaProvider } from './context/PwaContext'
 import { PageLoader } from './components/common/PageLoader'
 import { ScrollToTop } from './components/utils/ScrollToTop'
@@ -33,6 +32,7 @@ const CinematicDetails = lazy(() => import('./pages/media/CinematicDetails').the
 const GameDetails = lazy(() => import('./pages/media/GameDetails').then(m => ({ default: m.GameDetails })))
 const SoftwareDetails = lazy(() => import('./pages/media/SoftwareDetails').then(m => ({ default: m.SoftwareDetails })))
 const Actor = lazy(() => import('./pages/media/Actor').then(m => ({ default: m.Actor })))
+const PartyJoin = lazy(() => import('./pages/media/PartyJoin').then(m => ({ default: m.PartyJoin })))
 
 // Discovery
 const Search = lazy(() => import('./pages/discovery/Search').then(m => ({ default: m.Search })))
@@ -49,7 +49,7 @@ const PlaysPage = lazy(() => import('./pages/discovery/Plays').then(m => ({ defa
 const ClassicsPage = lazy(() => import('./pages/discovery/Classics').then(m => ({ default: m.ClassicsPage })))
 const SummariesPage = lazy(() => import('./pages/discovery/Summaries').then(m => ({ default: m.SummariesPage })))
 const QuranPage = lazy(() => import('./pages/discovery/Quran').then(m => ({ default: m.QuranPage })))
-const QuranRadio = lazy(() => import('./pages/discovery/QuranRadio').then(m => ({ default: m.QuranRadio })))
+const QuranRadio = lazy(() => import('./pages/discovery/QuranRadio'))
 const RamadanPage = lazy(() => import('./pages/discovery/Ramadan').then(m => ({ default: m.RamadanPage })))
 const ReciterDetails = lazy(() => import('./pages/media/ReciterDetails').then(m => ({ default: m.ReciterDetails })))
 
@@ -76,6 +76,7 @@ const AdminSystemControl = lazy(() => import('./pages/admin/system').then(m => (
 const AddMovie = lazy(() => import('./pages/admin/AddMovie').then(m => ({ default: m.AddMovie })))
 const MoviesManage = lazy(() => import('./pages/admin/MoviesManage').then(m => ({ default: m.MoviesManage })))
 const ContentHealth = lazy(() => import('./pages/admin/ContentHealth').then(m => ({ default: m.ContentHealth })))
+const ServerTester = lazy(() => import('./pages/admin/ServerTester').then(m => ({ default: m.ServerTester })))
 
 import { SeriesRouteHandler } from './components/routing/SeriesRouteHandler'
 
@@ -146,7 +147,6 @@ const App = () => {
   const navigate = useNavigate()
   return (
     <PwaProvider>
-      <QuranPlayerProvider>
         <MainLayout>
           <ScrollToTop />
           <NetworkStatus />
@@ -156,11 +156,13 @@ const App = () => {
             
             {/* Media Routes */}
             <Route path="/movie/:id" element={<MovieDetails />} />
+            <Route path="/party/:partyId" element={<PartyJoin />} />
 
             {/* SEO Friendly Watch Routes */}
             <Route path="/video/:id" element={<WatchVideo />} />
         <Route path="/watch/yt/:id" element={<WatchVideo />} />
         <Route path="/watch/video/:id" element={<WatchVideo />} />
+        <Route path="/watch/dm/:id" element={<WatchVideo />} />
         
         {/* ID-based routes should come BEFORE SEO routes to avoid conflicts */}
         <Route path="/watch/:type/:id/:s/:e" element={<Watch />} />
@@ -304,6 +306,8 @@ const App = () => {
             <Route path="/terms" element={<Terms />} />
             <Route path="/privacy" element={<Privacy />} />
 
+            <Route path="/server-tester" element={<ServerTester />} />
+
             {/* Admin — غرفة القيادة */}
             <Route path="/admin/setup" element={<SetupAdmin />} />
             <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
@@ -319,8 +323,8 @@ const App = () => {
               <Route path="series/:id/season/:seasonId" element={<SeasonManage />} />
               <Route path="movies" element={<MoviesManage />} />
               <Route path="add-movie" element={<AddMovie />} />
-              <Route path="content-health" element={<ContentHealth />} />
-              <Route path="users" element={<ProtectedSuperAdmin><AdminUsersPage /></ProtectedSuperAdmin>} />
+                <Route path="content-health" element={<ContentHealth />} />
+                <Route path="users" element={<ProtectedSuperAdmin><AdminUsersPage /></ProtectedSuperAdmin>} />
               <Route path="settings" element={<ProtectedSuperAdmin><AdminSettingsPage /></ProtectedSuperAdmin>} />
               <Route path="ads" element={<ProtectedSuperAdmin><AdminAdsPage /></ProtectedSuperAdmin>} />
               <Route path="backup" element={<ProtectedSuperAdmin><AdminBackupPage /></ProtectedSuperAdmin>} />
@@ -331,7 +335,6 @@ const App = () => {
         <AdsManager type="popunder" position="global" />
         <Toaster richColors position="top-center" toastOptions={{ style: { zIndex: 999999 } }} />
         </MainLayout>
-      </QuranPlayerProvider>
     </PwaProvider>
   )
 }

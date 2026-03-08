@@ -29,7 +29,7 @@ const AdminSettingsPage = () => {
     defaultValues: {
       id: 1,
       site_name: 'Cinema Online',
-      logo_url: 'https://cinema.online/logo.png',
+      logo_url: 'https://cinma.online/logo.png',
       seo_title: 'Best Movies & Series',
       seo_desc: 'Watch the latest movies and series online in high quality.',
       seo_keywords: 'movies, series, cinema, online, watch',

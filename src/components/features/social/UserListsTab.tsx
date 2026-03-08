@@ -4,6 +4,7 @@ import { getUserLists, deleteUserList } from '../../../lib/supabase'
 import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
+import { logger } from '../../../lib/logger'
 
 interface UserListsTabProps {
   userId: string
@@ -19,7 +20,7 @@ export const UserListsTab = ({ userId, lang = 'ar' }: UserListsTabProps) => {
       const data = await getUserLists(userId)
       setLists(data)
     } catch (error) {
-      console.error('Error fetching lists:', error)
+      logger.error('Error fetching lists:', error)
     } finally {
       setLoading(false)
     }

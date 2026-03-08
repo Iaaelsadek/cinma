@@ -78,6 +78,50 @@ class ExternalContentFetcher:
             print(f"Error fetching YouTube playlist: {e}")
             return []
 
+    def _validate_sequel_match(self, query, title):
+        """
+        Check if the fetched title matches the query, avoiding part/season mismatches.
+        Returns True if it's a safe match, False otherwise.
+        """
+        q_norm = query.lower()
+        t_norm = title.lower()
+        
+        # Define patterns that indicate specific parts/seasons (excluding 1)
+        # We assume 1 is default, so mismatches with 1 are usually safe unless explicit "Part 1" vs "Part 2"
+        indicators = [
+            'part 2', 'part 3', 'part 4', 'part 5',
+            'vol 2', 'vol 3', 'vol 4',
+            'season 2', 'season 3', 'season 4', 'season 5',
+            'chapter 2', 'chapter 3', 'chapter 4',
+            ' 2 ', ' 3 ', ' 4 ', ' 5 ', # Surrounded by spaces to avoid matching inside words like "2024"
+            ' II ', ' III ', ' IV ',
+            'الجزء الثاني', 'الجزء الثالث', 'الجزء الرابع',
+            'الموسم الثاني', 'الموسم الثالث', 'الموسم الرابع',
+            'جزء 2', 'جزء 3', 'جزء 4'
+        ]
+        
+        for indicator in indicators:
+            in_query = indicator in q_norm
+            in_title = indicator in t_norm
+            
+            # If one has it and the other doesn't, it's likely a mismatch
+            if in_query != in_title:
+                # Special case: If query has "2" and title has "II", or vice versa
+                # This simple check might be too strict if we don't normalize numbers.
+                # But generally, if I search "Spider-Man 2", I expect "2" or "II" in title.
+                # If title is "Spider-Man", it's a mismatch.
+                # If title is "Spider-Man 3", it's a mismatch (both have indicator logic handled separately)
+                
+                # Check for Roman numeral equivalence
+                if indicator.strip() == '2' and ' II ' in t_norm: continue
+                if indicator.strip() == '3' and ' III ' in t_norm: continue
+                if indicator.strip() == 'II' and ' 2 ' in t_norm: continue
+                if indicator.strip() == 'III' and ' 3 ' in t_norm: continue
+                
+                return False
+                
+        return True
+
     def search_and_fetch_videos(self, query, category='video', limit=20):
         """Search YouTube and fetch videos."""
         print(f"Searching YouTube for: {query} ({category})")
@@ -89,18 +133,45 @@ class ExternalContentFetcher:
         
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                # If searching for summaries, fetch more results to allow for filtering
+                search_limit = 50 if category == 'summary' else limit
                 # ytsearch{limit}:{query}
-                search_query = f"ytsearch{limit}:{query}"
+                search_query = f"ytsearch{search_limit}:{query}"
                 info = ydl.extract_info(search_query, download=False)
                 
                 if 'entries' in info:
                     videos = []
+                    valid_entries = []
+
+                    # First pass: Filter and collect valid entries
                     for entry in info['entries']:
                         if not entry: continue
                         # Skip if no title or id
                         if not entry.get('title') or not entry.get('id'):
                             continue
 
+                        duration = entry.get('duration') or 0
+                        
+                        # Apply strict duration filter for summaries (15 min to 90 min)
+                        if category == 'summary':
+                            if not (900 <= duration <= 5400):
+                                continue
+                                
+                        # Apply strict sequel/part matching to avoid mixing up Part 1/2
+                        if not self._validate_sequel_match(query, entry.get('title', '')):
+                            continue
+
+                        valid_entries.append(entry)
+
+                    # Second pass: Sort if needed (Highest Views)
+                    if category == 'summary':
+                        # Sort by view count descending
+                        valid_entries.sort(key=lambda x: x.get('view_count', 0) or 0, reverse=True)
+                        # Take top 'limit'
+                        valid_entries = valid_entries[:limit]
+                    
+                    # Third pass: Process and store
+                    for entry in valid_entries:
                         video_data = {
                             'id': entry.get('id'),
                             'title': entry.get('title'),

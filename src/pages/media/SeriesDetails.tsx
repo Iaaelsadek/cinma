@@ -99,27 +99,22 @@ const SeriesDetails = ({ id: propId }: SeriesDetailsProps = {}) => {
 
   // SEO Schema
   const schemaData = useMemo(() => {
-    if (!remote.data) return null;
-    const s = remote.data
+    if (!series.data) return null;
     return {
       "@context": "https://schema.org",
       "@type": "TVSeries",
-      "name": s.name,
-      "image": s.backdrop_path ? `https://image.tmdb.org/t/p/w780${s.backdrop_path}` : undefined,
-      "description": s.overview,
-      "startDate": s.first_air_date,
-      "actor": s.aggregate_credits?.cast?.slice(0, 5).map((actor: any) => ({
-        "@type": "Person",
-        "name": actor.name
-      })),
-      "aggregateRating": s.vote_average ? {
+      "name": series.data.name,
+      "image": series.data.poster_path ? `https://image.tmdb.org/t/p/w780${series.data.poster_path}` : undefined,
+      "description": series.data.overview,
+      "datePublished": series.data.first_air_date,
+      "aggregateRating": {
         "@type": "AggregateRating",
-        "ratingValue": s.vote_average,
+        "ratingValue": series.data.vote_average,
         "bestRating": "10",
-        "ratingCount": s.vote_count
-      } : undefined
+        "ratingCount": series.data.vote_count
+      }
     }
-  }, [remote.data])
+  }, [series.data])
 
   const dualTitles = useDualTitles(series.data || {})
 

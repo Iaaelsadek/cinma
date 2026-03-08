@@ -1,8 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { toast } from 'sonner'
 import { errorLogger } from '../../services/errorLogging'
+import { Navigate } from 'react-router-dom'
+import { useAuth } from '../../hooks/useAuth'
 
 const API_BASE = import.meta.env.VITE_API_BASE || ''
 
@@ -30,15 +32,50 @@ async function getProfiles(search: string) {
       category: 'network',
       context: { error: err }
     })
-    const res = await fetch(`${API_BASE}/api/profiles?search=${encodeURIComponent(search)}`)
+    const headers = await getAdminRequestHeaders()
+    const res = await fetch(`${API_BASE}/api/admin/proxy/profiles?select=id,username,role,banned,created_at&order=created_at&orderAsc=false`, { headers })
     if (!res.ok) throw err
-    return await res.json()
+    const rows = await res.json()
+    if (!search.trim()) return rows as ProfileRow[]
+    const term = search.trim().toLowerCase()
+    return (rows as ProfileRow[]).filter(p => (p.username || '').toLowerCase().includes(term))
   }
 }
 
+async function getAdminRequestHeaders() {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  const { data: { session } } = await supabase.auth.getSession()
+  if (session?.access_token) {
+    headers.Authorization = `Bearer ${session.access_token}`
+  }
+  const adminToken = sessionStorage.getItem('admin_sync_token') || ''
+  if (adminToken) {
+    headers['x-admin-token'] = adminToken
+  }
+  return headers
+}
+
 const AdminUsersPage = () => {
+  const { user, profile, loading: authLoading, refreshProfile } = useAuth()
   const [search, setSearch] = useState('')
   const q = useQuery({ queryKey: ['profiles', search], queryFn: () => getProfiles(search) })
+
+  useEffect(() => {
+    if (user && !profile) {
+      refreshProfile(true).catch(() => {})
+    }
+  }, [user, profile, refreshProfile])
+
+  if (authLoading || (user && !profile)) {
+    return <div className="p-8 text-center text-zinc-500">جاري التحقق من الصلاحيات...</div>
+  }
+  if (!user) {
+    return <Navigate to="/login" replace />
+  }
+  if (profile?.role !== 'admin') {
+    return <Navigate to="/admin/dashboard" replace />
+  }
+
   const updateRole = useMutation({
     mutationFn: async (args: { id: string; role: 'user' | 'admin' | 'supervisor' }) => {
       const { error } = await supabase.from('profiles').update({ role: args.role }).eq('id', args.id)
@@ -49,9 +86,10 @@ const AdminUsersPage = () => {
             category: 'network',
             context: { error, args }
          })
+         const headers = await getAdminRequestHeaders()
          const res = await fetch(`${API_BASE}/api/profile/${args.id}/role`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers,
             body: JSON.stringify({ role: args.role })
          })
          if (!res.ok) throw error
@@ -74,9 +112,10 @@ const AdminUsersPage = () => {
             category: 'network',
             context: { error, args }
          })
+         const headers = await getAdminRequestHeaders()
          const res = await fetch(`${API_BASE}/api/profile/${args.id}/ban`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers,
             body: JSON.stringify({ banned: args.banned })
          })
          if (!res.ok) throw error

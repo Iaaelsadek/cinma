@@ -169,23 +169,34 @@ export const MovieCard = memo(({ movie, index = 0 }: { movie: Movie; index?: num
         to={watchUrl}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        className="block relative h-full w-full lumen-focus-ring rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-lumen-gold focus-visible:outline-offset-2"
+        draggable={false}
+        onDragStart={(e) => e.preventDefault()}
+        className="block relative h-full w-full lumen-focus-ring rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-lumen-gold focus-visible:outline-offset-2 select-none"
       >
         <div className="lumen-card h-full flex flex-col transition-transform duration-300 ease-lumen hover:scale-[1.03] focus-within:scale-[1.02]">
           {/* Poster */}
           <div className="relative aspect-[2/3] w-full overflow-hidden bg-lumen-muted">
-            <TmdbImage
-              path={movie.poster_path}
-              alt={title}
-              size="w342"
-              className="h-full w-full"
-              imgClassName={`transition-all duration-500 ease-lumen ${isHovered ? 'scale-105 brightness-75' : 'scale-100'}`}
-              fallback={
-                <div className="flex h-full w-full items-center justify-center bg-lumen-muted text-lumen-silver">
-                  <Play size={40} className="opacity-30" />
-                </div>
-              }
-            />
+            {(movie as any).thumbnail ? (
+              <img
+                src={(movie as any).thumbnail}
+                alt={title}
+                className={`h-full w-full object-cover transition-all duration-500 ease-lumen ${isHovered ? 'scale-105 brightness-75' : 'scale-100'}`}
+                loading="lazy"
+              />
+            ) : (
+              <TmdbImage
+                path={movie.poster_path}
+                alt={title}
+                size="w342"
+                className="h-full w-full"
+                imgClassName={`transition-all duration-500 ease-lumen ${isHovered ? 'scale-105 brightness-75' : 'scale-100'}`}
+                fallback={
+                  <div className="flex h-full w-full items-center justify-center bg-lumen-muted text-lumen-silver">
+                    <Play size={40} className="opacity-30" />
+                  </div>
+                }
+              />
+            )}
 
             {/* Lazy Video Layer */}
             <AnimatePresence>

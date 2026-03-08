@@ -88,7 +88,7 @@ create policy "Public movies are viewable by everyone" on movies for select usin
 create policy "Public series are viewable by everyone" on series for select using (true);
 create policy "Public seasons are viewable by everyone" on seasons for select using (true);
 create policy "Public episodes are viewable by everyone" on episodes for select using (true);
-create policy "Public profiles are viewable by everyone" on profiles for select using (true);
+create policy "Users can view their own profile" on profiles for select using (auth.uid() = id);
 
 -- Admin write access (Assuming simple role check or auth.uid() check if using custom claims, 
 -- for now allow authenticated users to insert/update for simplicity in migration context, 

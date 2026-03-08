@@ -3,6 +3,8 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
+import crypto from 'crypto';
+import zlib from 'zlib';
 
 // Load environment variables
 dotenv.config();
@@ -42,6 +44,7 @@ class AutomaticBackupSystem {
   private supabase: SupabaseClient;
   private config: BackupConfig;
   private isRunning: boolean;
+  private backupInterval?: ReturnType<typeof setInterval>;
 
   constructor(config: BackupConfig) {
     this.supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
@@ -115,22 +118,7 @@ class AutomaticBackupSystem {
         data: data || []
       };
       
-      // Write to file
-      const content = JSON.stringify(backupData, null, 2);
-      let finalContent = content;
-      
-      // Compress if requested
-      if (this.config.compress) {
-        // Simple compression - remove whitespace
-        finalContent = JSON.stringify(backupData);
-      }
-      
-      // Encrypt if requested (simple XOR for demonstration)
-      if (this.config.encrypt) {
-        finalContent = this.simpleEncrypt(finalContent);
-      }
-      
-      fs.writeFileSync(backupPath, finalContent);
+      this.writeBackupFile(backupPath, backupData);
       
       console.log(`✅ Table ${table} backed up successfully (${data?.length || 0} rows)`);
       return true;
@@ -141,23 +129,91 @@ class AutomaticBackupSystem {
     }
   }
 
-  private simpleEncrypt(text: string): string {
-    const key = 'backup_encryption_key_2024';
-    let result = '';
-    for (let i = 0; i < text.length; i++) {
-      result += String.fromCharCode(text.charCodeAt(i) ^ key.charCodeAt(i % key.length));
-    }
-    return Buffer.from(result).toString('base64');
+  private getEncryptionKey(): Buffer {
+    const secret = process.env.BACKUP_ENCRYPTION_KEY || SERVICE_ROLE_KEY || 'cinma-backup-fallback-key';
+    return crypto.createHash('sha256').update(secret).digest();
   }
 
-  private simpleDecrypt(encryptedText: string): string {
-    const key = 'backup_encryption_key_2024';
-    const text = Buffer.from(encryptedText, 'base64').toString();
-    let result = '';
-    for (let i = 0; i < text.length; i++) {
-      result += String.fromCharCode(text.charCodeAt(i) ^ key.charCodeAt(i % key.length));
+  private encryptBuffer(buffer: Buffer) {
+    const key = this.getEncryptionKey();
+    const iv = crypto.randomBytes(12);
+    const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+    const encrypted = Buffer.concat([cipher.update(buffer), cipher.final()]);
+    const authTag = cipher.getAuthTag();
+    return {
+      iv: iv.toString('base64'),
+      authTag: authTag.toString('base64'),
+      data: encrypted.toString('base64')
+    };
+  }
+
+  private decryptBuffer(payload: { iv: string; authTag: string; data: string }): Buffer {
+    const key = this.getEncryptionKey();
+    const decipher = crypto.createDecipheriv(
+      'aes-256-gcm',
+      key,
+      Buffer.from(payload.iv, 'base64')
+    );
+    decipher.setAuthTag(Buffer.from(payload.authTag, 'base64'));
+    return Buffer.concat([
+      decipher.update(Buffer.from(payload.data, 'base64')),
+      decipher.final()
+    ]);
+  }
+
+  private writeBackupFile(backupPath: string, payload: any) {
+    const serialized = Buffer.from(JSON.stringify(payload), 'utf8');
+    const compressed = this.config.compress;
+    const payloadBuffer = compressed ? zlib.gzipSync(serialized, { level: 9 }) : serialized;
+
+    if (this.config.encrypt) {
+      const encrypted = this.encryptBuffer(payloadBuffer);
+      const envelope = {
+        format: 'cinma-backup.v2',
+        encrypted: true,
+        compressed,
+        algorithm: 'aes-256-gcm',
+        payload: encrypted
+      };
+      fs.writeFileSync(backupPath, JSON.stringify(envelope, null, 2), 'utf8');
+      return;
     }
-    return result;
+
+    if (compressed) {
+      const envelope = {
+        format: 'cinma-backup.v2',
+        encrypted: false,
+        compressed: true,
+        encoding: 'base64',
+        data: payloadBuffer.toString('base64')
+      };
+      fs.writeFileSync(backupPath, JSON.stringify(envelope, null, 2), 'utf8');
+      return;
+    }
+
+    fs.writeFileSync(backupPath, JSON.stringify(payload, null, 2), 'utf8');
+  }
+
+  private readBackupFile(backupPath: string): any {
+    const content = fs.readFileSync(backupPath, 'utf8');
+    const parsed = JSON.parse(content);
+
+    if (!parsed || parsed.format !== 'cinma-backup.v2') {
+      return parsed;
+    }
+
+    let payloadBuffer: Buffer;
+
+    if (parsed.encrypted) {
+      payloadBuffer = this.decryptBuffer(parsed.payload);
+    } else if (parsed.compressed && parsed.encoding === 'base64') {
+      payloadBuffer = Buffer.from(parsed.data, 'base64');
+    } else {
+      return parsed;
+    }
+
+    const rawBuffer = parsed.compressed ? zlib.gunzipSync(payloadBuffer) : payloadBuffer;
+    return JSON.parse(rawBuffer.toString('utf8'));
   }
 
   private async backupAuthData(backupPath: string): Promise<boolean> {
@@ -177,7 +233,7 @@ class AutomaticBackupSystem {
         users_count: 0 // Would need to get this from auth.users table
       };
       
-      fs.writeFileSync(backupPath, JSON.stringify(authData, null, 2));
+      this.writeBackupFile(backupPath, authData);
       console.log('✅ Auth backup placeholder created');
       return true;
       
@@ -207,7 +263,7 @@ class AutomaticBackupSystem {
         note: 'Storage backup includes metadata only. Files need separate backup.'
       };
       
-      fs.writeFileSync(backupPath, JSON.stringify(storageData, null, 2));
+      this.writeBackupFile(backupPath, storageData);
       console.log('✅ Storage metadata backed up');
       return true;
       
@@ -318,7 +374,7 @@ class AutomaticBackupSystem {
       // Create metadata file
       const metadata = await this.createBackupMetadata(this.config.tables);
       const metadataPath = path.join(backupDir, 'metadata.json');
-      fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2));
+      this.writeBackupFile(metadataPath, metadata);
       
       const duration = Date.now() - startTime;
       console.log(`✅ Backup completed in ${duration}ms`);
@@ -348,7 +404,7 @@ class AutomaticBackupSystem {
         return false;
       }
       
-      const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
+      const metadata = this.readBackupFile(metadataPath);
       console.log(`📋 Backup metadata: ${JSON.stringify(metadata, null, 2)}`);
       
       // Restore tables
@@ -372,15 +428,7 @@ class AutomaticBackupSystem {
     try {
       console.log(`🔄 Restoring table: ${table}`);
       
-      // Read backup file
-      let content = fs.readFileSync(backupPath, 'utf8');
-      
-      // Decrypt if encrypted
-      if (this.config.encrypt) {
-        content = this.simpleDecrypt(content);
-      }
-      
-      const backupData = JSON.parse(content);
+      const backupData = this.readBackupFile(backupPath);
       
       // Clear existing data
       const { error: deleteError } = await this.supabase

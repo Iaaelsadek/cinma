@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Link } from 'react-router-dom'
+import { logger } from '../../lib/logger'
 
 interface BrokenContent {
   tmdb_id: number
@@ -143,7 +144,7 @@ export const ContentHealth = () => {
 
       setContent(processed.sort((a, b) => b.broken_count - a.broken_count))
     } catch (err) {
-      console.error(err)
+      logger.error(err)
       toast.error('فشل تحميل بيانات صحة المحتوى')
     } finally {
       setLoading(false)

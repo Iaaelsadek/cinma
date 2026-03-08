@@ -1,0 +1,44 @@
+name: Link Healer & Cache Generator
+
+on:
+  schedule:
+    # Run twice a week (e.g., Mondays and Thursdays at 00:00 UTC)
+    - cron: '0 0 * * 1,4'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  heal-and-cache:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+          
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install supabase python-dotenv aiohttp requests
+          
+      - name: Run Link Healer
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: python backend/link_healer.py
+        
+      - name: Generate Static Cache
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: python backend/generate_cache.py
+        
+      - name: Commit and Push Cache Changes
+        run: |
+          git config --global user.name 'GitHub Action'
+          git config --global user.email 'action@github.com'
+          git add public/data/homepage_cache.json
+          git commit -m "Update static cache [skip ci]" || echo "No changes to commit"
+          git push

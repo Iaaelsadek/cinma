@@ -19,8 +19,8 @@ dotenv.config({ path: path.join(__dirname, '../.env') });
 const app = express();
 const port = 3001;
 const allowedOrigins = (process.env.WEB_ORIGIN || '').split(',').map((s) => s.trim()).filter(Boolean);
-const apiLimiter = rateLimit({ windowMs: 60 * 1000, max: 100, standardHeaders: true, legacyHeaders: false }); // Increased limit for admin
-const linkLimiter = rateLimit({ windowMs: 60 * 1000, max: 120, standardHeaders: true, legacyHeaders: false });
+const regularLimiter = rateLimit({ windowMs: 60 * 1000, max: 100, standardHeaders: true, legacyHeaders: false });
+const sensitiveLimiter = rateLimit({ windowMs: 60 * 1000, max: 20, standardHeaders: true, legacyHeaders: false });
 const pythonBin = process.env.PYTHON_BIN || 'python';
 const adminToken = process.env.ADMIN_SYNC_TOKEN || ''; // If empty, allows all (dev mode)
 
@@ -78,6 +78,65 @@ function ensureAdminToken(req, res) {
   return false;
 }
 
+async function getAuthContext(req) {
+  if (!supabase) {
+    return { ok: false, status: 500, error: 'Supabase not configured' };
+  }
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return { ok: false, status: 401, error: 'Missing token' };
+  }
+  const token = authHeader.replace('Bearer ', '');
+  const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+  if (userError || !user) {
+    return { ok: false, status: 401, error: 'Invalid token' };
+  }
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('role,banned')
+    .eq('id', user.id)
+    .maybeSingle();
+  if (profileError || !profile) {
+    return { ok: false, status: 403, error: 'Profile not found' };
+  }
+  if (profile.banned) {
+    return { ok: false, status: 403, error: 'User is banned' };
+  }
+  return { ok: true, user, profile };
+}
+
+async function ensureAdminJwtRole(req, res, allowedRoles = ['admin', 'supervisor']) {
+  const ctx = await getAuthContext(req);
+  if (!ctx.ok) {
+    res.status(ctx.status).json({ error: ctx.error });
+    return false;
+  }
+  if (!allowedRoles.includes(ctx.profile.role)) {
+    res.status(403).json({ error: 'Admin access required' });
+    return false;
+  }
+  req.authUser = ctx.user;
+  req.authProfile = ctx.profile;
+  return true;
+}
+
+async function ensureSelfOrAdmin(req, res, targetUserId) {
+  const ctx = await getAuthContext(req);
+  if (!ctx.ok) {
+    res.status(ctx.status).json({ error: ctx.error });
+    return false;
+  }
+  const isSelf = ctx.user.id === targetUserId;
+  const isAdmin = ['admin', 'supervisor'].includes(ctx.profile.role);
+  if (!isSelf && !isAdmin) {
+    res.status(403).json({ error: 'Access denied' });
+    return false;
+  }
+  req.authUser = ctx.user;
+  req.authProfile = ctx.profile;
+  return true;
+}
+
 function runPythonScript(scriptPath) {
   return new Promise((resolve, reject) => {
     // Use the venv python if available
@@ -102,7 +161,7 @@ function runPythonScript(scriptPath) {
 // --- GOD MODE ENDPOINTS ---
 
 // 1. System Shell Execution (SECURED)
-app.post('/api/admin/exec', apiLimiter, async (req, res) => {
+app.post('/api/admin/exec', sensitiveLimiter, async (req, res) => {
   if (!ensureAdminToken(req, res)) return;
   const { command, cwd } = req.body;
   if (!command) return res.status(400).json({ error: 'Command required' });
@@ -141,22 +200,10 @@ app.post('/api/admin/exec', apiLimiter, async (req, res) => {
 app.get('/api/profile/:id', async (req, res) => {
   const { id } = req.params;
   if (!supabase) return res.status(500).json({ error: 'Supabase not configured' });
-  
-  // SECURITY FIX: Require valid Bearer token before fetching user data
-  const authHeader = req.headers.authorization;
-  if (!authHeader) {
-    return res.status(401).json({ error: 'No token provided' });
-  }
-
-  const token = authHeader.replace('Bearer ', '');
-  const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-  
-  if (authError || !user) {
-    return res.status(401).json({ error: 'Invalid token' });
-  }
+  const allowed = await ensureSelfOrAdmin(req, res, id);
+  if (!allowed) return;
 
   try {
-    // Use service_role key (supabase client here is admin) to bypass RLS
     const { data, error } = await supabase
       .from('profiles')
       .select('id, username, avatar_url, role')
@@ -172,7 +219,7 @@ app.get('/api/profile/:id', async (req, res) => {
 });
 
 // --- NEW ENDPOINT FOR ERROR LOGGING (SECURED & RATE LIMITED) ---
-app.post('/api/log', apiLimiter, async (req, res) => {
+app.post('/api/log', regularLimiter, async (req, res) => {
   const { message, severity, category, context, stack, url, user_agent, user_id } = req.body;
   
   if (!supabase) {
@@ -220,7 +267,9 @@ app.post('/api/profile/:id', async (req, res) => {
   const { id } = req.params;
   const { username, avatar_url } = req.body;
   if (!supabase) return res.status(500).json({ error: 'Supabase not configured' });
-  
+  const allowed = await ensureSelfOrAdmin(req, res, id);
+  if (!allowed) return;
+
   try {
     const updates = {};
     if (username !== undefined) updates.username = username;
@@ -243,7 +292,12 @@ app.post('/api/profile/:id/role', async (req, res) => {
   const { id } = req.params;
   const { role } = req.body;
   if (!supabase) return res.status(500).json({ error: 'Supabase not configured' });
-  
+  const allowed = await ensureAdminJwtRole(req, res, ['admin']);
+  if (!allowed) return;
+  if (!['user', 'admin', 'supervisor'].includes(role)) {
+    return res.status(400).json({ error: 'Invalid role' });
+  }
+
   try {
     const { error } = await supabase.from('profiles').update({ role }).eq('id', id);
     if (error) throw error;
@@ -257,7 +311,12 @@ app.post('/api/profile/:id/ban', async (req, res) => {
   const { id } = req.params;
   const { banned } = req.body;
   if (!supabase) return res.status(500).json({ error: 'Supabase not configured' });
-  
+  const allowed = await ensureAdminJwtRole(req, res, ['admin']);
+  if (!allowed) return;
+  if (typeof banned !== 'boolean') {
+    return res.status(400).json({ error: 'Invalid banned value' });
+  }
+
   try {
     const { error } = await supabase.from('profiles').update({ banned }).eq('id', id);
     if (error) throw error;
@@ -270,34 +329,7 @@ app.post('/api/profile/:id/ban', async (req, res) => {
 // --- GENERIC ADMIN PROXY ---
 // Helper: ensure caller is admin (using service role check)
 async function ensureAdmin(req, res) {
-  const token = req.headers.authorization?.replace('Bearer ', '');
-  if (!token) {
-    return res.status(401).json({ error: 'Missing token' });
-  }
-  
-  try {
-    // Verify token and check admin role
-    const { data: { user }, error } = await supabase.auth.getUser(token);
-    if (error || !user) {
-      return res.status(401).json({ error: 'Invalid token' });
-    }
-    
-    // Check if user has admin role
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single();
-    
-    if (!profile || !['admin', 'supervisor'].includes(profile.role)) {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
-    
-    return true; // User is admin
-  } catch (err) {
-    console.error('Admin check error:', err);
-    return res.status(500).json({ error: 'Authentication error' });
-  }
+  return ensureAdminJwtRole(req, res, ['admin', 'supervisor']);
 }
 
 // Admin proxy endpoints with role checking
@@ -419,7 +451,7 @@ app.delete('/api/admin/proxy/:table/:id', async (req, res) => {
 });
 
 // 2. File System Manager
-app.get('/api/admin/fs', apiLimiter, async (req, res) => {
+app.get('/api/admin/fs', sensitiveLimiter, async (req, res) => {
   if (!ensureAdminToken(req, res)) return;
   const targetPath = path.resolve(process.cwd(), req.query.path || '.');
   
@@ -447,7 +479,7 @@ app.get('/api/admin/fs', apiLimiter, async (req, res) => {
   }
 });
 
-app.post('/api/admin/fs', apiLimiter, async (req, res) => {
+app.post('/api/admin/fs', sensitiveLimiter, async (req, res) => {
   if (!ensureAdminToken(req, res)) return;
   const { path: relPath, content } = req.body;
   const targetPath = path.resolve(process.cwd(), relPath);
@@ -465,57 +497,13 @@ app.post('/api/admin/fs', apiLimiter, async (req, res) => {
 });
 
 // 3. Database Manager (SQL Runner)
-app.post('/api/admin/sql', apiLimiter, async (req, res) => {
+app.post('/api/admin/sql', sensitiveLimiter, async (req, res) => {
   if (!ensureAdminToken(req, res)) return;
-  if (!supabase) return res.status(503).json({ error: 'Supabase not configured' });
-
-  const { query } = req.body;
-  if (!query) return res.status(400).json({ error: 'Query required' });
-
-  // Currently Supabase JS client doesn't expose raw SQL execution easily via public API
-  // EXCEPT via rpc if we have a function "exec_sql".
-  // Alternatively, we can use the `pg` library if we had the connection string.
-  // But wait! We can use the postgres connection string if available.
-  // OR we can rely on a python script helper that uses sqlalchemy/psycopg2 which we ALREADY have setup!
-  
-  // Using the Python backend infrastructure to run SQL is safer and reuses existing env vars.
-  // Let's create a temporary python script or use a helper.
-  
-  try {
-    // Write query to temp file
-    const tmpFile = path.join(process.cwd(), 'temp_query.sql');
-    await fs.writeFile(tmpFile, query);
-    
-    // Run python script that reads this file and executes it
-    // We'll assume a 'backend/run_sql.py' exists or create one on the fly?
-    // Let's create a helper 'backend/run_sql.py' if it doesn't exist.
-    // Actually, let's write it now via FS if needed, but for now let's just use exec to run python with inline code? No, too complex escaping.
-    
-    // Better approach: Create 'backend/run_sql.py' that reads stdin or arg.
-    // Let's create the file using FS right here if we can't assume it exists.
-    // But for this response, I'll assume I will create it.
-    
-    const cmd = `.venv\\Scripts\\python.exe backend/run_sql.py "${tmpFile}"`; // Windows
-    // Need to handle platform specific python path
-    const pythonExec = process.platform === 'win32' ? '.venv\\Scripts\\python.exe' : '.venv/bin/python';
-    
-    exec(`${pythonExec} backend/run_sql.py "${tmpFile}"`, { cwd: process.cwd() }, async (error, stdout, stderr) => {
-      await fs.unlink(tmpFile).catch(()=>{}); // Cleanup
-      res.json({
-        error: error ? error.message : null,
-        stdout,
-        stderr,
-        rows: [] // Python script should output JSON if possible
-      });
-    });
-
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  return res.status(403).json({ error: 'sql_endpoint_disabled' });
 });
 
 // 4. Admin Claim (Initial Setup)
-app.post('/api/admin/claim', apiLimiter, async (req, res) => {
+app.post('/api/admin/claim', sensitiveLimiter, async (req, res) => {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(401).json({ error: 'Missing token' });
   
@@ -559,7 +547,7 @@ app.post('/api/admin/claim', apiLimiter, async (req, res) => {
 
 // --- ORIGINAL ENDPOINTS ---
 
-app.post('/api/gemini-summary', apiLimiter, async (req, res) => {
+app.post('/api/gemini-summary', sensitiveLimiter, async (req, res) => {
   const { title, overview } = req.body || {};
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
@@ -588,7 +576,7 @@ app.post('/api/gemini-summary', apiLimiter, async (req, res) => {
   }
 });
 
-app.post('/api/gemini-recommendations', apiLimiter, async (req, res) => {
+app.post('/api/gemini-recommendations', sensitiveLimiter, async (req, res) => {
   const { genres } = req.body || {};
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
@@ -615,7 +603,7 @@ app.post('/api/gemini-recommendations', apiLimiter, async (req, res) => {
   }
 });
 
-app.get('/api/check-link', linkLimiter, async (req, res) => {
+app.get('/api/check-link', sensitiveLimiter, async (req, res) => {
   const { url } = req.query;
 
   if (!url) {
@@ -664,18 +652,129 @@ app.get('/api/check-link', linkLimiter, async (req, res) => {
   }
 });
 
-app.get('/api/admin/health', apiLimiter, async (req, res) => {
+app.get('/api/radio/cairo', regularLimiter, async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+
+  const candidates = [
+    'https://n09.radiojar.com/8s5u5tpdtwzuv?rj-ttl=5&rj-tok=AAABnL1sTdIAdrvVVnc42TdU_Q',
+    'https://stream.radiojar.com/8s5u5tpdtwzuv',
+    'https://n09.radiojar.com/8s5u5tpdtwzuv?rj-ttl=5'
+  ];
+
+  for (const url of candidates) {
+    try {
+      const upstream = await axios.get(url, {
+        responseType: 'stream',
+        timeout: 20000,
+        maxRedirects: 8,
+        headers: {
+          'User-Agent': 'Mozilla/5.0',
+          Accept: '*/*'
+        },
+        validateStatus: (status) => status >= 200 && status < 400
+      });
+
+      const contentType = upstream.headers?.['content-type'];
+      if (contentType) res.setHeader('Content-Type', contentType);
+
+      req.on('close', () => {
+        try {
+          upstream.data?.destroy();
+        } catch {}
+      });
+
+      upstream.data.on('error', () => {
+        if (!res.headersSent) res.status(502);
+        res.end();
+      });
+
+      upstream.data.pipe(res);
+      return;
+    } catch {
+      continue;
+    }
+  }
+
+  res.status(502).json({ error: 'radio_unavailable' });
+});
+
+app.get('/api/prayer/timings', regularLimiter, async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+
+  const lat = Number(req.query.lat);
+  const lon = Number(req.query.lon);
+
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+    return res.status(400).json({ error: 'invalid_coords' });
+  }
+  if (Math.abs(lat) > 90 || Math.abs(lon) > 180) {
+    return res.status(400).json({ error: 'invalid_coords' });
+  }
+
+  try {
+    const upstream = await axios.get('https://api.aladhan.com/v1/timings', {
+      params: {
+        latitude: lat,
+        longitude: lon,
+        method: 5,
+        midnightMode: 0,
+        tune: '0,0,0,0,0,0,0,0,0'
+      },
+      timeout: 10000,
+      headers: { 'User-Agent': 'CinemaOnline/1.0', Accept: 'application/json' },
+      validateStatus: (status) => status >= 200 && status < 400
+    });
+
+    return res.json(upstream.data);
+  } catch (error) {
+    return res.status(502).json({ error: 'upstream_error' });
+  }
+});
+
+app.get('/api/weather/current', regularLimiter, async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+
+  const lat = Number(req.query.lat);
+  const lon = Number(req.query.lon);
+
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+    return res.status(400).json({ error: 'invalid_coords' });
+  }
+  if (Math.abs(lat) > 90 || Math.abs(lon) > 180) {
+    return res.status(400).json({ error: 'invalid_coords' });
+  }
+
+  try {
+    const upstream = await axios.get('https://api.open-meteo.com/v1/forecast', {
+      params: {
+        latitude: lat,
+        longitude: lon,
+        current_weather: true,
+        timezone: 'Africa/Cairo'
+      },
+      timeout: 10000,
+      headers: { 'User-Agent': 'CinemaOnline/1.0', Accept: 'application/json' },
+      validateStatus: (status) => status >= 200 && status < 400
+    });
+
+    return res.json(upstream.data);
+  } catch {
+    return res.status(502).json({ error: 'upstream_error' });
+  }
+});
+
+app.get('/api/admin/health', sensitiveLimiter, async (req, res) => {
   if (!ensureAdminToken(req, res)) return;
   res.json({ lastSyncAt, lastSyncStatus });
 });
 
-app.get('/api/admin/logs', apiLimiter, async (req, res) => {
+app.get('/api/admin/logs', sensitiveLimiter, async (req, res) => {
   if (!ensureAdminToken(req, res)) return;
   const logs = (lastSyncLogs || []).slice(-20);
   res.json({ logs });
 });
 
-app.post('/api/admin/sync', apiLimiter, async (req, res) => {
+app.post('/api/admin/sync', sensitiveLimiter, async (req, res) => {
   if (!ensureAdminToken(req, res)) return;
   lastSyncStatus = 'running';
   lastSyncAt = new Date().toISOString();
@@ -690,7 +789,7 @@ app.post('/api/admin/sync', apiLimiter, async (req, res) => {
   }
 });
 
-app.post('/api/admin/refresh/anime', apiLimiter, async (req, res) => {
+app.post('/api/admin/refresh/anime', sensitiveLimiter, async (req, res) => {
   if (!ensureAdminToken(req, res)) return;
   try {
     const result = await runPythonScript('backend/fetch_anime.py');
@@ -700,7 +799,7 @@ app.post('/api/admin/refresh/anime', apiLimiter, async (req, res) => {
   }
 });
 
-app.post('/api/admin/refresh/quran', apiLimiter, async (req, res) => {
+app.post('/api/admin/refresh/quran', sensitiveLimiter, async (req, res) => {
   if (!ensureAdminToken(req, res)) return;
   try {
     const result = await runPythonScript('backend/fetch_quran.py');
@@ -711,7 +810,7 @@ app.post('/api/admin/refresh/quran', apiLimiter, async (req, res) => {
 });
 
 // --- TMDB PROXY ---
-app.get(/^\/api\/tmdb\/(.*)/, apiLimiter, async (req, res) => {
+app.get(/^\/api\/tmdb\/(.*)/, regularLimiter, async (req, res) => {
   const endpoint = req.params[0];
   const query = req.query;
   const apiKey = process.env.TMDB_API_KEY || query.api_key;
@@ -738,3 +837,18 @@ app.get(/^\/api\/tmdb\/(.*)/, apiLimiter, async (req, res) => {
 app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);
 });
+
+async function refreshHomeViews() {
+  if (!supabase) return;
+  try {
+    await supabase.rpc('refresh_home_materialized_views', { force_refresh: false, min_interval_minutes: 30 });
+  } catch (error) {
+    console.error('Materialized view refresh error:', error?.message || error);
+  }
+}
+
+setInterval(() => {
+  refreshHomeViews();
+}, 30 * 60 * 1000);
+
+refreshHomeViews();

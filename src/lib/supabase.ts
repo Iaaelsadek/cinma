@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { CONFIG } from './constants'
 import { errorLogger } from '../services/errorLogging'
+import { logger } from './logger'
 
 // Fallback to prevent crash if env vars are missing
 const sbUrl = CONFIG.SUPABASE_URL || 'https://placeholder.supabase.co'
@@ -38,7 +39,7 @@ async function fetchWithTimeout(resource: RequestInfo | URL, options: FetchOptio
   } catch (error: any) {
     clearTimeout(id);
     if (error.name === 'AbortError') {
-      console.warn('[Supabase] Request timed out:', resource);
+      logger.warn('[Supabase] Request timed out:', resource)
     }
     throw error;
   }
@@ -1057,11 +1058,15 @@ export async function deleteComment(commentId: string) {
 }
 
 export async function incrementClicks(table: 'movies' | 'games' | 'software', id: number | string) {
-  const { data, error } = await supabase.from(table).select('clicks').eq('id', id).maybeSingle()
-  if (error && error.code !== 'PGRST116') throw error
-  const next = (data?.clicks || 0) + 1
-  const { error: upd } = await supabase.from(table).update({ clicks: next }).eq('id', id)
-  if (upd) throw upd
+  const numericId = Number(id)
+  if (!Number.isFinite(numericId)) {
+    throw new Error('Invalid content id for incrementClicks')
+  }
+  const { error } = await supabase.rpc('increment_content_clicks', {
+    target_table: table,
+    target_id: numericId
+  })
+  if (error) throw error
 }
 
 // ------------------------------------------------------------------

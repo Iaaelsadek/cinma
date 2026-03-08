@@ -5,7 +5,8 @@ import { AuroraBackground } from '../effects/AuroraBackground'
 import { Footer } from './Footer'
 import { useLocation } from 'react-router-dom'
 import { useLang } from '../../state/useLang'
-import { QuranPlayerBar } from '../../context/QuranPlayerContext'
+import { QuranPlayerBar } from '../features/quran/QuranPlayerBar'
+import { useAudioController } from '../../hooks/useAudioController'
 import { PwaInstallPrompt } from '../features/system/PwaInstallPrompt'
 import { ErrorBoundary } from '../common/ErrorBoundary'
 
@@ -16,6 +17,9 @@ interface MainLayoutProps {
 export const MainLayout = ({ children }: MainLayoutProps) => {
   const location = useLocation()
   const { lang } = useLang()
+  
+  // Initialize Audio Controller (Global Singleton)
+  useAudioController()
 
   if (location.pathname === '/quran/radio') {
     return <>{children}</>

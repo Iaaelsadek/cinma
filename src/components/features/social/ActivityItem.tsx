@@ -24,6 +24,7 @@ import {
 import { toast } from 'sonner'
 import clsx from 'clsx'
 import { MoreVertical, Flag, Shield, UserX, AtSign } from 'lucide-react'
+import { logger } from '../../../lib/logger'
 
 const MentionText = ({ text }: { text: string }) => {
   const parts = text.split(/(@\w+)/g)
@@ -110,7 +111,7 @@ export const ActivityItem = ({ activity, currentUserId, currentUserRole }: Activ
       const data = await getActivityReactions(activity.id)
       setReactions(data)
     } catch (e) {
-      console.error('Error fetching reactions:', e)
+      logger.error('Error fetching reactions:', e)
     }
   }
 

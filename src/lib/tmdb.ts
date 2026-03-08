@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { CONFIG } from './constants'
+import { mapEnglishToArabicKeyboard } from './utils'
 
 export const tmdb = axios.create({
   baseURL: 'https://api.themoviedb.org/3',
@@ -91,7 +92,7 @@ function colorToCertification(colors?: Array<'green' | 'yellow' | 'red'>) {
 
 export async function advancedSearch(params: AdvancedSearchParams) {
   const {
-    query = '',
+    query: rawQuery = '',
     types = ['movie'],
     genres = [],
     yearFrom,
@@ -104,6 +105,16 @@ export async function advancedSearch(params: AdvancedSearchParams) {
     with_original_language,
     with_keywords
   } = params
+
+  // Normalize query: if it looks like English characters typed on Arabic keyboard (or vice versa), 
+  // we try both the original and the mapped version to cast a wider net.
+  // For TMDB API, we'll primarily use the original query, but we can detect if it's meant to be Arabic.
+  const query = rawQuery.trim()
+  const keyboardMappedQuery = mapEnglishToArabicKeyboard(query)
+  
+  // Use a heuristic: if mapping changes the string significantly and original is all English but keyboardMapped is Arabic, 
+  // maybe we should try the mapped one? Actually, TMDB search works best with the actual intended string.
+  // We'll use the original query for now as TMDB handles multilingual search well if the string is correct.
   
   const doAnime = types.includes('anime')
   const doMovie = types.includes('movie')
@@ -111,10 +122,16 @@ export async function advancedSearch(params: AdvancedSearchParams) {
   
   const cert = colorToCertification(rating_color)
   const promises: Array<Promise<TmdbListResponse>> = []
-  const hasQuery = query.trim().length > 0
+  const hasQuery = query.length > 0
   if (doMovie) {
-    if (hasQuery) {
-      const p = tmdb.get('/search/movie', { params: { query, include_adult: false, page } })
+    if (query.length > 0) {
+      // If query is English but looks like it could be Arabic keyboard mapping (e.g. 'sfhd]v'), 
+      // we'll try searching with both.
+      const queryToUse = (/[a-zA-Z]/.test(query) && /[\u0600-\u06FF]/.test(keyboardMappedQuery)) 
+        ? `${query} ${keyboardMappedQuery}`
+        : query;
+        
+      const p = tmdb.get('/search/movie', { params: { query: queryToUse, include_adult: false, page } })
         .then(r => {
           let res = (r.data.results || []).map((x: TmdbSearchItem) => ({ ...x, media_type: 'movie' as const }))
           // client-side filter when using search endpoint
@@ -149,8 +166,12 @@ export async function advancedSearch(params: AdvancedSearchParams) {
     }
   }
   if (doTv) {
-    if (hasQuery) {
-      const p = tmdb.get('/search/tv', { params: { query, include_adult: false, page } })
+    if (query.length > 0) {
+      const queryToUse = (/[a-zA-Z]/.test(query) && /[\u0600-\u06FF]/.test(keyboardMappedQuery)) 
+        ? `${query} ${keyboardMappedQuery}`
+        : query;
+
+      const p = tmdb.get('/search/tv', { params: { query: queryToUse, include_adult: false, page } })
         .then(r => {
           let res = (r.data.results || []).map((x: TmdbSearchItem) => ({ ...x, media_type: 'tv' as const }))
           if (genres.length) res = res.filter((x: TmdbSearchItem) => (x.genre_ids || []).some((id: number) => genres.includes(id)))
