@@ -2,6 +2,7 @@ import { useCallback } from 'react'
 import { useQuranPlayerStore } from '../state/useQuranPlayerStore'
 import { RECITER_OVERRIDES } from '../data/quran'
 import type { QuranReciter } from '../components/features/quran/ReciterList'
+import { logger } from '../lib/logger'
 
 export const useQuranAudio = () => {
   const { playTrack, currentTrack, isPlaying } = useQuranPlayerStore()
@@ -21,7 +22,7 @@ export const useQuranAudio = () => {
     }
     
     if (!serverUrl) {
-      console.error("No server URL found for reciter:", reciter.name)
+      logger.error("No server URL found for reciter:", reciter.name)
       return
     }
 

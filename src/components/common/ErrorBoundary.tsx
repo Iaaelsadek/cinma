@@ -57,6 +57,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
   public render() {
     if (this.state.hasError) {
+      // Don't redirect, show error UI
       return (
         <div className="flex min-h-screen flex-col items-center justify-center bg-black p-8 text-white text-center" dir="rtl">
           <div className="mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-red-500/10">

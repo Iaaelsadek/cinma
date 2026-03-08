@@ -15,13 +15,15 @@ import {
   FastForward,
   Rewind,
   Loader2,
-  Check
+  Check,
+  ExternalLink
 } from 'lucide-react'
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { Button } from '../../common/Button'
 import { useLang } from '../../../state/useLang'
 import { motion, AnimatePresence } from 'framer-motion'
 import { clsx } from 'clsx'
+import { logger } from '../../../lib/logger'
 
 interface VideoPlayerProps {
   url: string
@@ -319,13 +321,22 @@ export const VideoPlayer = ({ url, subtitles = [], introStart, introEnd, title, 
       {fallbackToIframe ? (
         <iframe
           src={(() => {
-            if (url.includes('youtube.com/watch')) {
-              const videoId = url.split('v=')[1]?.split('&')[0]
-              return `https://www.youtube.com/embed/${videoId}?autoplay=1&origin=${window.location.origin}`
+            if (url.includes('youtube.com') || url.includes('youtu.be')) {
+               // Extract ID
+               let id = ''
+               if (url.includes('/embed/')) id = url.split('/embed/')[1].split('?')[0]
+               else if (url.includes('v=')) id = url.split('v=')[1].split('&')[0]
+               else if (url.includes('youtu.be/')) id = url.split('youtu.be/')[1].split('?')[0]
+               
+               return `https://www.youtube.com/embed/${id}?autoplay=1&origin=${window.location.origin}`
             }
-            if (url.includes('youtu.be/')) {
-              const videoId = url.split('youtu.be/')[1]?.split('?')[0]
-              return `https://www.youtube.com/embed/${videoId}?autoplay=1&origin=${window.location.origin}`
+            if (url.includes('dailymotion.com')) {
+               // Ensure it's embed format
+               if (url.includes('/video/')) {
+                  const id = url.split('/video/')[1].split('?')[0]
+                  return `https://www.dailymotion.com/embed/video/${id}?autoplay=1`
+               }
+               return url
             }
             return url
           })()}
@@ -350,13 +361,15 @@ export const VideoPlayer = ({ url, subtitles = [], introStart, introEnd, title, 
         onBufferEnd={() => setLoading(false)}
         onError={(e) => {
           const isYouTube = url.includes('youtube.com') || url.includes('youtu.be')
-          if (isYouTube && !fallbackToIframe) {
-            console.log('ReactPlayer failed, falling back to raw iframe')
+          const isDailyMotion = url.includes('dailymotion.com') || url.includes('dai.ly')
+          
+          if ((isYouTube || isDailyMotion) && !fallbackToIframe) {
+            logger.warn(`ReactPlayer failed for ${isYouTube ? 'YouTube' : 'DailyMotion'}, falling back to raw iframe`)
             setFallbackToIframe(true)
             setLoading(false)
             return
           }
-          console.error('Playback error:', e)
+          logger.error('Playback error:', e)
           setError(true)
         }}
         onProgress={handleProgress}

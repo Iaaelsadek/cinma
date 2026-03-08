@@ -3,6 +3,7 @@ import { Zap, Award, PlayCircle, MessageSquare, Users, CheckCircle2, Trophy, Fla
 import { getUserChallenges, getAvailableChallenges, type UserChallenge, type Challenge } from '../../../lib/supabase'
 import { motion, AnimatePresence } from 'framer-motion'
 import clsx from 'clsx'
+import { logger } from '../../../lib/logger'
 
 interface ChallengesProps {
   userId: string
@@ -27,7 +28,7 @@ export const Challenges = ({ userId, lang = 'ar' }: ChallengesProps) => {
       setUserChallenges(uChallenges)
       setAvailableChallenges(aChallenges)
     } catch (error) {
-      console.error('Error fetching challenges:', error)
+      logger.error('Error fetching challenges:', error)
     } finally {
       setLoading(false)
     }

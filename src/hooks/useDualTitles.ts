@@ -35,12 +35,21 @@ export const useDualTitles = (movie: any) => {
          return
       }
 
-      // Check Local Cache ONLY to avoid massive API/DB spam for every card
+      // Check Local Cache or Translate
       if (!subTitle && mainTitle) {
         const cacheKey = `ar_title_cache_${mainTitle.toLowerCase().trim()}`
         const cached = localStorage.getItem(cacheKey)
         if (cached && cached !== mainTitle) {
           subTitle = cached
+        } else {
+          // If no cache, try to translate activey
+          try {
+             translateTitleToArabic(mainTitle).then(translated => {
+               if (isMounted && translated && translated !== mainTitle) {
+                 setTitles(prev => ({ ...prev, sub: translated }))
+               }
+             })
+          } catch {}
         }
       }
 

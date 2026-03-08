@@ -16,6 +16,7 @@ import { SkeletonGrid } from '../../components/common/Skeletons'
 import { Button } from '../../components/common/Button'
 import { FileQuestion } from 'lucide-react'
 import { useLang } from '../../state/useLang'
+import { logger } from '../../lib/logger'
 
 type SearchItem = {
   id: number
@@ -32,6 +33,16 @@ type GameRow = { id: number; title: string; poster_url: string | null; category:
 type SoftwareRow = { id: number; title: string; poster_url: string | null; category: string | null; rating: number | null }
 type AnimeRow = { id: number; title: string; image_url: string | null; category: string | null; score: number | null }
 type ReciterRow = { id: number; name: string; image: string | null; rewaya: string | null }
+type MediaSearchRow = {
+  id: number
+  media_type: 'movie' | 'tv'
+  title: string | null
+  name: string | null
+  poster_path: string | null
+  backdrop_path: string | null
+  vote_average: number | null
+  rank_score: number
+}
 
 export const Search = () => {
   const [sp, setSp] = useSearchParams()
@@ -78,7 +89,7 @@ export const Search = () => {
             }
           }
         } catch (err) {
-          console.error('Smart Search Error:', err)
+          logger.error('Smart Search Error:', err)
         } finally {
           setIsSmartSearchLoading(false)
         }
@@ -118,6 +129,35 @@ export const Search = () => {
         results = fallback || []
       }
       return results
+    },
+    enabled: q.length >= 2
+  })
+
+  const mediaSearchQuery = useQuery<SearchItem[]>({
+    queryKey: ['search-media-rpc', q, types.join(',')],
+    queryFn: async () => {
+      if (!q || q.length < 2) return []
+      const mediaTypes = types.length ? types : ['movie']
+      const allowMovie = mediaTypes.includes('movie')
+      const allowTv = mediaTypes.includes('tv')
+      if (!allowMovie && !allowTv) return []
+      const { data, error } = await supabase.rpc('search_movies_series', {
+        query_text: q,
+        result_limit: 30
+      })
+      if (error || !data) return []
+      const rows = (data as MediaSearchRow[])
+        .filter((row) => (allowMovie && row.media_type === 'movie') || (allowTv && row.media_type === 'tv'))
+        .map((row) => ({
+          id: Number(row.id),
+          media_type: row.media_type,
+          title: row.title || undefined,
+          name: row.name || undefined,
+          poster_path: row.poster_path,
+          backdrop_path: row.backdrop_path,
+          vote_average: row.vote_average || 0
+        }))
+      return rows
     },
     enabled: q.length >= 2
   })
@@ -482,6 +522,17 @@ export const Search = () => {
           </div>
         )}
 
+        {mediaSearchQuery.data && mediaSearchQuery.data.length > 0 && (
+          <div className="mb-4 space-y-3">
+            <h2 className="text-lg font-semibold text-zinc-300">نتائج الأفلام والمسلسلات</h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
+              {mediaSearchQuery.data.map((m, idx) => (
+                <MovieCard key={`${m.media_type}-${m.id}-db`} movie={m} index={idx} />
+              ))}
+            </div>
+          </div>
+        )}
+
         {gamesQuery.data && gamesQuery.data.length > 0 && (
           <div className="mb-4 space-y-3">
             <h2 className="text-lg font-semibold text-zinc-300">الألعاب</h2>
@@ -571,7 +622,7 @@ export const Search = () => {
         )}
 
         {isLoading && <SkeletonGrid count={10} variant="poster" />}
-        {!isLoading && items.length === 0 && !supabaseQuery.data?.length && !gamesQuery.data?.length && !softwareQuery.data?.length && !animeQuery.data?.length && !recitersQuery.data?.length && (
+        {!isLoading && items.length === 0 && !supabaseQuery.data?.length && !mediaSearchQuery.data?.length && !gamesQuery.data?.length && !softwareQuery.data?.length && !animeQuery.data?.length && !recitersQuery.data?.length && (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <div className="mb-4 rounded-full bg-white/5 p-4">
               <FileQuestion size={40} className="text-zinc-500" />

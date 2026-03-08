@@ -22,10 +22,11 @@ export type UseCategoryOptions = {
   enabled?: boolean
   year?: number
   staleTime?: number
+  gcTime?: number
 }
 
 export function useCategoryVideos(category: string, options: UseCategoryOptions = {}) {
-  const { limit = 20, orderBy = 'created_at', ascending = false, enabled = true, year, staleTime = 1000 * 60 * 30 } = options
+  const { limit = 20, orderBy = 'created_at', ascending = false, enabled = true, year, staleTime = 300000, gcTime = 1000 * 60 * 30 } = options
   
   return useQuery({
     queryKey: ['videos', category, limit, orderBy, ascending, year],
@@ -42,7 +43,6 @@ export function useCategoryVideos(category: string, options: UseCategoryOptions 
             }
           }
         } catch (e) {
-          // console.warn('Cache miss for', category);
         }
       }
 
@@ -62,12 +62,13 @@ export function useCategoryVideos(category: string, options: UseCategoryOptions 
       return (data || []) as VideoItem[]
     },
     enabled,
-    staleTime
+    staleTime,
+    gcTime
   })
 }
 
 export function useClassicVideos(options: UseCategoryOptions = {}) {
-  const { limit = 20, orderBy = 'created_at', ascending = false, enabled = true, staleTime = 1000 * 60 * 30 } = options
+  const { limit = 20, orderBy = 'created_at', ascending = false, enabled = true, staleTime = 300000, gcTime = 1000 * 60 * 30 } = options
   return useQuery({
     queryKey: ['videos', 'classics', limit, orderBy, ascending],
     queryFn: async () => {
@@ -93,7 +94,8 @@ export function useClassicVideos(options: UseCategoryOptions = {}) {
       return (data || []) as VideoItem[]
     },
     enabled,
-    staleTime
+    staleTime,
+    gcTime
   })
 }
 
@@ -109,6 +111,7 @@ export function useCachedHomepage() {
         return null;
       }
     },
-    staleTime: 1000 * 60 * 60 // 1 hour
+    staleTime: 300000,
+    gcTime: 1000 * 60 * 30
   })
 }

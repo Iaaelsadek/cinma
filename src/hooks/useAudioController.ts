@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { useQuranPlayerStore } from '../state/useQuranPlayerStore'
 import { toast } from 'sonner'
 import { SURAHS } from '../data/quran'
+import { logger } from '../lib/logger'
 
 // Singleton Audio Instance
 const audio = new Audio()
@@ -57,7 +58,7 @@ export const useAudioController = () => {
           }
         }
       } catch (err: any) {
-        console.error("Audio playback error:", err)
+        logger.error("Audio playback error:", err)
         setIsPlaying(false)
         setIsLoading(false)
         if (err.name !== 'AbortError') {
@@ -91,7 +92,7 @@ export const useAudioController = () => {
     }
     
     const handleError = (e: Event) => {
-       console.error("Audio error event:", e)
+       logger.error("Audio error event:", e)
        setIsLoading(false)
        setIsPlaying(false)
        setError("Failed to load audio")
@@ -147,7 +148,7 @@ export const useAudioController = () => {
         }
       }
     } catch (e) {
-      console.error("Skip failed", e)
+      logger.error("Skip failed", e)
     }
   }
   

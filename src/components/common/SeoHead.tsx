@@ -26,7 +26,10 @@ export const SeoHead = ({
 }: SeoHeadProps) => {
   const { pathname } = useLocation()
   const siteUrl = 'https://cinma.online'
-  const url = `${siteUrl}${pathname}`
+  const normalizedPath = pathname === '/' ? '' : pathname.replace(/\/+$/, '')
+  const url = normalizedPath
+    ? `${siteUrl}${normalizedPath.startsWith('/') ? normalizedPath : `/${normalizedPath}`}`
+    : siteUrl
   const fullTitle = `${title} | أونلاين سينما`
 
   // Breadcrumb Schema
@@ -54,22 +57,30 @@ export const SeoHead = ({
     ]
   }
 
-  // Schema.org VideoObject for Google Rich Results
-  const videoSchema = type.startsWith('video') ? {
+  const contentSchema = type === 'video.movie' ? {
     "@context": "https://schema.org",
-    "@type": "VideoObject",
+    "@type": "Movie",
     "name": title,
     "description": description,
-    "thumbnailUrl": [image],
-    "uploadDate": releaseDate || new Date().toISOString(),
-    "duration": duration || "PT2H", // Default fallback
-    "contentUrl": url,
-    "embedUrl": url,
-    "interactionStatistic": {
-      "@type": "InteractionCounter",
-      "interactionType": { "@type": "WatchAction" },
-      "userInteractionCount": 10000
-    },
+    "image": image,
+    "url": url,
+    "datePublished": releaseDate || undefined,
+    "duration": duration || undefined,
+    "aggregateRating": rating ? {
+      "@type": "AggregateRating",
+      "ratingValue": rating,
+      "bestRating": 10,
+      "ratingCount": 100
+    } : undefined,
+    "genre": genres
+  } : type === 'video.tv_show' ? {
+    "@context": "https://schema.org",
+    "@type": "TVSeries",
+    "name": title,
+    "description": description,
+    "image": image,
+    "url": url,
+    "datePublished": releaseDate || undefined,
     "aggregateRating": rating ? {
       "@type": "AggregateRating",
       "ratingValue": rating,
@@ -82,7 +93,7 @@ export const SeoHead = ({
   const schemas = [
     breadcrumbSchema,
     type === 'website' ? organizationSchema : null,
-    schema || videoSchema
+    schema || contentSchema
   ].filter(Boolean)
 
   return (
