@@ -4,6 +4,7 @@ import { getLeaderboard, type LeaderboardEntry } from '../../../lib/supabase'
 import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import clsx from 'clsx'
+import { logger } from '../../../lib/logger'
 
 interface LeaderboardProps {
   limit?: number
@@ -19,7 +20,7 @@ export const Leaderboard = ({ limit = 20, lang = 'ar' }: LeaderboardProps) => {
       const data = await getLeaderboard(limit)
       setEntries(data)
     } catch (error) {
-      console.error('Error fetching leaderboard:', error)
+      logger.error('Error fetching leaderboard:', error)
     } finally {
       setLoading(false)
     }

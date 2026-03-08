@@ -7,6 +7,7 @@ import { useAuth } from '../../../hooks/useAuth'
 import { addToWatchlist, isInWatchlist, removeFromWatchlist } from '../../../lib/supabase'
 import ReactPlayer from 'react-player/youtube'
 import { tmdb } from '../../../lib/tmdb'
+import { logger } from '../../../lib/logger'
 
 import { useDualTitles } from '../../../hooks/useDualTitles'
 
@@ -129,7 +130,7 @@ export const VideoCard = memo(({ video, index = 0 }: { video: VideoItem; index?:
         setInList(true)
       }
     } catch (error) {
-      console.error('Watchlist toggle error:', error)
+      logger.error('Watchlist toggle error:', error)
     } finally {
       setBusy(false)
     }

@@ -283,7 +283,7 @@ export const SeriesPage = () => {
 
       <div className="space-y-2 pt-4 relative z-10">
         <QuantumTrain 
-          items={onTheAir.data || []} 
+          items={latest.data || []} 
           title={lang === 'ar' ? 'يعرض الآن' : 'On The Air'} 
           link="/search?types=tv&sort=first_air_date.desc"
         />

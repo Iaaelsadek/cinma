@@ -19,6 +19,8 @@ import { SkeletonGrid } from '../../components/common/Skeletons'
 import { SubtitleManager } from '../../components/features/media/SubtitleManager'
 import { useServers } from '../../hooks/useServers'
 import { useWatchProgress } from '../../hooks/useWatchProgress'
+import { useDualTitles } from '../../hooks/useDualTitles'
+import { generateArabicSummary } from '../../lib/gemini'
 import { errorLogger } from '../../services/errorLogging'
 
 import { EmbedPlayer } from '../../components/features/media/EmbedPlayer'
@@ -28,6 +30,7 @@ import { WatchParty } from '../../components/features/social/WatchParty'
 import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'framer-motion'
 import clsx from 'clsx'
+import { logger } from '../../lib/logger'
 
 type TmdbCastMember = {
   id: number
@@ -163,10 +166,11 @@ export const Watch = () => {
     // If we have query params, redirect to clean URL and return
     if ((sFromQuery || eFromQuery) && idParam) {
       const typeParamFinal = typeParam || sp.get('type') || 'movie'
+      // Use replace to avoid history stack buildup
       navigate(`/watch/${typeParamFinal}/${idParam}/s${sFromQuery || 1}/ep${eFromQuery || 1}`, { replace: true })
       return
     }
-  }, [sp, idParam, typeParam, navigate])
+  }, []) // Run once on mount
 
   const [season, setSeason] = useState(Math.max(1, sNum || 1))
   const [episode, setEpisode] = useState(Math.max(1, eNum || 1))
@@ -215,6 +219,23 @@ export const Watch = () => {
   // (type normalized above)
 
   const [details, setDetails] = useState<TmdbDetails | null>(null)
+  
+  // Translation Logic
+  const [translatedOverview, setTranslatedOverview] = useState<string | null>(null)
+  const dualTitles = useDualTitles(details as any)
+
+  useEffect(() => {
+    if (!details || !details.overview) return
+    const isArabic = /[\u0600-\u06FF]/.test(details.overview)
+    if (!isArabic && !translatedOverview) {
+      generateArabicSummary(details.title || '', details.overview).then(summary => {
+        if (summary && summary !== details.overview) {
+          setTranslatedOverview(summary)
+        }
+      })
+    }
+  }, [details?.overview, details?.title])
+
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
   const [cinemaMode, setCinemaMode] = useState(false)
@@ -262,10 +283,10 @@ export const Watch = () => {
         const granted = await grantAchievement(user.id, 'party_host')
         if (granted) toast.success(lang === 'ar' ? 'إنجاز جديد: صاحب المجلس 🏠' : 'New achievement: Group Watch Party Host 🏠')
       } catch (err) {
-        console.error('Failed to grant achievement:', err)
+        logger.error('Failed to grant achievement:', err)
       }
     } catch (err: any) {
-      console.error('Failed to create group watch party:', err)
+      logger.error('Failed to create group watch party:', err)
       toast.error(lang === 'ar' ? `فشل إنشاء الغرفة: ${err.message || 'خطأ غير معروف'}` : `Failed to create group watch party: ${err.message || 'Unknown error'}`)
     } finally {
       setIsCreating(false)
@@ -323,13 +344,18 @@ export const Watch = () => {
     // But DON'T set season/episode if we are already using path params like /s1/ep1
     if (sNum || eNum) return
 
-    const p = new URLSearchParams(sp)
-    if (type === 'tv') {
-      p.set('season', String(season))
-      p.set('episode', String(episode))
-      p.set('type', 'tv')
-      setSp(p, { replace: true })
-    }
+    // If type is TV and we don't have season/episode in path, we might need to redirect to default
+    // But be careful not to cause loop if we just came from there.
+    // Actually, the initial Sync useEffect at line 160 handles redirection to /s/ep path if query params exist.
+    // If we are here, it means we might be at /watch/tv/:id (without s/ep).
+    // In that case, we should probably default to s1/ep1 in the URL for consistency.
+    
+    /* 
+    // This logic is dangerous and causing loops. Let's rely on `initialSeason` and `initialEpisode` defaults.
+    // If the user navigates to /watch/tv/123, `sNum` and `eNum` will be null (or 1 from defaults).
+    // We can just update the internal state without changing URL, or redirect once.
+    */
+   
   }, [season, episode, type, setSp, sNum, eNum])
 
   // Hook 2: Fetch Details
@@ -342,8 +368,12 @@ export const Watch = () => {
     setError(false)
     ;(async () => {
       if (!id) {
-        setError(true)
-        setLoading(false)
+        // If we have no ID, and no slug, we can't do anything.
+        // But if we have slug and it failed resolution, we already set error in resolveSlug
+        if (!slug) {
+           setError(true)
+           setLoading(false)
+        }
         return
       }
       try {
@@ -356,15 +386,22 @@ export const Watch = () => {
             const { data: collectionData } = await tmdb.get(`/collection/${data.belongs_to_collection.id}`)
             data.collection = collectionData
           } catch (err) {
-            console.error('Failed to fetch collection:', err)
+            logger.error('Failed to fetch collection:', err)
           }
         }
         
-        if (mounted) setDetails(data)
+        if (mounted) {
+            setDetails(data)
+            setLoading(false)
+        }
       } catch (e) {
-        if (mounted) setError(true)
-      } finally {
-        if (mounted) setLoading(false)
+        // Only set error if we really can't find anything
+        // Don't redirect immediately, show error UI
+        logger.error('TMDB Fetch Error:', e)
+        if (mounted) {
+            setError(true)
+            setLoading(false)
+        }
       }
     })()
     return () => { mounted = false }
@@ -374,8 +411,10 @@ export const Watch = () => {
 
   // Hook 4: Memos (Moved UP before early returns)
   const title = useMemo(() => {
+    // Prefer translated title if available
+    if (dualTitles.sub) return dualTitles.sub
     return details?.title || details?.name || (type === 'movie' ? `فيلم #${id}` : `مسلسل #${id}`)
-  }, [details, type, id])
+  }, [details, type, id, dualTitles])
   
   const year = useMemo(() => {
     const d = type === 'movie' ? details?.release_date : details?.first_air_date
@@ -393,7 +432,7 @@ export const Watch = () => {
   }, [details])
   
   const genres = useMemo<Array<{ id: number; name: string }>>(() => details?.genres || [], [details])
-  const overview = useMemo(() => details?.overview || 'لا يوجد وصف متاح', [details])
+  const overview = useMemo(() => translatedOverview || details?.overview || 'لا يوجد وصف متاح', [details, translatedOverview])
   const poster = useMemo(() => (details?.poster_path ? `https://image.tmdb.org/t/p/w500${details.poster_path}` : ''), [details])
   const backdrop = useMemo(() => (details?.backdrop_path ? `https://image.tmdb.org/t/p/original${details.backdrop_path}` : ''), [details])
   const cast = useMemo(() => (details?.credits?.cast || []).slice(0, 12), [details])
@@ -472,6 +511,11 @@ export const Watch = () => {
     episode,
     details?.external_ids?.imdb_id
   )
+  const dlUrl = useMemo(() => {
+    if (!effectiveId) return '#'
+    if (type === 'tv') return `https://dl.vidsrc.vip/tv/${effectiveId}/${season}/${episode}`
+    return `https://dl.vidsrc.vip/movie/${effectiveId}`
+  }, [effectiveId, type, season, episode])
 
   const [availableEpisodes, setAvailableEpisodes] = useState<Record<string, boolean>>({})
   const [availableSeasonsMap, setAvailableSeasonsMap] = useState<Record<number, boolean>>({})
@@ -831,6 +875,26 @@ export const Watch = () => {
                             onSelect={setActive}
                             lang={lang}
                         />
+                    </div>
+
+                    <div className="bg-black/40 border border-white/5 rounded-2xl p-4 backdrop-blur-sm space-y-3">
+                      <div className="flex items-center justify-between px-1">
+                        <h3 className="text-[11px] font-black text-white uppercase tracking-tight">
+                          {t('سيرفرات التحميل', 'Download Servers')}
+                        </h3>
+                        <span className="text-[10px] text-zinc-500">{type === 'tv' ? `S${season}E${episode}` : 'Movie'}</span>
+                      </div>
+                      <div className="grid grid-cols-1 gap-2">
+                        <a
+                          href={dlUrl}
+                          target="_blank"
+                          rel="noopener noreferrer nofollow"
+                          className="px-3 py-2 rounded-xl bg-white/5 border border-white/10 hover:border-primary/40 hover:bg-primary/10 text-center transition-all"
+                        >
+                          <div className="text-[10px] font-black text-zinc-400 mb-0.5">{t('مصدر التحميل', 'Download Source')}</div>
+                          <div className="text-[11px] font-bold text-white truncate">dl.vidsrc.vip</div>
+                        </a>
+                      </div>
                     </div>
 
                     {/* Seasons Selector (TV Only) */}

@@ -50,14 +50,10 @@ export const ServerSelector = ({ servers, active, onSelect, lang = 'ar' }: Props
       </div>
 
       <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-1">
-        {servers
-          .map((s, idx) => {
+        {servers.map((s, idx) => {
             const isActive = idx === active
             const isOffline = s.status === 'offline'
             const isUnknown = s.status === 'unknown'
-            
-            // We no longer hide offline servers, but show them with a red X as requested
-            // unless it's a very long list, but usually there are only 10-15 servers
             
             return (
               <motion.button

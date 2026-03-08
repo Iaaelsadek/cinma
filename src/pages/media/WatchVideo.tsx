@@ -1,8 +1,8 @@
 import { useEffect, useState, useRef } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useLocation } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { VideoPlayer } from '../../components/features/media/VideoPlayer'
-import { ChevronLeft, Eye, Clock, Calendar, Users, Send, X, Sparkles } from 'lucide-react'
+import { ChevronLeft, Eye, Clock, Calendar, Users, Send, X, Sparkles, AlertTriangle } from 'lucide-react'
 import { Helmet } from 'react-helmet-async'
 import { useLang } from '../../state/useLang'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -10,6 +10,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { toast } from 'sonner'
 import { errorLogger } from '../../services/errorLogging'
 import { FALLBACK_SUMMARIES, LEGACY_ID_MAP } from '../../lib/constants'
+import { logger } from '../../lib/logger'
 
 type VideoData = {
   id: string
@@ -73,6 +74,23 @@ export const WatchVideo = () => {
     let mounted = true
     async function load() {
       if (!id) return
+      
+      // Special Handler for DailyMotion
+      if (window.location.pathname.includes('/watch/dm/')) {
+        setVideo({
+          id,
+          title: `DailyMotion Video`,
+          url: `https://www.dailymotion.com/video/${id}`,
+          category: 'DailyMotion',
+          description: 'Watch on DailyMotion',
+          created_at: new Date().toISOString(),
+          views: 0,
+          duration: 0
+        })
+        setLoading(false)
+        return
+      }
+
       try {
         let { data, error } = await supabase
           .from('videos')
@@ -107,7 +125,7 @@ export const WatchVideo = () => {
         }
       } catch (err) {
         if (mounted) setLoading(false)
-        console.error('Video load error', err)
+        logger.error('Video load error', err)
       }
     }
     load()
@@ -125,12 +143,36 @@ export const WatchVideo = () => {
     )
   }
 
-  if (!video) {
+  // Ensure we have a video object to display, even if fallback
+  const effectiveVideo = video || {
+    id: id || 'unknown',
+    title: 'Unknown Video',
+    url: '',
+    description: '',
+    views: 0,
+    duration: 0,
+    category: '',
+    year: undefined,
+    intro_start: undefined,
+    intro_end: undefined
+  }
+
+  if (!effectiveVideo.url && !loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-black text-white">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">{lang === 'ar' ? 'عذراً، الفيديو غير موجود' : 'Video Not Found'}</h1>
-          <Link to="/" className="text-lumen-400 hover:text-lumen-300 underline">
+      <div className="flex flex-col items-center justify-center min-h-screen bg-black text-white p-4">
+        <div className="text-center max-w-md">
+          <AlertTriangle className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
+          <h1 className="text-2xl font-bold mb-2">{lang === 'ar' ? 'عذراً، الفيديو غير موجود' : 'Video Not Found'}</h1>
+          <p className="text-zinc-400 mb-6">
+            {lang === 'ar' 
+              ? 'قد يكون الرابط غير صحيح أو تم حذف الفيديو.' 
+              : 'The link might be incorrect or the video has been removed.'}
+          </p>
+          <Link 
+            to="/" 
+            className="inline-flex items-center gap-2 bg-lumen-gold text-black px-6 py-3 rounded-xl font-bold hover:bg-yellow-400 transition-colors"
+          >
+            <ChevronLeft size={20} className={lang === 'ar' ? '' : 'rotate-180'} />
             {lang === 'ar' ? 'العودة للصفحة الرئيسية' : 'Back to Home'}
           </Link>
         </div>
@@ -138,10 +180,10 @@ export const WatchVideo = () => {
     )
   }
 
-  const title = video.title || 'Untitled Video'
-  const description = video.description || ''
-  const poster = video.thumbnail || '/placeholder.jpg'
-  const videoUrl = video.url || '' // Make sure we have a URL
+  const title = effectiveVideo.title || 'Untitled Video'
+  const description = effectiveVideo.description || ''
+  const poster = effectiveVideo.thumbnail || '/placeholder.jpg'
+  const videoUrl = effectiveVideo.url || '' // Make sure we have a URL
 
   // Schema for VideoObject
   const schemaData = {
@@ -150,14 +192,14 @@ export const WatchVideo = () => {
     "name": title,
     "description": description,
     "thumbnailUrl": [poster],
-    "uploadDate": video.created_at || new Date().toISOString(),
-    "duration": video.duration ? `PT${Math.floor(video.duration / 60)}M${video.duration % 60}S` : undefined,
+    "uploadDate": effectiveVideo.created_at || new Date().toISOString(),
+    "duration": effectiveVideo.duration ? `PT${Math.floor(effectiveVideo.duration / 60)}M${effectiveVideo.duration % 60}S` : undefined,
     "contentUrl": videoUrl,
     "embedUrl": videoUrl, // Assuming direct link or embeddable
     "interactionStatistic": {
       "@type": "InteractionCounter",
       "interactionType": { "@type": "WatchAction" },
-      "userInteractionCount": video.views || 0
+      "userInteractionCount": effectiveVideo.views || 0
     }
   }
 

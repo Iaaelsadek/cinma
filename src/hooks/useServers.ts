@@ -1,6 +1,4 @@
-import { useEffect, useState, useMemo, useCallback } from 'react'
-import { supabase } from '../lib/supabase'
-import { errorLogger } from '../services/errorLogging'
+import { useEffect, useState } from 'react'
 
 export type Server = {
   id?: string
@@ -12,285 +10,226 @@ export type Server = {
 }
 
 // ------------------------------------------------------------------
-// STAGE 2: ZERO-FAILURE STREAMING ARCHITECTURE
+// CURATED SERVER LIST - FINAL ORDER (USER SPECIFIED)
 // ------------------------------------------------------------------
 const PROVIDERS = [
-  { id: 'vidsrc_nl', name: 'VidSrc NL (Fast)', base: 'https://vidsrc.net/embed' },
-  { id: 'vidsrc', name: 'VidSrc (Primary)', base: 'https://vidsrc.to/embed' },
-  { id: 'vidsrc_me', name: 'VidSrc Me', base: 'https://vidsrc.me/embed' },
-  { id: 'embed_su', name: 'Embed.su', base: 'https://embed.su/embed' },
-  { id: 'vidsrc_pro', name: 'VidSrc Pro', base: 'https://vidsrc.pro/embed' },
-  { id: 'vidsrc_vip', name: 'VidSrc VIP', base: 'https://vidsrc.vip/embed' },
-  { id: 'vidsrc_xyz', name: 'VidSrc XYZ', base: 'https://vidsrc.xyz/embed' },
-  { id: 'vidsrc_icu', name: 'VidSrc ICU', base: 'https://vidsrc.icu/embed' },
-  { id: 'autoembed', name: 'AutoEmbed', base: 'https://autoembed.co' },
-  { id: 'vidsrc_cc', name: 'VidSrc CC', base: 'https://vidsrc.cc/v2/embed' },
-  { id: 'vidlink', name: 'VidLink', base: 'https://vidlink.pro' },
-  { id: 'superembed', name: 'SuperEmbed', base: 'https://superembed.stream' },
-  { id: 'smashystream', name: 'SmashyStream', base: 'https://embed.smashystream.com/playere.php' },
-  { id: 'multiembed', name: 'MultiEmbed', base: 'https://multiembed.mov' },
-  { id: '2embed', name: '2Embed', base: 'https://www.2embed.cc/embed' },
+  { id: 'autoembed_co', name: 'AutoEmbed Co', base: 'https://autoembed.co/movie/tmdb' },
+  { id: 'vidsrc_net', name: 'VidSrc.net', base: 'https://vidsrc.net/embed' },
+  { id: '2embed_cc', name: '2Embed.cc', base: 'https://www.2embed.cc/embed' },
+  { id: '111movies', name: '111Movies', base: 'https://111movies.com' },
+  { id: 'smashystream', name: 'SmashyStream', base: 'https://player.smashy.stream' },
+  { id: 'vidsrc_io', name: 'VidSrc.io', base: 'https://vidsrc.io/embed' },
+  { id: 'vidsrc_cc', name: 'VidSrc.cc', base: 'https://vidsrc.cc/v2/embed' },
+  { id: 'vidsrc_xyz', name: 'VidSrc.xyz', base: 'https://vidsrc.xyz/embed' },
+  { id: '2embed_skin', name: '2Embed.skin', base: 'https://www.2embed.skin/embed' },
+  { id: 'vidsrc_me', name: 'VidSrc.me', base: 'https://vidsrc.me/embed' },
+  { id: 'vidsrc_vip', name: 'VidSrc.vip', base: 'https://vidsrc.vip/embed' },
 ]
+const DOWNLOAD_SERVER_IDS = ['autoembed_co', 'vidsrc_net', '2embed_cc']
+
+const buildAutoEmbedUrl = (type: 'movie' | 'tv', tmdbId: number, season: number, episode: number) => {
+  if (type === 'movie') return `https://autoembed.co/movie/tmdb/${tmdbId}`
+  return `https://autoembed.co/tv/tmdb/${tmdbId}-${season}-${episode}`
+}
+
+const addParamIfMissing = (url: string, key: string, value: string) => {
+  const hasParam = new RegExp(`([?&])${key}=`, 'i').test(url)
+  if (hasParam) return url
+  const sep = url.includes('?') ? '&' : (url.includes('&season=') && !url.includes('?') ? '&' : '?')
+  return `${url}${sep}${key}=${value}`
+}
+
+const withArabicSubtitleHint = (url: string, providerId: string, type: 'movie' | 'tv') => {
+  const lower = providerId.toLowerCase()
+  // Movies: Only safe providers get params automatically
+  if (type === 'movie') {
+    if (lower === 'autoembed_co' || lower === '111movies') {
+      return addParamIfMissing(url, 'lang', 'ar')
+    }
+    return url
+  }
+  // TV Shows: Apply full subtitle logic
+  if (lower === 'smashystream' && url.includes('&season=') && !url.includes('?')) {
+    return `${url}&sub=ar`
+  }
+  if (lower.startsWith('vidsrc_')) {
+    let next = url
+    next = addParamIfMissing(next, 'subtitles', 'ar')
+    next = addParamIfMissing(next, 'lang', 'ar')
+    return next
+  }
+  if (lower === 'autoembed_co') {
+    let next = url
+    next = addParamIfMissing(next, 'lang', 'ar')
+    next = addParamIfMissing(next, 'subtitles', 'ar')
+    return next
+  }
+  if (lower.startsWith('2embed')) {
+    let next = url
+    next = addParamIfMissing(next, 'subtitles', 'ar')
+    next = addParamIfMissing(next, 'lang', 'ar')
+    return next
+  }
+  if (lower === '111movies') {
+    return addParamIfMissing(url, 'lang', 'ar')
+  }
+  if (lower === 'smashystream' || lower === 'moviebox' || lower === 'streamwish') {
+    let next = url
+    next = addParamIfMissing(next, 'sub', 'ar')
+    next = addParamIfMissing(next, 'lang', 'ar')
+    return next
+  }
+  return url
+}
 
 const generateServerUrl = (p: typeof PROVIDERS[0], type: 'movie' | 'tv', tmdbId: number, season?: number, episode?: number, imdbId?: string) => {
-  const query = '?ds_lang=ar'
-  if (['vidsrc', 'vidsrc_pro', 'vidsrc_vip', 'vidsrc_xyz', 'vidsrc_icu', 'vidsrc_nl'].includes(p.id)) {
-    return type === 'movie' 
-      ? (imdbId ? `${p.base}/movie/${imdbId}${query}` : `${p.base}/movie/${tmdbId}${query}`)
-      : (imdbId ? `${p.base}/tv/${imdbId}/${season}/${episode}${query}` : `${p.base}/tv/${tmdbId}/${season}/${episode}${query}`)
-  } 
-  if (p.id === 'vidsrc_me') {
-    return type === 'movie'
-       ? (imdbId ? `${p.base}/movie?imdb=${imdbId}&sub.lang=ar` : `${p.base}/movie?tmdb=${tmdbId}&sub.lang=ar`)
-       : (imdbId ? `${p.base}/tv?imdb=${imdbId}&season=${season}&episode=${episode}&sub.lang=ar` : `${p.base}/tv?tmdb=${tmdbId}&season=${season}&episode=${episode}&sub.lang=ar`)
-  }
-  if (p.id === 'vidsrc_cc') {
-    return type === 'movie' ? `${p.base}/movie/${tmdbId}?lang=ar` : `${p.base}/tv/${tmdbId}/${season}/${episode}?lang=ar`
-  }
-  if (p.id === 'vidlink') {
-    return type === 'movie' ? `${p.base}/movie/${tmdbId}?multiLang=true` : `${p.base}/tv/${tmdbId}/${season}/${episode}?multiLang=true`
-  }
-  if (p.id === 'superembed') {
-    return type === 'movie' ? `${p.base}/movie/${tmdbId}?lang=ar` : `${p.base}/tv/${tmdbId}/${season}/${episode}?lang=ar`
-  }
-  if (p.id === 'autoembed') {
-    return type === 'movie' ? `${p.base}/movie/tmdb/${tmdbId}?caption=ar` : `${p.base}/tv/tmdb/${tmdbId}-${season}-${episode}?caption=ar`
-  }
+  const s = season || 1
+  const e = episode || 1
+
   if (p.id === 'smashystream') {
-    return type === 'movie' ? `${p.base}?tmdb=${tmdbId}&sub=ar` : `${p.base}?tmdb=${tmdbId}&season=${season}&episode=${episode}&sub=ar`
+    const url = type === 'movie'
+      ? `${p.base}/movie/${tmdbId}`
+      : `${p.base}/tv/${tmdbId}&season=${s}&episode=${e}`
+    return withArabicSubtitleHint(url, p.id, type)
   }
+
+  if (p.id === 'moviebox') {
+    const url = type === 'movie'
+      ? `${p.base}/movie/${tmdbId}`
+      : `${p.base}/tv/${tmdbId}/${s}/${e}`
+    return withArabicSubtitleHint(url, p.id, type)
+  }
+
+  if (p.id === 'streamwish') {
+    const url = type === 'movie'
+      ? `${p.base}/e/${tmdbId}`
+      : `${p.base}/e/${tmdbId}?season=${s}&episode=${e}`
+    return withArabicSubtitleHint(url, p.id, type)
+  }
+
+  if (p.id === 'autoembed_co') {
+      const url = buildAutoEmbedUrl(type, tmdbId, s, e)
+      return withArabicSubtitleHint(url, p.id, type)
+  }
+
+  // 2. DatabaseGDrive (Special Pattern)
+  if (p.id === 'database_gdrive') {
+      const url = `https://databasegdriveplayer.co/player.php?tmdb=${tmdbId}${type === 'tv' ? `&s=${s}&e=${e}` : ''}`
+      return withArabicSubtitleHint(url, p.id, type)
+  }
+
+  // 3. 2Embed Family
+  if (p.id.startsWith('2embed')) {
+     const url = type === 'movie' ? `${p.base}/${tmdbId}` : `${p.base}/${tmdbId}/${s}/${e}`
+     return withArabicSubtitleHint(url, p.id, type)
+  }
+
+  // 4. VidSrc Family (Standard Pattern)
+  if (p.id.startsWith('vidsrc_')) {
+    if (p.id === 'vidsrc_cc') {
+        const tvId = imdbId || String(tmdbId)
+        const url = type === 'movie'
+           ? `${p.base}/movie/${tmdbId}`
+           : `${p.base}/tv/${tvId}?autoPlay=false&s=${s}&e=${e}`
+        return withArabicSubtitleHint(url, p.id, type)
+    }
+    if (p.id === 'vidsrc_to') {
+        const url = type === 'movie' 
+           ? `${p.base}/movie/${tmdbId}` 
+           : `${p.base}/tv/${tmdbId}/${s}/${e}`
+        return withArabicSubtitleHint(url, p.id, type)
+    }
+    if (p.id === 'vidsrc_io') {
+         const url = type === 'movie' 
+           ? `${p.base}/movie/${tmdbId}` 
+           : `${p.base}/tv/${tmdbId}/${s}/${e}`
+         return withArabicSubtitleHint(url, p.id, type)
+    }
+    // Standard vidsrc
+    const url = type === 'movie' 
+       ? (imdbId ? `${p.base}/movie/${imdbId}` : `${p.base}/movie/${tmdbId}`)
+       : (imdbId ? `${p.base}/tv/${imdbId}/${s}/${e}` : `${p.base}/tv/${tmdbId}/${s}/${e}`)
+    return withArabicSubtitleHint(url, p.id, type)
+  }
+
+  // 5. MultiEmbed
   if (p.id === 'multiembed') {
-    return type === 'movie' ? `${p.base}/directstream.php?video_id=${tmdbId}&tmdb=1&sub_lang=ar` : `${p.base}/directstream.php?video_id=${tmdbId}&tmdb=1&s=${season}&e=${episode}&sub_lang=ar`
+      const url = `https://multiembed.mov/?video_id=${tmdbId}&tmdb=1${type === 'tv' ? `&s=${s}&e=${e}` : ''}`
+      return withArabicSubtitleHint(url, p.id, type)
   }
-  if (p.id === 'embed_su') {
-    return type === 'movie' ? `${p.base}/movie/${tmdbId}?language=ar` : `${p.base}/tv/${tmdbId}/${season}/${episode}?language=ar`
+
+  // 6. 111Movies
+  if (p.id === '111movies') {
+      const url = type === 'movie' 
+         ? `${p.base}/movie/${tmdbId}` 
+         : `https://111movies.net/tv/${tmdbId}/${s}/${e}`
+      return withArabicSubtitleHint(url, p.id, type)
   }
-  if (p.id === '2embed') {
-    return type === 'movie' ? `${p.base}/${tmdbId}?lang=ar` : `${p.base}/${tmdbId}?s=${season}&e=${episode}&lang=ar`
+
+  // 7. VidLink
+  if (p.id === 'vidlink') {
+     const url = type === 'movie' 
+        ? `${p.base}/movie/${tmdbId}` 
+        : `${p.base}/tv/${tmdbId}/${s}/${e}`
+     return withArabicSubtitleHint(url, p.id, type)
   }
-  return type === 'movie' ? `${p.base}/movie/${tmdbId}` : `${p.base}/tv/${tmdbId}/${season}/${episode}`
+
+  return ''
 }
 
 export const useServers = (tmdbId: number, type: 'movie' | 'tv', season?: number, episode?: number, imdbId?: string) => {
   const [baseServers, setBaseServers] = useState<Server[]>([])
   const [active, setActive] = useState(0)
   const [loading, setLoading] = useState(true)
-  const [reporting, setReporting] = useState(false)
-  const [statuses, setStatuses] = useState<Record<string, Server['status']>>({})
 
-  // content-specific statuses (for this specific movie/episode)
-  const [contentStatuses, setContentStatuses] = useState<Record<string, Server['status']>>({})
+  // Initialize providers
+  useEffect(() => {
+    const allServers = PROVIDERS.map((p, index) => ({
+      name: p.name,
+      url: generateServerUrl(p, type, tmdbId, season, episode, imdbId),
+      priority: index,
+      status: 'online' as const,
+      id: p.id
+    })).filter(s => Boolean(s.url))
+    setBaseServers(allServers)
+    setActive(0)
+    setLoading(false)
+  }, [tmdbId, type, season, episode, imdbId])
 
-  // Disable automatic availability check as it's unreliable and blocks working servers
-  const checkContentAvailability = async (_url: string, id: string) => {
-    setContentStatuses(prev => ({ ...prev, [id]: 'online' }));
+  const reportServer = () => {}
+
+  const checkBatchAvailability = async (
+    items: Array<{ s: number; e: number }>
+  ): Promise<Record<string, boolean>> => {
+    const results: Record<string, boolean> = {}
+    items.forEach(({ s, e }) => {
+      results[`${s}-${e}`] = true
+    })
+    return results
   }
 
-  // Reset content statuses on content change
-  useEffect(() => {
-    // Initialize all servers as online to avoid false negatives
-    const initialStatuses: Record<string, Server['status']> = {};
-    PROVIDERS.forEach(p => {
-      initialStatuses[p.id] = 'online';
-    });
-    setContentStatuses(initialStatuses);
-  }, [tmdbId, type, season, episode])
+  const setActiveSafe = (next: number) => {
+    if (next < 0 || next >= baseServers.length) return
+    setActive(next)
+  }
 
-  useEffect(() => {
-    const fetchStatuses = async () => {
-      try {
-        const { data } = await supabase.from('server_status').select('server_id, status')
-        if (data) {
-          const statusMap = data.reduce((acc, row) => ({
-            ...acc,
-            [row.server_id]: row.status as Server['status']
-          }), {})
-          setStatuses(statusMap)
-        }
-      } catch (e) {
-        console.error('Failed to fetch server statuses', e)
-      }
-    }
-
-    fetchStatuses()
-    
-    // Realtime subscription for status updates
-    const channel = supabase
-      .channel('server_status_changes')
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'server_status' },
-        (payload) => {
-          const { server_id, status } = payload.new as { server_id: string, status: Server['status'] }
-          setStatuses(prev => ({ ...prev, [server_id]: status }))
-        }
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [])
-
-  useEffect(() => {
-    let mounted = true
-    
-    const init = async () => {
-      if (!tmdbId || isNaN(tmdbId) || tmdbId <= 0) {
-        setBaseServers([])
-        setLoading(false)
-        return
-      }
-
-      setLoading(true)
-      
-      // 1. Fetch Custom DB Links (Highest Priority)
-      let dbLinks: Record<string, string> = {}
-      try {
-        if (type === 'movie') {
-          const { data } = await supabase.from('movies').select('embed_links').eq('id', tmdbId).maybeSingle()
-          if (data?.embed_links) dbLinks = data.embed_links
-        } else if (type === 'tv' && season && episode) {
-          const { data: seasonRow } = await supabase.from('seasons').select('id').eq('series_id', tmdbId).eq('season_number', season).maybeSingle()
-          if (seasonRow?.id) {
-            const { data: epRow } = await supabase.from('episodes').select('embed_links').eq('season_id', seasonRow.id).eq('episode_number', episode).maybeSingle()
-            if (epRow?.embed_links) dbLinks = epRow.embed_links
-          }
-        }
-      } catch (err) {
-        errorLogger.logError({
-          message: 'DB Link fetch failed, falling back to auto-generation',
-          severity: 'low',
-          category: 'media',
-          context: { error: err, tmdbId, type }
-        })
-      }
-
-      // 2. Generate Fallback Links
-      const generatedServers: Server[] = PROVIDERS.map((p, idx) => {
-        let url = generateServerUrl(p, type, tmdbId, season, episode, imdbId)
-
-        // Override with DB link if exists
-        if (dbLinks[p.id]) url = dbLinks[p.id]
-
-        if (!url) return null
-
-        const status = statuses[p.id] || 'unknown'
-        
-        return {
-          id: p.id,
-          name: p.name,
-          url,
-          priority: status === 'offline' ? -100 : (10 - idx),
-          status,
-          responseTime: undefined
-        }
-      })
-      .filter(Boolean) as Server[]
-
-      // Sort by priority (offline servers will be last)
-      generatedServers.sort((a, b) => b.priority - a.priority)
-
-      if (mounted) {
-        setBaseServers(generatedServers)
-        if (active >= generatedServers.length) setActive(0)
-        setLoading(false)
-      }
-    }
-
-    init()
-    return () => { mounted = false }
-  }, [tmdbId, type, season, episode, imdbId, statuses])
-
-  // Calculate final servers list with current statuses
-  const finalServers = useMemo(() => {
-    if (!baseServers.length) return []
-    
-    return baseServers.map((s) => ({
-      ...s,
-      status: s.status || 'online'
-    })).sort((a, b) => {
-      // Offline servers last
-      if (a.status === 'offline' && b.status !== 'offline') return 1
-      if (a.status !== 'offline' && b.status === 'offline') return -1
-      return b.priority - a.priority
-    })
-  }, [baseServers])
-
-  const reportBroken = useCallback(async () => {
-    setReporting(true)
-    const s = finalServers[active]
-    try {
-      await supabase.from('link_checks').insert({
-        content_id: tmdbId,
-        content_type: type,
-        source_name: s.name,
-        url: s.url,
-        status_code: 0,
-        response_time_ms: 0
-      })
-    } catch {}
-    
-    // Auto-switch to next server
-    if (active < finalServers.length - 1) {
-      setActive(prev => prev + 1)
-    } else {
-      setActive(0) // Loop back to start
-    }
-    setReporting(false)
-  }, [active, finalServers, tmdbId, type])
-
-  // Pre-check for multiple episodes availability (for lists)
-  const checkBatchAvailability = useCallback(async (episodes: { s: number, e: number }[]) => {
-    const results: Record<string, boolean> = {}
-    
-    // Limit batch size to prevent overloading
-    const batch = episodes.slice(0, 30)
-    
-    // Check in chunks of 5 to not hit browser connection limits too hard
-    const chunkSize = 5
-    for (let i = 0; i < batch.length; i += chunkSize) {
-      const chunk = batch.slice(i, i + chunkSize)
-      await Promise.all(chunk.map(async (ep) => {
-        const key = `${ep.s}-${ep.e}`
-        
-        // Check top 2 providers for each episode
-        const topProviders = PROVIDERS.slice(0, 2)
-        let isAvailable = false
-        
-        for (const p of topProviders) {
-          const url = generateServerUrl(p, type, tmdbId, ep.s, ep.e, imdbId)
-          try {
-            const controller = new AbortController()
-            const timeoutId = setTimeout(() => controller.abort(), 3000)
-            
-            await fetch(url, { 
-              mode: 'no-cors', 
-              signal: controller.signal
-            })
-            
-            clearTimeout(timeoutId)
-            isAvailable = true
-            break // One provider working is enough
-          } catch (e) {
-            // This provider failed, try next one
-          }
-        }
-        
-        results[key] = isAvailable
-      }))
-    }
-    
-    return results
-  }, [tmdbId, type, imdbId])
+  const activeServer = baseServers[active]
+  const downloadServers = DOWNLOAD_SERVER_IDS
+    .map((id) => baseServers.find((server) => server.id === id))
+    .filter((server): server is Server => Boolean(server))
+    .slice(0, 3)
 
   return {
-    servers: finalServers,
+    servers: baseServers,
+    downloadServers,
+    activeServer,
+    setActiveServer: setActiveSafe,
     active,
-    setActive,
+    setActive: setActiveSafe,
     loading,
-    reportBroken,
-    reporting,
+    reportServer,
+    reportBroken: reportServer,
+    reporting: false,
     checkBatchAvailability
   }
 }

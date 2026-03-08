@@ -4,21 +4,71 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { useLang } from '../../state/useLang'
 import { supabase } from '../../lib/supabase'
 import { useQuery } from '@tanstack/react-query'
-import { Download, Monitor, Smartphone, Apple, Terminal, Star, Search, Shield, Cpu, Grid, Filter } from 'lucide-react'
+import { Download, Monitor, Smartphone, Apple, Terminal, Star, Search, Shield, Cpu, Grid, Filter, Box } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { SOFTWARE_MOCK_ITEMS, type SoftwareRow } from '../../data/software'
 
-type SoftwareRow = {
-  id: number
-  title: string
-  poster_url?: string | null
-  rating?: number | null
-  year?: number | null
-  category?: string | null
-  download_url?: string | null
-  description?: string
-  version?: string
-  size?: string
-  platform?: 'pc' | 'android' | 'apple' | 'terminal' | 'other'
+// Static Fallback Images per Category
+const FALLBACK_IMAGES = {
+  pc: 'https://images.unsplash.com/photo-1587620962725-abab7fe55159?q=80&w=1000&auto=format&fit=crop', // Computer Code / Setup
+  android: 'https://images.unsplash.com/photo-1607252650355-f7fd0460ccdb?q=80&w=1000&auto=format&fit=crop', // Android Robot
+  apple: 'https://images.unsplash.com/photo-1611186871348-b1ce696e52c9?q=80&w=1000&auto=format&fit=crop', // Apple MacBook
+  terminal: 'https://images.unsplash.com/photo-1629654297299-c8506221ca97?q=80&w=1000&auto=format&fit=crop', // Matrix / Terminal
+  other: 'https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=1000&auto=format&fit=crop' // Chip / Tech
+}
+
+const SoftwareCard = ({ item }: { item: SoftwareRow }) => {
+  const [imgError, setImgError] = useState(false)
+  const fallback = FALLBACK_IMAGES[item.platform || 'other'] || FALLBACK_IMAGES.other
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      layout
+      className="group relative bg-lumen-void/40 border border-white/5 rounded-xl overflow-hidden hover:border-lumen-gold/30 transition-colors"
+    >
+      <div className="aspect-square relative overflow-hidden bg-black/50">
+        <img 
+          src={imgError || !item.poster_url ? fallback : item.poster_url} 
+          alt={item.title}
+          className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-110 ${imgError ? 'opacity-50 grayscale' : ''}`}
+          onError={() => setImgError(true)}
+          loading="lazy"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-80" />
+        
+        <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-md px-2 py-1 rounded-lg border border-white/10 flex items-center gap-1">
+          <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
+          <span className="text-xs font-bold text-white">{item.rating || 'N/A'}</span>
+        </div>
+
+        <div className="absolute bottom-0 left-0 right-0 p-4">
+           <h3 className="text-white font-bold text-lg leading-tight mb-1">{item.title}</h3>
+           <div className="flex items-center gap-2 text-white/50 text-xs">
+              <span className="bg-white/10 px-1.5 py-0.5 rounded uppercase">{item.version}</span>
+              <span>{item.size}</span>
+           </div>
+        </div>
+      </div>
+
+      <div className="p-4 pt-2">
+        <p className="text-white/60 text-sm line-clamp-2 mb-4 min-h-[2.5rem]">{item.description}</p>
+        
+        <div className="flex items-center gap-2">
+           <a 
+             href={item.download_url || '#'} 
+             target="_blank"
+             rel="noopener noreferrer"
+             className="flex-1 bg-lumen-gold text-black font-bold py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-yellow-400 transition-colors"
+           >
+             <Download className="w-4 h-4" />
+             Download
+           </a>
+        </div>
+      </div>
+    </motion.div>
+  )
 }
 
 export const Software = () => {
@@ -45,32 +95,7 @@ export const Software = () => {
         platform: item.platform || 'pc'
       })) as SoftwareRow[]
 
-      // Mock Data
-      const mockItems: SoftwareRow[] = [
-        // PC
-        { id: 201, title: 'Visual Studio Code', poster_url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9a/Visual_Studio_Code_1.35_icon.svg/2048px-Visual_Studio_Code_1.35_icon.svg.png', rating: 9.9, category: 'Development', description: 'Code editing. Redefined.', version: '1.86.0', size: '120 MB', platform: 'pc' },
-        { id: 202, title: 'Adobe Photoshop', poster_url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/af/Adobe_Photoshop_CC_icon.svg/1200px-Adobe_Photoshop_CC_icon.svg.png', rating: 9.5, category: 'Design', description: 'Reimagine reality with Photoshop.', version: '2024', size: '4 GB', platform: 'pc' },
-        { id: 203, title: 'Google Chrome', poster_url: 'https://upload.wikimedia.org/wikipedia/commons/e/e1/Google_Chrome_icon_%28February_2022%29.svg', rating: 9.0, category: 'Browser', description: 'The browser built by Google.', version: '122.0', size: '90 MB', platform: 'pc' },
-        { id: 204, title: 'VLC Media Player', poster_url: 'https://upload.wikimedia.org/wikipedia/commons/e/e6/VLC_Icon.svg', rating: 9.2, category: 'Multimedia', description: 'The best open source media player.', version: '3.0.20', size: '40 MB', platform: 'pc' },
-        { id: 205, title: 'Discord', poster_url: 'https://assets-global.website-files.com/6257adef93867e56f84d3092/636e0a6a49cf127bf92de1e2_icon_clyde_blurple_RGB.png', rating: 9.4, category: 'Communication', description: 'Your place to talk and hang out.', version: 'Stable', size: '85 MB', platform: 'pc' },
-        
-        // Android
-        { id: 301, title: 'Termux', poster_url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/75/Termux_Logo.png/800px-Termux_Logo.png', rating: 9.8, category: 'Terminal', description: 'Powerful terminal emulation for Android.', version: '0.118', size: '90 MB', platform: 'android' },
-        { id: 302, title: 'MX Player', poster_url: 'https://play-lh.googleusercontent.com/e3oZddH3M9kC8kX5A9g1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1', rating: 9.4, category: 'Multimedia', description: 'Powerful video player.', version: 'Latest', size: '50 MB', platform: 'android' },
-        { id: 303, title: 'F-Droid', poster_url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/F-Droid_Logo_2017.svg/2048px-F-Droid_Logo_2017.svg.png', rating: 9.6, category: 'Store', description: 'FOSS app repository for Android.', version: '1.19', size: '15 MB', platform: 'android' },
-        
-        // Apple
-        { id: 401, title: 'Xcode', poster_url: 'https://developer.apple.com/assets/elements/icons/xcode/xcode-128x128_2x.png', rating: 9.7, category: 'Development', description: 'Everything you need to create great apps.', version: '15.2', size: '10 GB', platform: 'apple' },
-        { id: 402, title: 'Final Cut Pro', poster_url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/36/Final_Cut_Pro_X.png/800px-Final_Cut_Pro_X.png', rating: 9.5, category: 'Video Editing', description: 'Professional video editing for Mac.', version: '10.7', size: '4 GB', platform: 'apple' },
-        { id: 403, title: 'IINA', poster_url: 'https://iina.io/images/iina-icon.png', rating: 9.6, category: 'Multimedia', description: 'The modern video player for macOS.', version: '1.3.3', size: '60 MB', platform: 'apple' },
-        
-        // Terminal
-        { id: 501, title: 'Oh My Zsh', poster_url: 'https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/docs/public/favicon.ico', rating: 9.9, category: 'Shell', description: 'Unleash your terminal like never before.', version: 'Latest', size: 'N/A', platform: 'terminal' },
-        { id: 502, title: 'Docker', poster_url: 'https://www.docker.com/wp-content/uploads/2022/03/vertical-logo-monochromatic.png', rating: 9.8, category: 'DevOps', description: 'OS-level virtualization.', version: '25.0', size: '500 MB', platform: 'terminal' },
-        { id: 503, title: 'Neovim', poster_url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/Neovim-mark.svg/1200px-Neovim-mark.svg.png', rating: 9.9, category: 'Editor', description: 'Hyperextensible Vim-based text editor.', version: '0.9.5', size: '10 MB', platform: 'terminal' },
-      ]
-
-      return [...dbItems, ...mockItems]
+      return [...dbItems, ...SOFTWARE_MOCK_ITEMS]
     },
     staleTime: 1000 * 60 * 60
   })
@@ -169,94 +194,21 @@ export const Software = () => {
       </div>
 
       {/* GRID CONTENT */}
-      <div className="px-4 md:px-12 w-full">
+      <div className="container mx-auto px-4 pb-24">
         {isLoading ? (
-           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
-             {[1,2,3,4,5,6,7,8].map(n => (
-               <div key={n} className="h-64 rounded-3xl bg-white/5 animate-pulse" />
+           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+             {[1,2,3,4,5,6,7,8,9,10].map(n => (
+               <div key={n} className="aspect-[3/4] rounded-xl bg-white/5 animate-pulse" />
              ))}
            </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
+          <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
             <AnimatePresence mode='popLayout'>
               {filteredSoftware.map((item) => (
-                <motion.div
-                  layout
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  key={item.id} 
-                  className="group relative bg-[#0a0a0a] border border-white/5 rounded-3xl p-6 hover:border-sky-500/30 hover:bg-[#0f0f0f] transition-all duration-300 flex flex-col"
-                >
-                  <Link to={`/software/${item.id}`} className="block flex-1">
-                    {/* Header: Icon & Rating */}
-                    <div className="flex items-start justify-between mb-6">
-                      <div className="w-16 h-16 rounded-2xl bg-white/5 p-2 border border-white/5 group-hover:scale-110 transition-transform duration-300 shadow-lg shadow-black/50 overflow-hidden">
-                        {item.poster_url ? (
-                          <img
-                            src={item.poster_url}
-                            alt={item.title}
-                            className="w-full h-full object-contain"
-                            loading="lazy"
-                            onError={(e) => {
-                              const target = e.target as HTMLImageElement;
-                              target.src = 'https://upload.wikimedia.org/wikipedia/commons/e/e4/Infobox_info_icon.svg';
-                              target.onerror = null;
-                            }}
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-zinc-500">
-                            <Cpu />
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-1 bg-yellow-500/10 border border-yellow-500/20 px-2 py-1 rounded-lg text-yellow-500 text-xs font-bold">
-                        <Star size={12} fill="currentColor" />
-                        {item.rating}
-                      </div>
-                    </div>
-
-                    {/* Content */}
-                    <div className="mb-6">
-                      <h3 className="text-xl font-bold text-white mb-2 group-hover:text-sky-400 transition-colors">{item.title}</h3>
-                      <p className="text-zinc-500 text-sm line-clamp-2 leading-relaxed mb-3">
-                        {item.description}
-                      </p>
-                      <div className="flex flex-wrap gap-2">
-                        <span className="text-xs px-2 py-1 rounded-md bg-white/5 text-zinc-400 border border-white/5 capitalize">
-                          {item.platform}
-                        </span>
-                        <span className="text-xs px-2 py-1 rounded-md bg-white/5 text-zinc-400 border border-white/5">
-                          v{item.version}
-                        </span>
-                      </div>
-                    </div>
-                  </Link>
-
-                  {/* Action */}
-                  <a 
-                    href={item.download_url || '#'}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full py-3 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-sky-900/20 group-hover:shadow-sky-600/20 group-hover:translate-y-[-2px]"
-                  >
-                    <Download size={18} />
-                    {lang === 'ar' ? 'تحميل' : 'Download'}
-                  </a>
-                  
-                  {/* Decorative Glow */}
-                  <div className="absolute inset-0 bg-sky-500/5 blur-2xl rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
-                </motion.div>
+                 <SoftwareCard key={item.id} item={item} />
               ))}
             </AnimatePresence>
-          </div>
-        )}
-
-        {!isLoading && filteredSoftware.length === 0 && (
-          <div className="text-center py-20 text-zinc-500">
-             <Filter className="mx-auto mb-4 opacity-50" size={48} />
-             <p className="text-lg">No software found in this category.</p>
-          </div>
+          </motion.div>
         )}
       </div>
     </div>

@@ -5,6 +5,7 @@ import { SeoHead } from '../../components/common/SeoHead'
 import { Layers, Film, ChevronRight, Calendar, Star } from 'lucide-react'
 import { SkeletonGrid } from '../../components/common/Skeletons'
 import { motion } from 'framer-motion'
+import { logger } from '../../lib/logger'
 
 type Part = {
   id: number
@@ -42,7 +43,7 @@ export const Parts = () => {
           if (mounted) setCollection(colData)
         }
       } catch (err) {
-        console.error('Failed to fetch parts:', err)
+        logger.error('Failed to fetch parts:', err)
       } finally {
         if (mounted) setLoading(false)
       }

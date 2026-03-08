@@ -9,6 +9,7 @@ import { Helmet } from 'react-helmet-async'
 import { PageLoader } from '../../components/common/PageLoader'
 import { tmdb } from '../../lib/tmdb'
 import { useCategoryVideos } from '../../hooks/useFetchContent'
+import { logger } from '../../lib/logger'
 
 // Specific queries to ensure accurate categorization
 const ADEL_IMAM_QUERY = 'مدرسة المشاغبين|الواد سيد الشغال|الزعيم|شاهد ماشفش حاجة|بودي جارد'
@@ -34,7 +35,7 @@ const fetchPlays = async (query: string, allowedCountries?: string[]) => {
             allResults = [...allResults, ...validResults]
         }
       } catch (e) {
-        console.error(e)
+        logger.error(e)
       }
   }
   

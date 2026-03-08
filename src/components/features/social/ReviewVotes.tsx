@@ -4,6 +4,7 @@ import { voteReview, removeReviewVote, getReviewVotes } from '../../../lib/supab
 import { clsx } from 'clsx'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
+import { logger } from '../../../lib/logger'
 
 interface ReviewVotesProps {
   commentId: string
@@ -20,7 +21,7 @@ export const ReviewVotes = ({ commentId, userId, lang = 'ar' }: ReviewVotesProps
       const data = await getReviewVotes(commentId)
       setVotes(data)
     } catch (error) {
-      console.error('Error fetching votes:', error)
+      logger.error('Error fetching votes:', error)
     }
   }
 

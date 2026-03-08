@@ -5,6 +5,7 @@ import { useLang } from '../../../state/useLang'
 import { useQuranPlayerStore } from '../../../state/useQuranPlayerStore'
 import { NATURE_IMAGES, SURAHS } from '../../../data/quran'
 import { toast } from 'sonner'
+import { logger } from '../../../lib/logger'
 
 export const QuranPlayerBar = () => {
   const { 
@@ -61,7 +62,7 @@ export const QuranPlayerBar = () => {
             })
           }
         }
-      } catch (e) { console.error(e) }
+      } catch (e) { logger.error(e) }
   }
 
   const handleSkipPrev = () => {
@@ -90,7 +91,7 @@ export const QuranPlayerBar = () => {
             })
           }
         }
-      } catch (e) { console.error(e) }
+      } catch (e) { logger.error(e) }
   }
 
   useEffect(() => {

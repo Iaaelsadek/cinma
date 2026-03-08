@@ -1,3 +1,5 @@
+import { logger } from './logger'
+
 export const CONFIG = {
   SUPABASE_URL: import.meta.env.VITE_SUPABASE_URL,
   SUPABASE_ANON_KEY: import.meta.env.VITE_SUPABASE_ANON_KEY,
@@ -17,11 +19,7 @@ const requiredKeys = [
 
 requiredKeys.forEach(key => {
   if (!import.meta.env[key]) {
-    console.error(`❌ CRITICAL ERROR: Missing environment variable: ${key}`)
-    // In development, we might want to throw to stop execution
-    if (import.meta.env.DEV) {
-       // console.warn(`Please set ${key} in your .env file`)
-    }
+    logger.error(`❌ CRITICAL ERROR: Missing environment variable: ${key}`)
   }
 })
 

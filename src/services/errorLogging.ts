@@ -1,4 +1,5 @@
 import { toast } from 'sonner';
+import { logger } from '../lib/logger';
 
 // Define process for browser environment
 declare const process: { env: { NODE_ENV?: string } } | undefined;
@@ -75,7 +76,7 @@ class ErrorLoggingService {
       try {
         this.queue = JSON.parse(saved);
       } catch (e) {
-        console.error('Failed to load error queue', e);
+        logger.error('Failed to load error queue', e)
       }
     }
   }
@@ -135,14 +136,14 @@ class ErrorLoggingService {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(error)
-        }).catch(err => console.error('Failed to send log:', err))
+        }).catch(err => logger.error('Failed to send log:', err))
       ));
 
       // Remove processed items
       this.queue = this.queue.slice(batch.length);
       this.saveQueue();
     } catch (error) {
-      console.error('Failed to process error queue:', error);
+      logger.error('Failed to process error queue:', error)
     } finally {
       this.isProcessing = false;
       

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { 
   supabase, 
   WatchParty as WatchPartyType, 
@@ -14,7 +14,7 @@ import {
 import { useAuth } from '../../../hooks/useAuth'
 import { 
   Users, Play, Pause, MessageCircle, X, Crown, LogOut, 
-  Send, Smile, RefreshCw, Zap, Flame, Heart, Star, Laugh
+  Send, Smile, RefreshCw, Zap, Flame, Heart, Star, Laugh, Copy, Link2
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
@@ -60,6 +60,10 @@ export const WatchParty = ({ partyId, onSync, onClose, currentVideoTime, isVideo
   const chatEndRef = useRef<HTMLDivElement>(null)
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
+  const inviteLink = useMemo(() => {
+    if (typeof window === 'undefined') return `https://cinma.online./party/${partyId}`
+    return `${window.location.origin}/party/${partyId}`
+  }, [partyId])
 
   const t = (ar: string, en: string) => (lang === 'ar' ? ar : en)
 
@@ -250,6 +254,15 @@ export const WatchParty = ({ partyId, onSync, onClose, currentVideoTime, isVideo
     }, 3000)
   }
 
+  const copyInviteLink = async () => {
+    try {
+      await navigator.clipboard.writeText(inviteLink)
+      toast.success(t('تم نسخ رابط الدعوة', 'Invite link copied'))
+    } catch {
+      toast.error(t('فشل نسخ الرابط', 'Failed to copy link'))
+    }
+  }
+
   if (!party) return null
 
   return (
@@ -302,6 +315,37 @@ export const WatchParty = ({ partyId, onSync, onClose, currentVideoTime, isVideo
               >
                 <X size={18} />
               </button>
+            </div>
+            <div className="px-6 py-3 border-b border-white/5 bg-white/[0.01]">
+              <div className="rounded-2xl border border-white/10 bg-black/30 p-3">
+                <div className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-400">
+                  <Link2 size={12} />
+                  <span>{t('رابط الدعوة', 'Invite Link')}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    readOnly
+                    value={inviteLink}
+                    className="h-10 w-full rounded-xl border border-white/10 bg-white/5 px-3 text-[11px] text-zinc-200 outline-none"
+                  />
+                  <button
+                    onClick={copyInviteLink}
+                    className="h-10 shrink-0 rounded-xl border border-primary/30 bg-primary/15 px-3 text-primary hover:bg-primary/25 transition-colors"
+                    aria-label={t('نسخ الرابط', 'Copy link')}
+                  >
+                    <Copy size={14} />
+                  </button>
+                  <a
+                    href={`https://wa.me/?text=${encodeURIComponent(inviteLink)}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="h-10 shrink-0 rounded-xl border border-emerald-500/30 bg-emerald-500/15 px-3 text-emerald-400 hover:bg-emerald-500/25 transition-colors flex items-center justify-center"
+                    aria-label={t('مشاركة واتساب', 'Share to WhatsApp')}
+                  >
+                    <MessageCircle size={14} />
+                  </a>
+                </div>
+              </div>
             </div>
 
             {/* Tabs */}

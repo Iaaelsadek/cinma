@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { getProgress, upsertProgress, addHistory } from '../lib/supabase'
 import { errorLogger } from '../services/errorLogging'
 
@@ -12,6 +12,11 @@ interface UseWatchProgressProps {
 
 export const useWatchProgress = ({ user, id, type, season, episode }: UseWatchProgressProps) => {
   const [elapsed, setElapsed] = useState(0)
+  const elapsedRef = useRef(0)
+
+  useEffect(() => {
+    elapsedRef.current = elapsed
+  }, [elapsed])
 
   useEffect(() => {
     let timer: ReturnType<typeof setInterval> | undefined
@@ -70,7 +75,7 @@ export const useWatchProgress = ({ user, id, type, season, episode }: UseWatchPr
         }
         return next
       })
-    }, 10000)
+    }, 60000)
 
     const onVisibilityChange = async () => {
       if (document.visibilityState === 'hidden' && id) {
@@ -82,7 +87,7 @@ export const useWatchProgress = ({ user, id, type, season, episode }: UseWatchPr
               contentType: type === 'movie' ? 'movie' : 'tv',
               season: type === 'tv' ? season : null,
               episode: type === 'tv' ? episode : null,
-              progressSeconds: elapsed
+              progressSeconds: elapsedRef.current
             })
             await addHistory({
               userId: user.id,
@@ -112,7 +117,7 @@ export const useWatchProgress = ({ user, id, type, season, episode }: UseWatchPr
       window.removeEventListener('visibilitychange', onVisibilityChange)
       window.removeEventListener('beforeunload', onVisibilityChange)
     }
-  }, [user, id, type, season, episode, elapsed])
+  }, [user, id, type, season, episode])
 
   return { elapsed, setElapsed }
 }

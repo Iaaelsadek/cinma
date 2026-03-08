@@ -17,6 +17,7 @@ import { useLang } from '../../state/useLang'
 import ReactPlayer from 'react-player'
 import { SeoHead } from '../../components/common/SeoHead'
 import { useDualTitles } from '../../hooks/useDualTitles'
+import { generateArabicSummary } from '../../lib/gemini'
 import { SectionHeader } from '../../components/common/SectionHeader'
 import { SkeletonDetails } from '../../components/common/Skeletons'
 
@@ -115,11 +116,24 @@ export const MovieDetails = () => {
       if (!id) return
       const { data } = await supabase.from('movies').select('ai_summary,trailer_url').eq('id', String(id)).maybeSingle()
       if (cancelled) return
-      setAiSummary(data?.ai_summary || null)
+      if (data?.ai_summary) setAiSummary(data.ai_summary)
       setDbTrailerUrl(data?.trailer_url || null)
     })()
     return () => { cancelled = true }
   }, [id])
+
+  // Auto-translate overview if needed
+  useEffect(() => {
+    if (!data || !data.overview) return
+    const isArabic = /[\u0600-\u06FF]/.test(data.overview)
+    if (!isArabic && !aiSummary) {
+      generateArabicSummary(data.title || data.name || '', data.overview).then(summary => {
+        if (summary && summary !== data.overview) {
+          setAiSummary(summary)
+        }
+      })
+    }
+  }, [data?.overview, data?.title, data?.name, aiSummary])
 
   // Watchlist Mutation
   const toggleWatchlist = useMutation({
@@ -128,14 +142,7 @@ export const MovieDetails = () => {
       if (heart) {
         await removeFromWatchlist(user.id, Number(id), 'movie')
       } else {
-        await addToWatchlist({
-          user_id: user.id,
-          media_id: Number(id),
-          media_type: 'movie',
-          title: data.title || data.name,
-          poster_path: data.poster_path,
-          vote_average: data.vote_average
-        })
+        await addToWatchlist(user.id, Number(id), 'movie')
       }
     },
     onSuccess: () => {
@@ -197,8 +204,8 @@ export const MovieDetails = () => {
   // Visual Data
   const poster = data.poster_path ? `https://image.tmdb.org/t/p/w500${data.poster_path}` : '/placeholder.jpg'
   const backdrop = data.backdrop_path ? `https://image.tmdb.org/t/p/w1280${data.backdrop_path}` : ''
-  const title = dualTitles.main || data.title || data.name
-  const overview = data.overview || (lang === 'ar' ? 'لا يوجد وصف' : 'No description')
+  const title = dualTitles.sub || dualTitles.main || data.title || data.name
+  const overview = aiSummary || data.overview || (lang === 'ar' ? 'لا يوجد وصف' : 'No description')
   const rating = data.vote_average ? Math.round(data.vote_average * 10) / 10 : 0
   const year = data.release_date ? new Date(data.release_date).getFullYear() : ''
   const genres = data.genres || []
@@ -212,9 +219,11 @@ export const MovieDetails = () => {
       <Helmet>
         <title>{title} - Cinema Online</title>
         <meta name="description" content={overview.slice(0, 160)} />
+        <link rel="canonical" href={`https://cinma.online/movie/${id}`} />
         <meta property="og:title" content={title} />
         <meta property="og:description" content={overview.slice(0, 200)} />
         <meta property="og:image" content={poster} />
+        <meta property="og:url" content={`https://cinma.online/movie/${id}`} />
         <meta property="twitter:card" content="summary_large_image" />
         {schemaData && <script type="application/ld+json">{JSON.stringify(schemaData)}</script>}
       </Helmet>
@@ -266,7 +275,7 @@ export const MovieDetails = () => {
                                 <span>{rating}</span>
                             </div>
                             <span>•</span>
-                            <span>{genres.map(g => g.name).join(', ')}</span>
+                            <span>{genres.map((g: TmdbGenre) => g.name).join(', ')}</span>
                         </div>
                     </div>
 
@@ -296,10 +305,10 @@ export const MovieDetails = () => {
                     {/* Similar Movies */}
                     {similar?.results && similar.results.length > 0 && (
                         <div className="pt-12">
-                            <SectionHeader title={lang === 'ar' ? 'أفلام مشابهة' : 'Similar Movies'} />
+                            <SectionHeader title={lang === 'ar' ? 'أفلام مشابهة' : 'Similar Movies'} icon={<Play className="w-5 h-5" />} />
                             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                                 {similar.results.slice(0, 5).map(item => (
-                                    <MovieCard key={item.id} item={{...item, media_type: 'movie'}} />
+                                    <MovieCard key={item.id} movie={{ ...item, media_type: 'movie' }} />
                                 ))}
                             </div>
                         </div>
