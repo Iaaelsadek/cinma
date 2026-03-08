@@ -1,6 +1,7 @@
 import { getHistory, getContinueWatching, supabase } from '../lib/supabase'
 import { tmdb } from '../lib/tmdb'
 import { callGeminiWithFallback } from '../lib/gemini'
+import { logger } from '../lib/logger'
 
 export type RecommendationItem = {
   id: number
@@ -182,7 +183,7 @@ async function generateTitles(genres: string[], userId: string): Promise<string[
       
     return lines.slice(0, 8);
   } catch (err) {
-    console.warn('[Recommendations] Gemini failed, falling back to TMDB genres', err);
+    logger.warn('[Recommendations] Gemini failed, falling back to TMDB genres', err)
     return [];
   }
 }

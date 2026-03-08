@@ -7,6 +7,7 @@ import { useAuth } from '../../../hooks/useAuth'
 import { addToWatchlist, isInWatchlist, removeFromWatchlist } from '../../../lib/supabase'
 import ReactPlayer from 'react-player/youtube'
 import { tmdb } from '../../../lib/tmdb'
+import { logger } from '../../../lib/logger'
 
 import { useDualTitles } from '../../../hooks/useDualTitles'
 
@@ -129,7 +130,7 @@ export const VideoCard = memo(({ video, index = 0 }: { video: VideoItem; index?:
         setInList(true)
       }
     } catch (error) {
-      console.error('Watchlist toggle error:', error)
+      logger.error('Watchlist toggle error:', error)
     } finally {
       setBusy(false)
     }
@@ -144,6 +145,10 @@ export const VideoCard = memo(({ video, index = 0 }: { video: VideoItem; index?:
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onClick={() => {
+        if (video.category === 'summary' || video.category === 'video' || video.category === 'plays') {
+          navigate(`/watch/video/${video.id}`)
+          return
+        }
         const type = video.category === 'series' || video.category === 'tv' ? 'tv' : 'movie'
         const url = type === 'tv' ? `/watch/tv/${video.id}/s1/ep1` : `/watch/movie/${video.id}`
         navigate(url)
@@ -154,9 +159,11 @@ export const VideoCard = memo(({ video, index = 0 }: { video: VideoItem; index?:
           <img 
             src={imageSrc}
             alt={displayTitle}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110 select-none"
             onError={handleImageError}
             loading="lazy"
+            draggable={false}
+            onDragStart={(e) => e.preventDefault()}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-zinc-800">

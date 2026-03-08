@@ -337,7 +337,7 @@ const EngineManager = ({ token }: { token: string }) => {
                   try {
                     const res = await fetch(`${API_BASE}/api/admin/exec`, {
                       method: 'POST',
-                      headers: { 'Content-Type': 'application/json', 'x-admin-token': '' },
+                      headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
                       body: JSON.stringify({ command: 'pip install -r backend/requirements.txt' })
                     });
                     const d = await res.json();
@@ -356,7 +356,7 @@ const EngineManager = ({ token }: { token: string }) => {
                   try {
                     const res = await fetch(`${API_BASE}/api/admin/exec`, {
                       method: 'POST',
-                      headers: { 'Content-Type': 'application/json', 'x-admin-token': '' },
+                      headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
                       body: JSON.stringify({ command: 'pm2 restart all' })
                     });
                     const d = await res.json();
@@ -376,7 +376,7 @@ const EngineManager = ({ token }: { token: string }) => {
                 try {
                   const res = await fetch(`${API_BASE}/api/admin/exec`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
                     body: JSON.stringify({ command: 'npm run build && git add . && git commit -m "Admin Deploy" && git push' })
                   });
                   const d = await res.json();

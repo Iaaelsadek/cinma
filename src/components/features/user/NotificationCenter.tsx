@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 import { formatDistanceToNow } from 'date-fns'
 import { ar } from 'date-fns/locale/ar'
 import { clsx } from 'clsx'
+import { logger } from '../../../lib/logger'
 
 export const NotificationCenter = () => {
   const { user } = useAuth()
@@ -22,7 +23,7 @@ export const NotificationCenter = () => {
       setNotifications(data)
       setUnreadCount(data.filter(n => !n.is_read).length)
     } catch (err) {
-      console.error('Failed to fetch notifications:', err)
+      logger.error('Failed to fetch notifications:', err)
     } finally {
       setLoading(false)
     }

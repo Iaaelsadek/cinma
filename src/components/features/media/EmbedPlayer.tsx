@@ -1,8 +1,9 @@
-import { Signal, Lightbulb, WifiOff, Wifi, SkipForward, AlertTriangle, Loader2, RefreshCcw } from 'lucide-react'
+import { Signal, Lightbulb, WifiOff, Wifi, SkipForward, AlertTriangle, Loader2, RefreshCcw, Play, Pause, Volume2, VolumeX, Maximize, FastForward, Rewind, Rocket, ArrowDown, Settings, Subtitles, Monitor } from 'lucide-react'
 import { Server } from '../../../hooks/useServers'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useState, useEffect } from 'react'
 import { clsx } from 'clsx'
+import { logger } from '../../../lib/logger'
 
 type Props = {
   server: Server | undefined
@@ -28,7 +29,82 @@ export const EmbedPlayer = ({
   const [isIframeLoading, setIsIframeLoading] = useState(true)
   const [retryCount, setRetryCount] = useState(0)
   const [isSlowConnection, setIsSlowConnection] = useState(false)
+  const [clicksAbsorbed, setClicksAbsorbed] = useState(0)
+  const [isMuted, setIsMuted] = useState(false)
+  const [isPlaying, setIsPlaying] = useState(false) // Optimistic UI state
+  const [hasStarted, setHasStarted] = useState(false) // Tracks if user has ever clicked start
+  const [startClicks, setStartClicks] = useState(0) // Tracks number of clicks on start overlay
+  const [isUserActive, setIsUserActive] = useState(true) // Track mouse movement
+  const [showQualityMenu, setShowQualityMenu] = useState(false)
+  const [quality, setQuality] = useState('1080p')
+  const [ccEnabled, setCcEnabled] = useState(false)
+  const [playerUrl, setPlayerUrl] = useState<string | undefined>(server?.url)
+  const [subtitleRequested, setSubtitleRequested] = useState(false)
+  
+  // Progress Bar State (Experimental)
+  const [currentTime, setCurrentTime] = useState(0)
+  const [duration, setDuration] = useState(7200) // Default 2 hours if unknown
+
   const t = (ar: string, en: string) => (lang === 'ar' ? ar : en)
+
+  // SIMULATED PROGRESS: Increment timer if playing
+  // useEffect(() => {
+  //   let interval: number;
+  //   if (isPlaying) {
+  //     interval = window.setInterval(() => {
+  //        setCurrentTime(prev => {
+  //          if (prev >= duration) return duration;
+  //          return prev + 1;
+  //        });
+  //     }, 1000);
+  //   }
+  //   return () => clearInterval(interval);
+  // }, [isPlaying, duration]);
+
+  // Auto-hide controls logic
+  useEffect(() => {
+    let timeout: number | undefined
+    
+    const handleActivity = () => {
+      setIsUserActive(true);
+      if (timeout !== undefined) {
+        clearTimeout(timeout)
+      }
+      
+      // Only hide if playing AND has started AND quality menu is closed
+      if (isPlaying && hasStarted && !showQualityMenu) {
+        timeout = window.setTimeout(() => {
+          setIsUserActive(false);
+        }, 3000);
+      }
+    };
+
+    // If paused or hasn't started, always show controls (if started)
+    if (!isPlaying || !hasStarted) {
+      setIsUserActive(true);
+      if (timeout !== undefined) {
+        clearTimeout(timeout)
+      }
+    } else {
+      // Start timer immediately if playing
+      timeout = window.setTimeout(() => {
+        setIsUserActive(false);
+      }, 3000);
+    }
+
+    window.addEventListener('mousemove', handleActivity);
+    window.addEventListener('click', handleActivity);
+    window.addEventListener('keydown', handleActivity);
+
+    return () => {
+      if (timeout !== undefined) {
+        clearTimeout(timeout)
+      }
+      window.removeEventListener('mousemove', handleActivity);
+      window.removeEventListener('click', handleActivity);
+      window.removeEventListener('keydown', handleActivity);
+    };
+  }, [isPlaying, hasStarted]);
 
   // Connection Quality Detection
   useEffect(() => {
@@ -67,7 +143,170 @@ export const EmbedPlayer = ({
   useEffect(() => {
     setIsIframeLoading(true)
     setRetryCount(0)
-  }, [server?.url])
+    setClicksAbsorbed(0)
+    setPlayerUrl(server?.url)
+    setSubtitleRequested(false)
+  }, [server?.url, server?.id])
+
+  const addSubtitleParam = (url: string, param: string) => {
+    const key = param.split('=')[0]
+    const hasParam = new RegExp(`([?&])${key}=`, 'i').test(url)
+    if (hasParam) return url
+    const sep = url.includes('?') ? '&' : (url.includes('&season=') && !url.includes('?') ? '&' : '?')
+    return `${url}${sep}${param}`
+  }
+
+  const withArabicSubtitleHints = (url: string, serverId?: string) => {
+    let next = url
+    if (serverId?.startsWith('vidsrc_')) {
+      next = addSubtitleParam(next, 'subtitles=ar')
+      next = addSubtitleParam(next, 'lang=ar')
+      return next
+    }
+    if (serverId === 'autoembed_co') {
+      next = addSubtitleParam(next, 'lang=ar')
+      next = addSubtitleParam(next, 'subtitles=ar')
+      return next
+    }
+    if (serverId?.startsWith('2embed')) {
+      next = addSubtitleParam(next, 'subtitles=ar')
+      next = addSubtitleParam(next, 'lang=ar')
+      return next
+    }
+    if (serverId === '111movies') {
+      next = addSubtitleParam(next, 'lang=ar')
+      return next
+    }
+    if (serverId === 'smashystream' || serverId === 'moviebox' || serverId === 'streamwish') {
+      next = addSubtitleParam(next, 'sub=ar')
+      next = addSubtitleParam(next, 'lang=ar')
+      return next
+    }
+    return url
+  }
+
+  const requestArabicSubtitles = () => {
+    if (!server?.url) return
+    const updated = withArabicSubtitleHints(server.url, server.id)
+    setSubtitleRequested(true)
+    setIsIframeLoading(true)
+    setPlayerUrl(updated)
+  }
+
+  // POPUP BLOCKER: Attempt to neutralize window.open from within the component scope
+  // Note: This is a best-effort approach. Cross-origin iframes are protected, but some 
+  // older ad scripts try to open windows from the parent or shared context.
+  useEffect(() => {
+    const originalOpen = window.open;
+    // Monkey Patch window.open to block popups - RETURN A FAKE WINDOW OBJECT
+    (window as any).open = function(url: string, target: string, features: string) {
+      logger.debug('🚫 Mocked popup attempt:', url)
+      // Return a fake window object to fool ad scripts that check for 'popup.closed' or 'popup.focus'
+      return {
+        closed: false,
+        focus: () => { logger.debug('🚫 Mocked focus call') },
+        close: () => { logger.debug('🚫 Mocked close call') },
+        document: { write: () => {} },
+        location: { href: url }
+      };
+    };
+
+    return () => {
+      // Restore original on cleanup
+      (window as any).open = originalOpen;
+    };
+  }, []);
+
+  // LINK INTERCEPTOR: Prevent anchor tags from opening new windows (target="_blank")
+  useEffect(() => {
+    const handleLinkClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      const link = target.closest('a');
+      
+      if (link) {
+        // If it tries to open in new tab/window, force it to stay or block it
+        if (link.target === '_blank') {
+          logger.debug('🚫 Blocked link popup:', link.href)
+          e.preventDefault();
+          e.stopPropagation();
+          // Optionally: link.target = '_self'; // To force open in same tab (risky for video player)
+        }
+      }
+    };
+
+    // Capture phase to intercept before it bubbles
+    window.addEventListener('click', handleLinkClick, true);
+
+    return () => {
+      window.removeEventListener('click', handleLinkClick, true);
+    };
+  }, []);
+
+  // PROGRESS BAR & SYNC: Listen for messages from iframe
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      // Security check: ensure message is from our iframe source (optional but good practice)
+      // if (event.origin !== new URL(server?.url || '').origin) return;
+
+      try {
+        const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+        
+        // Check for common player events (jwplayer, clappr, etc)
+        if (data && (data.event === 'timeupdate' || data.type === 'timeupdate' || data.event === 'play' || data.type === 'play' || data.event === 'playing' || data.type === 'playing')) {
+           const time = data.position || data.currentTime || data.time;
+           const dur = data.duration || data.totalTime;
+           if (time) setCurrentTime(time);
+           if (dur) setDuration(dur);
+
+           // Smart Activation: If video started, enable controls immediately!
+           setHasStarted(prev => {
+             if (!prev) {
+               logger.debug('🎬 Smart Detection: Video started! Activating controls...')
+                setIsPlaying(true);
+                setStartClicks(2); // Force completion
+                return true;
+             }
+             return prev;
+           });
+        }
+      } catch (e) {
+        // Ignore parse errors
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [server]);
+
+  // FOCUS DETECTION: If user clicks the iframe, window loses focus -> we assume playing started
+  useEffect(() => {
+    const onBlur = () => {
+      if (document.activeElement instanceof HTMLIFrameElement) {
+         logger.debug('🖱️ Iframe clicked (Focus lost) -> Incrementing Start Clicks')
+         
+         setStartClicks(prev => {
+           const newCount = prev + 1;
+           
+           // HACK: Refocus window after first click so we can detect the second click!
+           if (newCount === 1) {
+              setTimeout(() => {
+                 window.focus();
+                 logger.debug('🔄 Refocusing window to capture second click...')
+              }, 200);
+           }
+
+           if (newCount >= 2) {
+              setIsPlaying(true);
+              setHasStarted(true); // Mark as started forever after 2nd click
+           }
+           return newCount;
+         });
+      }
+    };
+    
+    window.addEventListener('blur', onBlur);
+    return () => window.removeEventListener('blur', onBlur);
+  }, []);
 
   if (loading) {
     return (
@@ -88,8 +327,14 @@ export const EmbedPlayer = ({
     )
   }
 
-  const isOffline = server?.status === 'offline'
-  const isDegraded = server?.status === 'degraded'
+  // --- FORCE SHOW: Never show offline screen, even if server is offline ---
+  // const isOffline = server?.status === 'offline'
+  // const isDegraded = server?.status === 'degraded'
+  const isOffline = false; 
+  const isDegraded = false;
+  
+  // --- IGNORE ERROR SCREEN ---
+  // if (isOffline && !isIframeLoading) { ... } -> Removed/Bypassed
 
   const handleIframeLoad = () => {
     setIsIframeLoading(false)
@@ -99,6 +344,138 @@ export const EmbedPlayer = ({
     setRetryCount(prev => prev + 1)
     setIsIframeLoading(true)
   }
+
+  // POSTMESSAGE CONTROL: Attempt to control iframe player externally
+  const handleExternalControl = (action: string, value?: any) => {
+    const iframe = document.querySelector('iframe');
+    if (iframe && iframe.contentWindow) {
+      // Optimistic Update
+      if (action === 'play') setIsPlaying(true);
+      if (action === 'pause') setIsPlaying(false);
+      if (action === 'mute') setIsMuted(true);
+      if (action === 'unmute') setIsMuted(false);
+      if (action === 'captions') setCcEnabled(prev => !prev);
+      if (action === 'quality') setQuality(value);
+
+      // PostMessage Commands
+      let msgs: any[] = [];
+      
+      if (action === 'play' || action === 'pause') {
+         msgs = [
+          { event: 'command', func: action === 'play' ? 'playVideo' : 'pauseVideo' }, // YouTube/Google
+          { method: action }, // Vimeo
+          { type: action }, // Generic
+          action
+        ];
+      } else if (action === 'mute' || action === 'unmute') {
+        msgs = [
+           { event: 'command', func: action === 'mute' ? 'mute' : 'unMute' },
+           { method: action === 'mute' ? 'setVolume' : 'setVolume', value: action === 'mute' ? 0 : 1 },
+           { type: action }
+        ];
+      } else if (action === 'seek_forward') {
+         // Generic seek forward 10s
+         setCurrentTime(prev => Math.min(prev + 10, duration));
+         msgs = [
+             { event: 'command', func: 'seekTo', args: [10, true] }, // YouTube style relative seek is hard, usually absolute
+             { method: 'seekTo', value: 10 } 
+         ];
+      } else if (action === 'seek_backward') {
+          // Generic seek backward 10s
+          setCurrentTime(prev => Math.max(prev - 10, 0));
+          msgs = [
+              { event: 'command', func: 'seekTo', args: [-10, true] },
+              { method: 'seekTo', value: -10 }
+          ];
+      } else if (action === 'captions') {
+          msgs = [{ event: 'command', func: ccEnabled ? 'hideCaptions' : 'showCaptions' }];
+      } else if (action === 'quality') {
+          msgs = [{ event: 'command', func: 'setPlaybackQuality', args: [value] }];
+      } else if (action === 'seek') {
+          // Absolute seek from progress bar
+          setCurrentTime(value);
+          msgs = [
+             { event: 'command', func: 'seekTo', args: [value, true] },
+             { method: 'seekTo', value: value }
+          ];
+      }
+
+      // Keyboard Simulation Fallback
+      if (action === 'seek_forward') {
+         // Simulate Right Arrow
+         iframe.focus();
+         window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', code: 'ArrowRight', bubbles: true }));
+      } else if (action === 'seek_backward') {
+         // Simulate Left Arrow
+         iframe.focus();
+         window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', code: 'ArrowLeft', bubbles: true }));
+      } else if (action === 'play' || action === 'pause') {
+         // Force focus and send Space key - Safe for Play/Pause toggle
+         iframe.focus();
+         setTimeout(() => {
+            window.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', code: 'Space', keyCode: 32, which: 32, bubbles: true }));
+         }, 50);
+      } else if (action === 'mute' || action === 'unmute') {
+         // Simulate M
+         iframe.focus();
+         window.dispatchEvent(new KeyboardEvent('keydown', { key: 'm', code: 'KeyM', bubbles: true }));
+      }
+
+      // DIRECT CLICK SIMULATION (The Ultimate Fallback)
+      // If server ignores everything, we might just focus the iframe and hope user clicks work better
+      // But for Play/Pause specifically, we can try to send a click event to the document body of iframe (if same origin)
+      // or just rely on the Space key above.
+      
+      msgs.forEach(msg => {
+        iframe.contentWindow?.postMessage(JSON.stringify(msg), '*');
+        iframe.contentWindow?.postMessage(msg, '*');
+      });
+      
+      logger.debug(`📡 Sent external ${action} command to iframe`, value)
+    }
+  };
+
+  // Attempt to enter fullscreen on the wrapper div
+  const toggleFullscreen = () => {
+     const wrapper = document.querySelector('.player-wrapper');
+     if (wrapper) {
+       if (!document.fullscreenElement) {
+         wrapper.requestFullscreen().catch(err => logger.error(err))
+       } else {
+         document.exitFullscreen();
+       }
+     }
+  }
+
+  // --- NEW: Direct Click Handler for Play/Pause Button ---
+  const handlePlayClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    // 1. Force Focus on Iframe First!
+    const iframe = document.querySelector('iframe');
+    if (iframe) {
+       iframe.focus();
+       logger.debug('🎯 Focused iframe for keyboard event')
+    }
+
+    // 2. Determine Action
+    const cmd = isPlaying ? 'pause' : 'play';
+    
+    // 3. Send Space Key (The most reliable method after focus)
+    // We send it multiple times with slight delays to ensure the player catches it
+    setTimeout(() => {
+       window.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', code: 'Space', keyCode: 32, which: 32, bubbles: true }));
+    }, 50);
+    setTimeout(() => {
+       window.dispatchEvent(new KeyboardEvent('keyup', { key: ' ', code: 'Space', keyCode: 32, which: 32, bubbles: true }));
+    }, 100);
+
+    // 4. Also try postMessage as backup
+    handleExternalControl(cmd);
+
+    // 5. Optimistic UI Update
+    setIsPlaying(!isPlaying);
+  };
 
   return (
     <div className="space-y-4">
@@ -135,7 +512,7 @@ export const EmbedPlayer = ({
 
       {/* Video Player Container */}
       <div className={clsx(
-        "relative aspect-video w-full overflow-hidden transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] group",
+        "relative aspect-video w-full overflow-hidden transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] group player-wrapper",
         cinemaMode 
           ? 'fixed inset-0 z-[60] h-screen w-screen rounded-none border-none bg-black' 
           : 'rounded-[2rem] border border-white/10 bg-black shadow-2xl ring-1 ring-white/5'
@@ -155,7 +532,7 @@ export const EmbedPlayer = ({
               </div>
               <div className="text-center space-y-1">
                 <span className="block text-[10px] text-zinc-500 font-bold uppercase tracking-widest">
-                  {t('جاري إنشاء اتصال آمن...', 'ESTABLISHING SECURE CONNECTION...')}
+                  {t('جاري تحميل الفيديو...', 'LOADING VIDEO...')}
                 </span>
               </div>
             </motion.div>
@@ -164,10 +541,10 @@ export const EmbedPlayer = ({
 
         {/* Video Frame */}
         <div className="h-full w-full relative">
-          {server ? (
-            <iframe
-              key={`${server.url}-${retryCount}`}
-              src={server.url}
+          {/* ALWAYS RENDER IFRAME - NEVER SHOW ERROR SCREEN */}
+          <iframe
+              key={`${playerUrl || 'loading'}-${retryCount}`}
+              src={playerUrl}
               className={clsx(
                 "h-full w-full bg-black transition-opacity duration-1000",
                 isIframeLoading ? "opacity-0" : "opacity-100"
@@ -178,29 +555,8 @@ export const EmbedPlayer = ({
               referrerPolicy="origin"
               style={{ border: 'none', overflow: 'hidden' }}
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              title={`Stream ${server.name}`}
+              title={`Stream ${server?.name || 'Loading...'}`}
             />
-          ) : (
-            <div className="flex h-full flex-col items-center justify-center text-zinc-500 gap-6 bg-zinc-950/50 backdrop-blur-3xl">
-              <div className="p-8 rounded-full bg-white/5 border border-white/5">
-                <WifiOff size={64} className="opacity-20" />
-              </div>
-              <div className="text-center space-y-3 max-w-xs">
-                <span className="block text-xl font-black text-zinc-200 uppercase tracking-tighter">
-                  {t('فشل الاتصال', 'CONNECTION FAILED')}
-                </span>
-                <span className="block text-xs text-zinc-500 font-medium leading-relaxed">
-                  {t('جميع قنوات البث غير مستجيبة حالياً. جاري محاولة التبديل لسيرفرات بديلة.', 'All stream channels are unresponsive. Attempting to rotate to alternative servers.')}
-                </span>
-                <button 
-                  onClick={onNextServer}
-                  className="mt-4 px-10 py-4 rounded-2xl bg-primary text-black text-xs md:text-sm font-black uppercase tracking-tight hover:scale-105 transition-transform"
-                >
-                  {t('التبديل للسيرفر التالي', 'Switch to Next Server')}
-                </button>
-              </div>
-            </div>
-          )}
         </div>
         
         {/* Cinema Mode Close Button */}
@@ -227,6 +583,68 @@ export const EmbedPlayer = ({
              </div>
           </div>
         )}
+
+        {/* External Controls (Experimental) */}
+        {!isIframeLoading && server && (
+          <div className="absolute inset-0 z-[100] pointer-events-none flex flex-col justify-end p-6 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+             
+             {/* FULL SHIELD: Blocks clicks on iframe TOP 85% ONLY */}
+             {hasStarted && (
+               <div className="absolute top-0 left-0 right-0 h-[85%] z-[200] pointer-events-none">
+                 {/* Top Block */}
+                 <div 
+                   className="absolute top-0 left-0 right-0 h-[calc(50%-75px)] bg-transparent pointer-events-auto cursor-default"
+                   onDoubleClick={(e) => { e.stopPropagation(); toggleFullscreen(); }}
+                   onClick={(e) => e.stopPropagation()}
+                 />
+                 
+                 {/* Bottom Block (above the 15% open area) */}
+                 <div 
+                   className="absolute bottom-0 left-0 right-0 top-[calc(50%+75px)] bg-transparent pointer-events-auto cursor-default"
+                   onDoubleClick={(e) => { e.stopPropagation(); toggleFullscreen(); }}
+                   onClick={(e) => e.stopPropagation()}
+                 />
+
+                 {/* Left Block */}
+                 <div 
+                   className="absolute top-[calc(50%-75px)] bottom-[calc(50%-75px)] left-0 w-[calc(50%-75px)] h-[150px] bg-transparent pointer-events-auto cursor-default"
+                   onDoubleClick={(e) => { e.stopPropagation(); toggleFullscreen(); }}
+                   onClick={(e) => e.stopPropagation()}
+                 />
+
+                 {/* Right Block */}
+                 <div 
+                   className="absolute top-[calc(50%-75px)] bottom-[calc(50%-75px)] right-0 w-[calc(50%-75px)] h-[150px] bg-transparent pointer-events-auto cursor-default"
+                   onDoubleClick={(e) => { e.stopPropagation(); toggleFullscreen(); }}
+                   onClick={(e) => e.stopPropagation()}
+                 />
+                 
+                 {/* Center Hole is implicitly created by the space between these divs */}
+               </div>
+             )}
+
+             {/* Center Play Button Overlay - TRANSPARENT TO ALLOW FIRST 2 CLICKS ON IFRAME */}
+             {startClicks === 0 && (
+               <div 
+                  className={clsx(
+                    "absolute inset-0 flex items-center justify-center transition-opacity duration-500",
+                    "opacity-100 cursor-pointer"
+                  )}
+                  onClick={() => {
+                     // We let the click pass through to iframe
+                     // But we update our internal counter
+                     setStartClicks(prev => prev + 1);
+                  }}
+                  style={{ pointerEvents: 'none' }} // Always allow click through to iframe initially
+               >
+                  {/* COMPLETELY TRANSPARENT - NO VISIBLE UI */}
+               </div>
+             )}
+
+             {/* Floating Controls: Removed per request for minimalist look */}
+             {/* Use Shield for Play/Pause (Click) and Fullscreen (DoubleClick) */}
+          </div>
+        )}
       </div>
 
       {/* Footer: Detailed Controls & Reporting */}
@@ -238,6 +656,16 @@ export const EmbedPlayer = ({
           >
             <RefreshCcw size={16} className="group-hover:rotate-180 transition-transform duration-700" />
             <span>{t('إعادة اتصال', 'Reconnect')}</span>
+          </button>
+          <button
+            onClick={requestArabicSubtitles}
+            className={clsx(
+              "group flex items-center gap-2 text-xs md:text-sm font-black uppercase tracking-tight transition-colors",
+              subtitleRequested ? "text-emerald-400" : "text-zinc-500 hover:text-white"
+            )}
+          >
+            <Subtitles size={16} />
+            <span>{subtitleRequested ? t('تم طلب ترجمة عربية', 'Arabic Subtitle Requested') : t('طلب ترجمة عربية', 'Request Arabic Subtitles')}</span>
           </button>
         </div>
 

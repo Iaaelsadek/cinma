@@ -7,6 +7,7 @@ import { createPlaylist, addPlaylistItem, getUserPlaylists, Playlist, PlaylistIt
 import { tmdb } from '../../../lib/tmdb'
 import { toast } from 'sonner'
 import { clsx } from 'clsx'
+import { logger } from '../../../lib/logger'
 
 export const PlaylistManager = () => {
   const { user } = useAuth()
@@ -22,7 +23,7 @@ export const PlaylistManager = () => {
       const data = await getUserPlaylists(user.id)
       setPlaylists(data)
     } catch (err) {
-      console.error('Failed to fetch playlists:', err)
+      logger.error('Failed to fetch playlists:', err)
     } finally {
       setLoading(false)
     }

@@ -2,6 +2,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { errorLogger } from '../services/errorLogging';
 import { supabase } from './supabase';
 import { CONFIG } from './constants';
+import { logger } from './logger';
 
 // Use Vite environment variable
 const API_KEY = CONFIG.GEMINI_API_KEY || "";
@@ -171,7 +172,7 @@ export const generateAiInsights = async (title: string, type: 'movie' | 'tv', ov
     const insights = JSON.parse(jsonStr);
     if (Array.isArray(insights)) return insights.map(i => i.replace(/^[-•]\s*/, '').trim());
   } catch (err) {
-    console.warn('[Gemini - ai-insights] Failed to parse JSON:', err);
+    logger.warn('[Gemini - ai-insights] Failed to parse JSON:', err)
     // Simple fallback: split by newline if it looks like a list
     if (text.includes('\n')) return text.split('\n')
       .filter(s => s.trim().length > 0)
@@ -219,7 +220,7 @@ export const processSmartSearch = async (query: string): Promise<any> => {
     const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
     return JSON.parse(jsonStr);
   } catch (err) {
-    console.warn('[Gemini - smart-search] Failed to parse JSON:', err);
+    logger.warn('[Gemini - smart-search] Failed to parse JSON:', err)
     return null;
   }
 };
@@ -256,7 +257,7 @@ export const generateAiPlaylist = async (theme?: string, history?: string): Prom
     const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
     return JSON.parse(jsonStr);
   } catch (err) {
-    console.warn('[Gemini - ai-playlist] Failed to parse JSON:', err);
+    logger.warn('[Gemini - ai-playlist] Failed to parse JSON:', err)
     return null;
   }
 };
@@ -326,7 +327,7 @@ export const translateTitleToArabic = async (title: string): Promise<string> => 
           arabic_title: finalTranslation
         }).then(({ error }) => {
            if (error && error.code !== '42P01') { // Ignore if table missing
-             console.warn('[Translation] Failed to save to DB:', error.message);
+             logger.warn('[Translation] Failed to save to DB:', error.message)
            }
         });
 
@@ -357,7 +358,7 @@ export const translateTitleToArabic = async (title: string): Promise<string> => 
       if (res.status === 429) {
         // Rate limit hit: Back off for 1 hour to prevent console spam
         if (!isMyMemoryRateLimited) {
-            console.warn('[Translation] MyMemory rate limit reached. Pausing requests for 1 hour.');
+            logger.warn('[Translation] MyMemory rate limit reached. Pausing requests for 1 hour.')
             isMyMemoryRateLimited = true;
             localStorage.setItem(backoffKey, (Date.now() + 3600000).toString());
         }

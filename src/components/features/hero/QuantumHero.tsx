@@ -60,7 +60,24 @@ export const QuantumHero = memo(({ items }: { items: any[] }) => {
         const item = heroItems.find(i => i.id === activeId)
         if (!item) return
 
+        // Handle Custom Videos (YouTube)
+        if (item.media_type === 'video' || item.source === 'youtube' || item.category === 'plays' || item.category === 'quran' || item.category === 'prophets' || item.category === 'summary') {
+             let videoId = typeof item.id === 'string' ? item.id : null
+             if (!videoId && item.url) {
+                 const match = item.url.match(/[?&]v=([^&]+)/)
+                 videoId = match ? match[1] : null
+             }
+             
+             if (mounted && videoId) {
+                 setTrailers(prev => ({ ...prev, [activeId]: videoId }))
+             }
+             return
+        }
+
         const type = item.media_type || 'movie'
+        // Prevent calling TMDB for invalid types
+        if (type !== 'movie' && type !== 'tv') return
+
         const { data } = await tmdb.get(`/${type}/${item.id}/videos`)
         const trailer = data.results?.find(
           (v: any) => v.site === 'YouTube' && (v.type === 'Trailer' || v.type === 'Teaser')
@@ -85,7 +102,7 @@ export const QuantumHero = memo(({ items }: { items: any[] }) => {
         modules={[Autoplay]}
         spaceBetween={0}
         slidesPerView={1}
-        loop={true}
+        loop={heroItems.length >= 5}
         speed={1000} // Smooth transition speed
         autoplay={{
           delay: 5000,

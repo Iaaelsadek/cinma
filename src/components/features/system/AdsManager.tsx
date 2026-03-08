@@ -21,6 +21,45 @@ type Props = {
   durationSeconds?: number
 }
 
+function sanitizeAdHtml(input: string) {
+  if (!input?.trim()) return ''
+  try {
+    const parser = new DOMParser()
+    const doc = parser.parseFromString(input, 'text/html')
+    doc.querySelectorAll('script,iframe,object,embed,meta,base').forEach((node) => node.remove())
+    doc.querySelectorAll('*').forEach((el) => {
+      Array.from(el.attributes).forEach((attr) => {
+        const name = attr.name.toLowerCase()
+        const value = (attr.value || '').trim().toLowerCase()
+        if (name.startsWith('on')) {
+          el.removeAttribute(attr.name)
+          return
+        }
+        if ((name === 'href' || name === 'src' || name === 'xlink:href') && (value.startsWith('javascript:') || value.startsWith('data:text/html'))) {
+          el.removeAttribute(attr.name)
+        }
+      })
+    })
+    return doc.body.innerHTML
+  } catch {
+    return ''
+  }
+}
+
+function extractSafeAdUrl(input: string) {
+  const fromHref = input.match(/href\s*=\s*["'](https?:\/\/[^"']+)["']/i)?.[1]
+  const fromRaw = input.match(/https?:\/\/[^\s"'<>]+/i)?.[0]
+  const candidate = fromHref || fromRaw
+  if (!candidate) return null
+  try {
+    const url = new URL(candidate)
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return null
+    return url.toString()
+  } catch {
+    return null
+  }
+}
+
 async function fetchAd(type: AdRow['type'], position?: string) {
   let q = supabase.from('ads').select('*').eq('active', true).eq('type', type).order('created_at', { ascending: false })
   if (position) {
@@ -113,15 +152,10 @@ export const AdsManager = ({ type, position, onDone, durationSeconds = 8 }: Prop
       if (onceRef.current) return
       onceRef.current = true
       sessionStorage.setItem(key, '1')
-      const w = window.open('', '_blank', 'noopener,noreferrer')
-      if (w) {
-        try {
-          w.document.write(ad.code || '<p>Ad</p>')
-          w.document.close()
-          incImpression(ad).catch(() => {})
-          w.addEventListener('click', () => incClick(ad).catch(() => {}))
-        } catch {}
-      }
+      const safeUrl = extractSafeAdUrl(ad.code || '')
+      if (!safeUrl) return
+      const w = window.open(safeUrl, '_blank', 'noopener,noreferrer')
+      if (w) incImpression(ad).catch(() => {})
     }
     document.addEventListener('click', handler, { once: true })
     return () => document.removeEventListener('click', handler)
@@ -150,17 +184,24 @@ export const AdsManager = ({ type, position, onDone, durationSeconds = 8 }: Prop
   if (!ad) return null
 
   if (type === 'banner') {
+    const sanitizedCode = sanitizeAdHtml(ad?.code || '')
     return (
       <div
-        className={`rounded-md border border-zinc-800 bg-zinc-900 p-3 text-center`}
+        className={`rounded-md border border-zinc-800 bg-zinc-900 p-3 text-center overflow-hidden`}
         onClick={() => ad && incClick(ad)}
       >
-        <div dangerouslySetInnerHTML={{ __html: ad?.code || '' }} />
+        <iframe 
+            srcDoc={sanitizedCode} 
+            className="w-full h-24 border-0" 
+            sandbox="allow-popups"
+            title={`ad-${ad.id}`}
+        />
       </div>
     )
   }
 
   if (type === 'preroll') {
+    const sanitizedCode = sanitizeAdHtml(ad?.code || '<div>إعلان</div>')
     return (
       <div className="relative z-10 flex h-full w-full items-center justify-center bg-black/90">
         <div className="absolute right-3 top-3 text-xs text-white/80">ينتهي خلال {countdown}s</div>
@@ -172,8 +213,13 @@ export const AdsManager = ({ type, position, onDone, durationSeconds = 8 }: Prop
             تخطي
           </button>
         </div>
-        <div className="max-w-3xl rounded-md border border-zinc-700 bg-zinc-900 p-4">
-          <div dangerouslySetInnerHTML={{ __html: ad?.code || '<div class=\"text-white\">إعلان</div>' }} />
+        <div className="max-w-3xl rounded-md border border-zinc-700 bg-zinc-900 p-4 w-full h-[60vh]">
+          <iframe 
+            srcDoc={sanitizedCode} 
+            className="w-full h-full border-0"
+            sandbox="allow-popups"
+            title={`ad-preroll-${ad.id}`}
+          />
         </div>
       </div>
     )

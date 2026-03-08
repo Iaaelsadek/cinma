@@ -1,6 +1,7 @@
 User-agent: *
 Allow: /
 Disallow: /admin
-Disallow: /profile
-Disallow: /login
+Disallow: /api
+Disallow: /auth
+
 Sitemap: https://cinma.online/sitemap.xml

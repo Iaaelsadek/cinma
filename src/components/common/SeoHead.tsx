@@ -26,20 +26,61 @@ export const SeoHead = ({
 }: SeoHeadProps) => {
   const { pathname } = useLocation()
   const siteUrl = 'https://cinma.online'
-  const url = `${siteUrl}${pathname}`
+  const normalizedPath = pathname === '/' ? '' : pathname.replace(/\/+$/, '')
+  const url = normalizedPath
+    ? `${siteUrl}${normalizedPath.startsWith('/') ? normalizedPath : `/${normalizedPath}`}`
+    : siteUrl
   const fullTitle = `${title} | أونلاين سينما`
 
-  // Schema.org VideoObject for Google Rich Results
-  const videoSchema = type.startsWith('video') ? {
+  // Breadcrumb Schema
+  const breadcrumbSchema = {
     "@context": "https://schema.org",
-    "@type": "VideoObject",
+    "@type": "BreadcrumbList",
+    "itemListElement": pathname.split('/').filter(Boolean).map((segment, index, arr) => ({
+      "@type": "ListItem",
+      "position": index + 1,
+      "name": segment.charAt(0).toUpperCase() + segment.slice(1),
+      "item": `${siteUrl}/${arr.slice(0, index + 1).join('/')}`
+    }))
+  }
+
+  // Organization Schema (Brand Entity)
+  const organizationSchema = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "Online Cinema",
+    "url": siteUrl,
+    "logo": `${siteUrl}/logo.svg`,
+    "sameAs": [
+      "https://twitter.com/cinemaonline",
+      "https://facebook.com/cinemaonline"
+    ]
+  }
+
+  const contentSchema = type === 'video.movie' ? {
+    "@context": "https://schema.org",
+    "@type": "Movie",
     "name": title,
     "description": description,
-    "thumbnailUrl": [image],
-    "uploadDate": releaseDate || new Date().toISOString(),
-    "duration": duration || "PT2H", // Default fallback
-    "contentUrl": url,
-    "embedUrl": url,
+    "image": image,
+    "url": url,
+    "datePublished": releaseDate || undefined,
+    "duration": duration || undefined,
+    "aggregateRating": rating ? {
+      "@type": "AggregateRating",
+      "ratingValue": rating,
+      "bestRating": 10,
+      "ratingCount": 100
+    } : undefined,
+    "genre": genres
+  } : type === 'video.tv_show' ? {
+    "@context": "https://schema.org",
+    "@type": "TVSeries",
+    "name": title,
+    "description": description,
+    "image": image,
+    "url": url,
+    "datePublished": releaseDate || undefined,
     "aggregateRating": rating ? {
       "@type": "AggregateRating",
       "ratingValue": rating,
@@ -49,7 +90,11 @@ export const SeoHead = ({
     "genre": genres
   } : null
 
-  const finalSchema = schema || videoSchema
+  const schemas = [
+    breadcrumbSchema,
+    type === 'website' ? organizationSchema : null,
+    schema || contentSchema
+  ].filter(Boolean)
 
   return (
     <Helmet>
@@ -75,11 +120,11 @@ export const SeoHead = ({
       <meta name="twitter:image" content={image} />
 
       {/* Structured Data */}
-      {finalSchema && (
-        <script type="application/ld+json">
-          {JSON.stringify(finalSchema)}
+      {schemas.map((s, i) => (
+        <script key={i} type="application/ld+json">
+          {JSON.stringify(s)}
         </script>
-      )}
+      ))}
     </Helmet>
   )
 }

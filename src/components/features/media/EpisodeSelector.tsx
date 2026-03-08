@@ -1,5 +1,5 @@
 import { ChevronDown, Calendar, PlayCircle, ListVideo, Layers } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import clsx from 'clsx'
 
@@ -25,7 +25,26 @@ export const EpisodeSelector = ({
   availableEpisodes = {}
 }: Props) => {
   const [seasonOpen, setSeasonOpen] = useState(false)
+  const [visibleEpisodes, setVisibleEpisodes] = useState(48)
   const t = (ar: string, en: string) => (lang === 'ar' ? ar : en)
+  useEffect(() => {
+    setVisibleEpisodes(48)
+  }, [season])
+  const filteredEpisodes = Array.from({ length: episodesCount })
+    .map((_, i) => i + 1)
+    .filter(epNum => {
+      const key = `${season}-${epNum}`
+      if (availableEpisodes[key] === false) {
+        const otherAvailable = Array.from({ length: episodesCount }).some((_, idx) => {
+          const otherEp = idx + 1
+          return otherEp !== epNum && availableEpisodes[`${season}-${otherEp}`] !== false
+        })
+        if (!otherAvailable) return true
+        return false
+      }
+      return true
+    })
+  const renderedEpisodes = filteredEpisodes.slice(0, visibleEpisodes)
 
   return (
     <div className="space-y-6">
@@ -106,23 +125,7 @@ export const EpisodeSelector = ({
 
       {/* Episodes Grid - Modern Mini Style */}
       <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-2 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
-        {Array.from({ length: episodesCount })
-          .map((_, i) => i + 1)
-          .filter(epNum => {
-            const key = `${season}-${epNum}`
-            // If we know it's offline
-            if (availableEpisodes[key] === false) {
-              // But if we have NO other episodes in this season, show it anyway
-              const otherAvailable = Array.from({ length: episodesCount }).some((_, idx) => {
-                const otherEp = idx + 1
-                return otherEp !== epNum && availableEpisodes[`${season}-${otherEp}`] !== false
-              })
-              if (!otherAvailable) return true
-              return false
-            }
-            return true
-          })
-          .map((epNum) => {
+        {renderedEpisodes.map((epNum) => {
             const isActive = epNum === episode
             
             return (
@@ -168,6 +171,14 @@ export const EpisodeSelector = ({
             )
           })}
       </div>
+      {filteredEpisodes.length > renderedEpisodes.length && (
+        <button
+          onClick={() => setVisibleEpisodes((prev) => prev + 48)}
+          className="w-full h-10 rounded-xl border border-white/10 bg-white/5 text-[11px] font-black text-zinc-300 hover:text-white hover:bg-white/10 transition-colors"
+        >
+          {t('عرض المزيد من الحلقات', 'Show More Episodes')}
+        </button>
+      )}
     </div>
   )
 }

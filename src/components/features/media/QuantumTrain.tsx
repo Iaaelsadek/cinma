@@ -46,25 +46,23 @@ export const QuantumTrain = memo(({
   return (
     <div className={`relative py-3 w-full perspective-1000 group/section ${className || ''}`}>
       
-      <div className="px-4 md:px-12">
-        <SectionHeader 
-          title={displayTitle}
-          icon={displayIcon}
-          link={link}
-          badge={badge}
-          color={color}
-          actions={
-            <div className="flex items-center gap-2">
-              <button ref={setPrevEl} className="w-10 h-10 rounded-full border border-white/10 bg-black/40 hover:bg-cyan-500/20 hover:border-cyan-500/50 flex items-center justify-center transition-all disabled:opacity-30">
-                <ChevronRight className={`w-5 h-5 ${lang === 'ar' ? '' : 'rotate-180'}`} />
-              </button>
-              <button ref={setNextEl} className="w-10 h-10 rounded-full border border-white/10 bg-black/40 hover:bg-cyan-500/20 hover:border-cyan-500/50 flex items-center justify-center transition-all disabled:opacity-30">
-                <ChevronLeft className={`w-5 h-5 ${lang === 'ar' ? '' : 'rotate-180'}`} />
-              </button>
-            </div>
-          }
-        />
-      </div>
+      <SectionHeader 
+        title={displayTitle}
+        icon={displayIcon}
+        link={link}
+        badge={badge}
+        color={color}
+        actions={
+          <div className="flex items-center gap-2">
+            <button ref={setPrevEl} className="w-10 h-10 rounded-full border border-white/10 bg-black/40 hover:bg-cyan-500/20 hover:border-cyan-500/50 flex items-center justify-center transition-all disabled:opacity-30">
+              <ChevronRight className={`w-5 h-5 ${lang === 'ar' ? '' : 'rotate-180'}`} />
+            </button>
+            <button ref={setNextEl} className="w-10 h-10 rounded-full border border-white/10 bg-black/40 hover:bg-cyan-500/20 hover:border-cyan-500/50 flex items-center justify-center transition-all disabled:opacity-30">
+              <ChevronLeft className={`w-5 h-5 ${lang === 'ar' ? '' : 'rotate-180'}`} />
+            </button>
+          </div>
+        }
+      />
       
       <div className="relative z-10 w-full">
         <Swiper
@@ -76,7 +74,7 @@ export const QuantumTrain = memo(({
             prevEl,
             nextEl,
           }}
-          className="!pb-6 !overflow-visible"
+          className="!pb-6"
         >
           {items.map((movie, index) => {
             return (
