@@ -1,4 +1,4 @@
-import ReactPlayer from 'react-player'
+import { lazy, Suspense, useState, useRef, useEffect, useCallback } from 'react'
 import { 
   AlertTriangle, 
   SkipForward, 
@@ -18,12 +18,13 @@ import {
   Check,
   ExternalLink
 } from 'lucide-react'
-import { useState, useRef, useEffect, useCallback } from 'react'
 import { Button } from '../../common/Button'
 import { useLang } from '../../../state/useLang'
 import { motion, AnimatePresence } from 'framer-motion'
 import { clsx } from 'clsx'
 import { logger } from '../../../lib/logger'
+
+const ReactPlayer = lazy(() => import('react-player'))
 
 interface VideoPlayerProps {
   url: string
@@ -346,59 +347,61 @@ export const VideoPlayer = ({ url, subtitles = [], introStart, introEnd, title, 
           title={title || "Video"}
         />
       ) : (
-      <ReactPlayer
-        key={`${url}-${activeSubtitle}`}
-        ref={playerRef}
-        url={url}
-        width="100%"
-        height="100%"
-        playing={playing}
-        volume={volume}
-        muted={muted}
-        playbackRate={playbackRate}
-        onReady={() => setLoading(false)}
-        onBuffer={() => setLoading(true)}
-        onBufferEnd={() => setLoading(false)}
-        onError={(e) => {
-          const isYouTube = url.includes('youtube.com') || url.includes('youtu.be')
-          const isDailyMotion = url.includes('dailymotion.com') || url.includes('dai.ly')
-          
-          if ((isYouTube || isDailyMotion) && !fallbackToIframe) {
-            logger.warn(`ReactPlayer failed for ${isYouTube ? 'YouTube' : 'DailyMotion'}, falling back to raw iframe`)
-            setFallbackToIframe(true)
-            setLoading(false)
-            return
-          }
-          logger.error('Playback error:', e)
-          setError(true)
-        }}
-        onProgress={handleProgress}
-        onDuration={(d) => setDuration(d)}
-        onClick={() => handlePlayPause()}
-        config={{ 
-          youtube: {
-            playerVars: { 
-              origin: window.location.origin,
-              modestbranding: 1,
-              rel: 0
+      <Suspense fallback={<div className="h-full w-full bg-black/80" />}>
+        <ReactPlayer
+          key={`${url}-${activeSubtitle}`}
+          ref={playerRef}
+          url={url}
+          width="100%"
+          height="100%"
+          playing={playing}
+          volume={volume}
+          muted={muted}
+          playbackRate={playbackRate}
+          onReady={() => setLoading(false)}
+          onBuffer={() => setLoading(true)}
+          onBufferEnd={() => setLoading(false)}
+          onError={(e) => {
+            const isYouTube = url.includes('youtube.com') || url.includes('youtu.be')
+            const isDailyMotion = url.includes('dailymotion.com') || url.includes('dai.ly')
+            
+            if ((isYouTube || isDailyMotion) && !fallbackToIframe) {
+              logger.warn(`ReactPlayer failed for ${isYouTube ? 'YouTube' : 'DailyMotion'}, falling back to raw iframe`)
+              setFallbackToIframe(true)
+              setLoading(false)
+              return
             }
-          },
-          file: { 
-            attributes: { 
-              crossOrigin: 'anonymous',
-              poster: poster
+            logger.error('Playback error:', e)
+            setError(true)
+          }}
+          onProgress={handleProgress}
+          onDuration={(d) => setDuration(d)}
+          onClick={() => handlePlayPause()}
+          config={{ 
+            youtube: {
+              playerVars: { 
+                origin: window.location.origin,
+                modestbranding: 1,
+                rel: 0
+              }
             },
-            forceHLS: url.includes('.m3u8'),
-            tracks: subtitles.map((sub, idx) => ({
-              kind: 'subtitles',
-              src: sub.src,
-              srcLang: sub.srcLang,
-              label: sub.label,
-              default: activeSubtitle === idx
-            }))
-          }
-        }}
-      />
+            file: { 
+              attributes: { 
+                crossOrigin: 'anonymous',
+                poster: poster
+              },
+              forceHLS: url.includes('.m3u8'),
+              tracks: subtitles.map((sub, idx) => ({
+                kind: 'subtitles',
+                src: sub.src,
+                srcLang: sub.srcLang,
+                label: sub.label,
+                default: activeSubtitle === idx
+              }))
+            }
+          }}
+        />
+      </Suspense>
       )}
 
       {/* Custom Controls Overlay */}

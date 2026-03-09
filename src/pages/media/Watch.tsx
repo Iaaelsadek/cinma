@@ -724,7 +724,7 @@ export const Watch = () => {
 
               {!!cast.length && (
                 <div className="w-full max-w-xl">
-                  <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-4">
+                  <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-zinc-500 mb-4">
                     <span className="w-4 h-[1px] bg-zinc-800" />
                     طاقم العمل
                   </div>
@@ -760,15 +760,23 @@ export const Watch = () => {
                                 </div>
                               )}
                             </div>
-                            <span className="font-bold text-zinc-300 text-[9px] line-clamp-1 group-hover/cast:text-primary transition-colors">{p.name}</span>
+                            <span className="font-bold text-zinc-300 text-xs line-clamp-1 group-hover/cast:text-primary transition-colors">{p.name}</span>
                           </Link>
                         </SwiperSlide>
                       ))}
                     </Swiper>
-                    <button className="cast-prev absolute -left-4 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-black/40 border border-white/10 hover:bg-primary hover:text-black transition-all opacity-0 group-hover/cast-slider:opacity-100 disabled:hidden z-20 backdrop-blur-sm">
+                    <button
+                      className="cast-prev absolute -left-4 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-black/40 border border-white/10 hover:bg-primary hover:text-black transition-all opacity-0 group-hover/cast-slider:opacity-100 disabled:hidden z-20 backdrop-blur-sm"
+                      type="button"
+                      aria-label={lang === 'ar' ? 'الممثلون السابقون' : 'Previous cast members'}
+                    >
                       <ChevronLeft size={14} />
                     </button>
-                    <button className="cast-next absolute -right-4 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-black/40 border border-white/10 hover:bg-primary hover:text-black transition-all opacity-0 group-hover/cast-slider:opacity-100 disabled:hidden z-20 backdrop-blur-sm">
+                    <button
+                      className="cast-next absolute -right-4 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-black/40 border border-white/10 hover:bg-primary hover:text-black transition-all opacity-0 group-hover/cast-slider:opacity-100 disabled:hidden z-20 backdrop-blur-sm"
+                      type="button"
+                      aria-label={lang === 'ar' ? 'الممثلون التاليون' : 'Next cast members'}
+                    >
                       <ChevronRight size={14} />
                     </button>
                   </div>
@@ -842,9 +850,9 @@ export const Watch = () => {
                       >
                       <div className="flex items-center justify-center gap-2 mb-1 text-zinc-500">
                         <AlertTriangle size={12} />
-                        <span className="text-[10px] font-black uppercase tracking-widest">{t('إخلاء مسؤولية', 'DISCLAIMER')}</span>
+                        <span className="text-xs font-black uppercase tracking-widest">{t('إخلاء مسؤولية', 'DISCLAIMER')}</span>
                       </div>
-                      <p className="text-[9px] text-zinc-500 font-bold leading-relaxed max-w-2xl mx-auto">
+                      <p className="text-xs text-zinc-500 font-bold leading-relaxed max-w-2xl mx-auto">
                         {t(
                           'تُجلب كافة المحتويات المعروضة آلياً من مصادر خارجية؛ الموقع غير مسؤول عن أي إعلانات تظهر داخل المشغلات أو أي مشاهد قد لا تلائم البعض. لا يقوم الموقع بتخزين أي ملفات فيديو على خوادمه الخاصة، وتعود حقوق الملكية الفكرية لأصحابها الأصليين.',
                           'All content displayed is automatically fetched from external sources; the site is not responsible for any advertisements appearing within the players or any content that may not be suitable for all audiences. The site does not host any video files on its servers; all intellectual property rights belong to their respective owners.'
