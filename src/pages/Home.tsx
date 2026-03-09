@@ -218,29 +218,23 @@ export const Home = () => {
     staleTime: 300000
   })
 
-  const popularMovies = useQuery<{ results: TmdbMedia[] }>({
-    queryKey: ['popular-train'],
+  const homeAggregated = useQuery({
+    queryKey: ['home-aggregated', lang],
     queryFn: async () => {
-      const [moviePage1, moviePage2, tvPage1, tvPage2] = await Promise.all([
-        tmdb.get('/movie/popular', { params: { page: 1 } }),
-        tmdb.get('/movie/popular', { params: { page: 2 } }),
-        tmdb.get('/tv/popular', { params: { page: 1 } }),
-        tmdb.get('/tv/popular', { params: { page: 2 } })
-      ])
-
-      const withType = (items: TmdbMedia[] | undefined, type: 'movie' | 'tv'): TmdbMedia[] =>
-        (items || []).map((item) => ({ ...item, media_type: item.media_type || type }))
-
-      return { results: [
-        ...withType(moviePage1.data.results, 'movie'),
-        ...withType(moviePage2.data.results, 'movie'),
-        ...withType(tvPage1.data.results, 'tv'),
-        ...withType(tvPage2.data.results, 'tv')
-      ]}
+      const res = await fetch(`/api/home?lang=${lang === 'ar' ? 'ar' : 'en'}`)
+      if (!res.ok) throw new Error('home_aggregated_failed')
+      return res.json() as Promise<{
+        tmdb?: {
+          trending?: { results?: TmdbMedia[] }
+          popularMovies?: { results?: TmdbMedia[] }
+          topRatedMovies?: { results?: TmdbMedia[] }
+        }
+        supabase?: {
+          mvTrending?: any[] | null
+        }
+      }>
     },
-    enabled: !!CONFIG.TMDB_API_KEY,
-    placeholderData: keepPreviousData,
-    staleTime: 300000
+    staleTime: 300000,
   })
 
   const plays = useCategoryVideos('plays', { limit: 20 }) 
@@ -351,16 +345,6 @@ export const Home = () => {
     staleTime: 300000
   })
 
-  const topRatedMovies = useQuery<{ results: TmdbMedia[] }>({
-    queryKey: ['home', 'top-rated'],
-    queryFn: async () => {
-      const { data } = await tmdb.get('/movie/top_rated', { params: { page: 1 } })
-      return data
-    },
-    enabled: !!CONFIG.TMDB_API_KEY && canLoadBelowFold,
-    staleTime: 300000
-  })
-
   const dmTrending = useDailyMotion(canLoadBelowFold)
 
   // Apply translations directly
@@ -389,7 +373,7 @@ export const Home = () => {
       <div className="max-w-[2400px] mx-auto px-4 md:px-12 w-full">
         {/* 1. QUANTUM HERO PORTAL */}
         <section className="relative z-10 w-full">
-           {popularMovies.isLoading ? <SkeletonHero /> : <QuantumHero items={heroItems} />}
+           {diverseHero.isLoading ? <SkeletonHero /> : <QuantumHero items={heroItems} />}
         </section>
 
         <AdsManager type="banner" position="home-top" />
@@ -420,12 +404,12 @@ export const Home = () => {
 
         {/* 2. THE INFINITE TRAIN */}
         <section className="relative z-20 -mt-12 w-full overflow-hidden pb-4 rounded-3xl">
-          {popularMovies.isLoading ? (
+          {homeAggregated.isLoading ? (
             <div className="flex gap-4 overflow-hidden px-4">
               <SkeletonGrid count={6} variant="poster" />
             </div>
           ) : (
-            <QuantumTrain items={popularMovies.data?.results || []} />
+            <QuantumTrain items={homeAggregated.data?.tmdb?.popularMovies?.results || []} />
           )}
         </section>
 
@@ -684,7 +668,7 @@ export const Home = () => {
              badge="⭐ 9.0+"
            />
            <div className="flex gap-3 overflow-x-auto pb-4 snap-x scrollbar-none">
-             {sanitizeMediaItems(topRatedMovies.data?.results).slice(0, 10).map((movie, idx) => (
+             {sanitizeMediaItems(homeAggregated.data?.tmdb?.topRatedMovies?.results).slice(0, 10).map((movie, idx) => (
                 <div key={movie.id} className="snap-center shrink-0 w-[120px] md:w-[140px]">
                    <MovieCard movie={movie} index={idx} />
                 </div>
