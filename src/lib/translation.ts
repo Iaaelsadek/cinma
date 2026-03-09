@@ -1,17 +1,5 @@
 import { supabase } from './supabase'
-
-// Helper to get env var safely
-const getEnv = (key: string) => {
-  if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env[key]) {
-    return import.meta.env[key]
-  }
-  if (typeof window !== 'undefined' && (window as any).__RUNTIME_CONFIG__) {
-    return (window as any).__RUNTIME_CONFIG__[key]
-  }
-  return ''
-}
-
-const GEMINI_API_KEY = getEnv('VITE_GEMINI_API_KEY')
+import { tmdb } from './tmdb'
 
 export interface TranslatedContent {
   title_ar?: string
@@ -20,85 +8,144 @@ export interface TranslatedContent {
   overview_en?: string
 }
 
+const cleanText = (value: unknown): string => (typeof value === 'string' ? value.trim() : '')
+
+const pickFirst = (...values: unknown[]): string => {
+  for (const value of values) {
+    const cleaned = cleanText(value)
+    if (cleaned) return cleaned
+  }
+  return ''
+}
+
+export const resolveTitleWithFallback = (content: any): string => {
+  const arabicTitle = pickFirst(content?.title_ar, content?.translated_title_ar, content?.title, content?.name)
+  const englishTitle = pickFirst(content?.title_en, content?.translated_title_en)
+  const originalTitle = pickFirst(content?.original_title, content?.original_name)
+  return pickFirst(arabicTitle, englishTitle, originalTitle)
+}
+
+export const resolveOverviewWithFallback = (content: any): string => {
+  const arabicOverview = pickFirst(content?.overview_ar, content?.translated_overview_ar, content?.overview)
+  const englishOverview = pickFirst(content?.overview_en, content?.translated_overview_en)
+  return pickFirst(arabicOverview, englishOverview)
+}
+
 export async function getTranslation(movie: any): Promise<TranslatedContent | null> {
   if (!movie || !movie.id) return null
 
-  const mediaType = movie.media_type === 'tv' || movie.name ? 'tv' : 'movie'
-  const originalTitle = movie.title || movie.name || ''
-  const originalOverview = movie.overview || ''
+  const mediaType: 'movie' | 'tv' = movie.media_type === 'tv' || movie.name ? 'tv' : 'movie'
+  const tmdbId = Number(movie.id)
+  if (!Number.isFinite(tmdbId) || tmdbId <= 0) return null
 
-  // 1. Check Supabase cache
   try {
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from('content_translations')
       .select('title_ar, overview_ar, title_en, overview_en')
-      .eq('tmdb_id', movie.id)
+      .eq('tmdb_id', tmdbId)
       .eq('media_type', mediaType)
-      .single()
+      .maybeSingle()
 
     if (data && (data.title_ar || data.title_en)) {
-      return data
+      const originalTitle = pickFirst(movie?.original_title, movie?.original_name)
+      const title_en = pickFirst(data.title_en, originalTitle)
+      return {
+        ...data,
+        title_en,
+        overview_en: resolveOverviewWithFallback(data)
+      }
     }
-  } catch (e) {
-    // Ignore error, proceed to translation
+  } catch {
   }
 
-  // 2. If missing, translate via Gemini
-  if (!GEMINI_API_KEY) {
-    console.warn('Missing Gemini API Key')
-    return null
+  const pickTitle = (payload: any) => {
+    if (!payload) return ''
+    return pickFirst(payload.title, payload.name, payload.original_title, payload.original_name)
   }
+
+  const pickOverview = (payload: any) => {
+    if (!payload) return ''
+    return pickFirst(payload.overview)
+  }
+
+  const fromTranslations = (translationsPayload: any, langCode: 'en' | 'ar') => {
+    const list = Array.isArray(translationsPayload?.translations) ? translationsPayload.translations : []
+    const hit = list.find((t: any) => t?.iso_639_1 === langCode)
+    if (!hit?.data) return { title: '', overview: '' }
+    const title = pickTitle(hit.data)
+    const overview = pickOverview(hit.data)
+    return { title, overview }
+  }
+
+  const endpoint = `/${mediaType}/${tmdbId}`
 
   try {
-    const prompt = `Translate the following to Arabic and English. If the original is already English, keep English as is. If original is Arabic, keep Arabic as is. Ensure strict translation without explanations.
-    Original Title: "${originalTitle}"
-    Original Overview: "${originalOverview}"
-    
-    Return strictly valid JSON:
-    {
-      "title_ar": "Arabic Title",
-      "overview_ar": "Arabic Overview",
-      "title_en": "English Title",
-      "overview_en": "English Overview"
-    }`
+    const [arRes, enRes, txRes] = await Promise.all([
+      tmdb.get(endpoint, { params: { language: 'ar-SA' } }).catch(() => ({ data: null })),
+      tmdb.get(endpoint, { params: { language: 'en-US' } }).catch(() => ({ data: null })),
+      tmdb.get(`${endpoint}/translations`).catch(() => ({ data: null }))
+    ])
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }]
-        })
-      }
+    const arFromDetails = pickTitle(arRes.data)
+    const enFromDetails = pickTitle(enRes.data)
+    const arOverviewFromDetails = pickOverview(arRes.data)
+    const enOverviewFromDetails = pickOverview(enRes.data)
+
+    const fromTxAr = fromTranslations(txRes.data, 'ar')
+    const fromTxEn = fromTranslations(txRes.data, 'en')
+
+    const originalTitle = pickFirst(
+      movie?.original_title,
+      movie?.original_name,
+      arRes.data?.original_title,
+      arRes.data?.original_name,
+      enRes.data?.original_title,
+      enRes.data?.original_name
     )
 
-    const data = await response.json()
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text
-    
-    if (!text) return null
+    const title_ar = arFromDetails || fromTxAr.title || ''
+    const title_en = enFromDetails || fromTxEn.title || originalTitle || ''
+    const overview_ar = arOverviewFromDetails || fromTxAr.overview || ''
+    const overview_en = enOverviewFromDetails || fromTxEn.overview || ''
 
-    // Extract JSON from markdown code block if present
-    const jsonStr = text.replace(/```json\n?|\n?```/g, '').trim()
-    const result = JSON.parse(jsonStr)
+    const resolvedTitle = resolveTitleWithFallback({
+      ...movie,
+      title_ar,
+      title_en,
+      original_title: originalTitle
+    })
+    if (!resolvedTitle) return null
 
-    // 3. Save to Supabase
+    const resolvedOverview = resolveOverviewWithFallback({
+      overview_ar,
+      overview_en
+    })
+
+    const cachedTitleAr = title_ar || resolvedTitle
+    const cachedOverviewAr = overview_ar || overview_en || ''
+
+    const result: TranslatedContent = {
+      title_ar: cachedTitleAr,
+      overview_ar: cachedOverviewAr,
+      title_en,
+      overview_en: resolvedOverview
+    }
+
     const { error: insertError } = await supabase.from('content_translations').upsert({
-      tmdb_id: movie.id,
+      tmdb_id: tmdbId,
       media_type: mediaType,
-      title_ar: result.title_ar,
-      overview_ar: result.overview_ar,
-      title_en: result.title_en,
-      overview_en: result.overview_en
+      title_ar: cachedTitleAr,
+      overview_ar: cachedOverviewAr,
+      title_en,
+      overview_en: resolvedOverview
     }, { onConflict: 'tmdb_id,media_type' })
 
     if (insertError) {
-        console.error('Failed to save translation:', insertError)
+      return result
     }
 
     return result
-  } catch (e) {
-    console.error('Translation failed:', e)
+  } catch {
     return null
   }
 }
