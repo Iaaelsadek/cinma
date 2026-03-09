@@ -11,7 +11,7 @@ import { useLang } from '../../../state/useLang'
 import { useDualTitles } from '../../../hooks/useDualTitles'
 import { TmdbImage } from '../../common/TmdbImage'
 import ReactPlayer from 'react-player/youtube'
-import { getTranslation } from '../../../lib/translation'
+import { getTranslation, resolveOverviewWithFallback, resolveTitleWithFallback } from '../../../lib/translation'
 import { tmdb } from '../../../lib/tmdb'
 
 export type Movie = {
@@ -32,6 +32,7 @@ export type Movie = {
 
 export const MovieCard = memo(({ movie, index = 0 }: { movie: Movie; index?: number }) => {
   const [translatedData, setTranslatedData] = useState<any>(null)
+  const [translationRequested, setTranslationRequested] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
   const [trailerKey, setTrailerKey] = useState<string | null>(null)
   const [listBusy, setListBusy] = useState(false)
@@ -42,19 +43,12 @@ export const MovieCard = memo(({ movie, index = 0 }: { movie: Movie; index?: num
   // Merge translated data into movie object for useDualTitles
   const effectiveMovie = { ...movie, ...translatedData }
   const titles = useDualTitles(effectiveMovie)
+  const resolvedTitle = resolveTitleWithFallback(effectiveMovie)
+  const resolvedOverview = resolveOverviewWithFallback(effectiveMovie)
   
   const navigate = useNavigate()
-  const title = effectiveMovie.title || effectiveMovie.name || 'Untitled'
+  const title = resolvedTitle || effectiveMovie.title || effectiveMovie.name || 'Untitled'
   
-  // Auto-translate if titles are missing or generic
-  useEffect(() => {
-    if (titles.main === 'Untitled' || titles.main === 'بدون عنوان') {
-      getTranslation(movie).then(res => {
-        if (res) setTranslatedData(res)
-      })
-    }
-  }, [movie.id, titles.main])
-
   const date = movie.release_date || movie.first_air_date || ''
   const year = date ? new Date(date).getFullYear() : ''
   
@@ -88,8 +82,21 @@ export const MovieCard = memo(({ movie, index = 0 }: { movie: Movie; index?: num
     if (words.length <= 15) return text
     return words.slice(0, 15).join(' ') + '...'
   }
-  const shortOverview = getShortOverview(movie.overview)
+  const shortOverview = getShortOverview(resolvedOverview)
   const [thumbSrc, setThumbSrc] = useState<string>(((movie as any).thumbnail || '').trim())
+  const hasPosterPath = Boolean(movie.poster_path && movie.poster_path.trim())
+  const hasValidTitle = Boolean(resolvedTitle)
+
+  useEffect(() => {
+    if (!['movie', 'tv'].includes(mediaType)) return
+    if (translationRequested) return
+    if (resolvedTitle && resolvedOverview) return
+
+    setTranslationRequested(true)
+    getTranslation(movie).then((res) => {
+      if (res) setTranslatedData(res)
+    })
+  }, [movie.id, mediaType, resolvedTitle, resolvedOverview, translationRequested])
   
   useEffect(() => {
     if (!user) {
@@ -176,6 +183,8 @@ export const MovieCard = memo(({ movie, index = 0 }: { movie: Movie; index?: num
     if (isTv) return isAr ? 'مسلسل' : 'Series'
     return isAr ? 'فيلم' : 'Movie'
   }
+
+  if (!hasPosterPath || !hasValidTitle) return null
 
   return (
     <motion.div
@@ -293,14 +302,14 @@ export const MovieCard = memo(({ movie, index = 0 }: { movie: Movie; index?: num
           </div>
 
           {/* Title & meta */}
-          <div className="p-3 h-[96px] flex flex-col justify-end bg-gradient-to-b from-transparent to-lumen-void/60">
-            <h3 className="line-clamp-1 text-sm font-semibold text-lumen-cream group-hover/card:text-lumen-gold transition-colors duration-200 mb-0.5">
+          <div className="p-3 h-[104px] grid grid-rows-[18px_16px_1fr] bg-gradient-to-b from-transparent to-lumen-void/60">
+            <h3 className="line-clamp-1 text-sm font-semibold leading-[18px] text-lumen-cream group-hover/card:text-lumen-gold transition-colors duration-200">
               {titles.main}
             </h3>
-            <p className={`line-clamp-1 text-xs text-lumen-gold/80 font-arabic min-h-[16px] ${titles.sub ? '' : 'invisible'}`}>
+            <p className={`line-clamp-1 text-xs leading-4 text-lumen-gold/80 font-arabic ${titles.sub ? '' : 'invisible'}`}>
               {titles.sub || '—'}
             </p>
-            <div className="mt-1 flex flex-wrap items-center gap-1 text-[9px] font-medium uppercase tracking-wider text-lumen-silver">
+            <div className="self-end mt-1 flex flex-wrap items-center gap-1 text-[9px] font-medium uppercase tracking-wider text-lumen-silver">
                {/* Rating */}
                {rating != null && (
                  <span className="flex items-center gap-0.5 text-lumen-gold">

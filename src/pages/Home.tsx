@@ -50,6 +50,7 @@ type HomeViewRow = {
 
 import { useTranslatedContent } from '../hooks/useTranslatedContent'
 import { useDailyMotion } from '../hooks/useDailyMotion'
+import { resolveTitleWithFallback } from '../lib/translation'
 
 export const Home = () => {
   const { user } = useAuth()
@@ -264,18 +265,25 @@ export const Home = () => {
     queryKey: ['home-critical-lcp'],
     queryFn: async () => {
       const mapRows = (rows: HomeViewRow[] | null | undefined): TmdbMedia[] =>
-        (rows || []).map((item) => ({
-          id: Number(item.tmdb_id),
-          title: item.title || undefined,
-          name: item.name || undefined,
-          media_type: item.media_type,
-          poster_path: item.poster_path || undefined,
-          backdrop_path: item.backdrop_path || undefined,
-          vote_average: item.vote_average || 0,
-          overview: item.overview || undefined,
-          release_date: item.release_date || undefined,
-          first_air_date: item.first_air_date || undefined
-        }))
+        (rows || [])
+          .map((item) => ({
+            id: Number(item.tmdb_id),
+            title: item.title || undefined,
+            name: item.name || undefined,
+            media_type: item.media_type,
+            poster_path: item.poster_path || undefined,
+            backdrop_path: item.backdrop_path || undefined,
+            vote_average: item.vote_average || 0,
+            overview: item.overview || undefined,
+            release_date: item.release_date || undefined,
+            first_air_date: item.first_air_date || undefined
+          }))
+          .filter((item) =>
+            Number.isFinite(Number(item.id)) &&
+            Number(item.id) > 0 &&
+            Boolean(item.poster_path && item.poster_path.trim()) &&
+            Boolean(resolveTitleWithFallback(item))
+          )
 
       const [trendingView, ramadanView, kidsTmdb] = await Promise.all([
         supabase.from('mv_home_trending').select('*').limit(20),
@@ -363,6 +371,13 @@ export const Home = () => {
   const description = lang === 'ar' ? 'منصة أونلاين سينما - تجربة المستقبل' : 'Online Cinema - The Future Experience'
 
   const heroItems = diverseHero.data?.results || []
+  const sanitizeMediaItems = (items: TmdbMedia[] | undefined) =>
+    (items || []).filter((item) =>
+      Number.isFinite(Number(item?.id)) &&
+      Number(item.id) > 0 &&
+      Boolean(item.poster_path && item.poster_path.trim()) &&
+      Boolean(resolveTitleWithFallback(item))
+    )
 
   return (
     <div className="min-h-screen text-white overflow-x-hidden selection:bg-cyan-500 selection:text-black">
@@ -426,7 +441,7 @@ export const Home = () => {
             </>
           ) : (
             <QuantumTrain 
-              items={criticalHomeData.data?.popularAr || []} 
+              items={sanitizeMediaItems(criticalHomeData.data?.popularAr)} 
               title={lang === 'ar' ? 'الأعلى مشاهدة في مصر' : 'Top Trending in Egypt'} 
               icon={<Zap />} 
               link="/movies" 
@@ -443,7 +458,7 @@ export const Home = () => {
             </>
           ) : (
             <QuantumTrain 
-              items={criticalHomeData.data?.arabicSeries || []} 
+              items={sanitizeMediaItems(criticalHomeData.data?.arabicSeries)} 
               title={lang === 'ar' ? 'مسلسلات عربية ورمضانية' : 'Arabic & Ramadan Series'} 
               icon={<Tv />} 
               link="/ramadan" 
@@ -460,7 +475,7 @@ export const Home = () => {
             </>
           ) : (
             <QuantumTrain 
-              items={criticalHomeData.data?.kids || []} 
+              items={sanitizeMediaItems(criticalHomeData.data?.kids)} 
               title={lang === 'ar' ? 'أطفال وعائلة' : 'Kids & Family'} 
               icon={<Smile />} 
               link="/kids" 
@@ -482,7 +497,7 @@ export const Home = () => {
             </>
           ) : (
             <QuantumTrain 
-              items={translatedKorean.data || []} 
+              items={sanitizeMediaItems(translatedKorean.data)} 
               title={lang === 'ar' ? 'الدراما الكورية' : 'K-Drama'} 
               icon={<Film />} 
               link="/k-drama" 
@@ -499,7 +514,7 @@ export const Home = () => {
             </>
            ) : (
             <QuantumTrain 
-              items={translatedChinese.data || []} 
+              items={sanitizeMediaItems(translatedChinese.data)} 
               title={lang === 'ar' ? 'مسلسلات صينية قصيرة' : 'Chinese Short Series'} 
               icon={<Tv />} 
               link="/chinese" 
@@ -516,7 +531,7 @@ export const Home = () => {
             </>
           ) : (
             <QuantumTrain 
-              items={translatedTurkish.data || []} 
+              items={sanitizeMediaItems(translatedTurkish.data)} 
               title={lang === 'ar' ? 'الدراما التركية' : 'Turkish Drama'} 
               icon={<Film />} 
               link="/turkish" 
@@ -533,7 +548,7 @@ export const Home = () => {
             </>
           ) : (
             <QuantumTrain 
-              items={bollywoodMovies.data?.results || []} 
+              items={sanitizeMediaItems(bollywoodMovies.data?.results)} 
               title={lang === 'ar' ? 'أفلام بوليوود' : 'Bollywood Movies'} 
               icon={<Film />} 
               link="/bollywood" 
@@ -565,7 +580,7 @@ export const Home = () => {
           <SectionHeader title={lang === 'ar' ? 'الرائج عالمياً' : 'Global Trending'} icon={<Zap />} link="/top-watched" />
           {criticalHomeData.isPending ? <SkeletonGrid count={10} variant="poster" /> : (
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6 perspective-1000">
-              {(criticalHomeData.data?.popularAr || []).slice(0, 12).map((movie, idx) => (
+              {sanitizeMediaItems(criticalHomeData.data?.popularAr).slice(0, 12).map((movie, idx) => (
                  <MovieCard key={movie.id} movie={movie} index={idx} />
               ))}
             </div>
@@ -581,7 +596,7 @@ export const Home = () => {
             </>
           ) : (
             <QuantumTrain 
-              items={documentaries.data?.results || []} 
+              items={sanitizeMediaItems(documentaries.data?.results)} 
               title={lang === 'ar' ? 'وثائقيات وواقع' : 'Documentaries'} 
               icon={<FileText />} 
               link="/docs" 
@@ -652,7 +667,7 @@ export const Home = () => {
             </>
           ) : (
              <QuantumTrain 
-               items={(animeHub.data && animeHub.data.length > 0) ? animeHub.data : (tmdbAnime.data || [])} 
+               items={sanitizeMediaItems((animeHub.data && animeHub.data.length > 0) ? animeHub.data : tmdbAnime.data)} 
                title={lang === 'ar' ? 'أنمي مترجم' : 'Anime'} 
                icon={<Tv />} 
                link="/anime" 
@@ -669,7 +684,7 @@ export const Home = () => {
              badge="⭐ 9.0+"
            />
            <div className="flex gap-3 overflow-x-auto pb-4 snap-x scrollbar-none">
-              {topRatedMovies.data?.results?.slice(0, 10).map((movie, idx) => (
+             {sanitizeMediaItems(topRatedMovies.data?.results).slice(0, 10).map((movie, idx) => (
                 <div key={movie.id} className="snap-center shrink-0 w-[120px] md:w-[140px]">
                    <MovieCard movie={movie} index={idx} />
                 </div>

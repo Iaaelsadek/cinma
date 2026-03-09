@@ -1,7 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { Play, Plus, Check } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { useLang } from '../../../state/useLang'
 import { useEffect, useState, type MouseEvent, memo } from 'react'
 import { useAuth } from '../../../hooks/useAuth'
 import { addToWatchlist, isInWatchlist, removeFromWatchlist } from '../../../lib/supabase'
@@ -10,7 +9,7 @@ import { tmdb } from '../../../lib/tmdb'
 import { logger } from '../../../lib/logger'
 
 import { useDualTitles } from '../../../hooks/useDualTitles'
-import { getTranslation } from '../../../lib/translation'
+import { getTranslation, resolveTitleWithFallback } from '../../../lib/translation'
 
 export type VideoItem = {
   id: string | number
@@ -39,21 +38,27 @@ function formatViews(views: number): string {
 }
 
 export const VideoCard = memo(({ video, index = 0 }: { video: VideoItem; index?: number }) => {
-  const { lang } = useLang()
   const [translatedData, setTranslatedData] = useState<any>(null)
+  const [translationRequested, setTranslationRequested] = useState(false)
   
   const effectiveVideo = { ...video, ...translatedData }
   const titles = useDualTitles(effectiveVideo)
-  const displayTitle = titles.main
+  const resolvedTitle = resolveTitleWithFallback({
+    ...effectiveVideo,
+    original_title: (effectiveVideo as any)?.original_title || effectiveVideo.title,
+    original_name: (effectiveVideo as any)?.original_name || effectiveVideo.title
+  })
+  const displayTitle = resolvedTitle || titles.main
 
   useEffect(() => {
-    if (titles.main === 'Untitled' || titles.main === 'بدون عنوان') {
-      const type = video.category === 'series' || video.category === 'tv' ? 'tv' : 'movie'
-      getTranslation({ ...video, media_type: type, name: video.title }).then(res => {
-        if (res) setTranslatedData(res)
-      })
-    }
-  }, [video.id, titles.main])
+    if (translationRequested) return
+    if (resolvedTitle) return
+    const type = video.category === 'series' || video.category === 'tv' ? 'tv' : 'movie'
+    setTranslationRequested(true)
+    getTranslation({ ...video, media_type: type, name: video.title }).then((res) => {
+      if (res) setTranslatedData(res)
+    })
+  }, [video.id, video.category, resolvedTitle, translationRequested])
 
   const [isHovered, setIsHovered] = useState(false)
   const [trailerKey, setTrailerKey] = useState<string | null>(null)
@@ -88,6 +93,8 @@ export const VideoCard = memo(({ video, index = 0 }: { video: VideoItem; index?:
   const contentId = Number(video.id)
   const canToggle = Number.isFinite(contentId)
   const contentType = video.category === 'series' ? 'tv' : 'movie'
+  const hasVisual = Boolean(imageSrc)
+  const hasValidTitle = Boolean(displayTitle && displayTitle !== 'Untitled' && displayTitle !== 'بدون عنوان')
 
   useEffect(() => {
     let mounted = true
@@ -148,6 +155,8 @@ export const VideoCard = memo(({ video, index = 0 }: { video: VideoItem; index?:
     }
   }
 
+  if (!hasVisual || !hasValidTitle) return null
+
   return (
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
@@ -178,8 +187,9 @@ export const VideoCard = memo(({ video, index = 0 }: { video: VideoItem; index?:
             onDragStart={(e) => e.preventDefault()}
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center bg-zinc-800">
-            <Play className="text-zinc-600" />
+          <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-800 p-4 text-center">
+            <Play className="text-zinc-600 mb-2 opacity-50" size={32} />
+            <span className="text-[10px] font-medium text-zinc-500 line-clamp-2">{displayTitle}</span>
           </div>
         )}
         
