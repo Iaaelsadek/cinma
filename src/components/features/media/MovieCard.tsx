@@ -187,7 +187,7 @@ export const MovieCard = memo(({ movie, index = 0 }: { movie: Movie; index?: num
                 alt={title}
                 className={`h-full w-full object-cover transition-all duration-500 ease-lumen ${isHovered ? 'scale-105 brightness-75' : 'scale-100'}`}
                 loading="lazy"
-                onError={() => setThumbSrc('/placeholder.jpg')}
+                onError={() => setThumbSrc('')}
               />
             ) : (
               <TmdbImage
@@ -197,7 +197,9 @@ export const MovieCard = memo(({ movie, index = 0 }: { movie: Movie; index?: num
                 className="h-full w-full"
                 imgClassName={`transition-all duration-500 ease-lumen ${isHovered ? 'scale-105 brightness-75' : 'scale-100'}`}
                 fallback={
-                  <img src="/placeholder.jpg" alt={title} className="h-full w-full object-cover" loading="lazy" />
+                  <div className="h-full w-full flex items-center justify-center bg-zinc-800 text-zinc-600">
+                    <Play size={40} strokeWidth={1} />
+                  </div>
                 }
               />
             )}
@@ -275,7 +277,7 @@ export const MovieCard = memo(({ movie, index = 0 }: { movie: Movie; index?: num
           </div>
 
           {/* Title & meta */}
-          <div className="p-3 min-h-[82px] flex-1 flex flex-col justify-end bg-gradient-to-b from-transparent to-lumen-void/60">
+          <div className="p-3 h-[88px] flex flex-col justify-end bg-gradient-to-b from-transparent to-lumen-void/60">
             <h3 className="line-clamp-1 text-sm font-semibold text-lumen-cream group-hover/card:text-lumen-gold transition-colors duration-200">
               {titles.main}
             </h3>
