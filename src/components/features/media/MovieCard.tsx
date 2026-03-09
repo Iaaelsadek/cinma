@@ -74,6 +74,7 @@ export const MovieCard = memo(({ movie, index = 0 }: { movie: Movie; index?: num
     return words.slice(0, 15).join(' ') + '...'
   }
   const shortOverview = getShortOverview(movie.overview)
+  const [thumbSrc, setThumbSrc] = useState<string>(((movie as any).thumbnail || '').trim())
   
   useEffect(() => {
     if (!user) {
@@ -118,6 +119,10 @@ export const MovieCard = memo(({ movie, index = 0 }: { movie: Movie; index?: num
       if (timeoutId) clearTimeout(timeoutId)
     }
   }, [isHovered, trailerKey, mediaType, movie.id])
+
+  useEffect(() => {
+    setThumbSrc(((movie as any).thumbnail || '').trim())
+  }, [(movie as any).thumbnail])
 
   const toggleList = async (e: MouseEvent<HTMLButtonElement>) => {
     e.preventDefault()
@@ -176,24 +181,23 @@ export const MovieCard = memo(({ movie, index = 0 }: { movie: Movie; index?: num
         <div className="lumen-card h-full flex flex-col transition-transform duration-300 ease-lumen hover:scale-[1.03] focus-within:scale-[1.02]">
           {/* Poster */}
           <div className="relative aspect-[2/3] w-full overflow-hidden bg-lumen-muted">
-            {(movie as any).thumbnail ? (
+            {thumbSrc ? (
               <img
-                src={(movie as any).thumbnail}
+                src={thumbSrc}
                 alt={title}
                 className={`h-full w-full object-cover transition-all duration-500 ease-lumen ${isHovered ? 'scale-105 brightness-75' : 'scale-100'}`}
                 loading="lazy"
+                onError={() => setThumbSrc('/placeholder.jpg')}
               />
             ) : (
               <TmdbImage
-                path={movie.poster_path}
+                path={movie.poster_path || movie.backdrop_path}
                 alt={title}
                 size="w342"
                 className="h-full w-full"
                 imgClassName={`transition-all duration-500 ease-lumen ${isHovered ? 'scale-105 brightness-75' : 'scale-100'}`}
                 fallback={
-                  <div className="flex h-full w-full items-center justify-center bg-lumen-muted text-lumen-silver">
-                    <Play size={40} className="opacity-30" />
-                  </div>
+                  <img src="/placeholder.jpg" alt={title} className="h-full w-full object-cover" loading="lazy" />
                 }
               />
             )}
@@ -271,15 +275,13 @@ export const MovieCard = memo(({ movie, index = 0 }: { movie: Movie; index?: num
           </div>
 
           {/* Title & meta */}
-          <div className="p-3 flex-1 flex flex-col justify-end bg-gradient-to-b from-transparent to-lumen-void/60">
+          <div className="p-3 min-h-[82px] flex-1 flex flex-col justify-end bg-gradient-to-b from-transparent to-lumen-void/60">
             <h3 className="line-clamp-1 text-sm font-semibold text-lumen-cream group-hover/card:text-lumen-gold transition-colors duration-200">
               {titles.main}
             </h3>
-            {titles.sub && (
-               <p className="line-clamp-1 text-xs text-lumen-gold/80 font-arabic mt-0.5">
-                 {titles.sub}
-               </p>
-            )}
+            <p className={`line-clamp-1 text-xs text-lumen-gold/80 font-arabic mt-0.5 min-h-[16px] ${titles.sub ? '' : 'invisible'}`}>
+              {titles.sub || '—'}
+            </p>
             <div className="mt-1 flex flex-wrap items-center gap-1 text-[9px] font-medium uppercase tracking-wider text-lumen-silver">
                {/* Rating */}
                {rating != null && (

@@ -1,70 +1,40 @@
-
-import { useState, useEffect } from 'react'
-import { translateTitleToArabic } from '../lib/gemini'
+import { useMemo } from 'react'
 import { useLang } from '../state/useLang'
 
 export const useDualTitles = (movie: any) => {
   const { lang } = useLang()
-  const [titles, setTitles] = useState<{ main: string; sub: string | null }>({
-    main: movie?.original_title || movie?.original_name || movie?.title || movie?.name || '',
-    sub: null
-  })
 
-  useEffect(() => {
-    if (!movie) return
+  return useMemo(() => {
+    const rawCandidates = [
+      movie?.title_ar,
+      movie?.translated_title_ar,
+      movie?.title,
+      movie?.name,
+      movie?.title_en,
+      movie?.translated_title_en,
+      movie?.original_title,
+      movie?.original_name
+    ]
+      .map((v: any) => (typeof v === 'string' ? v.trim() : ''))
+      .filter(Boolean)
 
-    let isMounted = true
+    const isArabic = (text: string) => /[\u0600-\u06FF]/.test(text)
+    const isEnglish = (text: string) => /[A-Za-z]/.test(text)
 
-    const fetchTitles = async () => {
-      // 1. Identify English/Original Title (Main)
-      let mainTitle = movie.original_title || movie.original_name || movie.title || movie.name || ''
-      
-      // 2. Identify Arabic Title (Sub)
-      let subTitle = ''
-      
-      const titleIsArabic = /[\u0600-\u06FF]/.test(movie.title || movie.name || '')
-      const originalIsArabic = /[\u0600-\u06FF]/.test(mainTitle)
+    const arTitle = rawCandidates.find(isArabic) || ''
+    const enTitle = rawCandidates.find(isEnglish) || ''
 
-      if (titleIsArabic) {
-        subTitle = movie.title || movie.name
-      }
+    const fallbackAr = 'بدون عنوان'
+    const fallbackEn = 'Untitled'
 
-      if (originalIsArabic) {
-         // If main is Arabic, we treat it as Main. Sub is null.
-         if (isMounted) setTitles({ main: subTitle, sub: null })
-         return
-      }
-
-      // Check Local Cache or Translate
-      if (!subTitle && mainTitle) {
-        const cacheKey = `ar_title_cache_${mainTitle.toLowerCase().trim()}`
-        const cached = localStorage.getItem(cacheKey)
-        if (cached && cached !== mainTitle) {
-          subTitle = cached
-        } else {
-          // If no cache, try to translate activey
-          try {
-             translateTitleToArabic(mainTitle).then(translated => {
-               if (isMounted && translated && translated !== mainTitle) {
-                 setTitles(prev => ({ ...prev, sub: translated }))
-               }
-             })
-          } catch {}
-        }
-      }
-
-      if (isMounted) {
-        setTitles({
-          main: mainTitle,
-          sub: subTitle && subTitle !== mainTitle ? subTitle : null
-        })
-      }
+    if (lang === 'ar') {
+      const main = arTitle || enTitle || fallbackAr
+      const sub = enTitle && enTitle !== main ? enTitle : null
+      return { main, sub }
     }
 
-    fetchTitles()
-
-    return () => { isMounted = false }
-  }, [movie?.id, lang])
-
-  return titles
+    const main = enTitle || arTitle || fallbackEn
+    const sub = arTitle && arTitle !== main ? arTitle : null
+    return { main, sub }
+  }, [movie?.id, movie?.title, movie?.name, movie?.original_title, movie?.original_name, movie?.title_en, movie?.title_ar, lang])
 }
