@@ -10,6 +10,7 @@ import { tmdb } from '../../../lib/tmdb'
 import { logger } from '../../../lib/logger'
 
 import { useDualTitles } from '../../../hooks/useDualTitles'
+import { getTranslation } from '../../../lib/translation'
 
 export type VideoItem = {
   id: string | number
@@ -39,8 +40,21 @@ function formatViews(views: number): string {
 
 export const VideoCard = memo(({ video, index = 0 }: { video: VideoItem; index?: number }) => {
   const { lang } = useLang()
-  const titles = useDualTitles(video)
-  const displayTitle = lang === 'ar' ? (titles.sub || titles.main) : titles.main
+  const [translatedData, setTranslatedData] = useState<any>(null)
+  
+  const effectiveVideo = { ...video, ...translatedData }
+  const titles = useDualTitles(effectiveVideo)
+  const displayTitle = titles.main
+
+  useEffect(() => {
+    if (titles.main === 'Untitled' || titles.main === 'بدون عنوان') {
+      const type = video.category === 'series' || video.category === 'tv' ? 'tv' : 'movie'
+      getTranslation({ ...video, media_type: type, name: video.title }).then(res => {
+        if (res) setTranslatedData(res)
+      })
+    }
+  }, [video.id, titles.main])
+
   const [isHovered, setIsHovered] = useState(false)
   const [trailerKey, setTrailerKey] = useState<string | null>(null)
   const [inList, setInList] = useState(false)
@@ -228,8 +242,8 @@ export const VideoCard = memo(({ video, index = 0 }: { video: VideoItem; index?:
         )}
       </div>
 
-      <div className="mt-3 h-[64px] flex flex-col justify-between space-y-1">
-        <h3 className="font-bold text-sm text-zinc-100 line-clamp-2 h-[40px] group-hover:text-cyan-400 transition-colors leading-snug">
+      <div className="mt-3 h-[72px] flex flex-col justify-between space-y-1">
+        <h3 className="font-bold text-sm text-zinc-100 line-clamp-2 min-h-[40px] group-hover:text-cyan-400 transition-colors leading-snug">
           {displayTitle}
         </h3>
         
