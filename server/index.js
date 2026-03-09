@@ -22,7 +22,12 @@ const allowedOrigins = (process.env.WEB_ORIGIN || '').split(',').map((s) => s.tr
 const regularLimiter = rateLimit({ windowMs: 60 * 1000, max: 100, standardHeaders: true, legacyHeaders: false });
 const sensitiveLimiter = rateLimit({ windowMs: 60 * 1000, max: 20, standardHeaders: true, legacyHeaders: false });
 const pythonBin = process.env.PYTHON_BIN || 'python';
-const adminToken = process.env.ADMIN_SYNC_TOKEN || ''; // If empty, allows all (dev mode)
+const adminToken = process.env.ADMIN_SYNC_TOKEN || '';
+const adminIpAllowlist = (process.env.ADMIN_IP_ALLOWLIST || '')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean);
+const adminTokenMinLength = 32;
 
 // Supabase Admin Client
 const supabaseUrl = process.env.VITE_SUPABASE_URL;
@@ -48,6 +53,27 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false,
 }));
 
+// Strong CSP tailored for SPA + external APIs
+app.use((req, res, next) => {
+  const csp = [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com data:",
+    "img-src 'self' https://image.tmdb.org data: blob: https:",
+    "media-src 'self' https: data:",
+    "connect-src 'self' https: wss:",
+    "frame-src 'self' https:",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'self'",
+    "upgrade-insecure-requests",
+  ].join('; ');
+  res.setHeader('Content-Security-Policy', csp);
+  next();
+});
+
 function isPrivateHost(hostname) {
   if (!hostname) return true;
   const host = hostname.toLowerCase();
@@ -63,9 +89,9 @@ function isPrivateHost(hostname) {
 }
 
 function ensureAdminToken(req, res) {
-  // CRITICAL FIX: Fail if token is not set in environment
-  if (!adminToken || adminToken.trim() === '') {
-    console.error('[SECURITY] ADMIN_SYNC_TOKEN is missing. Rejecting request.');
+  // Fail hard if token is not set or too weak
+  if (!adminToken || adminToken.trim() === '' || adminToken.trim().length < adminTokenMinLength) {
+    console.error('[SECURITY] ADMIN_SYNC_TOKEN is missing or too short. Rejecting admin request.');
     res.status(500).json({ error: 'Server security misconfiguration' });
     return false;
   }
@@ -75,6 +101,36 @@ function ensureAdminToken(req, res) {
   
   console.warn(`[SECURITY] Invalid admin token attempt from ${req.ip}`);
   res.status(401).json({ error: 'unauthorized' });
+  return false;
+}
+
+function ensureAdminIpAllowed(req, res) {
+  const ip = req.ip || req.connection?.remoteAddress || '';
+  const normalizedIp = (ip || '').replace('::ffff:', '');
+
+  // Always allow localhost-style addresses for local dev
+  const isLocal =
+    normalizedIp === '127.0.0.1' ||
+    normalizedIp === '::1' ||
+    normalizedIp === '' ||
+    normalizedIp === '::ffff:127.0.0.1';
+
+  if (isLocal && adminIpAllowlist.length === 0) {
+    return true;
+  }
+
+  if (adminIpAllowlist.length === 0) {
+    console.error('[SECURITY] ADMIN_IP_ALLOWLIST is empty. Rejecting non-local admin request.');
+    res.status(500).json({ error: 'Server security misconfiguration (admin IP allowlist empty)' });
+    return false;
+  }
+
+  if (adminIpAllowlist.includes(normalizedIp)) {
+    return true;
+  }
+
+  console.warn(`[SECURITY] Admin access denied for IP ${normalizedIp}`);
+  res.status(403).json({ error: 'admin_ip_not_allowed' });
   return false;
 }
 
@@ -160,24 +216,26 @@ function runPythonScript(scriptPath) {
 
 // --- GOD MODE ENDPOINTS ---
 
-// 1. System Shell Execution (SECURED)
+// 1. System Shell Execution (DISABLED FOR SECURITY)
+// This endpoint previously allowed running whitelisted shell commands via HTTP.
+// It is now fully disabled to eliminate remote code execution risk from this process.
+// If you absolutely need it for a locked-down ops environment, re-enable carefully
+// and ensure strict network isolation, IP allowlist, and secret management.
+/*
 app.post('/api/admin/exec', sensitiveLimiter, async (req, res) => {
+  if (!ensureAdminIpAllowed(req, res)) return;
   if (!ensureAdminToken(req, res)) return;
   const { command, cwd } = req.body;
   if (!command) return res.status(400).json({ error: 'Command required' });
 
-  // Security: Only allow specific commands (Whitelist)
-  // We allow the importer to run with arguments if needed, but we should be careful.
-  // For now, we strictly allow the defined script in package.json or the direct python call.
-  
   const ALLOWED_COMMANDS = [
     'npm run import:content',
-    'npm run import:content --', // allow args
+    'npm run import:content --',
     'python backend/mass_content_importer.py',
     '.\\.venv\\Scripts\\python.exe backend\\mass_content_importer.py'
   ];
 
-  const isAllowed = ALLOWED_COMMANDS.some(allowed => 
+  const isAllowed = ALLOWED_COMMANDS.some((allowed) =>
     command === allowed || command.startsWith(allowed + ' ')
   );
 
@@ -187,7 +245,7 @@ app.post('/api/admin/exec', sensitiveLimiter, async (req, res) => {
   }
 
   console.log(`[EXEC] ${command}`);
-  
+
   exec(command, { cwd: cwd || process.cwd() }, (error, stdout, stderr) => {
     if (error) {
       return res.status(500).json({ error: error.message, stderr });
@@ -195,6 +253,7 @@ app.post('/api/admin/exec', sensitiveLimiter, async (req, res) => {
     res.json({ stdout, stderr });
   });
 });
+*/
 
 // --- NEW ENDPOINT TO BYPASS RLS RECURSION ---
 app.get('/api/profile/:id', async (req, res) => {
@@ -450,8 +509,9 @@ app.delete('/api/admin/proxy/:table/:id', async (req, res) => {
   }
 });
 
-// 2. File System Manager
+// 2. File System Manager (READ-ONLY LISTING, WRITE DISABLED BY DEFAULT)
 app.get('/api/admin/fs', sensitiveLimiter, async (req, res) => {
+  if (!ensureAdminIpAllowed(req, res)) return;
   if (!ensureAdminToken(req, res)) return;
   const targetPath = path.resolve(process.cwd(), req.query.path || '.');
   
@@ -471,30 +531,18 @@ app.get('/api/admin/fs', sensitiveLimiter, async (req, res) => {
       }));
       res.json({ type: 'dir', content: result, path: path.relative(process.cwd(), targetPath) });
     } else {
-      const content = await fs.readFile(targetPath, 'utf8');
-      res.json({ type: 'file', content, path: path.relative(process.cwd(), targetPath) });
+      // File content reads are disabled by default for security reasons.
+      // You may re-enable controlled reads if required for ops, but be aware
+      // this can expose source code and secrets if misconfigured.
+      res.status(403).json({ error: 'file_read_disabled_for_security' });
     }
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-app.post('/api/admin/fs', sensitiveLimiter, async (req, res) => {
-  if (!ensureAdminToken(req, res)) return;
-  const { path: relPath, content } = req.body;
-  const targetPath = path.resolve(process.cwd(), relPath);
-
-  if (!targetPath.startsWith(process.cwd())) {
-    return res.status(403).json({ error: 'Access denied' });
-  }
-
-  try {
-    await fs.writeFile(targetPath, content, 'utf8');
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+// Remote write endpoint disabled completely; use a dedicated hardened ops channel instead.
+// app.post('/api/admin/fs', sensitiveLimiter, async (req, res) => { ... });
 
 // 3. Database Manager (SQL Runner)
 app.post('/api/admin/sql', sensitiveLimiter, async (req, res) => {
