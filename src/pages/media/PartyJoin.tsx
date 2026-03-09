@@ -30,7 +30,10 @@ export const PartyJoin = () => {
     if (!party) return ''
     const type = party.content_type || 'movie'
     const contentId = party.content_id || ''
-    return `/watch/${type}/${contentId}?partyId=${party.id}`
+    const isSeries = type === 'tv' || type === 'series' || type === 'anime'
+    return isSeries
+      ? `/watch/tv/${contentId}/s1/ep1?partyId=${party.id}`
+      : `/watch/movie/${contentId}?partyId=${party.id}`
   }, [party])
 
   useEffect(() => {
@@ -107,7 +110,12 @@ export const PartyJoin = () => {
         toast.error('الغرفة غير متاحة')
         return
       }
-      const target = `/watch/${resolvedParty.content_type || 'movie'}/${resolvedParty.content_id || ''}?partyId=${resolvedParty.id}`
+      const resolvedType = resolvedParty.content_type || 'movie'
+      const resolvedContentId = resolvedParty.content_id || ''
+      const isSeries = resolvedType === 'tv' || resolvedType === 'series' || resolvedType === 'anime'
+      const target = isSeries
+        ? `/watch/tv/${resolvedContentId}/s1/ep1?partyId=${resolvedParty.id}`
+        : `/watch/movie/${resolvedContentId}?partyId=${resolvedParty.id}`
       navigate(target, { replace: true })
     } catch (err: any) {
       toast.error(err?.message || 'تعذر الانضمام إلى الغرفة')

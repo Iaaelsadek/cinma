@@ -977,14 +977,45 @@ export async function getParticipants(partyId: string) {
     .from('watch_party_participants')
     .select('user_id, joined_at, profiles:user_id(username, avatar_url)')
     .eq('party_id', partyId)
-  
-  if (error) throw error
-  return data.map(p => ({
-    user_id: p.user_id,
-    joined_at: p.joined_at,
-    username: (p.profiles as any)?.username || `User ${p.user_id.slice(0, 4)}`,
-    avatar_url: (p.profiles as any)?.avatar_url || null
-  }))
+
+  if (!error && data) {
+    return data.map(p => ({
+      user_id: p.user_id,
+      joined_at: p.joined_at,
+      username: (p.profiles as any)?.username || `User ${p.user_id.slice(0, 4)}`,
+      avatar_url: (p.profiles as any)?.avatar_url || null
+    }))
+  }
+
+  const { data: rawParticipants, error: rawError } = await supabase
+    .from('watch_party_participants')
+    .select('user_id, joined_at')
+    .eq('party_id', partyId)
+
+  if (rawError) throw rawError
+
+  const enriched = await Promise.all(
+    (rawParticipants || []).map(async (p) => {
+      try {
+        const profile = await getProfile(p.user_id)
+        return {
+          user_id: p.user_id,
+          joined_at: p.joined_at,
+          username: profile?.username || `User ${p.user_id.slice(0, 4)}`,
+          avatar_url: profile?.avatar_url || null
+        }
+      } catch {
+        return {
+          user_id: p.user_id,
+          joined_at: p.joined_at,
+          username: `User ${p.user_id.slice(0, 4)}`,
+          avatar_url: null
+        }
+      }
+    })
+  )
+
+  return enriched
 }
 
 export async function getComments(contentId: number | string, contentType: string) {

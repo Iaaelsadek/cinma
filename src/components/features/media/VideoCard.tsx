@@ -67,9 +67,7 @@ export const VideoCard = memo(({ video, index = 0 }: { video: VideoItem; index?:
   }, [video.thumbnail])
 
   const handleImageError = () => {
-    // If image fails, don't try fallback chains to avoid console spam.
-    // hqdefault should exist for 99% of videos. If not, just show placeholder.
-    setImageSrc('')
+    setImageSrc('/placeholder.jpg')
   }
 
   const duration = video.duration ? formatDuration(video.duration) : ''
@@ -230,8 +228,8 @@ export const VideoCard = memo(({ video, index = 0 }: { video: VideoItem; index?:
         )}
       </div>
 
-      <div className="mt-3 space-y-1">
-        <h3 className="font-bold text-sm text-zinc-100 line-clamp-2 group-hover:text-cyan-400 transition-colors leading-snug">
+      <div className="mt-3 min-h-[64px] flex flex-col justify-between space-y-1">
+        <h3 className="font-bold text-sm text-zinc-100 line-clamp-2 min-h-[40px] group-hover:text-cyan-400 transition-colors leading-snug">
           {displayTitle}
         </h3>
         

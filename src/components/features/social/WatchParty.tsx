@@ -61,7 +61,7 @@ export const WatchParty = ({ partyId, onSync, onClose, currentVideoTime, isVideo
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const inviteLink = useMemo(() => {
-    if (typeof window === 'undefined') return `https://cinma.online./party/${partyId}`
+    if (typeof window === 'undefined') return `https://cinma.online/party/${partyId}`
     return `${window.location.origin}/party/${partyId}`
   }, [partyId])
 
