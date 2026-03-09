@@ -8,7 +8,6 @@ export async function onRequestGet(context) {
     VITE_TMDB_API_KEY: getVal('VITE_TMDB_API_KEY'),
     VITE_API_BASE: getVal('VITE_API_BASE'),
     VITE_DOMAIN: getVal('VITE_DOMAIN', 'https://cinma.online'),
-    VITE_GEMINI_API_KEY: getVal('VITE_GEMINI_API_KEY'),
     VITE_YOUTUBE_API_KEY: getVal('VITE_YOUTUBE_API_KEY')
   }
   return new Response(JSON.stringify(payload), {
