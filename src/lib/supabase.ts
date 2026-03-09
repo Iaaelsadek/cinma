@@ -994,28 +994,26 @@ export async function getParticipants(partyId: string) {
 
   if (rawError) throw rawError
 
-  const enriched = await Promise.all(
-    (rawParticipants || []).map(async (p) => {
-      try {
-        const profile = await getProfile(p.user_id)
-        return {
-          user_id: p.user_id,
-          joined_at: p.joined_at,
-          username: profile?.username || `User ${p.user_id.slice(0, 4)}`,
-          avatar_url: profile?.avatar_url || null
-        }
-      } catch {
-        return {
-          user_id: p.user_id,
-          joined_at: p.joined_at,
-          username: `User ${p.user_id.slice(0, 4)}`,
-          avatar_url: null
-        }
-      }
-    })
-  )
+  const participants = rawParticipants || []
+  if (participants.length === 0) return []
 
-  return enriched
+  // Batch fetch profiles to avoid N+1
+  const userIds = [...new Set(participants.map((p) => p.user_id))]
+  const { data: profiles } = await supabase
+    .from('profiles')
+    .select('id, username, avatar_url')
+    .in('id', userIds)
+  const profileMap = new Map((profiles || []).map((p) => [p.id, p]))
+
+  return participants.map((p) => {
+    const profile = profileMap.get(p.user_id)
+    return {
+      user_id: p.user_id,
+      joined_at: p.joined_at,
+      username: profile?.username || `User ${p.user_id.slice(0, 4)}`,
+      avatar_url: profile?.avatar_url || null
+    }
+  })
 }
 
 export async function getComments(contentId: number | string, contentType: string) {

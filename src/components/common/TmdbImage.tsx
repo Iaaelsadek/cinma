@@ -4,6 +4,18 @@ import { motion, AnimatePresence } from 'framer-motion'
 
 export type TmdbImageSize = 'w92' | 'w154' | 'w185' | 'w342' | 'w500' | 'w780' | 'w1280' | 'original'
 
+/** TMDB size to pixel dimensions for CLS prevention */
+const SIZE_DIMENSIONS: Record<TmdbImageSize, { w: number; h: number }> = {
+  w92: { w: 92, h: 138 },
+  w154: { w: 154, h: 231 },
+  w185: { w: 185, h: 278 },
+  w342: { w: 342, h: 513 },
+  w500: { w: 500, h: 750 },
+  w780: { w: 780, h: 1170 },
+  w1280: { w: 1280, h: 1920 },
+  original: { w: 1920, h: 2880 }
+}
+
 interface TmdbImageProps extends React.HTMLAttributes<HTMLDivElement> {
   path?: string | null
   size?: TmdbImageSize
@@ -44,9 +56,10 @@ export const TmdbImage = memo(({
 
   const src = getUrl(path, size)
   // Generate srcset for responsive images if using standard sizes
-  const srcSet = !path.startsWith('http') && size !== 'original' 
+  const srcSet = !path.startsWith('http') && size !== 'original'
     ? `${getUrl(path, 'w342')} 342w, ${getUrl(path, 'w500')} 500w, ${getUrl(path, 'w780')} 780w`
     : undefined
+  const dims = SIZE_DIMENSIONS[size]
 
   return (
     <div className={`relative overflow-hidden bg-zinc-900 ${className}`} {...props}>
@@ -67,6 +80,8 @@ export const TmdbImage = memo(({
         srcSet={srcSet}
         sizes={sizes}
         alt={alt}
+        width={dims?.w}
+        height={dims?.h}
         draggable={false}
         loading={priority ? 'eager' : 'lazy'}
         decoding={priority ? 'sync' : 'async'}

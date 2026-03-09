@@ -7,6 +7,7 @@ interface SeoHeadProps {
   image?: string
   type?: 'website' | 'article' | 'video.movie' | 'video.tv_show'
   rating?: number
+  ratingCount?: number
   duration?: string
   releaseDate?: string
   genres?: string[]
@@ -20,6 +21,7 @@ export const SeoHead = ({
   image = 'https://placehold.co/1200x630/000000/FFFFFF/png?text=Online+Cinema',
   type = 'website',
   rating,
+  ratingCount,
   duration,
   releaseDate,
   genres,
@@ -69,11 +71,11 @@ export const SeoHead = ({
     "url": url,
     "datePublished": releaseDate || undefined,
     "duration": duration || undefined,
-    "aggregateRating": rating ? {
+    "aggregateRating": rating != null ? {
       "@type": "AggregateRating",
       "ratingValue": rating,
       "bestRating": 10,
-      "ratingCount": 100
+      "ratingCount": ratingCount ?? 1
     } : undefined,
     "genre": genres
   } : type === 'video.tv_show' ? {
@@ -84,11 +86,11 @@ export const SeoHead = ({
     "image": image,
     "url": url,
     "datePublished": releaseDate || undefined,
-    "aggregateRating": rating ? {
+    "aggregateRating": rating != null ? {
       "@type": "AggregateRating",
       "ratingValue": rating,
       "bestRating": 10,
-      "ratingCount": 100
+      "ratingCount": ratingCount ?? 1
     } : undefined,
     "genre": genres
   } : null

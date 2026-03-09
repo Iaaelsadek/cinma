@@ -1173,13 +1173,15 @@ app.post('/api/admin/refresh/quran', sensitiveLimiter, async (req, res) => {
 });
 
 // --- TMDB PROXY ---
+// Security: Use server-side API key only. Never accept api_key from client to prevent key abuse.
 app.get(/^\/api\/tmdb\/(.*)/, regularLimiter, async (req, res) => {
   const endpoint = req.params[0];
-  const query = req.query;
-  const apiKey = process.env.TMDB_API_KEY || query.api_key;
-  
+  const query = { ...req.query };
+  delete query.api_key; // Strip any client-provided api_key
+  const apiKey = process.env.TMDB_API_KEY || process.env.VITE_TMDB_API_KEY;
+
   if (!apiKey) {
-    return res.status(401).json({ error: 'Missing TMDB API Key' });
+    return res.status(503).json({ error: 'TMDB API not configured' });
   }
 
   try {
