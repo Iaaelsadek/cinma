@@ -10,7 +10,6 @@ export const CONFIG = {
   SUPABASE_ANON_KEY: import.meta.env.VITE_SUPABASE_ANON_KEY || runtimeConfig.VITE_SUPABASE_ANON_KEY,
   TMDB_API_KEY: import.meta.env.VITE_TMDB_API_KEY || runtimeConfig.VITE_TMDB_API_KEY,
   YOUTUBE_API_KEY: import.meta.env.VITE_YOUTUBE_API_KEY || runtimeConfig.VITE_YOUTUBE_API_KEY,
-  GEMINI_API_KEY: import.meta.env.VITE_GEMINI_API_KEY || runtimeConfig.VITE_GEMINI_API_KEY,
   DOMAIN: import.meta.env.VITE_DOMAIN || runtimeConfig.VITE_DOMAIN || 'https://cinma.online',
   API_BASE: import.meta.env.VITE_API_BASE || runtimeConfig.VITE_API_BASE || ''
 }
