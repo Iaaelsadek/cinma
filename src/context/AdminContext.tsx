@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode, useEffect } from 'react'
+import { createContext, useContext, useState, ReactNode, useEffect, useCallback, useMemo } from 'react'
 import { toast } from 'sonner'
 import { supabase } from '../lib/supabase'
 import { errorLogger } from '../services/errorLogging'
@@ -142,15 +142,14 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
   }
 
   // Fetch Data with caching
-  const fetchData = async () => {
+  const fetchData = async (forceRefresh = false) => {
     setLoading(true)
     try {
-      // Check if we have valid cached stats
-      if (statsCache && isCacheValid(statsCache.timestamp)) {
+      const skipStatsCache = forceRefresh || !statsCache || !isCacheValid(statsCache.timestamp)
+      if (!skipStatsCache && statsCache) {
         setStats(statsCache.data)
-        // Still fetch fresh data for movies, series, users
       }
-      
+
       // Movies
       const { data: moviesData, error: moviesError } = await supabase
         .from('movies')
@@ -229,7 +228,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
       setUsers(mappedUsers)
 
       // Calculate Stats (only if cache is invalid or missing)
-      if (!statsCache || !isCacheValid(statsCache.timestamp)) {
+      if (skipStatsCache) {
         const totalMovies = moviesData?.length || 0
         const totalSeries = seriesData?.length || 0
         const totalUsers = profilesData?.length || 0
@@ -280,7 +279,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     fetchData()
   }, [])
 
-  const addMovie = async (movieData: Omit<AdminMovie, 'id' | 'views'>) => {
+  const addMovie = useCallback(async (movieData: Omit<AdminMovie, 'id' | 'views'>) => {
     try {
       const { data, error } = await supabase
         .from('movies')
@@ -332,9 +331,9 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
       })
       toast.error('Failed to add movie: ' + error.message)
     }
-  }
+  }, [])
 
-  const deleteMovie = async (id: number) => {
+  const deleteMovie = useCallback(async (id: number) => {
     try {
       const { error } = await supabase
         .from('movies')
@@ -355,9 +354,9 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
       })
       toast.error('Failed to delete movie: ' + error.message)
     }
-  }
+  }, [])
 
-  const updateMovie = async (id: number, data: Partial<AdminMovie>) => {
+  const updateMovie = useCallback(async (id: number, data: Partial<AdminMovie>) => {
     try {
       const payload: any = {}
       if (data.title !== undefined) payload.title = data.title
@@ -385,9 +384,9 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     } catch (error: any) {
       toast.error(error.message || 'فشل تحديث الفيلم')
     }
-  }
+  }, [])
 
-  const addSeries = async (seriesData: Omit<AdminSeries, 'id' | 'views'>) => {
+  const addSeries = useCallback(async (seriesData: Omit<AdminSeries, 'id' | 'views'>) => {
      try {
       const { data, error } = await supabase
         .from('tv_series') // Changed to tv_series
@@ -423,9 +422,9 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
      } catch (error: any) {
          toast.error(error.message)
      }
-  }
+  }, [])
 
-  const deleteSeries = async (id: number) => {
+  const deleteSeries = useCallback(async (id: number) => {
     try {
         const { error } = await supabase.from('tv_series').delete().eq('id', id) // Changed to tv_series
         if (error) throw error
@@ -434,18 +433,17 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     } catch (error: any) {
         toast.error(error.message)
     }
-  }
+  }, [])
 
-  const getSeriesById = (id: number) => {
+  const getSeriesById = useCallback((id: number) => {
     return series.find(s => s.id === id)
-  }
+  }, [series])
 
-  const addSeason = async (_seriesId: number, _seasonData: Omit<AdminSeason, 'id'>) => {
-    // Implementation for seasons
+  const addSeason = useCallback(async (_seriesId: number, _seasonData: Omit<AdminSeason, 'id'>) => {
     toast.info('Add season not fully implemented')
-  }
+  }, [])
 
-  const deleteSeason = async (seriesId: number, seasonId: number) => {
+  const deleteSeason = useCallback(async (seriesId: number, seasonId: number) => {
     try {
       const { error } = await supabase
         .from('seasons')
@@ -468,28 +466,26 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     } catch (error: any) {
       toast.error(error.message || 'Failed to delete season')
     }
-  }
+  }, [])
 
-  const addEpisode = async (_seriesId: number, _seasonId: number, _episodeData: Omit<AdminEpisode, 'id'>) => {
+  const addEpisode = useCallback(async (_seriesId: number, _seasonId: number, _episodeData: Omit<AdminEpisode, 'id'>) => {
     toast.info('Add episode not fully implemented')
-  }
+  }, [])
 
-  const deleteEpisode = async (_seriesId: number, _seasonId: number, _episodeId: number) => {
+  const deleteEpisode = useCallback(async (_seriesId: number, _seasonId: number, _episodeId: number) => {
     toast.info('Delete episode not fully implemented')
-  }
+  }, [])
 
-  const updateEpisode = async (_seriesId: number, _seasonId: number, _episodeId: number, _data: Partial<AdminEpisode>) => {
+  const updateEpisode = useCallback(async (_seriesId: number, _seasonId: number, _episodeId: number, _data: Partial<AdminEpisode>) => {
     toast.info('Update episode not fully implemented')
-  }
+  }, [])
 
-  const refreshStats = () => {
-    // Clear cache and re-fetch data
+  const refreshStats = useCallback(() => {
     setStatsCache(null)
-    fetchData()
-  }
+    fetchData(true)
+  }, [])
 
-  return (
-    <AdminContext.Provider value={{
+  const value = useMemo(() => ({
       movies,
       series,
       users,
@@ -504,11 +500,18 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
       getSeriesById,
       addSeason,
       deleteSeason,
-      addEpisode,
-      deleteEpisode,
-      updateEpisode,
-      refreshStats
-    }}>
+    addEpisode,
+    deleteEpisode,
+    updateEpisode,
+    refreshStats
+  }), [
+    movies, series, users, stats, recentActivity, loading,
+    addMovie, deleteMovie, updateMovie, addSeries, deleteSeries, getSeriesById,
+    addSeason, deleteSeason, addEpisode, deleteEpisode, updateEpisode, refreshStats
+  ])
+
+  return (
+    <AdminContext.Provider value={value}>
       {children}
     </AdminContext.Provider>
   )
