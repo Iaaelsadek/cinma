@@ -546,6 +546,7 @@ app.get('/api/admin/fs', sensitiveLimiter, async (req, res) => {
 
 // 3. Database Manager (SQL Runner)
 app.post('/api/admin/sql', sensitiveLimiter, async (req, res) => {
+  if (!ensureAdminIpAllowed(req, res)) return;
   if (!ensureAdminToken(req, res)) return;
   return res.status(403).json({ error: 'sql_endpoint_disabled' });
 });
@@ -702,6 +703,23 @@ app.get('/api/check-link', sensitiveLimiter, async (req, res) => {
 
 // --- HOME & CONTINUE-WATCHING AGGREGATION ENDPOINTS ---
 
+// Simple in-memory cache for hot aggregation endpoints
+const memoryCache = new Map();
+
+function getCache(key) {
+  const entry = memoryCache.get(key);
+  if (!entry) return null;
+  if (Date.now() > entry.expiresAt) {
+    memoryCache.delete(key);
+    return null;
+  }
+  return entry.value;
+}
+
+function setCache(key, value, ttlMs) {
+  memoryCache.set(key, { value, expiresAt: Date.now() + ttlMs });
+}
+
 async function tmdbGet(path, params = {}) {
   const apiKey = process.env.TMDB_API_KEY;
   if (!apiKey) {
@@ -723,6 +741,11 @@ async function tmdbGet(path, params = {}) {
 app.get('/api/home', regularLimiter, async (req, res) => {
   try {
     const lang = req.query.lang === 'en' ? 'en-US' : 'ar-SA';
+    const cacheKey = `home:${lang}`;
+    const cached = getCache(cacheKey);
+    if (cached) {
+      return res.json(cached);
+    }
 
     const [trending, popularMovies, topRatedMovies] = await Promise.all([
       tmdbGet('trending/movie/week', { language: lang }),
@@ -743,7 +766,7 @@ app.get('/api/home', regularLimiter, async (req, res) => {
       }
     }
 
-    res.json({
+    const payload = {
       tmdb: {
         trending,
         popularMovies,
@@ -752,7 +775,11 @@ app.get('/api/home', regularLimiter, async (req, res) => {
       supabase: {
         mvTrending,
       },
-    });
+    };
+
+    // Cache for 90 seconds to reduce TMDB load
+    setCache(cacheKey, payload, 90 * 1000);
+    res.json(payload);
   } catch (error) {
     console.error('/api/home error:', error?.message || error);
     res.status(502).json({ error: 'home_aggregation_failed' });
@@ -788,22 +815,31 @@ app.get('/api/continue-watching', regularLimiter, async (req, res) => {
 
     const lang = req.query.lang === 'en' ? 'en-US' : 'ar-SA';
 
+    const cacheKey = `cw:${userId}:${lang}`;
+    const cached = getCache(cacheKey);
+    if (cached) {
+      return res.json(cached);
+    }
+
     async function fetchMany(ids, type) {
-      const results = [];
-      for (const id of ids) {
-        try {
-          const data = await tmdbGet(`${type}/${id}`, { language: lang });
-          results.push(data);
-        } catch (e) {
-          console.warn(`TMDB ${type}/${id} failed:`, e?.message || e);
-        }
-      }
-      return results;
+      const safeIds = [...new Set(ids)].filter(Boolean);
+      if (!safeIds.length) return [];
+      const results = await Promise.all(
+        safeIds.map(async (id) => {
+          try {
+            return await tmdbGet(`${type}/${id}`, { language: lang });
+          } catch (e) {
+            console.warn(`TMDB ${type}/${id} failed:`, e?.message || e);
+            return null;
+          }
+        })
+      );
+      return results.filter(Boolean);
     }
 
     const [moviesMeta, tvMeta] = await Promise.all([
-      movieIds.length ? fetchMany(movieIds, 'movie') : Promise.resolve([]),
-      tvIds.length ? fetchMany(tvIds, 'tv') : Promise.resolve([]),
+      fetchMany(movieIds, 'movie'),
+      fetchMany(tvIds, 'tv'),
     ]);
 
     const movieMap = new Map(moviesMeta.map((m) => [String(m.id), m]));
@@ -825,7 +861,10 @@ app.get('/api/continue-watching', regularLimiter, async (req, res) => {
       return { ...row, meta };
     });
 
-    res.json({ items: enriched });
+    const payload = { items: enriched };
+    // Cache per-user continue watching for 60 seconds
+    setCache(cacheKey, payload, 60 * 1000);
+    res.json(payload);
   } catch (error) {
     console.error('/api/continue-watching error:', error?.message || error);
     res.status(502).json({ error: 'continue_watching_failed' });
@@ -944,11 +983,13 @@ app.get('/api/weather/current', regularLimiter, async (req, res) => {
 });
 
 app.get('/api/admin/health', sensitiveLimiter, async (req, res) => {
+  if (!ensureAdminIpAllowed(req, res)) return;
   if (!ensureAdminToken(req, res)) return;
   res.json({ lastSyncAt, lastSyncStatus });
 });
 
 app.get('/api/admin/logs', sensitiveLimiter, async (req, res) => {
+  if (!ensureAdminIpAllowed(req, res)) return;
   if (!ensureAdminToken(req, res)) return;
   const logs = (lastSyncLogs || []).slice(-20);
   res.json({ logs });
@@ -1094,6 +1135,7 @@ app.get('/api/admin/ops/status', regularLimiter, async (req, res) => {
 });
 
 app.post('/api/admin/sync', sensitiveLimiter, async (req, res) => {
+  if (!ensureAdminIpAllowed(req, res)) return;
   if (!ensureAdminToken(req, res)) return;
   lastSyncStatus = 'running';
   lastSyncAt = new Date().toISOString();
@@ -1109,6 +1151,7 @@ app.post('/api/admin/sync', sensitiveLimiter, async (req, res) => {
 });
 
 app.post('/api/admin/refresh/anime', sensitiveLimiter, async (req, res) => {
+  if (!ensureAdminIpAllowed(req, res)) return;
   if (!ensureAdminToken(req, res)) return;
   try {
     const result = await runPythonScript('backend/fetch_anime.py');
@@ -1119,6 +1162,7 @@ app.post('/api/admin/refresh/anime', sensitiveLimiter, async (req, res) => {
 });
 
 app.post('/api/admin/refresh/quran', sensitiveLimiter, async (req, res) => {
+  if (!ensureAdminIpAllowed(req, res)) return;
   if (!ensureAdminToken(req, res)) return;
   try {
     const result = await runPythonScript('backend/fetch_quran.py');
