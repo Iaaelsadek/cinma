@@ -11,6 +11,7 @@ import { useLang } from '../../../state/useLang'
 import { useDualTitles } from '../../../hooks/useDualTitles'
 import { TmdbImage } from '../../common/TmdbImage'
 import ReactPlayer from 'react-player/youtube'
+import { getTranslation } from '../../../lib/translation'
 import { tmdb } from '../../../lib/tmdb'
 
 export type Movie = {
@@ -29,17 +30,31 @@ export type Movie = {
   category?: string
 }
 
-
 export const MovieCard = memo(({ movie, index = 0 }: { movie: Movie; index?: number }) => {
+  const [translatedData, setTranslatedData] = useState<any>(null)
   const [isHovered, setIsHovered] = useState(false)
   const [trailerKey, setTrailerKey] = useState<string | null>(null)
   const [listBusy, setListBusy] = useState(false)
   const [inList, setInList] = useState(false)
   const { user } = useAuth()
   const { lang } = useLang()
-  const titles = useDualTitles(movie)
+  
+  // Merge translated data into movie object for useDualTitles
+  const effectiveMovie = { ...movie, ...translatedData }
+  const titles = useDualTitles(effectiveMovie)
+  
   const navigate = useNavigate()
-  const title = movie.title || movie.name || 'Untitled'
+  const title = effectiveMovie.title || effectiveMovie.name || 'Untitled'
+  
+  // Auto-translate if titles are missing or generic
+  useEffect(() => {
+    if (titles.main === 'Untitled' || titles.main === 'بدون عنوان') {
+      getTranslation(movie).then(res => {
+        if (res) setTranslatedData(res)
+      })
+    }
+  }, [movie.id, titles.main])
+
   const date = movie.release_date || movie.first_air_date || ''
   const year = date ? new Date(date).getFullYear() : ''
   
@@ -197,8 +212,9 @@ export const MovieCard = memo(({ movie, index = 0 }: { movie: Movie; index?: num
                 className="h-full w-full"
                 imgClassName={`transition-all duration-500 ease-lumen ${isHovered ? 'scale-105 brightness-75' : 'scale-100'}`}
                 fallback={
-                  <div className="h-full w-full flex items-center justify-center bg-zinc-800 text-zinc-600">
-                    <Play size={40} strokeWidth={1} />
+                  <div className="h-full w-full flex flex-col items-center justify-center bg-zinc-800 text-zinc-600 p-4 text-center">
+                    <Play size={32} strokeWidth={1.5} className="mb-2 opacity-50" />
+                    <span className="text-[10px] font-medium opacity-50 line-clamp-2">{title}</span>
                   </div>
                 }
               />
@@ -277,11 +293,11 @@ export const MovieCard = memo(({ movie, index = 0 }: { movie: Movie; index?: num
           </div>
 
           {/* Title & meta */}
-          <div className="p-3 h-[88px] flex flex-col justify-end bg-gradient-to-b from-transparent to-lumen-void/60">
-            <h3 className="line-clamp-1 text-sm font-semibold text-lumen-cream group-hover/card:text-lumen-gold transition-colors duration-200">
+          <div className="p-3 h-[96px] flex flex-col justify-end bg-gradient-to-b from-transparent to-lumen-void/60">
+            <h3 className="line-clamp-1 text-sm font-semibold text-lumen-cream group-hover/card:text-lumen-gold transition-colors duration-200 mb-0.5">
               {titles.main}
             </h3>
-            <p className={`line-clamp-1 text-xs text-lumen-gold/80 font-arabic mt-0.5 min-h-[16px] ${titles.sub ? '' : 'invisible'}`}>
+            <p className={`line-clamp-1 text-xs text-lumen-gold/80 font-arabic min-h-[16px] ${titles.sub ? '' : 'invisible'}`}>
               {titles.sub || '—'}
             </p>
             <div className="mt-1 flex flex-wrap items-center gap-1 text-[9px] font-medium uppercase tracking-wider text-lumen-silver">
