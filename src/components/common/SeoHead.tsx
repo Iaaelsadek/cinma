@@ -11,6 +11,7 @@ interface SeoHeadProps {
   releaseDate?: string
   genres?: string[]
   schema?: Record<string, any>
+  noIndex?: boolean
 }
 
 export const SeoHead = ({ 
@@ -22,7 +23,8 @@ export const SeoHead = ({
   duration,
   releaseDate,
   genres,
-  schema
+  schema,
+  noIndex = false
 }: SeoHeadProps) => {
   const { pathname } = useLocation()
   const siteUrl = 'https://cinma.online'
@@ -31,6 +33,7 @@ export const SeoHead = ({
     ? `${siteUrl}${normalizedPath.startsWith('/') ? normalizedPath : `/${normalizedPath}`}`
     : siteUrl
   const fullTitle = `${title} | أونلاين سينما`
+  const robots = noIndex ? 'noindex,follow' : 'index,follow'
 
   // Breadcrumb Schema
   const breadcrumbSchema = {
@@ -102,7 +105,7 @@ export const SeoHead = ({
       <title>{fullTitle}</title>
       <meta name="description" content={description} />
       <link rel="canonical" href={url} />
-      <meta name="robots" content="index, follow" />
+      <meta name="robots" content={robots} />
 
       {/* Open Graph */}
       <meta property="og:site_name" content="Online Cinema" />

@@ -1,15 +1,16 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { Play, Plus, Check } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { useEffect, useState, type MouseEvent, memo } from 'react'
+import { useEffect, useState, type MouseEvent, memo, lazy, Suspense, useRef } from 'react'
 import { useAuth } from '../../../hooks/useAuth'
 import { addToWatchlist, isInWatchlist, removeFromWatchlist } from '../../../lib/supabase'
-import ReactPlayer from 'react-player/youtube'
 import { tmdb } from '../../../lib/tmdb'
 import { logger } from '../../../lib/logger'
 
 import { useDualTitles } from '../../../hooks/useDualTitles'
 import { getTranslation, resolveTitleWithFallback } from '../../../lib/translation'
+
+const LazyReactPlayer = lazy(() => import('react-player/youtube'))
 
 export type VideoItem = {
   id: string | number
@@ -96,10 +97,14 @@ export const VideoCard = memo(({ video, index = 0 }: { video: VideoItem; index?:
   const hasVisual = Boolean(imageSrc)
   const hasValidTitle = Boolean(displayTitle && displayTitle !== 'Untitled' && displayTitle !== 'بدون عنوان')
 
+  const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   useEffect(() => {
     let mounted = true
+
     if (isHovered && !trailerKey) {
-      const fetchTrailer = async () => {
+      if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current)
+      hoverTimeoutRef.current = setTimeout(async () => {
         try {
           const type = video.category === 'series' ? 'tv' : 'movie'
           const { data } = await tmdb.get(`/${type}/${video.id}/videos`)
@@ -109,13 +114,22 @@ export const VideoCard = memo(({ video, index = 0 }: { video: VideoItem; index?:
           if (mounted && trailer?.key) {
             setTrailerKey(trailer.key)
           }
-        } catch (e) {
+        } catch {
           // Silent fail
         }
-      }
-      fetchTrailer()
+      }, 500)
+    } else if (!isHovered && hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current)
+      hoverTimeoutRef.current = null
     }
-    return () => { mounted = false }
+
+    return () => {
+      mounted = false
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current)
+        hoverTimeoutRef.current = null
+      }
+    }
   }, [isHovered, trailerKey, video.category, video.id])
 
   useEffect(() => {
@@ -202,27 +216,29 @@ export const VideoCard = memo(({ video, index = 0 }: { video: VideoItem; index?:
               exit={{ opacity: 0 }}
               className="absolute inset-0 z-10 bg-black"
             >
-              <ReactPlayer
-                url={`https://www.youtube.com/watch?v=${trailerKey}`}
-                width="100%"
-                height="100%"
-                playing
-                muted
-                loop
-                config={{
-                  youtube: {
-                    playerVars: { 
-                      autoplay: 1, 
-                      controls: 0, 
-                      showinfo: 0, 
-                      modestbranding: 1, 
-                      rel: 0,
-                      iv_load_policy: 3
+              <Suspense fallback={null}>
+                <LazyReactPlayer
+                  url={`https://www.youtube.com/watch?v=${trailerKey}`}
+                  width="100%"
+                  height="100%"
+                  playing
+                  muted
+                  loop
+                  config={{
+                    youtube: {
+                      playerVars: { 
+                        autoplay: 1, 
+                        controls: 0, 
+                        showinfo: 0, 
+                        modestbranding: 1, 
+                        rel: 0,
+                        iv_load_policy: 3
+                      }
                     }
-                  }
-                } as any}
-                className="pointer-events-none scale-150"
-              />
+                  } as any}
+                  className="pointer-events-none scale-150"
+                />
+              </Suspense>
             </motion.div>
           )}
         </AnimatePresence>

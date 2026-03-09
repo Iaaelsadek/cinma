@@ -652,6 +652,138 @@ app.get('/api/check-link', sensitiveLimiter, async (req, res) => {
   }
 });
 
+// --- HOME & CONTINUE-WATCHING AGGREGATION ENDPOINTS ---
+
+async function tmdbGet(path, params = {}) {
+  const apiKey = process.env.TMDB_API_KEY;
+  if (!apiKey) {
+    throw new Error('TMDB_API_KEY not configured on server');
+  }
+
+  const url = `https://api.themoviedb.org/3/${path}`;
+  const { data } = await axios.get(url, {
+    params: { api_key: apiKey, language: 'ar-SA', ...params },
+    timeout: 15000,
+    headers: {
+      Accept: 'application/json',
+      'User-Agent': 'CinemaOnline/1.0',
+    },
+  });
+  return data;
+}
+
+app.get('/api/home', regularLimiter, async (req, res) => {
+  try {
+    const lang = req.query.lang === 'en' ? 'en-US' : 'ar-SA';
+
+    const [trending, popularMovies, topRatedMovies] = await Promise.all([
+      tmdbGet('trending/movie/week', { language: lang }),
+      tmdbGet('movie/popular', { language: lang, page: 1 }),
+      tmdbGet('movie/top_rated', { language: lang, page: 1 }),
+    ]);
+
+    let mvTrending = null;
+    if (supabase) {
+      try {
+        const { data, error } = await supabase
+          .from('mv_home_trending')
+          .select('*')
+          .limit(30);
+        if (!error) mvTrending = data || null;
+      } catch {
+        mvTrending = null;
+      }
+    }
+
+    res.json({
+      tmdb: {
+        trending,
+        popularMovies,
+        topRatedMovies,
+      },
+      supabase: {
+        mvTrending,
+      },
+    });
+  } catch (error) {
+    console.error('/api/home error:', error?.message || error);
+    res.status(502).json({ error: 'home_aggregation_failed' });
+  }
+});
+
+app.get('/api/continue-watching', regularLimiter, async (req, res) => {
+  if (!supabase) {
+    return res.status(500).json({ error: 'Supabase not configured' });
+  }
+
+  try {
+    const ctx = await getAuthContext(req);
+    if (!ctx.ok) {
+      return res.status(ctx.status).json({ error: ctx.error });
+    }
+    const userId = ctx.user.id;
+
+    const { data: rows, error } = await supabase
+      .from('continue_watching')
+      .select('id, content_id, content_type, season, episode, progress, duration, updated_at')
+      .eq('user_id', userId)
+      .order('updated_at', { ascending: false })
+      .limit(12);
+
+    if (error) throw error;
+
+    const movies = rows.filter((r) => r.content_type === 'movie');
+    const tv = rows.filter((r) => r.content_type === 'tv');
+
+    const movieIds = [...new Set(movies.map((r) => r.content_id))].filter(Boolean);
+    const tvIds = [...new Set(tv.map((r) => r.content_id))].filter(Boolean);
+
+    const lang = req.query.lang === 'en' ? 'en-US' : 'ar-SA';
+
+    async function fetchMany(ids, type) {
+      const results = [];
+      for (const id of ids) {
+        try {
+          const data = await tmdbGet(`${type}/${id}`, { language: lang });
+          results.push(data);
+        } catch (e) {
+          console.warn(`TMDB ${type}/${id} failed:`, e?.message || e);
+        }
+      }
+      return results;
+    }
+
+    const [moviesMeta, tvMeta] = await Promise.all([
+      movieIds.length ? fetchMany(movieIds, 'movie') : Promise.resolve([]),
+      tvIds.length ? fetchMany(tvIds, 'tv') : Promise.resolve([]),
+    ]);
+
+    const movieMap = new Map(moviesMeta.map((m) => [String(m.id), m]));
+    const tvMap = new Map(tvMeta.map((m) => [String(m.id), m]));
+
+    const enriched = rows.map((row) => {
+      const key = String(row.content_id);
+      const base =
+        row.content_type === 'movie' ? movieMap.get(key) : tvMap.get(key);
+      const meta = base
+        ? {
+            id: base.id,
+            poster_path: base.poster_path,
+            title: base.title,
+            name: base.name,
+            vote_average: base.vote_average,
+          }
+        : null;
+      return { ...row, meta };
+    });
+
+    res.json({ items: enriched });
+  } catch (error) {
+    console.error('/api/continue-watching error:', error?.message || error);
+    res.status(502).json({ error: 'continue_watching_failed' });
+  }
+});
+
 app.get('/api/radio/cairo', regularLimiter, async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
 

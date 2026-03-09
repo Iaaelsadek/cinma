@@ -1,4 +1,4 @@
-import { memo, useState, type MouseEvent, useEffect } from 'react'
+import { memo, useState, type MouseEvent, useEffect, useRef, lazy, Suspense } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Play, Star, Plus, Check } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
@@ -10,9 +10,10 @@ import { generateWatchPath } from '../../../lib/utils'
 import { useLang } from '../../../state/useLang'
 import { useDualTitles } from '../../../hooks/useDualTitles'
 import { TmdbImage } from '../../common/TmdbImage'
-import ReactPlayer from 'react-player/youtube'
 import { getTranslation, resolveOverviewWithFallback, resolveTitleWithFallback } from '../../../lib/translation'
 import { tmdb } from '../../../lib/tmdb'
+
+const LazyReactPlayer = lazy(() => import('react-player/youtube'))
 
 export type Movie = {
   id: number
@@ -116,12 +117,14 @@ export const MovieCard = memo(({ movie, index = 0 }: { movie: Movie; index?: num
     return () => { mounted = false }
   }, [user, movie.id, mediaType])
 
+  const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   useEffect(() => {
     let mounted = true
-    let timeoutId: ReturnType<typeof setTimeout>
-    
+
     if (isHovered && !trailerKey) {
-      timeoutId = setTimeout(async () => {
+      if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current)
+      hoverTimeoutRef.current = setTimeout(async () => {
         try {
           const { data } = await tmdb.get(`/${mediaType}/${movie.id}/videos`)
           const trailer = data.results?.find(
@@ -130,15 +133,21 @@ export const MovieCard = memo(({ movie, index = 0 }: { movie: Movie; index?: num
           if (mounted && trailer?.key) {
             setTrailerKey(trailer.key)
           }
-        } catch (e) {
+        } catch {
           // Silent fail
         }
-      }, 400) // 400ms debounce
+      }, 500) // 500ms debounce
+    } else if (!isHovered && hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current)
+      hoverTimeoutRef.current = null
     }
     
     return () => { 
       mounted = false
-      if (timeoutId) clearTimeout(timeoutId)
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current)
+        hoverTimeoutRef.current = null
+      }
     }
   }, [isHovered, trailerKey, mediaType, movie.id])
 
@@ -238,27 +247,29 @@ export const MovieCard = memo(({ movie, index = 0 }: { movie: Movie; index?: num
                   exit={{ opacity: 0 }}
                   className="absolute inset-0 z-10 bg-black"
                 >
-                  <ReactPlayer
-                    url={`https://www.youtube.com/watch?v=${trailerKey}`}
-                    width="100%"
-                    height="100%"
-                    playing
-                    muted
-                    loop
-                    config={{
-                      youtube: {
-                        playerVars: { 
-                          autoplay: 1, 
-                          controls: 0, 
-                          showinfo: 0, 
-                          modestbranding: 1, 
-                          rel: 0,
-                          iv_load_policy: 3
+                  <Suspense fallback={null}>
+                    <LazyReactPlayer
+                      url={`https://www.youtube.com/watch?v=${trailerKey}`}
+                      width="100%"
+                      height="100%"
+                      playing
+                      muted
+                      loop
+                      config={{
+                        youtube: {
+                          playerVars: { 
+                            autoplay: 1, 
+                            controls: 0, 
+                            showinfo: 0, 
+                            modestbranding: 1, 
+                            rel: 0,
+                            iv_load_policy: 3
+                          }
                         }
-                      }
-                    } as any}
-                    className="pointer-events-none scale-150"
-                  />
+                      } as any}
+                      className="pointer-events-none scale-150"
+                    />
+                  </Suspense>
                 </motion.div>
               )}
             </AnimatePresence>

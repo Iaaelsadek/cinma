@@ -38,8 +38,8 @@ export const NotFound = () => {
     <div className="flex min-h-screen flex-col items-center justify-center bg-[#050505] p-4 text-center">
       <div className="relative mb-4">
         <div className="absolute inset-0 animate-pulse bg-primary/20 blur-[80px]" />
-        <Ghost size={80} className="relative z-10 text-zinc-800" />
-        <div className="absolute inset-0 flex items-center justify-center text-4xl font-black text-white mix-blend-overlay">
+        <Ghost size={80} className="relative z-10 text-zinc-800" aria-hidden="true" focusable="false" />
+        <div className="absolute inset-0 flex items-center justify-center text-4xl font-black text-white mix-blend-overlay" aria-hidden="true">
           404
         </div>
       </div>

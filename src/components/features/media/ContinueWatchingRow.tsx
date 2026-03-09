@@ -1,59 +1,43 @@
 import { useQuery } from '@tanstack/react-query'
 import { PrefetchLink } from '../../common/PrefetchLink'
-import { getContinueWatching } from '../../../lib/supabase'
-import { tmdb } from '../../../lib/tmdb'
 import { Clock } from 'lucide-react'
 import { SectionHeader } from '../../common/SectionHeader'
 import { useLang } from '../../../state/useLang'
 
-type CwItem = {
+type ApiCwItem = {
   content_id: number
   content_type: 'movie' | 'tv'
-  season_number: number | null
-  episode_number: number | null
-  progress_seconds: number
-  duration_seconds: number
+  season: number | null
+  episode: number | null
+  progress: number | null
+  duration: number | null
   updated_at: string
-}
-
-type EnrichedCwItem = CwItem & {
-  id: number
-  poster_path?: string
-  title?: string
-  name?: string
-  vote_average?: number
+  meta?: {
+    id: number
+    poster_path?: string | null
+    title?: string | null
+    name?: string | null
+    vote_average?: number | null
+  } | null
 }
 
 export const ContinueWatchingRow = ({ userId }: { userId: string }) => {
   const { lang } = useLang()
-  const cwQuery = useQuery<CwItem[]>({
-    queryKey: ['continue', userId],
-    queryFn: () => getContinueWatching(userId),
-    staleTime: 60 * 1000
-  })
-
-  const enriched = useQuery<EnrichedCwItem[]>({
-    queryKey: ['continue-enriched', cwQuery.data?.map(c => `${c.content_type}-${c.content_id}`).join(',')],
+  const { data, isPending } = useQuery<ApiCwItem[]>({
+    queryKey: ['continue-watching', userId],
     queryFn: async () => {
-      const items = cwQuery.data || []
-      const promises = items.slice(0, 12).map(async (r) => {
-        try {
-          const path = r.content_type === 'movie' ? `/movie/${r.content_id}` : `/tv/${r.content_id}`
-          const { data } = await tmdb.get(path)
-          return { ...r, id: r.content_id, poster_path: data.poster_path, title: data.title, name: data.name, vote_average: data.vote_average } as EnrichedCwItem
-        } catch {
-          return { ...r, id: r.content_id } as EnrichedCwItem
-        }
+      const res = await fetch('/api/continue-watching', {
+        headers: { 'Accept': 'application/json' }
       })
-      return Promise.all(promises)
+      if (!res.ok) throw new Error('failed_continue_watching')
+      const json = await res.json()
+      return (json.items || []) as ApiCwItem[]
     },
-    enabled: !!cwQuery.data?.length
+    staleTime: 60 * 1000,
   })
 
-  const data = enriched.data || []
-
-  if (!cwQuery.data?.length) return null
-  if (cwQuery.isPending) {
+  if (!data?.length) return null
+  if (isPending) {
     return (
       <section>
         <SectionHeader title={lang === 'ar' ? 'تابع المشاهدة' : 'Continue Watching'} icon={<Clock />} />
@@ -73,16 +57,16 @@ export const ContinueWatchingRow = ({ userId }: { userId: string }) => {
         {data.map((r, i) => {
           const href = r.content_type === 'movie'
             ? `/watch/movie/${r.content_id}`
-            : `/watch/tv/${r.content_id}/s${r.season_number || 1}/ep${r.episode_number || 1}`
-          const progress = r.duration_seconds > 0
-            ? Math.min(99, Math.round((r.progress_seconds / r.duration_seconds) * 100))
+            : `/watch/tv/${r.content_id}/s${r.season || 1}/ep${r.episode || 1}`
+          const progress = r.duration && r.duration > 0
+            ? Math.min(99, Math.round(((r.progress || 0) / r.duration) * 100))
             : 0
-          const movie = {
+          const movie = r.meta || {
             id: r.content_id,
-            title: r.title,
-            name: r.name,
-            poster_path: r.poster_path,
-            vote_average: r.vote_average,
+            title: undefined,
+            name: undefined,
+            poster_path: undefined,
+            vote_average: undefined,
             media_type: r.content_type
           }
 
@@ -96,7 +80,7 @@ export const ContinueWatchingRow = ({ userId }: { userId: string }) => {
                 <div className="aspect-[2/3] bg-zinc-900">
                   {r.poster_path ? (
                     <img
-                      src={`https://image.tmdb.org/t/p/w342${r.poster_path}`}
+                      src={`https://image.tmdb.org/t/p/w342${movie.poster_path}`}
                       alt={movie.title || movie.name || ''}
                       className="w-full h-full object-cover"
                       loading="lazy"
@@ -119,9 +103,9 @@ export const ContinueWatchingRow = ({ userId }: { userId: string }) => {
               <h3 className="mt-2 text-sm font-bold text-zinc-200 truncate group-hover:text-cyan-400 transition-colors">
                 {movie.title || movie.name || `#${r.content_id}`}
               </h3>
-              {r.content_type === 'tv' && (r.season_number || r.episode_number) && (
+              {r.content_type === 'tv' && (r.season || r.episode) && (
                 <p className="text-[10px] text-zinc-500">
-                  S{r.season_number || 1} E{r.episode_number || 1}
+                  S{r.season || 1} E{r.episode || 1}
                 </p>
               )}
             </PrefetchLink>
