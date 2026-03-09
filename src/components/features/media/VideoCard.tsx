@@ -67,7 +67,7 @@ export const VideoCard = memo(({ video, index = 0 }: { video: VideoItem; index?:
   }, [video.thumbnail])
 
   const handleImageError = () => {
-    setImageSrc('/placeholder.jpg')
+    setImageSrc('')
   }
 
   const duration = video.duration ? formatDuration(video.duration) : ''
@@ -228,8 +228,8 @@ export const VideoCard = memo(({ video, index = 0 }: { video: VideoItem; index?:
         )}
       </div>
 
-      <div className="mt-3 min-h-[64px] flex flex-col justify-between space-y-1">
-        <h3 className="font-bold text-sm text-zinc-100 line-clamp-2 min-h-[40px] group-hover:text-cyan-400 transition-colors leading-snug">
+      <div className="mt-3 h-[64px] flex flex-col justify-between space-y-1">
+        <h3 className="font-bold text-sm text-zinc-100 line-clamp-2 h-[40px] group-hover:text-cyan-400 transition-colors leading-snug">
           {displayTitle}
         </h3>
         
