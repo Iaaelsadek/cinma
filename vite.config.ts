@@ -24,13 +24,14 @@ export default defineConfig({
         orientation: 'any',
         categories: ['entertainment', 'video'],
         icons: [
-          { src: '/logo.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any maskable' },
-          { src: '/logo.svg', sizes: '512x512', type: 'image/svg+xml', purpose: 'any maskable' }
+          { src: '/android-chrome-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
+          { src: '/android-chrome-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' }
         ],
         prefer_related_applications: false
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        navigateFallback: '/index.html',
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/image\.tmdb\.org\/.*/i,
@@ -38,6 +39,42 @@ export default defineConfig({
             options: {
               cacheName: 'tmdb-images',
               expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 30 }
+            }
+          },
+          {
+            urlPattern: /^https:\/\/api\.themoviedb\.org\/3\/.*/i,
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'tmdb-api',
+              cacheableResponse: { statuses: [0, 200] },
+              expiration: { maxEntries: 300, maxAgeSeconds: 60 * 60 * 12 }
+            }
+          },
+          {
+            urlPattern: /\/api\/home(\?.*)?$/i,
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'home-api',
+              cacheableResponse: { statuses: [0, 200] },
+              expiration: { maxEntries: 50, maxAgeSeconds: 60 * 10 }
+            }
+          },
+          {
+            urlPattern: /\/api\/runtime-config(\?.*)?$/i,
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'runtime-config',
+              cacheableResponse: { statuses: [0, 200] },
+              expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 }
+            }
+          },
+          {
+            urlPattern: /\/data\/homepage_cache\.json$/i,
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'home-static-data',
+              cacheableResponse: { statuses: [0, 200] },
+              expiration: { maxEntries: 20, maxAgeSeconds: 60 * 60 * 6 }
             }
           }
         ]

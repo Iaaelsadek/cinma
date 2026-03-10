@@ -14,7 +14,7 @@ import {
   deleteActivityCommentReply,
   reportActivityComment,
   blockUser,
-  getProfileByUsername,
+  supabase,
   createNotification,
   type ActivityComment,
   type ActivityCommentReply,
@@ -115,6 +115,36 @@ export const ActivityItem = ({ activity, currentUserId, currentUserRole }: Activ
     }
   }
 
+  const notifyMentions = async (text: string, payload: { message: string; data: Record<string, any> }) => {
+    if (!currentUserId) return
+    const usernames = Array.from(
+      new Set(
+        (text.match(/@\w+/g) || [])
+          .map((mention) => mention.slice(1).trim().toLowerCase())
+          .filter(Boolean)
+      )
+    )
+    if (usernames.length === 0) return
+    const { data: profiles, error } = await supabase
+      .from('profiles')
+      .select('id, username')
+      .in('username', usernames)
+    if (error || !profiles?.length) return
+    await Promise.all(
+      profiles
+        .filter((profile) => profile.id !== currentUserId)
+        .map((profile) =>
+          createNotification({
+            userId: profile.id,
+            title: 'إشارة جديدة',
+            message: payload.message,
+            type: 'info',
+            data: payload.data
+          })
+        )
+    )
+  }
+
   const handleReaction = async (type: string) => {
     if (!currentUserId) {
       toast.error('يجب تسجيل الدخول للتفاعل', { id: 'auth-required' })
@@ -178,22 +208,10 @@ export const ActivityItem = ({ activity, currentUserId, currentUserRole }: Activ
       setComments(prev => [...prev, { ...comment, replies: [], showReplies: false }])
       
       // Process mentions
-      const mentions = newComment.match(/@\w+/g)
-      if (mentions) {
-        for (const mention of mentions) {
-          const username = mention.slice(1)
-          const profile = await getProfileByUsername(username)
-          if (profile && profile.id !== currentUserId) {
-            await createNotification({
-              userId: profile.id,
-              title: 'إشارة جديدة',
-              message: `ذكرك ${activity.user?.username || 'مستخدم'} في تعليق`,
-              type: 'info',
-              data: { activity_id: activity.id, comment_id: comment.id }
-            })
-          }
-        }
-      }
+      await notifyMentions(newComment, {
+        message: `ذكرك ${activity.user?.username || 'مستخدم'} في تعليق`,
+        data: { activity_id: activity.id, comment_id: comment.id }
+      })
 
       setNewComment('')
       toast.success('تم إضافة التعليق')
@@ -215,22 +233,10 @@ export const ActivityItem = ({ activity, currentUserId, currentUserRole }: Activ
       ))
 
       // Process mentions in reply
-      const mentions = newReply.match(/@\w+/g)
-      if (mentions) {
-        for (const mention of mentions) {
-          const username = mention.slice(1)
-          const profile = await getProfileByUsername(username)
-          if (profile && profile.id !== currentUserId) {
-            await createNotification({
-              userId: profile.id,
-              title: 'إشارة جديدة',
-              message: `ذكرك ${activity.user?.username || 'مستخدم'} في رد`,
-              type: 'info',
-              data: { activity_id: activity.id, comment_id: commentId, reply_id: reply.id }
-            })
-          }
-        }
-      }
+      await notifyMentions(newReply, {
+        message: `ذكرك ${activity.user?.username || 'مستخدم'} في رد`,
+        data: { activity_id: activity.id, comment_id: commentId, reply_id: reply.id }
+      })
 
       setNewReply('')
       setReplyingTo(null)

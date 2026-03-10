@@ -9,18 +9,15 @@ const audio = new Audio()
 audio.preload = 'auto'
 
 export const useAudioController = () => {
-  const {
-    currentTrack,
-    isPlaying,
-    volume,
-    seek,
-    setCurrentTime,
-    setDuration,
-    setIsPlaying,
-    setIsLoading,
-    setError,
-    playTrack
-  } = useQuranPlayerStore()
+  const currentTrack = useQuranPlayerStore((s) => s.currentTrack)
+  const isPlaying = useQuranPlayerStore((s) => s.isPlaying)
+  const volume = useQuranPlayerStore((s) => s.volume)
+  const setCurrentTime = useQuranPlayerStore((s) => s.setCurrentTime)
+  const setDuration = useQuranPlayerStore((s) => s.setDuration)
+  const setIsPlaying = useQuranPlayerStore((s) => s.setIsPlaying)
+  const setIsLoading = useQuranPlayerStore((s) => s.setIsLoading)
+  const setError = useQuranPlayerStore((s) => s.setError)
+  const playTrack = useQuranPlayerStore((s) => s.playTrack)
   
   const isSeekingRef = useRef(false)
   const lastTrackIdRef = useRef<string | number | null>(null)
@@ -161,17 +158,15 @@ export const useAudioController = () => {
   // Zustand subscribe is good for this.
   
   useEffect(() => {
-      const unsub = useQuranPlayerStore.subscribe((state, prevState) => {
-          // If currentTime changed abruptly (seek), update audio
-          // We need a way to distinguish "time update from audio" vs "seek from UI"
-          // The standard way: UI calls a specific method that updates both.
-          // Since we can't easily export `audio` object, let's watch a "seekTrigger" or similar.
-          // Or simply: let the UI update the store, and we check if diff is large (> 1s).
-          
-          if (Math.abs(state.currentTime - audio.currentTime) > 1.5) {
-              audio.currentTime = state.currentTime
-          }
-      })
-      return unsub
+    const unsub = useQuranPlayerStore.subscribe(
+      (state, prevState) => {
+        const currentTime = state.currentTime
+        if (currentTime === prevState.currentTime) return
+        if (Math.abs(currentTime - audio.currentTime) > 1.5) {
+          audio.currentTime = currentTime
+        }
+      }
+    )
+    return unsub
   }, [])
 }

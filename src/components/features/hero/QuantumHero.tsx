@@ -7,7 +7,7 @@ import { TmdbImage } from '../../common/TmdbImage'
 import { useLang } from '../../../state/useLang'
 import { tmdb } from '../../../lib/tmdb'
 import { getGenreName } from '../../../lib/genres'
-import ReactPlayer from 'react-player/youtube'
+import ReactPlayer from 'react-player/lazy'
 import { Swiper, SwiperSlide } from 'swiper/react'
 import { Autoplay } from 'swiper/modules'
 import 'swiper/css'
@@ -163,7 +163,9 @@ export const QuantumHero = memo(({ items }: { items: any[] }) => {
                           width="100%"
                           height="100%"
                           config={{
-                            playerVars: { showinfo: 0, controls: 0, disablekb: 1, fs: 0, iv_load_policy: 3, modestbranding: 1, rel: 0 }
+                            youtube: {
+                              playerVars: { showinfo: 0, controls: 0, disablekb: 1, fs: 0, iv_load_policy: 3, modestbranding: 1, rel: 0 }
+                            }
                           }}
                         />
                       </div>

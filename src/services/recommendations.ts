@@ -31,6 +31,23 @@ function cacheSet<T>(key: string, val: T, ttlMs = 6 * 60 * 60 * 1000) {
   } catch {}
 }
 
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  concurrency: number,
+  mapper: (item: T, index: number) => Promise<R>
+) {
+  const out = new Array<R>(items.length)
+  let index = 0
+  const workers = Array.from({ length: Math.max(1, Math.min(concurrency, items.length)) }, async () => {
+    while (index < items.length) {
+      const currentIndex = index++
+      out[currentIndex] = await mapper(items[currentIndex], currentIndex)
+    }
+  })
+  await Promise.all(workers)
+  return out
+}
+
 /** Fallback: Use TMDB similar/discover when Gemini API is unavailable */
 async function tmdbFallback(userId: string): Promise<RecommendationItem[]> {
   const seen = new Set<string>()
@@ -38,48 +55,61 @@ async function tmdbFallback(userId: string): Promise<RecommendationItem[]> {
 
   // 1. From Continue Watching - fetch similar content
   const cw = await getContinueWatching(userId)
-  for (const r of cw.slice(0, 3)) {
+  const cwSimilar = await mapWithConcurrency(cw.slice(0, 3), 3, async (r) => {
     try {
       const path = r.content_type === 'movie' ? `/movie/${r.content_id}/similar` : `/tv/${r.content_id}/similar`
       const { data } = await tmdb.get(path, { params: { page: 1 } })
-      const arr = (data.results || []) as RecommendationItem[]
-      for (const m of arr) {
-        const key = `${m.media_type}-${m.id}`
-        if (!seen.has(key) && m.poster_path) {
-          seen.add(key)
-          results.push({ ...m, media_type: r.content_type })
-        }
+      return ((data.results || []) as RecommendationItem[]).map((m) => ({ ...m, media_type: r.content_type }))
+    } catch {
+      return []
+    }
+  })
+  for (const arr of cwSimilar) {
+    for (const m of arr) {
+      const key = `${m.media_type}-${m.id}`
+      if (!seen.has(key) && m.poster_path) {
+        seen.add(key)
+        results.push(m)
       }
-    } catch {}
+    }
   }
 
   // 2. From History - fetch similar
   const hist = await getHistory(userId)
-  for (const h of hist.slice(0, 3)) {
+  const histSimilar = await mapWithConcurrency(hist.slice(0, 3), 3, async (h) => {
     try {
       const path = h.content_type === 'movie' ? `/movie/${h.content_id}/similar` : `/tv/${h.content_id}/similar`
       const { data } = await tmdb.get(path, { params: { page: 1 } })
-      const arr = (data.results || []) as RecommendationItem[]
-      for (const m of arr) {
-        const key = `${m.media_type}-${m.id}`
-        if (!seen.has(key) && m.poster_path) {
-          seen.add(key)
-          results.push({ ...m, media_type: h.content_type })
-        }
+      return ((data.results || []) as RecommendationItem[]).map((m) => ({ ...m, media_type: h.content_type }))
+    } catch {
+      return []
+    }
+  })
+  for (const arr of histSimilar) {
+    for (const m of arr) {
+      const key = `${m.media_type}-${m.id}`
+      if (!seen.has(key) && m.poster_path) {
+        seen.add(key)
+        results.push(m)
       }
-    } catch {}
+    }
   }
 
   // 3. Summarize genres from history
   const counts: Record<string, number> = {}
-  for (const h of hist.slice(0, 8)) {
+  const histDetails = await mapWithConcurrency(hist.slice(0, 8), 4, async (h) => {
     try {
       const path = h.content_type === 'movie' ? `/movie/${h.content_id}` : `/tv/${h.content_id}`
       const { data } = await tmdb.get(path)
-      for (const g of (data.genres || [])) {
-        counts[g.name] = (counts[g.name] || 0) + 1
-      }
-    } catch {}
+      return data.genres || []
+    } catch {
+      return []
+    }
+  })
+  for (const genres of histDetails) {
+    for (const g of genres) {
+      counts[g.name] = (counts[g.name] || 0) + 1
+    }
   }
   const topGenres = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([k]) => k)
 
@@ -135,16 +165,19 @@ async function summarizeGenres(userId: string): Promise<string[]> {
   const last = await getHistory(userId)
   const items = last.slice(0, 10)
   const counts: Record<string, number> = {}
-  for (const it of items) {
+  const details = await mapWithConcurrency(items, 4, async (it) => {
     try {
-      if (it.content_type === 'movie') {
-        const { data } = await tmdb.get(`/movie/${it.content_id}`)
-        for (const g of data.genres || []) counts[g.name] = (counts[g.name] || 0) + 1
-      } else {
-        const { data } = await tmdb.get(`/tv/${it.content_id}`)
-        for (const g of data.genres || []) counts[g.name] = (counts[g.name] || 0) + 1
-      }
-    } catch {}
+      const path = it.content_type === 'movie' ? `/movie/${it.content_id}` : `/tv/${it.content_id}`
+      const { data } = await tmdb.get(path)
+      return data.genres || []
+    } catch {
+      return []
+    }
+  })
+  for (const genres of details) {
+    for (const g of genres) {
+      counts[g.name] = (counts[g.name] || 0) + 1
+    }
   }
   return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([k]) => k)
 }
@@ -153,13 +186,15 @@ async function generateTitles(genres: string[], userId: string): Promise<string[
   try {
     // Get last 5 history items to give Gemini more context
     const lastItems = await getHistory(userId)
-    const context = await Promise.all(lastItems.slice(0, 5).map(async (h) => {
+    const context = await mapWithConcurrency(lastItems.slice(0, 5), 3, async (h) => {
       try {
         const path = h.content_type === 'movie' ? `/movie/${h.content_id}` : `/tv/${h.content_id}`
         const { data } = await tmdb.get(path)
         return `${h.content_type === 'movie' ? 'Movie' : 'TV'}: ${data.title || data.name}`
-      } catch { return null }
-    }))
+      } catch {
+        return null
+      }
+    })
     const validContext = context.filter(Boolean).join(', ')
 
     const prompt = `
@@ -189,20 +224,20 @@ async function generateTitles(genres: string[], userId: string): Promise<string[
 }
 
 async function searchTitles(titles: string[]): Promise<RecommendationItem[]> {
-  const results: RecommendationItem[] = []
-  for (const t of titles) {
+  const rows = await mapWithConcurrency(titles, 4, async (t) => {
     try {
       const [m, tv] = await Promise.all([
         tmdb.get('/search/movie', { params: { query: t, include_adult: false } }).then(r => r.data.results || []),
         tmdb.get('/search/tv', { params: { query: t, include_adult: false } }).then(r => r.data.results || [])
       ])
       const top = [...m, ...tv].sort((a: { popularity?: number }, b: { popularity?: number }) => (b.popularity || 0) - (a.popularity || 0))[0]
-      if (top) {
-        results.push({ ...top, media_type: top.title ? 'movie' : 'tv' })
-      }
-    } catch {}
-  }
-  return results
+      if (!top) return null
+      return { ...top, media_type: top.title ? 'movie' : 'tv' } as RecommendationItem
+    } catch {
+      return null
+    }
+  })
+  return rows.filter(Boolean) as RecommendationItem[]
 }
 
 export async function getRecommendations(userId: string): Promise<RecommendationItem[]> {

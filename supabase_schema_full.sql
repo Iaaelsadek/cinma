@@ -106,7 +106,7 @@ CREATE TABLE IF NOT EXISTS public.watch_parties (
     content_id TEXT NOT NULL,
     content_type TEXT NOT NULL,
     creator_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
-    current_time FLOAT DEFAULT 0,
+    "current_time" DOUBLE PRECISION DEFAULT 0,
     is_playing BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );

@@ -4,7 +4,6 @@ import { tmdb } from '../lib/tmdb'
 import { AdsManager } from '../components/features/system/AdsManager'
 import { useCategoryVideos } from '../hooks/useFetchContent'
 import { resolveTitleWithFallback } from '../lib/translation'
-import { sanitizeMediaItems } from '../components/features/home/HomeBelowFoldSections'
 import { useAuth } from '../hooks/useAuth'
 import { CONFIG } from '../lib/constants'
 import { useLang } from '../state/useLang'
@@ -18,7 +17,12 @@ import { QuantumTrain } from '../components/features/media/QuantumTrain'
 import { ContinueWatchingRow } from '../components/features/media/ContinueWatchingRow'
 import { SectionHeader } from '../components/common/SectionHeader'
 import { logger } from '../lib/logger'
-import { HomeBelowFoldSections } from '../components/features/home/HomeBelowFoldSections'
+
+const HomeBelowFoldSections = lazy(() =>
+  import('../components/features/home/HomeBelowFoldSections').then((mod) => ({
+    default: mod.HomeBelowFoldSections
+  }))
+)
 
 type TmdbMedia = {
   id: number
@@ -45,6 +49,14 @@ type HomeViewRow = {
   release_date?: string | null
   first_air_date?: string | null
 }
+
+const sanitizeMediaItems = (items: TmdbMedia[] | undefined) =>
+  (items || []).filter((item) =>
+    Number.isFinite(Number(item?.id)) &&
+    Number(item.id) > 0 &&
+    Boolean(item.poster_path && item.poster_path.trim()) &&
+    Boolean(resolveTitleWithFallback(item))
+  )
 
 export const Home = () => {
   const { user } = useAuth()
@@ -403,10 +415,18 @@ export const Home = () => {
         <div ref={belowFoldTriggerRef} className="h-px w-full" />
 
         {canLoadBelowFold ? (
-          <HomeBelowFoldSections
-            criticalHomeData={criticalData}
-            topRatedMovies={topRatedMovies}
-          />
+          <Suspense
+            fallback={
+              <section>
+                <SkeletonGrid count={6} variant="poster" />
+              </section>
+            }
+          >
+            <HomeBelowFoldSections
+              criticalHomeData={criticalData}
+              topRatedMovies={topRatedMovies}
+            />
+          </Suspense>
         ) : (
           <section>
             <SkeletonGrid count={6} variant="poster" />
