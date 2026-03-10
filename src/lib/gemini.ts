@@ -76,6 +76,12 @@ export const generateAiPlaylist = async (_theme?: string, _history?: string): Pr
  * - تبقي على منطق Supabase + MyMemory فقط
  * - تُزيل أي استدعاء مباشر لـ Gemini من المتصفح
  */
+// fallback for legacy code
+export const callGeminiWithFallback = async (prompt: string, tag: string): Promise<string> => {
+  // original implementation removed; return empty string for now
+  return ''
+}
+
 export const translateTitleToArabic = async (title: string): Promise<string> => {
   if (!title) return ''
 

@@ -25,7 +25,7 @@ export const SummariesPage = () => {
   if (isLoading) return <PageLoader />
 
   // Filter if genre is present (simple client-side filter for now)
-  let filteredSummaries = genre 
+  const filteredSummaries = genre 
     ? (summaries || []).filter(item => 
         item.title?.toLowerCase().includes(genre.toLowerCase()) || 
         item.description?.toLowerCase().includes(genre.toLowerCase())

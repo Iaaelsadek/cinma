@@ -78,9 +78,9 @@ export const ContinueWatchingRow = ({ userId }: { userId: string }) => {
             >
               <div className="relative rounded-2xl overflow-hidden border border-white/10 bg-white/5 backdrop-blur-md transition-transform duration-300 hover:scale-105 hover:shadow-[0_0_30px_rgba(0,255,204,0.3)]">
                 <div className="aspect-[2/3] bg-zinc-900">
-                  {r.poster_path ? (
+                  {(movie.poster_path || r.meta?.poster_path) ? (
                     <img
-                      src={`https://image.tmdb.org/t/p/w342${movie.poster_path}`}
+                      src={`https://image.tmdb.org/t/p/w342${movie.poster_path || r.meta?.poster_path}`}
                       alt={movie.title || movie.name || ''}
                       className="w-full h-full object-cover"
                       loading="lazy"

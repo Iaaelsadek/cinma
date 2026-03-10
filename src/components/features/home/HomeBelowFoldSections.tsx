@@ -1,4 +1,4 @@
-import { Suspense, memo } from 'react'
+import React, { Suspense, memo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Tv, Film, Drama, Zap, FileText, Play, Smile } from 'lucide-react'
 import { tmdb } from '../../../lib/tmdb'
@@ -41,7 +41,7 @@ type HomeBelowFoldSectionsProps = {
   topRatedMovies?: TmdbMedia[]
 }
 
-const sanitizeMediaItems = (items: TmdbMedia[] | undefined) =>
+export const sanitizeMediaItems = (items: TmdbMedia[] | undefined) =>
   (items || []).filter((item) =>
     Number.isFinite(Number(item?.id)) &&
     Number(item.id) > 0 &&
@@ -56,7 +56,7 @@ const BentoBox = ({
   color,
 }: {
   title: string
-  icon: JSX.Element
+  icon: React.ReactNode
   items: any[]
   color: 'cyan' | 'purple' | 'gold'
 }) => {
@@ -473,7 +473,9 @@ const HomeBelowFoldSectionsInner = ({ criticalHomeData, topRatedMovies }: HomeBe
         ) : (
           <QuantumTrain
             items={sanitizeMediaItems(
-              animeHub.data && animeHub.data.length > 0 ? animeHub.data : tmdbAnime.data || [],
+              animeHub.data && animeHub.data.length > 0
+                ? (animeHub.data as unknown as TmdbMedia[])
+                : tmdbAnime.data || [],
             )}
             title={lang === 'ar' ? 'أنمي مترجم' : 'Anime'}
             icon={<Tv />}

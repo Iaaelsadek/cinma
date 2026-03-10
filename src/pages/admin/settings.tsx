@@ -77,7 +77,9 @@ const AdminSettingsPage = () => {
             try {
               const val = JSON.parse(e.target.value)
               setValue('embed_servers', val as any)
-            } catch {}
+            } catch {
+              // ignore invalid JSON syntax
+            }
           }} className="w-full rounded-md border border-zinc-700 bg-zinc-900 p-1.5 font-mono text-xs" />
         </div>
         <div className="flex items-center gap-3">

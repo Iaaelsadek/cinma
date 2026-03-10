@@ -157,3 +157,34 @@ CREATE POLICY "Users can manage own watchlist" ON public.watchlist USING (auth.u
 ALTER TABLE public.watch_parties ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Watch parties are viewable by everyone" ON public.watch_parties FOR SELECT USING (true);
 CREATE POLICY "Creators can manage parties" ON public.watch_parties USING (auth.uid() = creator_id);
+
+-- ===== ADDITIONAL INDEXES =====
+CREATE INDEX IF NOT EXISTS idx_movies_title ON public.movies(title);
+CREATE INDEX IF NOT EXISTS idx_series_name ON public.series(name);
+CREATE INDEX IF NOT EXISTS idx_watchlist_user ON public.watchlist(user_id);
+CREATE INDEX IF NOT EXISTS idx_continue_watching_user ON public.continue_watching(user_id);
+CREATE INDEX IF NOT EXISTS idx_watch_party_creator ON public.watch_parties(creator_id);
+CREATE INDEX IF NOT EXISTS idx_wp_messages_party ON public.watch_party_messages(party_id);
+CREATE INDEX IF NOT EXISTS idx_user_achievements_user ON public.user_achievements(user_id);
+CREATE INDEX IF NOT EXISTS idx_profiles_username ON public.profiles(username);
+
+ALTER TABLE public.watch_party_messages ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Messages visible to party participants" ON public.watch_party_messages FOR SELECT USING (
+  EXISTS (
+    SELECT 1 FROM public.watch_party_participants
+    WHERE party_id = watch_party_messages.party_id AND user_id = auth.uid()
+  )
+);
+CREATE POLICY "Users can send messages to their party" ON public.watch_party_messages FOR INSERT WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM public.watch_party_participants
+    WHERE party_id = watch_party_messages.party_id AND user_id = auth.uid()
+  )
+);
+
+ALTER TABLE public.continue_watching ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can manage own continue watching" ON public.continue_watching USING (auth.uid() = user_id);
+
+ALTER TABLE public.user_achievements ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users see own achievements" ON public.user_achievements FOR SELECT USING (auth.uid() = user_id);
+
