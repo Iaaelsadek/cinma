@@ -28,7 +28,7 @@ export const AnimePage = () => {
     queryKey: ['anime-all', paramGenre, paramYear, paramRating],
     queryFn: async () => {
       // 1. Try Supabase first
-      let query = supabase
+      const query = supabase
         .from('anime')
         .select('*')
         .order('created_at', { ascending: false })

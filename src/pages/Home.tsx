@@ -2,6 +2,9 @@ import { useState, useEffect, useRef, lazy, Suspense } from 'react'
 import { useQuery, keepPreviousData } from '@tanstack/react-query'
 import { tmdb } from '../lib/tmdb'
 import { AdsManager } from '../components/features/system/AdsManager'
+import { useCategoryVideos } from '../hooks/useFetchContent'
+import { resolveTitleWithFallback } from '../lib/translation'
+import { sanitizeMediaItems } from '../components/features/home/HomeBelowFoldSections'
 import { useAuth } from '../hooks/useAuth'
 import { CONFIG } from '../lib/constants'
 import { useLang } from '../state/useLang'
@@ -126,7 +129,7 @@ export const Home = () => {
 
           const res = await tmdb.get(`/discover/${ep.type}`, { params })
           
-          let item = res.data.results?.[0]
+          const item = res.data.results?.[0]
           if (!item) return null
           
           return { ...item, media_type: ep.type }

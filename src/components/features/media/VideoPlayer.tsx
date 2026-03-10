@@ -37,7 +37,7 @@ interface VideoPlayerProps {
   onPlay?: () => void
   onPause?: () => void
   onDuration?: (duration: number) => void
-  ref?: React.RefObject<ReactPlayer | null>
+  ref?: React.RefObject<any> // ReactPlayer is lazy-imported, use any for now
   playing?: boolean
   seekTo?: number
 }
@@ -77,7 +77,7 @@ export const VideoPlayer = ({ url, subtitles = [], introStart, introEnd, title, 
   const [fallbackToIframe, setFallbackToIframe] = useState(false)
   
   // Refs
-  const playerRef = useRef<ReactPlayer>(null)
+  const playerRef = useRef<any>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const controlsTimeoutRef = useRef<any>(null)
 
@@ -361,7 +361,7 @@ export const VideoPlayer = ({ url, subtitles = [], introStart, introEnd, title, 
           onReady={() => setLoading(false)}
           onBuffer={() => setLoading(true)}
           onBufferEnd={() => setLoading(false)}
-          onError={(e) => {
+          onError={(e: any) => {
             const isYouTube = url.includes('youtube.com') || url.includes('youtu.be')
             const isDailyMotion = url.includes('dailymotion.com') || url.includes('dai.ly')
             
@@ -375,7 +375,7 @@ export const VideoPlayer = ({ url, subtitles = [], introStart, introEnd, title, 
             setError(true)
           }}
           onProgress={handleProgress}
-          onDuration={(d) => setDuration(d)}
+          onDuration={(d: number) => setDuration(d)}
           onClick={() => handlePlayPause()}
           config={{ 
             youtube: {

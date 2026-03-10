@@ -31,6 +31,7 @@ export const Register = () => {
     try {
       await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } })
     } catch (e) {
+      // ignore oauth errors
     } finally {
       setLoading(false)
     }

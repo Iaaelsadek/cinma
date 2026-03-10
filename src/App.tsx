@@ -34,11 +34,11 @@ const App = () => {
         <NetworkStatus />
         <Suspense fallback={<PageLoader />}>
           <Routes>
-            <MainRoutes />
-            <MediaRoutes />
-            <DiscoveryRoutes />
-            <UserRoutes />
-            <AdminRoutes />
+            {MainRoutes()}
+            {MediaRoutes()}
+            {DiscoveryRoutes()}
+            {UserRoutes()}
+            {AdminRoutes()}
           </Routes>
         </Suspense>
         <AdsManager type="popunder" position="global" />

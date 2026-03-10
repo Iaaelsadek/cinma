@@ -118,3 +118,12 @@ create policy "Authenticated users can delete episodes" on episodes for delete u
 -- Storage policies
 create policy "Public Access" on storage.objects for select using ( bucket_id = 'posters' );
 create policy "Authenticated users can upload" on storage.objects for insert with check ( bucket_id = 'posters' and auth.role() = 'authenticated' );
+
+-- Additional indexes for performance
+create index if not exists idx_movies_title on movies(title);
+create index if not exists idx_series_title on series(title);
+create index if not exists idx_profiles_username on profiles(username);
+create index if not exists idx_episodes_series on episodes(series_id);
+create index if not exists idx_seasons_series on seasons(series_id);
+create index if not exists idx_episodes_season on episodes(season_id);
+

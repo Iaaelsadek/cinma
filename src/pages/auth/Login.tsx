@@ -49,6 +49,7 @@ export const Login = () => {
     try {
       await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } })
     } catch (e) {
+      // oauth errors are expected, ignore
     } finally {
       setLoading(false)
     }

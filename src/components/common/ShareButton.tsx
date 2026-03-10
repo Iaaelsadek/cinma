@@ -19,7 +19,7 @@ export const ShareButton = ({ title, url, text, className = '', size = 'md', cur
   const menuRef = useRef<HTMLDivElement>(null)
 
   const getShareUrl = () => {
-    let baseUrl = url || (typeof window !== 'undefined' ? window.location.href : '')
+    const baseUrl = url || (typeof window !== 'undefined' ? window.location.href : '')
     if (currentTime && currentTime > 0) {
       const urlObj = new URL(baseUrl)
       urlObj.searchParams.set('t', Math.floor(currentTime).toString())

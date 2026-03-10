@@ -18,6 +18,9 @@ function getInitial(): Lang {
   return 'ar'
 }
 
+// exported only for testing logic without creating a store
+export const _getInitialLang = getInitial;
+
 export const useLang = create<LangState>((set, get) => ({
   lang: getInitial(),
   setLang: (lang) => {
