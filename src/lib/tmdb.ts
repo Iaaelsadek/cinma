@@ -2,10 +2,41 @@ import axios from 'axios'
 import { CONFIG } from './constants'
 import { mapEnglishToArabicKeyboard } from './utils'
 
+const TMDB_TIMEOUT_MS = 10000
+const TMDB_MAX_RETRIES = 3
+const TMDB_RETRY_BASE_DELAY_MS = 300
+
+function wait(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+function shouldRetry(status?: number) {
+  if (!status) return true
+  if (status === 429) return true
+  return status >= 500
+}
+
 export const tmdb = axios.create({
   baseURL: 'https://api.themoviedb.org/3',
-  params: { api_key: CONFIG.TMDB_API_KEY, language: 'ar-SA' }
+  params: { api_key: CONFIG.TMDB_API_KEY, language: 'ar-SA' },
+  timeout: TMDB_TIMEOUT_MS
 })
+
+tmdb.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const config = error?.config
+    if (!config) throw error
+    const retryCount = typeof config.__retryCount === 'number' ? config.__retryCount : 0
+    if (retryCount >= TMDB_MAX_RETRIES || !shouldRetry(error?.response?.status)) {
+      throw error
+    }
+    config.__retryCount = retryCount + 1
+    const backoff = TMDB_RETRY_BASE_DELAY_MS * (2 ** retryCount) + Math.floor(Math.random() * 120)
+    await wait(backoff)
+    return tmdb.request(config)
+  }
+)
 
 export function setTmdbLanguage(lang: 'ar-SA' | 'en-US') {
   tmdb.defaults.params = { ...(tmdb.defaults.params || {}), language: lang }

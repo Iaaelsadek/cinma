@@ -42,6 +42,7 @@ export const TmdbImage = memo(({
   alt,
   priority = false,
   sizes = '(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw',
+  style,
   ...props
 }: TmdbImageProps) => {
   const [status, setStatus] = useState<'loading' | 'loaded' | 'error'>('loading')
@@ -60,9 +61,10 @@ export const TmdbImage = memo(({
     ? `${getUrl(path, 'w342')} 342w, ${getUrl(path, 'w500')} 500w, ${getUrl(path, 'w780')} 780w`
     : undefined
   const dims = SIZE_DIMENSIONS[size]
+  const aspectRatio = dims ? `${dims.w} / ${dims.h}` : undefined
 
   return (
-    <div className={`relative overflow-hidden bg-zinc-900 ${className}`} {...props}>
+    <div className={`relative overflow-hidden bg-zinc-900 ${className}`} style={{ ...(style || {}), aspectRatio }} {...props}>
       <AnimatePresence>
         {status === 'loading' && showLoading && (
           <motion.div

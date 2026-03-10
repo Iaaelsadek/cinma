@@ -23,6 +23,12 @@ interface FetchOptions extends RequestInit {
   timeout?: number;
 }
 
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
+function isUuid(value: string) {
+  return uuidPattern.test(value)
+}
+
 async function fetchWithTimeout(resource: RequestInfo | URL, options: FetchOptions = {}) {
   // Increased default timeout to 60s to ensure data loads even on slow connections
   const { timeout = 60000, ...fetchOptions } = options; 
@@ -184,6 +190,10 @@ export async function getProfileByUsername(username: string) {
 }
 
 export async function getProfile(userId: string) {
+  if (!isUuid(userId)) {
+    throw new Error('Invalid user id')
+  }
+
   const { data, error } = await supabase
     .from('profiles')
     .select('*')
@@ -199,15 +209,18 @@ export async function getProfile(userId: string) {
     try {
       // Use relative path by default to leverage Vite proxy in dev, or API_BASE if set
       const apiBase = CONFIG.API_BASE || ''
-      const url = apiBase ? `${apiBase}/api/profile/${userId}` : `/api/profile/${userId}`
+      const url = apiBase ? `${apiBase}/api/profile/${encodeURIComponent(userId)}` : `/api/profile/${encodeURIComponent(userId)}`
       
       // Get current session token for authentication
       const { data: { session } } = await supabase.auth.getSession()
       const token = session?.access_token
-      const headers: Record<string, string> = {}
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`
+      const authUserId = session?.user?.id
+      if (!token || authUserId !== userId) {
+        if (error) throw error
+        return null
       }
+      const headers: Record<string, string> = {}
+      headers['Authorization'] = `Bearer ${token}`
 
       const res = await fetchWithTimeout(url, { headers, timeout: 3000 })
       if (res.ok) {
@@ -515,6 +528,15 @@ export async function deleteActivityCommentReply(replyId: string, userId: string
 }
 
 export async function uploadAvatar(file: File, userId: string) {
+  if (!isUuid(userId)) {
+    throw new Error('Invalid user id')
+  }
+
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session?.access_token || session.user.id !== userId) {
+    throw new Error('Unauthorized profile update')
+  }
+
   const ext = file.name.split('.').pop() || 'jpg'
   const path = `${userId}/${Date.now()}.${ext}`
   const { error: upErr } = await supabase.storage.from('avatars').upload(path, file, {
@@ -534,10 +556,14 @@ export async function uploadAvatar(file: File, userId: string) {
       category: 'database',
       context: { error: updErr, userId }
     })
-    const apiBase = CONFIG.API_BASE || 'http://localhost:3001'
-    const res = await fetch(`${apiBase}/api/profile/${userId}`, {
+    const apiBase = CONFIG.API_BASE || ''
+    const endpoint = apiBase ? `${apiBase}/api/profile/${encodeURIComponent(userId)}` : `/api/profile/${encodeURIComponent(userId)}`
+    const res = await fetch(endpoint, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`
+      },
       body: JSON.stringify({ avatar_url: publicUrl })
     })
     if (!res.ok) throw updErr

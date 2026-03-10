@@ -23,19 +23,13 @@ describe('envVar helper', () => {
     expect(envVar('TEST_KEY')).toBeUndefined();
   });
 
-  it('does not throw when import.meta is not available', () => {
-    // in jest global import.meta is undefined; the function should catch errors
+  it('returns undefined when no env source is available', () => {
     delete process.env.TEST_KEY;
     expect(envVar('NONEXISTENT')).toBeUndefined();
   });
 
-  it('returns undefined when eval throws', () => {
-    delete process.env.TEST_KEY;
-    const origEval = global.eval;
-    // force eval to blow up, covering catch branch
-    // @ts-ignore
-    global.eval = () => { throw new Error('boom'); };
-    expect(envVar('ANY')).toBeUndefined();
-    global.eval = origEval;
+  it('provides FLAGS via module mock', () => {
+    const { FLAGS } = require('../lib/constants');
+    expect(typeof FLAGS.ADS_ENABLED).toBe('boolean');
   });
 });

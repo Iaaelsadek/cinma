@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode, useEffect, useCallback, useMemo } from 'react'
+import { createContext, useContext, useState, ReactNode, useEffect, useCallback, useMemo, useRef } from 'react'
 import { toast } from 'sonner'
 import { supabase } from '../lib/supabase'
 import { errorLogger } from '../services/errorLogging'
@@ -134,20 +134,24 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
   
   // Cache state
   const [statsCache, setStatsCache] = useState<{ data: AdminStats; timestamp: number } | null>(null)
-  const [cacheTimeout] = useState(5 * 60 * 1000) // 5 minutes cache
+  const statsCacheRef = useRef<{ data: AdminStats; timestamp: number } | null>(null)
+  const cacheTimeout = 5 * 60 * 1000
   
-  // Check if cache is valid
-  const isCacheValid = (timestamp: number) => {
+  const isCacheValid = useCallback((timestamp: number) => {
     return Date.now() - timestamp < cacheTimeout
-  }
+  }, [cacheTimeout])
 
-  // Fetch Data with caching
-  const fetchData = async (forceRefresh = false) => {
+  useEffect(() => {
+    statsCacheRef.current = statsCache
+  }, [statsCache])
+
+  const fetchData = useCallback(async (forceRefresh = false) => {
     setLoading(true)
     try {
-      const skipStatsCache = forceRefresh || !statsCache || !isCacheValid(statsCache.timestamp)
-      if (!skipStatsCache && statsCache) {
-        setStats(statsCache.data)
+      const activeStatsCache = statsCacheRef.current
+      const skipStatsCache = forceRefresh || !activeStatsCache || !isCacheValid(activeStatsCache.timestamp)
+      if (!skipStatsCache && activeStatsCache) {
+        setStats(activeStatsCache.data)
       }
 
       // Movies
@@ -273,11 +277,11 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setLoading(false)
     }
-  }
+  }, [isCacheValid])
 
   useEffect(() => {
     fetchData()
-  }, [])
+  }, [fetchData])
 
   const addMovie = useCallback(async (movieData: Omit<AdminMovie, 'id' | 'views'>) => {
     try {
@@ -483,7 +487,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
   const refreshStats = useCallback(() => {
     setStatsCache(null)
     fetchData(true)
-  }, [])
+  }, [fetchData])
 
   const value = useMemo(() => ({
       movies,

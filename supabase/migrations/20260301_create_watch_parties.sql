@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS public.watch_parties (
     content_id TEXT NOT NULL,
     content_type TEXT NOT NULL,
     creator_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-    current_time FLOAT DEFAULT 0.0,
+    "current_time" DOUBLE PRECISION DEFAULT 0.0,
     is_playing BOOLEAN DEFAULT false,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     last_updated TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL

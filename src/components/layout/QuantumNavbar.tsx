@@ -260,10 +260,18 @@ export const QuantumNavbar = memo(() => {
                   className="relative group h-full flex items-center"
                   onMouseEnter={() => handleMouseEnter(link.label)}
                   onMouseLeave={handleMouseLeave}
+                  onFocusCapture={() => handleMouseEnter(link.label)}
+                  onBlurCapture={(e) => {
+                    if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+                      handleMouseLeave()
+                    }
+                  }}
                 >
                   <PrefetchLink
                     to={link.to}
                     target="_self"
+                    aria-expanded={link.hasMega ? hoveredLink === link.label : undefined}
+                    aria-controls={link.hasMega ? `mega-menu-${link.label}` : undefined}
                     className="flex flex-col items-center justify-center gap-1 px-2 py-1 text-xs font-bold text-zinc-400 group-hover:text-white transition-all duration-300 relative"
                   >
                     <div className="relative p-1.5 rounded-xl group-hover:bg-white/5 transition-colors duration-300">
@@ -283,9 +291,15 @@ export const QuantumNavbar = memo(() => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10, scale: 0.95 }}
             transition={{ duration: 0.2 }}
+            id={`mega-menu-${link.label}`}
             className="absolute top-full left-1/2 -translate-x-1/2 w-max z-50 pt-4"
             onMouseEnter={() => handleMouseEnter(link.label)}
             onMouseLeave={handleMouseLeave}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') {
+                setHoveredLink(null)
+              }
+            }}
           >
             <div 
               className="bg-[#0a0a0a]/95 border border-white/10 rounded-2xl shadow-xl overflow-hidden p-6 backdrop-blur-sm min-w-[280px]"
@@ -351,13 +365,17 @@ export const QuantumNavbar = memo(() => {
                     className="bg-zinc-900 border border-white/10 rounded-full py-2 pl-10 pr-10 text-sm text-zinc-300 w-36 lg:w-48 hover:bg-zinc-800 hover:border-cyan-500/30 transition-all focus:outline-none focus:border-cyan-500/50 placeholder:text-zinc-600"
                   />
                   <button 
+                    type="button"
                     onClick={handleSearch}
+                    aria-label={lang === 'ar' ? 'بحث' : 'Search'}
                     className={`absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 group-hover:text-cyan-400 transition-colors ${lang === 'ar' ? 'right-auto left-3' : 'left-3 right-auto'}`}
                   >
                     <Search className="w-4 h-4" />
                   </button>
                   <button 
+                    type="button"
                     onClick={startListening}
+                    aria-label={lang === 'ar' ? 'بحث صوتي' : 'Voice search'}
                     className={`absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-cyan-400 transition-colors ${isListening ? 'text-red-500 animate-pulse' : ''}`}
                   >
                     {isListening ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mic className="w-4 h-4" />}
@@ -367,7 +385,9 @@ export const QuantumNavbar = memo(() => {
 
               {isSupported && !isInstalled && (
                 <button
+                  type="button"
                   onClick={install}
+                  aria-label={lang === 'ar' ? 'تثبيت التطبيق' : 'Install app'}
                   className="hidden sm:inline-flex items-center gap-1 px-2 py-1.5 rounded-full border border-lumen-gold/50 text-lumen-gold/90 hover:bg-lumen-gold/10 text-xs font-bold transition-colors"
                   title={lang === 'ar' ? 'تثبيت التطبيق' : 'Install App'}
                 >
@@ -377,7 +397,7 @@ export const QuantumNavbar = memo(() => {
               )}
 
               {user && continueCount > 0 && (
-                <PrefetchLink to="/" target="_self" className="relative p-1.5 rounded-full hover:bg-white/10 text-zinc-400 hover:text-cyan-400 transition-colors" title={lang === 'ar' ? 'تابع المشاهدة' : 'Continue Watching'}>
+                <PrefetchLink to="/" target="_self" className="relative p-1.5 rounded-full hover:bg-white/10 text-zinc-400 hover:text-cyan-400 transition-colors" title={lang === 'ar' ? 'تابع المشاهدة' : 'Continue Watching'} aria-label={lang === 'ar' ? 'تابع المشاهدة' : 'Continue Watching'}>
                   <Clock size={20} />
                   <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] rounded-full bg-cyan-500 text-[10px] font-black text-black flex items-center justify-center px-0.5">
                     {continueCount > 9 ? '9+' : continueCount}
@@ -393,6 +413,9 @@ export const QuantumNavbar = memo(() => {
                         <img 
                           src={profile.avatar_url} 
                           alt="User" 
+                          width={36}
+                          height={36}
+                          style={{ aspectRatio: '1 / 1' }}
                           className="w-full h-full object-cover"
                           loading="lazy"
                         />
@@ -412,22 +435,30 @@ export const QuantumNavbar = memo(() => {
 
               {/* Mobile Search Icon */}
               <button 
+                type="button"
                 className="xl:hidden p-0.5 text-white"
                 onClick={() => {
                   setShowMobileSearch(!showMobileSearch);
                   setMenuOpen(false);
                 }}
+                aria-label={showMobileSearch ? (lang === 'ar' ? 'إغلاق البحث' : 'Close search') : (lang === 'ar' ? 'فتح البحث' : 'Open search')}
+                aria-expanded={showMobileSearch}
+                aria-controls="mobile-search-panel"
               >
                 <Search size={24} />
               </button>
 
               {/* Hamburger - Visible when Desktop Nav is hidden */}
               <button 
+                type="button"
                 className="xl:hidden p-1.5 text-white"
                 onClick={() => {
                   setMenuOpen(!menuOpen);
                   setShowMobileSearch(false);
                 }}
+                aria-label={menuOpen ? (lang === 'ar' ? 'إغلاق القائمة' : 'Close menu') : (lang === 'ar' ? 'فتح القائمة' : 'Open menu')}
+                aria-expanded={menuOpen}
+                aria-controls="mobile-nav-panel"
               >
                 {menuOpen ? <X size={24} /> : <Menu size={24} />}
               </button>
@@ -449,6 +480,7 @@ export const QuantumNavbar = memo(() => {
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
+                id="mobile-search-panel"
                 className="xl:hidden absolute top-full left-0 right-0 z-40 bg-black/95 border-b border-white/10 shadow-2xl"
               >
                 <div className="p-4">
@@ -468,7 +500,9 @@ export const QuantumNavbar = memo(() => {
                     className="w-full bg-zinc-900 border border-white/10 rounded-full py-3 pl-10 pr-10 text-base text-zinc-300 hover:bg-zinc-800 hover:border-cyan-500/30 transition-all focus:outline-none focus:border-cyan-500/50 placeholder:text-zinc-600"
                   />
                   <button 
+                    type="button"
                     onClick={() => { handleSearch(); setShowMobileSearch(false); }}
+                    aria-label={lang === 'ar' ? 'تنفيذ البحث' : 'Run search'}
                     className={`absolute top-1/2 -translate-y-1/2 text-zinc-500 hover:text-cyan-400 transition-colors ${lang === 'ar' ? 'left-4' : 'right-4'}`}
                   >
                     <Search size={20} />
@@ -488,6 +522,7 @@ export const QuantumNavbar = memo(() => {
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
+              id="mobile-nav-panel"
               className="xl:hidden fixed inset-x-0 top-[80px] h-[calc(100vh-80px)] z-40 bg-black/95 backdrop-blur-md border-t border-white/10 overflow-y-auto overscroll-y-contain pb-32"
             >
               <div className="grid grid-cols-2 gap-3 p-4">

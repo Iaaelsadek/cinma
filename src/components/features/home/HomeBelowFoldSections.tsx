@@ -87,6 +87,9 @@ const BentoBox = ({
                   src={img}
                   className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
                   alt={item.title || item.name}
+                  width={1280}
+                  height={720}
+                  style={{ aspectRatio: '16 / 9' }}
                   loading="lazy"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
@@ -124,6 +127,9 @@ const AIRecommended = ({ userId }: { userId: string }) => {
               src={`https://image.tmdb.org/t/p/w300${m.poster_path}`}
               className="w-full h-full object-cover"
               alt={m.title}
+              width={300}
+              height={450}
+              style={{ aspectRatio: '2 / 3' }}
               loading="lazy"
             />
           </PrefetchLink>
@@ -463,6 +469,9 @@ const HomeBelowFoldSectionsInner = ({ criticalHomeData, topRatedMovies }: HomeBe
                     }
                     alt={item.title}
                     className="h-full w-full object-cover opacity-80 group-hover:opacity-100"
+                    width={1280}
+                    height={720}
+                    style={{ aspectRatio: '16 / 9' }}
                     loading="lazy"
                     referrerPolicy="no-referrer"
                   />

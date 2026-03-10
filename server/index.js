@@ -19,15 +19,18 @@ dotenv.config({ path: path.join(__dirname, '../.env') });
 const app = express();
 const port = 3001;
 const allowedOrigins = (process.env.WEB_ORIGIN || '').split(',').map((s) => s.trim()).filter(Boolean);
+const devOrigins = ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:3001'];
 const regularLimiter = rateLimit({ windowMs: 60 * 1000, max: 100, standardHeaders: true, legacyHeaders: false });
 const sensitiveLimiter = rateLimit({ windowMs: 60 * 1000, max: 20, standardHeaders: true, legacyHeaders: false });
 const pythonBin = process.env.PYTHON_BIN || 'python';
 const adminToken = process.env.ADMIN_SYNC_TOKEN || '';
+const adminClaimToken = process.env.ADMIN_CLAIM_TOKEN || '';
 const adminIpAllowlist = (process.env.ADMIN_IP_ALLOWLIST || '')
   .split(',')
   .map((s) => s.trim())
   .filter(Boolean);
 const adminTokenMinLength = 32;
+const uuidV4LikePattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 // Supabase Admin Client
 const supabaseUrl = process.env.VITE_SUPABASE_URL;
@@ -42,9 +45,14 @@ let lastSyncLogs = [];
 
 app.set('trust proxy', 1);
 app.use(cors({
-  origin: allowedOrigins.length ? allowedOrigins : true,
+  origin(origin, callback) {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    if (process.env.NODE_ENV !== 'production' && devOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error('Origin not allowed by CORS'));
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-token'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-token', 'x-setup-token'],
   maxAge: 86400
 }));
 app.use(express.json({ limit: '50mb' })); // Increased limit for file saves
@@ -57,7 +65,7 @@ app.use(helmet({
 app.use((req, res, next) => {
   const csp = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+    "script-src 'self'",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com data:",
     "img-src 'self' https://image.tmdb.org data: blob: https:",
@@ -86,6 +94,10 @@ function isPrivateHost(hostname) {
     if (a === 172 && b >= 16 && b <= 31) return true;
   }
   return false;
+}
+
+function isUuid(value) {
+  return typeof value === 'string' && uuidV4LikePattern.test(value);
 }
 
 function ensureAdminToken(req, res) {
@@ -177,6 +189,10 @@ async function ensureAdminJwtRole(req, res, allowedRoles = ['admin', 'supervisor
 }
 
 async function ensureSelfOrAdmin(req, res, targetUserId) {
+  if (!isUuid(targetUserId)) {
+    res.status(400).json({ error: 'Invalid user id' });
+    return false;
+  }
   const ctx = await getAuthContext(req);
   if (!ctx.ok) {
     res.status(ctx.status).json({ error: ctx.error });
@@ -259,6 +275,7 @@ app.post('/api/admin/exec', sensitiveLimiter, async (req, res) => {
 app.get('/api/profile/:id', async (req, res) => {
   const { id } = req.params;
   if (!supabase) return res.status(500).json({ error: 'Supabase not configured' });
+  if (!isUuid(id)) return res.status(400).json({ error: 'Invalid user id' });
   const allowed = await ensureSelfOrAdmin(req, res, id);
   if (!allowed) return;
 
@@ -279,7 +296,7 @@ app.get('/api/profile/:id', async (req, res) => {
 
 // --- NEW ENDPOINT FOR ERROR LOGGING (SECURED & RATE LIMITED) ---
 app.post('/api/log', regularLimiter, async (req, res) => {
-  const { message, severity, category, context, stack, url, user_agent, user_id } = req.body;
+  const { message, severity, category, context, stack, url, user_agent } = req.body;
   
   if (!supabase) {
     console.error('Supabase not configured for logging');
@@ -287,13 +304,22 @@ app.post('/api/log', regularLimiter, async (req, res) => {
   }
 
   try {
-    // Validate required fields
     if (!message || !severity || !category) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
+    if (String(message).length > 2000) {
+      return res.status(400).json({ error: 'Message too long' });
+    }
+    const allowedSeverities = ['low', 'medium', 'high', 'critical'];
+    if (!allowedSeverities.includes(String(severity))) {
+      return res.status(400).json({ error: 'Invalid severity' });
+    }
 
-    // Insert into app_diagnostics using service_role key (admin privileges)
-    // This allows us to disable public INSERT RLS on the table
+    const auth = await getAuthContext(req);
+    if (!auth.ok) {
+      return res.status(auth.status).json({ error: auth.error });
+    }
+
     const { error } = await supabase
       .from('app_diagnostics')
       .insert({
@@ -304,7 +330,7 @@ app.post('/api/log', regularLimiter, async (req, res) => {
         stack,
         url,
         user_agent,
-        user_id: user_id || null, // Optional user linking
+        user_id: auth.user.id,
         resolved: false,
         timestamp: new Date().toISOString()
       });
@@ -326,13 +352,43 @@ app.post('/api/profile/:id', async (req, res) => {
   const { id } = req.params;
   const { username, avatar_url } = req.body;
   if (!supabase) return res.status(500).json({ error: 'Supabase not configured' });
+  if (!isUuid(id)) return res.status(400).json({ error: 'Invalid user id' });
   const allowed = await ensureSelfOrAdmin(req, res, id);
   if (!allowed) return;
 
   try {
     const updates = {};
-    if (username !== undefined) updates.username = username;
-    if (avatar_url !== undefined) updates.avatar_url = avatar_url;
+    if (username !== undefined) {
+      if (typeof username !== 'string') return res.status(400).json({ error: 'Invalid username' });
+      const normalizedUsername = username.trim();
+      if (normalizedUsername.length < 3 || normalizedUsername.length > 30) {
+        return res.status(400).json({ error: 'Invalid username length' });
+      }
+      if (!/^[a-zA-Z0-9_]+$/.test(normalizedUsername)) {
+        return res.status(400).json({ error: 'Invalid username format' });
+      }
+      updates.username = normalizedUsername;
+    }
+    if (avatar_url !== undefined) {
+      if (avatar_url !== null && typeof avatar_url !== 'string') {
+        return res.status(400).json({ error: 'Invalid avatar url' });
+      }
+      if (typeof avatar_url === 'string' && avatar_url.trim() !== '') {
+        let parsed;
+        try {
+          parsed = new URL(avatar_url);
+        } catch {
+          return res.status(400).json({ error: 'Invalid avatar url' });
+        }
+        if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+          return res.status(400).json({ error: 'Invalid avatar url protocol' });
+        }
+      }
+      updates.avatar_url = avatar_url;
+    }
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ error: 'No valid updates provided' });
+    }
     
     const { error } = await supabase
       .from('profiles')
@@ -388,7 +444,7 @@ app.post('/api/profile/:id/ban', async (req, res) => {
 // --- GENERIC ADMIN PROXY ---
 // Helper: ensure caller is admin (using service role check)
 async function ensureAdmin(req, res) {
-  return ensureAdminJwtRole(req, res, ['admin', 'supervisor']);
+  return ensureAdminJwtRole(req, res, ['admin']);
 }
 
 // Admin proxy endpoints with role checking
@@ -474,6 +530,9 @@ app.put('/api/admin/proxy/:table/:id', async (req, res) => {
   if (restrictedTables.includes(table)) {
     return res.status(403).json({ error: 'Access to this table is restricted' });
   }
+  if (table === 'profiles' && ('role' in body || 'banned' in body || 'id' in body)) {
+    return res.status(403).json({ error: 'Use dedicated profile role/ban endpoints' });
+  }
   
   try {
     const { data, error } = await supabase.from(table).update(body).eq('id', id).select().single();
@@ -554,7 +613,11 @@ app.post('/api/admin/sql', sensitiveLimiter, async (req, res) => {
 // 4. Admin Claim (Initial Setup)
 app.post('/api/admin/claim', sensitiveLimiter, async (req, res) => {
   const token = req.headers.authorization?.split(' ')[1];
+  const setupToken = String(req.headers['x-setup-token'] || '');
   if (!token) return res.status(401).json({ error: 'Missing token' });
+  if (!adminClaimToken || setupToken !== adminClaimToken) {
+    return res.status(403).json({ error: 'Setup token required' });
+  }
   
   if (!supabase) return res.status(503).json({ error: 'Supabase not configured' });
 

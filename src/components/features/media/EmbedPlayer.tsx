@@ -1,7 +1,7 @@
 import { Signal, Lightbulb, WifiOff, Wifi, SkipForward, AlertTriangle, Loader2, RefreshCcw, Play, Pause, Volume2, VolumeX, Maximize, FastForward, Rewind, Rocket, ArrowDown, Settings, Subtitles, Monitor } from 'lucide-react'
 import { Server } from '../../../hooks/useServers'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { clsx } from 'clsx'
 import { logger } from '../../../lib/logger'
 
@@ -26,6 +26,7 @@ export const EmbedPlayer = ({
   reporting, 
   lang = 'ar'
 }: Props) => {
+  const iframeRef = useRef<HTMLIFrameElement | null>(null)
   const [isIframeLoading, setIsIframeLoading] = useState(true)
   const [retryCount, setRetryCount] = useState(0)
   const [isSlowConnection, setIsSlowConnection] = useState(false)
@@ -46,6 +47,16 @@ export const EmbedPlayer = ({
   const [duration, setDuration] = useState(7200) // Default 2 hours if unknown
 
   const t = (ar: string, en: string) => (lang === 'ar' ? ar : en)
+  const trustedOrigin = useMemo(() => {
+    try {
+      if (!playerUrl) return null
+      const parsed = new URL(playerUrl, window.location.origin)
+      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null
+      return parsed.origin
+    } catch {
+      return null
+    }
+  }, [playerUrl])
 
   // SIMULATED PROGRESS: Increment timer if playing
   // useEffect(() => {
@@ -245,8 +256,10 @@ export const EmbedPlayer = ({
   // PROGRESS BAR & SYNC: Listen for messages from iframe
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      // Security check: ensure message is from our iframe source (optional but good practice)
-      // if (event.origin !== new URL(server?.url || '').origin) return;
+      const iframeWindow = iframeRef.current?.contentWindow
+      if (!iframeWindow || !trustedOrigin) return
+      if (event.source !== iframeWindow) return
+      if (event.origin !== trustedOrigin) return
 
       try {
         const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
@@ -276,7 +289,7 @@ export const EmbedPlayer = ({
 
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [server]);
+  }, [trustedOrigin]);
 
   // FOCUS DETECTION: If user clicks the iframe, window loses focus -> we assume playing started
   useEffect(() => {
@@ -347,8 +360,9 @@ export const EmbedPlayer = ({
 
   // POSTMESSAGE CONTROL: Attempt to control iframe player externally
   const handleExternalControl = (action: string, value?: any) => {
-    const iframe = document.querySelector('iframe');
+    const iframe = iframeRef.current;
     if (iframe && iframe.contentWindow) {
+      if (!trustedOrigin) return
       // Optimistic Update
       if (action === 'play') setIsPlaying(true);
       if (action === 'pause') setIsPlaying(false);
@@ -427,8 +441,8 @@ export const EmbedPlayer = ({
       // or just rely on the Space key above.
       
       msgs.forEach(msg => {
-        iframe.contentWindow?.postMessage(JSON.stringify(msg), '*');
-        iframe.contentWindow?.postMessage(msg, '*');
+        iframe.contentWindow?.postMessage(JSON.stringify(msg), trustedOrigin);
+        iframe.contentWindow?.postMessage(msg, trustedOrigin);
       });
       
       logger.debug(`📡 Sent external ${action} command to iframe`, value)
@@ -452,7 +466,7 @@ export const EmbedPlayer = ({
     e.stopPropagation();
     
     // 1. Force Focus on Iframe First!
-    const iframe = document.querySelector('iframe');
+    const iframe = iframeRef.current;
     if (iframe) {
        iframe.focus();
        logger.debug('🎯 Focused iframe for keyboard event')
@@ -545,6 +559,7 @@ export const EmbedPlayer = ({
           <iframe
               key={`${playerUrl || 'loading'}-${retryCount}`}
               src={playerUrl}
+              ref={iframeRef}
               className={clsx(
                 "h-full w-full bg-black transition-opacity duration-1000",
                 isIframeLoading ? "opacity-0" : "opacity-100"

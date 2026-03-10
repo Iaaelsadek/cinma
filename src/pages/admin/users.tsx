@@ -48,10 +48,6 @@ async function getAdminRequestHeaders() {
   if (session?.access_token) {
     headers.Authorization = `Bearer ${session.access_token}`
   }
-  const adminToken = sessionStorage.getItem('admin_sync_token') || ''
-  if (adminToken) {
-    headers['x-admin-token'] = adminToken
-  }
   return headers
 }
 
