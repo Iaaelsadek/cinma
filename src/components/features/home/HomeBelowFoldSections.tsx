@@ -202,6 +202,28 @@ const HomeBelowFoldSectionsInner = ({ criticalHomeData, topRatedMovies }: HomeBe
     staleTime: 300000,
   })
 
+  // determine whether we still need to fetch top rated movies ourselves.
+  // if the prop is missing or is an empty array, we consider it incomplete.
+  const needsFallback = !topRatedMovies || topRatedMovies.length === 0
+  const topRatedQuery = useQuery<TmdbMedia[] | undefined>(
+    {
+      queryKey: ['home', 'client-top-rated', lang],
+      queryFn: async () => {
+        const { data } = await tmdb.get('/movie/top_rated', {
+          params: { language: lang === 'ar' ? 'ar-SA' : 'en-US', page: 1 },
+        })
+        return data.results
+      },
+      enabled: needsFallback && !!CONFIG.TMDB_API_KEY,
+      staleTime: 300000,
+    }
+  )
+
+  const moviesToRender =
+    topRatedMovies && topRatedMovies.length > 0
+      ? topRatedMovies
+      : topRatedQuery.data || []
+
   const documentaries = useQuery<{ results: TmdbMedia[] }>({
     queryKey: ['home', 'docs'],
     queryFn: async () => {
@@ -491,11 +513,11 @@ const HomeBelowFoldSectionsInner = ({ criticalHomeData, topRatedMovies }: HomeBe
           link="/movies"
           badge="⭐ 9.0+"
         />
-        {!topRatedMovies ? (
+        {!moviesToRender || moviesToRender.length === 0 ? (
           <SkeletonGrid count={10} variant="poster" />
         ) : (
           <div className="flex gap-3 overflow-x-auto pb-4 snap-x scrollbar-none">
-            {sanitizeMediaItems(topRatedMovies)
+            {sanitizeMediaItems(moviesToRender)
               .slice(0, 10)
               .map((movie, idx) => (
                 <div key={movie.id} className="snap-center shrink-0 w-[120px] md:w-[140px]">
