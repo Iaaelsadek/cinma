@@ -28,4 +28,14 @@ describe('envVar helper', () => {
     delete process.env.TEST_KEY;
     expect(envVar('NONEXISTENT')).toBeUndefined();
   });
+
+  it('returns undefined when eval throws', () => {
+    delete process.env.TEST_KEY;
+    const origEval = global.eval;
+    // force eval to blow up, covering catch branch
+    // @ts-ignore
+    global.eval = () => { throw new Error('boom'); };
+    expect(envVar('ANY')).toBeUndefined();
+    global.eval = origEval;
+  });
 });
