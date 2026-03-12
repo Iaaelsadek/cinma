@@ -85,11 +85,13 @@ export const DynamicContentPage = ({ preset, type: propType }: Props) => {
       category: 'Ramadan',
       color: 'gold' as const,
       icon: <Moon />,
-      // Note: This is a best-effort. Specific Ramadan keyword usually requires ID.
-      // Using a known keyword ID for "Ramadan" or just text search fallback if needed.
-      // For now, we'll try a broad search or keyword. 
-      // Keyword 'Ramadan': 209288 (from TMDB if exists) or just generic query
-      params: { with_keywords: '209288', sort_by: 'primary_release_date.desc' }, 
+      params: {
+        with_original_language: 'ar',
+        with_origin_country: 'EG|SA|SY|AE|KW',
+        sort_by: 'first_air_date.desc',
+        'first_air_date.lte': new Date().toISOString().split('T')[0],
+        'vote_count.gte': 10
+      }, 
       defaultType: 'tv'
     },
     religious: {
@@ -148,7 +150,7 @@ export const DynamicContentPage = ({ preset, type: propType }: Props) => {
 
         const tmdbRes = await tmdb.get(endpoint, { params })
         
-        const tmdbItems = tmdbRes.data.results.map((item: any) => ({
+        const tmdbItems = (tmdbRes.data.results || []).map((item: any) => ({
             id: item.id,
             title: item.name || item.title || item.original_name || item.original_title,
             poster_path: item.poster_path,

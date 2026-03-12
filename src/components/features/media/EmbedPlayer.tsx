@@ -23,11 +23,13 @@ type Props = {
 }
 
 export const EmbedPlayer = ({ server, serverIndex = 0, cinemaMode, toggleCinemaMode, loading, onNextServer, onReport, reporting, title, onProgress, onPlay, onPause, playing, seekTo, lang = 'ar' }: Props) => {
+  void serverIndex
   const [isIframeLoading, setIsIframeLoading] = useState(true)
   const [retryCount, setRetryCount] = useState(0)
   const [isSlowConnection, setIsSlowConnection] = useState(false)
   const [loadStartTime, setLoadStartTime] = useState<number>(0)
   const [autoSwitchTimer, setAutoSwitchTimer] = useState<number>(0)
+  const [transportMode, setTransportMode] = useState<'proxy' | 'direct'>('proxy')
 
   // Connection Quality Detection
   useEffect(() => {
@@ -48,31 +50,33 @@ export const EmbedPlayer = ({ server, serverIndex = 0, cinemaMode, toggleCinemaM
     
     if (isIframeLoading && server) {
       setLoadStartTime(Date.now())
-      // If server doesn't load in 15 seconds, consider it a failure and offer next
       timeout = window.setTimeout(() => {
-        if (isIframeLoading) {
-           // We don't auto-switch immediately to avoid annoying the user, 
-           // but we show a helpful warning and a quick-switch button
-           onNextServer()
+        if (!isIframeLoading) return
+        if (transportMode === 'proxy') {
+          setTransportMode('direct')
+          setRetryCount((prev) => prev + 1)
+          setIsIframeLoading(true)
+          return
         }
+        onNextServer()
       }, 15000)
     }
 
     return () => {
       if (timeout) window.clearTimeout(timeout)
     }
-  }, [isIframeLoading, server?.url, onNextServer])
+  }, [isIframeLoading, server?.url, onNextServer, transportMode])
 
   // Reset loading state when server changes
   useEffect(() => {
     setIsIframeLoading(true)
     setRetryCount(0)
+    setTransportMode('proxy')
   }, [server?.url])
 
   const iframeUrl = (() => {
     if (!server?.url) return ''
-    const directOnlyByIndex = serverIndex === 3 || serverIndex === 9
-    if (directOnlyByIndex) return server.url
+    if (transportMode === 'direct') return server.url
     return `/api/embed-proxy?url=${encodeURIComponent(server.url)}`
   })()
 
@@ -101,6 +105,17 @@ export const EmbedPlayer = ({ server, serverIndex = 0, cinemaMode, toggleCinemaM
   const handleRetry = () => {
     setRetryCount(prev => prev + 1)
     setIsIframeLoading(true)
+    setTransportMode('proxy')
+  }
+
+  const handleIframeError = () => {
+    if (transportMode === 'proxy') {
+      setTransportMode('direct')
+      setRetryCount((prev) => prev + 1)
+      setIsIframeLoading(true)
+      return
+    }
+    onNextServer()
   }
 
   return (
@@ -184,6 +199,7 @@ export const EmbedPlayer = ({ server, serverIndex = 0, cinemaMode, toggleCinemaM
               allowFullScreen
               scrolling="no"
               onLoad={handleIframeLoad}
+              onError={handleIframeError}
               style={{ border: 'none', overflow: 'hidden' }}
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
               title={`Stream ${server.name}`}

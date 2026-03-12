@@ -16,6 +16,7 @@ export const useServers = (tmdbId: number, type: 'movie' | 'tv', season?: number
   const [downloadServerIds, setDownloadServerIds] = useState<string[]>(DOWNLOAD_SERVER_IDS)
   const [active, setActive] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [reporting, setReporting] = useState(false)
 
   // Initialize providers
   useEffect(() => {
@@ -54,6 +55,7 @@ export const useServers = (tmdbId: number, type: 'movie' | 'tv', season?: number
         return true
       })
 
+      const dedupe = new Set<string>()
       const allServers = filtered
         .map((p, index) => ({
           name: p.name,
@@ -62,7 +64,12 @@ export const useServers = (tmdbId: number, type: 'movie' | 'tv', season?: number
           status: 'online' as const,
           id: p.id
         }))
-        .filter((s) => Boolean(s.url))
+        .filter((s) => {
+          if (!s.url) return false
+          if (dedupe.has(s.url)) return false
+          dedupe.add(s.url)
+          return true
+        })
 
       setBaseServers(allServers)
       const resolvedDownloadIds = sourceProviders
@@ -76,7 +83,37 @@ export const useServers = (tmdbId: number, type: 'movie' | 'tv', season?: number
     loadProviders()
   }, [tmdbId, type, season, episode, imdbId])
 
-  const reportServer = () => {}
+  const reportServer = async () => {
+    const current = baseServers[active]
+    if (!current || reporting) return
+    setReporting(true)
+    setBaseServers((prev) =>
+      prev.map((server, idx) =>
+        idx === active ? { ...server, status: 'degraded' } : server
+      )
+    )
+    try {
+      if (current.id) {
+        await supabase
+          .from('link_checks')
+          .insert({
+            provider_id: current.id,
+            url: current.url,
+            ok: false,
+            status_code: 0,
+            response_ms: 0,
+            checked_at: new Date().toISOString(),
+            source: 'watch-report'
+          })
+      }
+    } catch {
+    } finally {
+      if (baseServers.length > 1) {
+        setActive((prev) => (prev < baseServers.length - 1 ? prev + 1 : 0))
+      }
+      setReporting(false)
+    }
+  }
 
   const checkBatchAvailability = async (
     items: Array<{ s: number; e: number }>
@@ -109,7 +146,7 @@ export const useServers = (tmdbId: number, type: 'movie' | 'tv', season?: number
     loading,
     reportServer,
     reportBroken: reportServer,
-    reporting: false,
+    reporting,
     checkBatchAvailability
   }
 }

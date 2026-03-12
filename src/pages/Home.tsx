@@ -269,28 +269,36 @@ export const Home = () => {
             Boolean(resolveTitleWithFallback(item))
           )
 
-      const [trendingView, ramadanView, kidsTmdb] = await Promise.all([
+      const [trendingView, kidsTmdb, arabicSeriesTmdb] = await Promise.all([
         supabase.from('mv_home_trending').select('*').limit(20),
-        supabase.from('mv_ramadan_eg').select('*').limit(20),
         tmdb.get('/discover/movie', {
           params: {
             with_genres: '16,10751',
             sort_by: 'primary_release_date.desc',
+            'release_date.lte': new Date().toISOString().split('T')[0],
+            'vote_count.gte': 50,
+            page: 1
+          }
+        }),
+        tmdb.get('/discover/tv', {
+          params: {
+            with_original_language: 'ar',
+            with_origin_country: 'EG|SA|SY|AE|KW',
+            sort_by: 'first_air_date.desc',
+            'first_air_date.lte': new Date().toISOString().split('T')[0],
+            'vote_count.gte': 10,
             page: 1
           }
         })
       ])
 
       const popularArFromView = !trendingView.error ? mapRows(trendingView.data as HomeViewRow[]) : []
-      const arabicSeriesFromView = !ramadanView.error ? mapRows(ramadanView.data as HomeViewRow[]) : []
 
       const popularAr = popularArFromView.length > 0
         ? popularArFromView
         : ((await tmdb.get('/discover/movie', { params: { region: 'EG', sort_by: 'primary_release_date.desc', page: 1 } })).data.results || [])
 
-      const arabicSeries = arabicSeriesFromView.length > 0
-        ? arabicSeriesFromView
-        : ((await tmdb.get('/discover/tv', { params: { with_original_language: 'ar', sort_by: 'first_air_date.desc', page: 1 } })).data.results || [])
+      const arabicSeries = arabicSeriesTmdb.data?.results || []
 
       return {
         popularAr,
@@ -403,7 +411,7 @@ export const Home = () => {
             </>
           ) : (
             <QuantumTrain 
-              items={criticalData?.kids || []} 
+              items={sanitizeMediaItems(criticalData?.kids)} 
               title={lang === 'ar' ? 'أطفال وعائلة' : 'Kids & Family'} 
               icon={<Smile />} 
               link="/kids" 

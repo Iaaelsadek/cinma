@@ -36,12 +36,19 @@ export const QuantumTrain = memo(({
   const { lang } = useLang()
   const [prevEl, setPrevEl] = useState<HTMLElement | null>(null)
   const [nextEl, setNextEl] = useState<HTMLElement | null>(null)
+  const isVideo = type === 'video'
+  const railItems = isVideo
+    ? items
+    : items.filter((item) => {
+        const title = item?.title || item?.name || item?.original_title || item?.original_name
+        const poster = item?.poster_path || item?.backdrop_path
+        return Number.isFinite(Number(item?.id)) && Number(item?.id) > 0 && Boolean(title) && Boolean(poster)
+      })
   
-  if (!items.length) return null
+  if (!railItems.length) return null
   
   const displayTitle = title || (lang === 'ar' ? 'الأعلى تقييما' : 'Top Rated')
   const displayIcon = icon || <Film />
-  const isVideo = type === 'video'
 
   return (
     <div className={`relative py-3 w-full perspective-1000 group/section ${className || ''}`}>
@@ -76,7 +83,7 @@ export const QuantumTrain = memo(({
           }}
           className="!pb-6"
         >
-          {items.map((movie, index) => {
+          {railItems.map((movie, index) => {
             return (
             <SwiperSlide 
               key={`${movie.id}-${index}`} 

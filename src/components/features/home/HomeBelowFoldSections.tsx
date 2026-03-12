@@ -198,6 +198,8 @@ const HomeBelowFoldSectionsInner = ({ criticalHomeData, topRatedMovies }: HomeBe
         params: {
           with_original_language: 'hi',
           sort_by: 'primary_release_date.desc',
+          'release_date.lte': new Date().toISOString().split('T')[0],
+          'vote_count.gte': 50,
           page: 1,
           region: 'IN',
         },
