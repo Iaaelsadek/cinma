@@ -98,7 +98,26 @@ export const EmbedPlayer = ({ server, serverIndex = 0, cinemaMode, toggleCinemaM
   const isOffline = server?.status === 'offline'
   const isDegraded = server?.status === 'degraded'
 
-  const handleIframeLoad = () => {
+  const handleIframeLoad = (event: React.SyntheticEvent<HTMLIFrameElement>) => {
+    if (transportMode === 'proxy') {
+      try {
+        const frame = event.currentTarget
+        const doc = frame.contentDocument
+        const titleText = (doc?.title || '').toLowerCase()
+        const bodyText = (doc?.body?.innerText || '').slice(0, 3000)
+        const looksLikeSpaFallback =
+          titleText.includes('online cinema') ||
+          bodyText.includes('جميع الحقوق محفوظة') ||
+          bodyText.includes('Server: DXB-01v2.4.0 Stable')
+        if (looksLikeSpaFallback) {
+          setTransportMode('direct')
+          setRetryCount((prev) => prev + 1)
+          setIsIframeLoading(true)
+          return
+        }
+      } catch {
+      }
+    }
     setIsIframeLoading(false)
   }
 
