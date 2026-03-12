@@ -5,18 +5,24 @@ import { getProfile } from '../../lib/supabase'
 import { AdminProvider } from '../../context/AdminContext'
 
 const AdminLayout = () => {
-  const { user } = useAuth()
-  const [role, setRole] = useState<'admin' | 'supervisor' | null>(null)
+  const { user, profile } = useAuth()
+  const [role, setRole] = useState<'admin' | 'supervisor' | null>((profile?.role as any) || null)
 
   useEffect(() => {
     let cancelled = false
-    if (user) {
-      getProfile(user.id).then(p => {
-        if (!cancelled) setRole(p?.role as any)
-      })
+    if (profile?.role) {
+      setRole(profile.role as any)
+    } else if (user) {
+      getProfile(user.id)
+        .then(p => {
+          if (!cancelled) setRole(p?.role as any)
+        })
+        .catch(() => {
+          if (!cancelled) setRole(null)
+        })
     }
     return () => { cancelled = true }
-  }, [user])
+  }, [user, profile?.role])
   
   const isSuper = role === 'admin'
 
@@ -50,11 +56,11 @@ const AdminLayout = () => {
               <NavLink to="/admin/series" className={({ isActive }) => isActive ? 'flex items-center gap-2 text-primary font-bold bg-white/5 px-3 py-2 rounded-lg transition-all' : 'flex items-center gap-2 text-zinc-400 hover:text-white px-3 py-2 hover:bg-white/5 rounded-lg transition-all'}>
                 📺 إدارة المسلسلات
               </NavLink>
-              <NavLink to="/admin/add-movie" className={({ isActive }) => isActive ? 'flex items-center gap-2 text-green-400 font-bold bg-green-400/10 px-3 py-2 rounded-lg transition-all' : 'flex items-center gap-2 text-zinc-400 hover:text-green-400 px-3 py-2 hover:bg-white/5 rounded-lg transition-all'}>
-                🎬 إضافة فيلم
-              </NavLink>
               <NavLink to="/admin/content-health" className={({ isActive }) => isActive ? 'flex items-center gap-2 text-rose-500 font-bold bg-rose-500/10 px-3 py-2 rounded-lg transition-all' : 'flex items-center gap-2 text-zinc-400 hover:text-rose-500 px-3 py-2 hover:bg-white/5 rounded-lg transition-all'}>
                 ❤️ صحة المحتوى
+              </NavLink>
+              <NavLink to="/admin/servers" className={({ isActive }) => isActive ? 'flex items-center gap-2 text-cyan-400 font-bold bg-cyan-400/10 px-3 py-2 rounded-lg transition-all' : 'flex items-center gap-2 text-zinc-400 hover:text-cyan-400 px-3 py-2 hover:bg-white/5 rounded-lg transition-all'}>
+                🧪 إدارة السيرفرات
               </NavLink>
             </div>
             
@@ -68,8 +74,8 @@ const AdminLayout = () => {
                 <NavLink to="/admin/settings" className={({ isActive }) => isActive ? 'flex items-center gap-2 text-primary font-bold bg-white/5 px-3 py-2 rounded-lg transition-all' : 'flex items-center gap-2 text-zinc-400 hover:text-white px-3 py-2 hover:bg-white/5 rounded-lg transition-all'}>
                   ⚙️ الإعدادات
                 </NavLink>
-                <NavLink to="/admin/backup" className={({ isActive }) => isActive ? 'flex items-center gap-2 text-primary font-bold bg-white/5 px-3 py-2 rounded-lg transition-all' : 'flex items-center gap-2 text-zinc-400 hover:text-white px-3 py-2 hover:bg-white/5 rounded-lg transition-all'}>
-                  💾 النسخ الاحتياطي
+                <NavLink to="/admin/backups" className={({ isActive }) => isActive ? 'flex items-center gap-2 text-primary font-bold bg-white/5 px-3 py-2 rounded-lg transition-all' : 'flex items-center gap-2 text-zinc-400 hover:text-white px-3 py-2 hover:bg-white/5 rounded-lg transition-all'}>
+                  💾 النسخ الاحتياطية
                 </NavLink>
                 <NavLink to="/admin/system" className={({ isActive }) => isActive ? 'flex items-center gap-2 text-cyan-400 font-bold bg-cyan-400/10 px-3 py-2 rounded-lg transition-all' : 'flex items-center gap-2 text-zinc-400 hover:text-cyan-400 px-3 py-2 hover:bg-white/5 rounded-lg transition-all'}>
                   ⚡ نظام التحكم

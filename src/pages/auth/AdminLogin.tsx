@@ -15,10 +15,16 @@ export const AdminLogin = () => {
     let cancelled = false
     ;(async () => {
       if (!user) return
-      const p = await getProfile(user.id)
-      if (cancelled) return
-      if (p?.role === 'admin') {
-        navigate('/admin', { replace: true })
+      try {
+        const p = await getProfile(user.id)
+        if (cancelled) return
+        if (p?.role === 'admin' || p?.role === 'supervisor') {
+          navigate('/admin', { replace: true })
+        }
+      } catch {
+        if (!cancelled) {
+          setError('تعذر التحقق من صلاحيات المشرف')
+        }
       }
     })()
     return () => { cancelled = true }

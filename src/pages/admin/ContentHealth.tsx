@@ -25,6 +25,8 @@ export const ContentHealth = () => {
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'dead' | 'partial'>('all')
   const [search, setSearch] = useState('')
+  const [selectedKeys, setSelectedKeys] = useState<string[]>([])
+  const [bulkAction, setBulkAction] = useState<'clear_reports' | 'open_admin' | 'open_watch'>('clear_reports')
 
   const fetchData = async () => {
     setLoading(true)
@@ -86,8 +88,9 @@ export const ContentHealth = () => {
       // Helper to calculate status
       const getStatus = (sources: Map<string, number>) => {
         let broken = 0
+        const healthyOrTransient = new Set([0, 200, 201, 206, 301, 302, 403, 408, 409, 425, 429, 500, 502, 503, 504, 520, 521, 522, 524])
         sources.forEach(status => {
-          if (status !== 200 && status !== 201 && status !== 301 && status !== 302) {
+          if (!healthyOrTransient.has(status)) {
             broken++
           }
         })
@@ -162,16 +165,75 @@ export const ContentHealth = () => {
     const { error } = await supabase.from('link_checks').delete().eq('content_id', tmdbId).eq('content_type', type)
     if (!error) {
       setContent(prev => prev.filter(c => !(c.tmdb_id === tmdbId && c.type === type)))
+      setSelectedKeys(prev => prev.filter(key => key !== `${type}-${tmdbId}`))
       toast.success('تم مسح البلاغات وتنشيط العمل')
     }
   }
 
   const filtered = content.filter(c => {
-    const matchesSearch = c.title.toLowerCase().includes(search.toLowerCase())
+    const title = String(c.title || '').toLowerCase()
+    const matchesSearch = title.includes(search.toLowerCase())
     if (filter === 'dead') return matchesSearch && c.status === 'dead'
     if (filter === 'partial') return matchesSearch && c.status === 'partial'
     return matchesSearch
   })
+
+  const getItemKey = (item: BrokenContent) => `${item.type}-${item.tmdb_id}`
+  const visibleKeys = filtered.map(getItemKey)
+  const selectedVisibleCount = filtered.filter(item => selectedKeys.includes(getItemKey(item))).length
+  const allVisibleSelected = filtered.length > 0 && selectedVisibleCount === filtered.length
+
+  const toggleItemSelection = (item: BrokenContent, checked: boolean) => {
+    const key = getItemKey(item)
+    setSelectedKeys(prev => checked ? Array.from(new Set([...prev, key])) : prev.filter(k => k !== key))
+  }
+
+  const toggleSelectAllVisible = (checked: boolean) => {
+    if (!checked) {
+      setSelectedKeys(prev => prev.filter(key => !visibleKeys.includes(key)))
+      return
+    }
+    setSelectedKeys(prev => Array.from(new Set([...prev, ...visibleKeys])))
+  }
+
+  const executeBulkAction = async () => {
+    const selectedItems = content.filter(item => selectedKeys.includes(getItemKey(item)))
+    if (selectedItems.length === 0) {
+      toast.error('اختر عملاً واحداً على الأقل')
+      return
+    }
+
+    if (bulkAction === 'clear_reports') {
+      if (!confirm(`هل تريد مسح بلاغات ${selectedItems.length} عمل؟`)) return
+      const results = await Promise.all(
+        selectedItems.map(item =>
+          supabase.from('link_checks').delete().eq('content_id', item.tmdb_id).eq('content_type', item.type)
+        )
+      )
+      const hasError = results.some(r => Boolean(r.error))
+      if (hasError) {
+        toast.error('حدث خطأ أثناء المسح الجماعي')
+        return
+      }
+      setContent(prev => prev.filter(item => !selectedKeys.includes(getItemKey(item))))
+      setSelectedKeys([])
+      toast.success('تم مسح البلاغات للأعمال المحددة')
+      return
+    }
+
+    if (bulkAction === 'open_admin') {
+      selectedItems.forEach(item => {
+        const path = item.type === 'movie' ? `/admin/movies?id=${item.tmdb_id}` : `/admin/series/${item.tmdb_id}`
+        window.open(path, '_blank', 'noopener,noreferrer')
+      })
+      return
+    }
+
+    selectedItems.forEach(item => {
+      const path = item.type === 'movie' ? `/watch/movie/${item.tmdb_id}` : `/watch/tv/${item.tmdb_id}/1/1`
+      window.open(path, '_blank', 'noopener,noreferrer')
+    })
+  }
 
   return (
     <div className="p-6 space-y-6 animate-in fade-in duration-500">
@@ -277,6 +339,40 @@ export const ContentHealth = () => {
         </div>
       </div>
 
+      <div className="flex flex-col lg:flex-row gap-3 lg:items-center justify-between bg-zinc-900/30 p-4 rounded-xl border border-zinc-800/50">
+        <div className="flex items-center gap-3">
+          <label className="inline-flex items-center gap-2 text-sm text-zinc-300 cursor-pointer">
+            <input
+              type="checkbox"
+              className="accent-primary w-4 h-4"
+              checked={allVisibleSelected}
+              onChange={(e) => toggleSelectAllVisible(e.target.checked)}
+            />
+            اختيار الكل (المعروض)
+          </label>
+          <span className="text-xs text-zinc-500">
+            المحدد: {selectedKeys.length} | من المعروض: {selectedVisibleCount}/{filtered.length}
+          </span>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            value={bulkAction}
+            onChange={(e) => setBulkAction(e.target.value as 'clear_reports' | 'open_admin' | 'open_watch')}
+            className="bg-zinc-800/70 border border-zinc-700 rounded-lg px-3 py-2 text-xs text-zinc-200"
+          >
+            <option value="clear_reports">مسح البلاغات للمحدد</option>
+            <option value="open_admin">فتح الإدارة للمحدد</option>
+            <option value="open_watch">فتح المشاهدة للمحدد</option>
+          </select>
+          <button
+            onClick={executeBulkAction}
+            className="px-4 py-2 bg-primary text-black font-bold text-xs rounded-lg hover:opacity-90 transition-opacity"
+          >
+            تنفيذ
+          </button>
+        </div>
+      </div>
+
       {/* Content Grid */}
       {loading ? (
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
@@ -296,6 +392,14 @@ export const ContentHealth = () => {
               key={`${item.type}-${item.tmdb_id}`}
               className="group relative bg-zinc-900/50 border border-zinc-800 rounded-2xl overflow-hidden hover:border-zinc-600 transition-all flex"
             >
+              <div className="absolute top-2 right-2 z-20 bg-black/60 rounded-md p-1">
+                <input
+                  type="checkbox"
+                  className="accent-primary w-4 h-4"
+                  checked={selectedKeys.includes(getItemKey(item))}
+                  onChange={(e) => toggleItemSelection(item, e.target.checked)}
+                />
+              </div>
               {/* Poster */}
               <div className="w-24 shrink-0 aspect-[2/3] relative overflow-hidden">
                 <img 
@@ -330,10 +434,17 @@ export const ContentHealth = () => {
                       </span>
                     </div>
                     <div className="h-1 bg-zinc-800 rounded-full overflow-hidden">
+                      {(() => {
+                        const safeTotal = Math.max(1, Number(item.total_units || 0))
+                        const safeDead = Math.max(0, Number(item.dead_units || 0))
+                        const ratio = Math.max(0, Math.min(100, (safeDead / safeTotal) * 100))
+                        return (
                       <div 
                         className={`h-full transition-all duration-1000 ${item.status === 'dead' ? 'bg-rose-500' : 'bg-amber-500'}`}
-                        style={{ width: `${(item.dead_units / item.total_units) * 100}%` }}
+                        style={{ width: `${ratio}%` }}
                       />
+                        )
+                      })()}
                     </div>
                     <div className="flex items-center justify-between text-[10px]">
                       <span className="text-zinc-500">إجمالي بلاغات السيرفرات</span>
@@ -350,7 +461,7 @@ export const ContentHealth = () => {
                      <Trash2 size={12} /> مسح البلاغات
                    </button>
                    <Link 
-                     to={item.type === 'movie' ? `/admin/movies?id=${item.tmdb_id}` : `/admin/series/manage/${item.tmdb_id}`}
+                     to={item.type === 'movie' ? `/admin/movies?id=${item.tmdb_id}` : `/admin/series/${item.tmdb_id}`}
                      className="p-1.5 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-zinc-400 hover:text-white transition-all"
                    >
                      <ChevronRight size={14} />

@@ -78,14 +78,26 @@ export const useAuth = create<AuthState>((set, get) => ({
         await refreshPromise
         return
       } catch (e) {
-        // If the ongoing request fails, we let the caller handle it (or it's already handled)
-        throw e
+        if (!silent) set({ loading: false })
+        return
       }
     }
 
     refreshPromise = (async () => {
       if (!silent) set({ loading: true, error: null })
-      const { data: sessionData } = await supabase.auth.getSession()
+      const withTimeout = async <T,>(promise: Promise<T>, timeoutMs: number) => {
+        let timer: ReturnType<typeof setTimeout> | undefined
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          timer = setTimeout(() => reject(new Error('auth_timeout')), timeoutMs)
+        })
+        try {
+          return await Promise.race([promise, timeoutPromise])
+        } finally {
+          if (timer) clearTimeout(timer)
+        }
+      }
+
+      const { data: sessionData } = await withTimeout(supabase.auth.getSession(), 5000)
       const session = sessionData?.session ?? null
       const user = session?.user ?? null
       
@@ -100,7 +112,7 @@ export const useAuth = create<AuthState>((set, get) => ({
   
       try {
         // Use getProfile helper which handles RLS errors via admin proxy
-        const data = await getProfile(user.id)
+        const data = await withTimeout(getProfile(user.id), 6000)
         
         if (!data) {
           // محاولة إنشاء بروفايل جديد
@@ -114,7 +126,7 @@ export const useAuth = create<AuthState>((set, get) => ({
           if (insertError) {
             // If profile already exists (race condition), try fetching it again
             if (insertError.code === '23505') { // unique_violation
-              const retryData = await getProfile(user.id)
+              const retryData = await withTimeout(getProfile(user.id), 4000)
               if (retryData) {
                 set({ profile: retryData as Profile, loading: false, error: null })
                 return
@@ -134,7 +146,7 @@ export const useAuth = create<AuthState>((set, get) => ({
         const err = e instanceof Error ? e : new Error(e.message || 'Auth refresh error');
         logAuthError('Auth refresh error', e)
         set({ loading: false, error: err })
-        throw err // Re-throw so deduping logic knows it failed
+        return
       }
     })()
 

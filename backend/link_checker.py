@@ -129,15 +129,24 @@ class LinkChecker:
 
     async def _update_db(self, results, table_name):
         """Update database with check results."""
+        healthy_codes = {200, 201, 206, 301, 302}
+        transient_codes = {0, 403, 408, 409, 425, 429, 500, 502, 503, 504, 520, 521, 522, 524}
         for result in results:
             try:
+                status_code = int(result.get('status_code', 0))
+                if status_code in transient_codes:
+                    self.supabase.table(table_name).update({
+                        'last_checked': datetime.now().isoformat()
+                    }).eq('id', result['content_id']).execute()
+                    continue
+
                 # Log to link_checks table
                 insert_data = {
                     'content_id': result['content_id'],
                     'content_type': result['content_type'],
                     'source_name': result['source_name'],
                     'url': result['url'],
-                    'status_code': result['status_code'],
+                    'status_code': status_code,
                     'response_time_ms': result['response_time_ms'],
                     'checked_at': result['checked_at']
                 }
@@ -150,10 +159,10 @@ class LinkChecker:
                 
                 self.supabase.table('link_checks').insert(insert_data).execute()
 
-                # If link is broken (0 or 4xx/5xx except some exclusions)
-                is_broken = result['status_code'] not in [200, 206, 301, 302, 403] # 403 sometimes just blocks head/range
+                # Only treat hard non-transient statuses as broken
+                is_broken = status_code not in healthy_codes
                 
-                if is_broken and result['status_code'] != 0: # Only remove if we got a definitive bad status
+                if is_broken:
                     print(f"Broken link found: {result['url']} ({result['status_code']})")
                     data = self.supabase.table(table_name).select('embed_links').eq('id', result['content_id']).single().execute()
                     if data.data:

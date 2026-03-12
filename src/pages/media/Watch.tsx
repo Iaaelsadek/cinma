@@ -658,7 +658,7 @@ export const Watch = () => {
         ) : (
           <div className="absolute inset-0 h-[35vh] bg-[#1a1a1a]" />
         )}
-        <div className="relative z-10 mx-auto max-w-[2400px] px-4 md:px-12 pt-14 pb-6">
+        <div className="relative z-10 mx-auto max-w-[1800px] px-4 md:px-12 pt-14 pb-6">
           <div className="flex flex-col md:flex-row md:items-start justify-between gap-12">
             {/* Left Side: Title, Details, Actions, Cast */}
             <div className="flex-1 flex flex-col items-start text-left order-2 md:order-1">
@@ -811,7 +811,7 @@ export const Watch = () => {
         </div>
       </div>
 
-      <div className="mx-auto max-w-[2400px] px-4 md:px-12 py-6 space-y-6">
+      <div className="mx-auto max-w-[1800px] px-4 md:px-12 py-6 space-y-6">
         
 
 
@@ -830,6 +830,7 @@ export const Watch = () => {
                         ) : (
                         <EmbedPlayer
                             server={servers[active]}
+                            serverIndex={active}
                             cinemaMode={cinemaMode}
                             toggleCinemaMode={() => setCinemaMode(!cinemaMode)}
                             loading={serversLoading}
