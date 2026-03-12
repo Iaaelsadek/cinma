@@ -33,8 +33,9 @@ const AdminSeriesList = () => {
   const genreOptions = useMemo(() => {
     const set = new Set<string>()
     series.forEach((s) => {
-      const items = Array.isArray((s as any).genres) ? (s as any).genres as string[] : []
-      items.filter(Boolean).forEach((g) => set.add(g))
+      const rawItems = Array.isArray((s as any).genres) ? (s as any).genres : []
+      const items = rawItems.map((g: any) => String(g || '').trim()).filter(Boolean)
+      items.forEach((g: string) => set.add(g))
     })
     return Array.from(set).sort((a, b) => a.localeCompare(b))
   }, [series])
@@ -45,7 +46,8 @@ const AdminSeriesList = () => {
       const name = String(s.name || '').toLowerCase()
       const overview = String(s.overview || '').toLowerCase()
       const matchesSearch = !q || name.includes(q) || overview.includes(q)
-      const genres = Array.isArray((s as any).genres) ? (s as any).genres as string[] : []
+      const rawGenres = Array.isArray((s as any).genres) ? (s as any).genres : []
+      const genres = rawGenres.map((g: any) => String(g || '').trim()).filter(Boolean)
       const matchesGenre = genre === 'all' || genres.includes(genre)
       return matchesSearch && matchesGenre
     })

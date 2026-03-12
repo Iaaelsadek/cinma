@@ -242,7 +242,7 @@ export const ContentHealth = () => {
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <Activity className="text-primary" /> صحة المحتوى (Content Health)
           </h1>
-          <p className="text-sm text-zinc-500">إدارة الأعمال المعطلة والمخفية بسبب السيرفرات</p>
+          <p className="text-sm text-zinc-500">إدارة الأعمال المبلّغ عنها يدوياً من الزوار بسبب تعطل السيرفرات</p>
         </div>
         
         <div className="flex items-center gap-2">
@@ -261,7 +261,7 @@ export const ContentHealth = () => {
         <div className="bg-zinc-900/50 border border-zinc-800 p-4 rounded-xl">
           <div className="text-zinc-500 text-xs mb-1">إجمالي المتأثر</div>
           <div className="text-2xl font-bold">{content.length}</div>
-          <div className="text-[10px] text-zinc-600">أعمال بها سيرفرات معطلة</div>
+          <div className="text-[10px] text-zinc-600">أعمال عليها بلاغات يدوية</div>
         </div>
 
         <div className="bg-rose-500/10 border border-rose-500/20 p-4 rounded-xl">
@@ -269,7 +269,7 @@ export const ContentHealth = () => {
           <div className="text-2xl font-bold text-rose-500">
             {content.filter(c => c.type === 'movie' && c.status === 'dead').length}
           </div>
-          <div className="text-[10px] text-rose-500/50">تخطت 15 سيرفر معطل</div>
+          <div className="text-[10px] text-rose-500/50">تخطت حد البلاغات اليدوية (15)</div>
         </div>
 
         <div className="bg-rose-500/10 border border-rose-500/20 p-4 rounded-xl">
@@ -277,7 +277,7 @@ export const ContentHealth = () => {
           <div className="text-2xl font-bold text-rose-500">
             {content.filter(c => c.type === 'tv' && c.status === 'dead').length}
           </div>
-          <div className="text-[10px] text-rose-500/50">جميع حلقاتها معطلة (15+)</div>
+          <div className="text-[10px] text-rose-500/50">بلاغات يدوية عالية على الحلقات (15+)</div>
         </div>
 
         <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-xl">
@@ -295,7 +295,7 @@ export const ContentHealth = () => {
           <div className="flex items-center gap-3">
             <AlertCircle className="text-zinc-400" size={20} />
             <div className="text-sm">
-              <span className="text-zinc-400">ملخص النظام:</span> هناك <span className="text-rose-500 font-bold">{content.filter(c => c.status === 'dead').length}</span> عمل تم إخفاؤهم تلقائياً من الموقع بسبب تعطل السيرفرات بالكامل أو تجاوز الحد المسموح (15 سيرفر).
+              <span className="text-zinc-400">ملخص النظام:</span> هناك <span className="text-rose-500 font-bold">{content.filter(c => c.status === 'dead').length}</span> عمل لديهم بلاغات يدوية مرتفعة من الزوار (15+).
             </div>
           </div>
           <div className="text-[10px] text-zinc-500 bg-zinc-800 px-3 py-1 rounded-full">
@@ -485,9 +485,9 @@ export const ContentHealth = () => {
         <AlertTriangle className="text-primary shrink-0" size={18} />
         <div className="text-xs text-zinc-400 leading-relaxed">
           <strong className="text-primary block mb-1">نصيحة للأدمن:</strong>
-          الأعمال المعروضة هنا هي التي قام النظام أو المستخدمون بالإبلاغ عن تعطل سيرفراتها. 
+          الأعمال المعروضة هنا هي التي قام الزوار بالإبلاغ يدوياً عن تعطل سيرفراتها. 
           يمكنك الضغط على "مسح البلاغات" لإعادة إظهار العمل فوراً للمستخدمين إذا قمت بإصلاح السيرفرات أو إضافة روابط جديدة يدوياً.
-          المحتوى "الميت" مخفي تماماً عن الزوار، أما "الجزئي" فيظهر مع تحذير داخلي.
+          التصنيف "ميت" يعني أن حجم البلاغات اليدوية مرتفع، أما "الجزئي" فيعني وجود بلاغات أقل.
         </div>
       </div>
     </div>
