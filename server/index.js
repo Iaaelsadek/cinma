@@ -1440,17 +1440,10 @@ app.get('/api/admin/ops/status', regularLimiter, async (req, res) => {
 app.post('/api/admin/sync', sensitiveLimiter, async (req, res) => {
   if (!ensureAdminIpAllowed(req, res)) return;
   if (!ensureAdminToken(req, res)) return;
-  lastSyncStatus = 'running';
+  lastSyncStatus = 'disabled';
   lastSyncAt = new Date().toISOString();
-  try {
-    const result = await runPythonScript('backend/master_engine.py');
-    lastSyncStatus = result.code === 0 ? 'success' : 'error';
-    lastSyncLogs = result.logs;
-    res.json({ ok: result.code === 0, logs: result.logs });
-  } catch (err) {
-    lastSyncStatus = 'error';
-    res.status(500).json({ ok: false, error: String(err) });
-  }
+  lastSyncLogs = ['Master engine has been disabled. Content health now depends on manual visitor reports only.'];
+  res.status(410).json({ ok: false, error: 'Master engine disabled', logs: lastSyncLogs });
 });
 
 app.post('/api/admin/refresh/anime', sensitiveLimiter, async (req, res) => {

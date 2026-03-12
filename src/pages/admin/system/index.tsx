@@ -303,8 +303,7 @@ const EngineManager = ({ token }: { token: string }) => {
     setRunning(true);
     setLogs(prev => [...prev, `Starting ${type}...`]);
     try {
-      let endpoint = '/api/admin/sync'; // default
-      if (type === 'anime') endpoint = '/api/admin/refresh/anime';
+      let endpoint = '/api/admin/refresh/anime';
       if (type === 'quran') endpoint = '/api/admin/refresh/quran';
       
       const res = await fetch(`${API_BASE}${endpoint}`, {
@@ -325,7 +324,6 @@ const EngineManager = ({ token }: { token: string }) => {
   return (
     <div className="grid grid-cols-3 gap-4 h-[500px]">
       <div className="col-span-1 space-y-4">
-        <EngineCard title="Master Engine" desc="Movies & Series (TMDB)" onClick={() => runEngine('master')} running={running} />
         <EngineCard title="Anime Engine" desc="Fetch Anime Data" onClick={() => runEngine('anime')} running={running} />
         <EngineCard title="Quran Engine" desc="Update Quran Data" onClick={() => runEngine('quran')} running={running} />
         

@@ -66,10 +66,6 @@ export const MoviesManage = () => {
     })
   }, [movies, search])
 
-  if (loading) {
-    return <div className="p-8 text-center text-zinc-500">Loading movies...</div>
-  }
-
   const openCreate = () => {
     setEditingId(null)
     setForm(emptyForm)
@@ -89,6 +85,10 @@ export const MoviesManage = () => {
       return next
     }, { replace: true })
   }, [searchParams, setSearchParams, loading, movies])
+
+  if (loading) {
+    return <div className="p-8 text-center text-zinc-500">Loading movies...</div>
+  }
 
   const openEdit = (movie: any) => {
     const genres = parseGenres(movie.genres)

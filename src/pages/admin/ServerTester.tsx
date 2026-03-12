@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { clsx } from 'clsx'
-import { Play, ExternalLink, Monitor, Trash2, Copy, Pencil, Plus, Minus } from 'lucide-react'
+import { Play, ExternalLink, Monitor, Trash2, Copy } from 'lucide-react'
 import { toast } from 'sonner'
 import { logger } from '../../lib/logger'
 import { tmdb } from '../../lib/tmdb'
@@ -30,11 +30,6 @@ type ServerPattern = {
   supports_tv: boolean
   is_download: boolean
   priority: number
-}
-
-type TemplateEditorState = {
-  domain: string
-  segments: string[]
 }
 
 const serverFamily = (name: string) => {
@@ -67,22 +62,59 @@ const DEFAULT_SERVER_PATTERNS: ServerPattern[] = SERVER_PROVIDERS.map((provider,
 
 const TEMPLATE_TOKENS = ['{tmdbId}', '{imdbId}', '{season}', '{episode}', '{type}', '{lang}'] as const
 const API_BASE = import.meta.env.VITE_API_BASE || import.meta.env.VITE_API_URL || ''
-const parseTemplateEditorState = (template: string): TemplateEditorState => {
-  const cleaned = template.trim().replace(/^https?:\/\//i, '')
-  const chunks = cleaned.split('/').filter(Boolean)
-  const domain = chunks[0] || ''
-  const segments = chunks.slice(1)
-  return {
-    domain,
-    segments: segments.length > 0 ? segments : ['{tmdbId}']
-  }
+const TEMPLATE_TOKEN_LABELS: Record<(typeof TEMPLATE_TOKENS)[number], string> = {
+  '{tmdbId}': 'TMDB',
+  '{imdbId}': 'IMDB',
+  '{season}': 'Season',
+  '{episode}': 'Episode',
+  '{type}': 'Type',
+  '{lang}': 'Lang'
 }
-
-const composeTemplateFromState = (state: TemplateEditorState) => {
-  const domain = state.domain.trim().replace(/^https?:\/\//i, '').replace(/\/.*$/, '').replace(/^www\./i, 'www.')
-  const segments = state.segments.map((s) => s.trim()).filter(Boolean)
-  if (!domain) return ''
-  return `https://${domain}${segments.length ? `/${segments.join('/')}` : ''}`
+const SUGGESTED_TEMPLATES: Record<string, { movie: string; tv: string }> = {
+  autoembed_co: {
+    movie: 'https://autoembed.co/movie/tmdb/{tmdbId}',
+    tv: 'https://autoembed.co/tv/tmdb/{tmdbId}-{season}-{episode}'
+  },
+  vidsrc_net: {
+    movie: 'https://vidsrc.net/embed/movie/{tmdbId}',
+    tv: 'https://vidsrc.net/embed/tv/{tmdbId}/{season}/{episode}'
+  },
+  vidsrc_io: {
+    movie: 'https://vidsrc.io/embed/movie/{tmdbId}',
+    tv: 'https://vidsrc.io/embed/tv/{tmdbId}/{season}/{episode}'
+  },
+  vidsrc_cc: {
+    movie: 'https://vidsrc.cc/v2/embed/movie/{tmdbId}',
+    tv: 'https://vidsrc.cc/v2/embed/tv/{tmdbId}?autoPlay=false&s={season}&e={episode}'
+  },
+  vidsrc_xyz: {
+    movie: 'https://vidsrc.xyz/embed/movie/{tmdbId}',
+    tv: 'https://vidsrc.xyz/embed/tv/{tmdbId}/{season}/{episode}'
+  },
+  vidsrc_me: {
+    movie: 'https://vidsrc.me/embed/movie/{tmdbId}',
+    tv: 'https://vidsrc.me/embed/tv/{tmdbId}/{season}/{episode}'
+  },
+  vidsrc_vip: {
+    movie: 'https://vidsrc.vip/embed/movie/{tmdbId}',
+    tv: 'https://vidsrc.vip/embed/tv/{tmdbId}/{season}/{episode}'
+  },
+  '2embed_cc': {
+    movie: 'https://www.2embed.cc/embed/{tmdbId}',
+    tv: 'https://www.2embed.cc/embed/{tmdbId}/{season}/{episode}'
+  },
+  '2embed_skin': {
+    movie: 'https://www.2embed.skin/embed/{tmdbId}',
+    tv: 'https://www.2embed.skin/embed/{tmdbId}/{season}/{episode}'
+  },
+  smashystream: {
+    movie: 'https://player.smashy.stream/movie/{tmdbId}',
+    tv: 'https://smashy.stream/tv/{tmdbId}/{season}/{episode}/player'
+  },
+  '111movies': {
+    movie: 'https://111movies.com/movie/{tmdbId}',
+    tv: 'https://111movies.net/tv/{tmdbId}/{season}/{episode}'
+  }
 }
 
 export const ServerTester = () => {
@@ -103,7 +135,6 @@ export const ServerTester = () => {
   const [translationMarks, setTranslationMarks] = useState<TranslationMarks>({})
   const [configSource, setConfigSource] = useState<'database' | 'local'>('local')
   const [subtitleLang, setSubtitleLang] = useState('ar')
-  const [editingTemplate, setEditingTemplate] = useState<'movie' | 'tv' | null>(null)
 
   // Load saved data on mount
   useEffect(() => {
@@ -511,126 +542,100 @@ export const ServerTester = () => {
     updateServerPattern(selectedPattern.id, { tv_template: value })
   }
 
-  const updateTemplateDomain = (mode: 'movie' | 'tv', domain: string) => {
-    const state = parseTemplateEditorState(getTemplateValue(mode))
-    const next = composeTemplateFromState({ ...state, domain })
-    setTemplateValue(mode, next)
+  const appendTemplateToken = (mode: 'movie' | 'tv', token: (typeof TEMPLATE_TOKENS)[number]) => {
+    const current = getTemplateValue(mode).trim()
+    const separator = current.length === 0 || current.endsWith('/') || current.endsWith('=') ? '' : '/'
+    setTemplateValue(mode, `${current}${separator}${token}`)
   }
 
-  const updateTemplateSegment = (mode: 'movie' | 'tv', index: number, value: string) => {
-    const state = parseTemplateEditorState(getTemplateValue(mode))
-    const nextSegments = [...state.segments]
-    nextSegments[index] = value
-    const next = composeTemplateFromState({ ...state, segments: nextSegments })
-    setTemplateValue(mode, next)
+  const applySuggestedTemplate = (mode: 'movie' | 'tv') => {
+    if (!selectedPattern) return
+    const suggested = SUGGESTED_TEMPLATES[selectedPattern.id]?.[mode]
+    if (!suggested) {
+      toast.error('لا يوجد قالب مقترح جاهز لهذا السيرفر')
+      return
+    }
+    setTemplateValue(mode, suggested)
+    toast.success(`تم تطبيق القالب المقترح لـ ${mode === 'movie' ? 'الفيلم' : 'المسلسل'}`)
   }
 
-  const addTemplateSegment = (mode: 'movie' | 'tv') => {
-    const state = parseTemplateEditorState(getTemplateValue(mode))
-    const next = composeTemplateFromState({ ...state, segments: [...state.segments, '{tmdbId}'] })
-    setTemplateValue(mode, next)
-  }
-
-  const removeTemplateSegment = (mode: 'movie' | 'tv', index: number) => {
-    const state = parseTemplateEditorState(getTemplateValue(mode))
-    const nextSegments = state.segments.filter((_, i) => i !== index)
-    const next = composeTemplateFromState({
-      ...state,
-      segments: nextSegments.length ? nextSegments : ['{tmdbId}']
+  const getTemplatePreview = (mode: 'movie' | 'tv') => {
+    if (!selectedPattern) return ''
+    const s = Math.max(1, Number(season) || 1)
+    const e = Math.max(1, Number(episode) || 1)
+    const safeTmdbId = Number(tmdbId) || 550
+    const providerForPreview = {
+      ...selectedPattern,
+      movie_template: mode === 'movie' ? getTemplateValue('movie') : selectedPattern.movie_template,
+      tv_template: mode === 'tv' ? getTemplateValue('tv') : selectedPattern.tv_template
+    }
+    return generateServerUrl(providerForPreview, mode, safeTmdbId, s, e, imdbId, {
+      language: subtitleLang,
+      disableFallback: true
     })
-    setTemplateValue(mode, next)
   }
 
   const renderTemplateBuilder = (mode: 'movie' | 'tv', label: string) => {
     if (!selectedPattern) return null
     const templateValue = getTemplateValue(mode)
-    const parsed = parseTemplateEditorState(templateValue)
-    const isEditing = editingTemplate === mode
+    const preview = getTemplatePreview(mode)
 
     return (
       <div className="bg-black/30 border border-white/10 rounded-lg p-2 space-y-2">
         <div className="flex items-center justify-between">
           <span className="text-[11px] text-zinc-300 font-bold">{label}</span>
-          <button
-            onClick={() => setEditingTemplate((prev) => (prev === mode ? null : mode))}
-            className={clsx(
-              "px-2 py-1 rounded-md text-[11px] font-bold border transition-colors flex items-center gap-1",
-              isEditing
-                ? "bg-primary/20 text-primary border-primary/40"
-                : "bg-zinc-800 text-zinc-300 border-zinc-700"
-            )}
-          >
-            <Pencil size={12} />
-            {isEditing ? 'إغلاق Edit' : 'Edit'}
-          </button>
-        </div>
-
-        {!isEditing ? (
-          <input
-            value={templateValue}
-            onChange={(e) => setTemplateValue(mode, e.target.value)}
-            className="bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-xs w-full font-mono"
-            dir="ltr"
-            placeholder={mode === 'movie' ? 'https://.../{tmdbId}' : 'https://.../{tmdbId}/{season}/{episode}'}
-          />
-        ) : (
-          <div className="space-y-2">
-            <div className="grid grid-cols-[1fr_auto] gap-2 items-center">
-              <input
-                value={parsed.domain}
-                onChange={(e) => updateTemplateDomain(mode, e.target.value)}
-                className="bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-xs font-mono"
-                dir="ltr"
-                placeholder="example.com"
-              />
-              <span className="text-[11px] text-zinc-500">https://</span>
-            </div>
-            <div className="space-y-1">
-              {parsed.segments.map((segment, index) => (
-                <div key={`${mode}-segment-${index}`} className="grid grid-cols-[18px_170px_1fr_34px] gap-2 items-center">
-                  <span className="text-zinc-600 text-center">/</span>
-                  <select
-                    value={TEMPLATE_TOKENS.includes(segment as any) ? segment : '__TEXT__'}
-                    onChange={(e) => {
-                      const next = e.target.value === '__TEXT__' ? '' : e.target.value
-                      updateTemplateSegment(mode, index, next)
-                    }}
-                    className="bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-[11px]"
-                  >
-                    <option value="__TEXT__">نص ثابت</option>
-                    <option value="{tmdbId}">TMDB ID</option>
-                    <option value="{imdbId}">IMDB ID</option>
-                    <option value="{season}">Season</option>
-                    <option value="{episode}">Episode</option>
-                    <option value="{type}">Type</option>
-                    <option value="{lang}">Lang</option>
-                  </select>
-                  <input
-                    value={segment}
-                    onChange={(e) => updateTemplateSegment(mode, index, e.target.value)}
-                    className="bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-xs font-mono"
-                    dir="ltr"
-                    placeholder="movie أو {tmdbId}"
-                  />
-                  <button
-                    onClick={() => removeTemplateSegment(mode, index)}
-                    className="h-8 w-8 rounded-lg bg-red-500/10 border border-red-500/30 text-red-300 flex items-center justify-center"
-                    title="حذف الجزء"
-                  >
-                    <Minus size={12} />
-                  </button>
-                </div>
-              ))}
-            </div>
+          <div className="flex items-center gap-1">
             <button
-              onClick={() => addTemplateSegment(mode)}
-              className="px-3 py-1.5 rounded-lg bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-[11px] font-bold flex items-center gap-1"
+              onClick={() => applySuggestedTemplate(mode)}
+              className="px-2 py-1 rounded-md text-[11px] font-bold border bg-cyan-500/15 text-cyan-300 border-cyan-500/30"
             >
-              <Plus size={12} />
-              إضافة جزء للرابط
+              قالب مقترح
+            </button>
+            <button
+              onClick={() => setTemplateValue(mode, '')}
+              className="px-2 py-1 rounded-md text-[11px] font-bold border bg-red-500/10 text-red-300 border-red-500/30"
+            >
+              مسح
             </button>
           </div>
-        )}
+        </div>
+        <input
+          value={templateValue}
+          onChange={(e) => setTemplateValue(mode, e.target.value)}
+          className="bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-xs w-full font-mono"
+          dir="ltr"
+          placeholder={mode === 'movie' ? 'https://.../{tmdbId}' : 'https://.../{tmdbId}/{season}/{episode}'}
+        />
+        <div className="flex flex-wrap gap-1.5">
+          {TEMPLATE_TOKENS.map((token) => (
+            <button
+              key={`${mode}-${token}`}
+              onClick={() => appendTemplateToken(mode, token)}
+              className="px-2 py-1 rounded-md text-[10px] font-bold border bg-zinc-800/80 border-zinc-700 text-zinc-200 hover:border-primary/40"
+            >
+              + {TEMPLATE_TOKEN_LABELS[token]}
+            </button>
+          ))}
+        </div>
+        <div className="rounded-lg border border-white/10 bg-black/30 px-2 py-1.5">
+          <div className="text-[10px] text-zinc-500 mb-1">معاينة الرابط الناتج</div>
+          {preview ? (
+            <div className="font-mono text-[11px] text-zinc-300 break-all" dir="ltr">{preview}</div>
+          ) : (
+            <div className="text-[11px] text-zinc-500">أدخل قالبًا صالحًا لعرض المعاينة</div>
+          )}
+          {!!preview && (
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(preview)
+                toast.success('تم نسخ رابط المعاينة')
+              }}
+              className="mt-2 px-2 py-1 rounded-md text-[10px] font-bold border bg-white/10 border-white/20 text-zinc-200"
+            >
+              نسخ المعاينة
+            </button>
+          )}
+        </div>
       </div>
     )
   }
@@ -772,12 +777,9 @@ export const ServerTester = () => {
                 <div 
                   key={server.id}
                   onClick={() => {
-                    window.setTimeout(() => {
-                      setActiveServerId(server.id)
-                      setActiveUrl(server.url)
-                    }, 0)
+                    setActiveServerId(server.id)
+                    setActiveUrl(server.url)
                   }}
-                  onMouseDown={(e) => e.preventDefault()}
                   className={clsx(
                     "p-2.5 rounded-xl border cursor-pointer transition-all group relative",
                     activeServerId === server.id
@@ -789,15 +791,16 @@ export const ServerTester = () => {
                     <div className="flex items-center gap-2">
                       <select
                         value={index + 1}
+                        onMouseDown={(e) => e.stopPropagation()}
                         onClick={(e) => e.stopPropagation()}
                         onChange={(e) => {
                           e.stopPropagation()
                           moveServerToPosition(server.id, Number(e.target.value))
                         }}
-                        className="text-[10px] h-6 w-12 rounded-md bg-primary/20 text-primary font-black border border-primary/40 px-1"
+                        className="text-[10px] h-6 w-12 rounded-md bg-zinc-700 text-white font-black border border-zinc-500 px-1"
                       >
                         {sortedVisibleResults.map((_, i) => (
-                          <option key={`${server.id}-pos-${i + 1}`} value={i + 1}>{i + 1}</option>
+                          <option key={`${server.id}-pos-${i + 1}`} value={i + 1} className="bg-zinc-700 text-white font-black">{i + 1}</option>
                         ))}
                       </select>
                       <span className={clsx("font-black text-[10px] px-1.5 py-0.5 rounded border", activeServerId === server.id ? "text-primary border-primary/40 bg-primary/10" : "text-zinc-300 border-white/10")}>
@@ -924,30 +927,11 @@ export const ServerTester = () => {
                         placeholder="server_id"
                         dir="ltr"
                       />
-                      <input
-                        value={selectedPattern.base}
-                        onChange={(e) => updateServerPattern(selectedPattern.id, { base: e.target.value })}
-                        className="bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-xs md:col-span-2 font-mono"
-                        placeholder="Base URL"
-                        dir="ltr"
-                      />
                       <div className="md:col-span-2">{renderTemplateBuilder('movie', 'منطق رابط الفيلم')}</div>
                       <div className="md:col-span-2">{renderTemplateBuilder('tv', 'منطق رابط المسلسل')}</div>
                       <label className="flex items-center gap-1.5 text-[11px] bg-white/5 border border-white/10 rounded-lg px-2 py-1.5">
                         <input type="checkbox" checked={selectedPattern.is_active} onChange={(e) => updateServerPattern(selectedPattern.id, { is_active: e.target.checked })} />
                         مفعل
-                      </label>
-                      <label className="flex items-center gap-1.5 text-[11px] bg-white/5 border border-white/10 rounded-lg px-2 py-1.5">
-                        <input type="checkbox" checked={selectedPattern.is_download} onChange={(e) => updateServerPattern(selectedPattern.id, { is_download: e.target.checked })} />
-                        تحميل
-                      </label>
-                      <label className="flex items-center gap-1.5 text-[11px] bg-white/5 border border-white/10 rounded-lg px-2 py-1.5">
-                        <input type="checkbox" checked={selectedPattern.supports_movie} onChange={(e) => updateServerPattern(selectedPattern.id, { supports_movie: e.target.checked })} />
-                        أفلام
-                      </label>
-                      <label className="flex items-center gap-1.5 text-[11px] bg-white/5 border border-white/10 rounded-lg px-2 py-1.5">
-                        <input type="checkbox" checked={selectedPattern.supports_tv} onChange={(e) => updateServerPattern(selectedPattern.id, { supports_tv: e.target.checked })} />
-                        مسلسلات
                       </label>
                     </div>
                   )}
