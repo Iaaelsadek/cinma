@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { toast } from 'sonner'
@@ -54,7 +54,13 @@ async function getAdminRequestHeaders() {
 const AdminUsersPage = () => {
   const { user, profile, loading: authLoading, refreshProfile } = useAuth()
   const [search, setSearch] = useState('')
-  const q = useQuery({ queryKey: ['profiles', search], queryFn: () => getProfiles(search) })
+  const [profileWaitExceeded, setProfileWaitExceeded] = useState(false)
+  const q = useQuery({
+    queryKey: ['profiles', search],
+    queryFn: () => getProfiles(search),
+    retry: 1,
+    refetchOnWindowFocus: false
+  })
 
   useEffect(() => {
     if (user && !profile) {
@@ -62,8 +68,30 @@ const AdminUsersPage = () => {
     }
   }, [user, profile, refreshProfile])
 
-  if (authLoading || (user && !profile)) {
+  useEffect(() => {
+    if (!(user && !profile)) {
+      setProfileWaitExceeded(false)
+      return
+    }
+    const timer = setTimeout(() => setProfileWaitExceeded(true), 6000)
+    return () => clearTimeout(timer)
+  }, [user, profile])
+
+  if (authLoading || (user && !profile && !profileWaitExceeded)) {
     return <div className="p-8 text-center text-zinc-500">جاري التحقق من الصلاحيات...</div>
+  }
+  if (user && !profile && profileWaitExceeded) {
+    return (
+      <div className="p-8 text-center text-zinc-400 space-y-3">
+        <div>تعذر تحميل صلاحيات الحساب حالياً</div>
+        <button
+          onClick={() => refreshProfile().catch(() => {})}
+          className="rounded-md border border-zinc-700 px-3 py-2 text-xs hover:bg-zinc-800"
+        >
+          إعادة المحاولة
+        </button>
+      </div>
+    )
   }
   if (!user) {
     return <Navigate to="/login" replace />
@@ -137,6 +165,14 @@ const AdminUsersPage = () => {
         />
       </div>
       <div className="overflow-x-auto rounded-lg border border-zinc-800">
+        {q.isError && (
+          <div className="p-4 text-xs text-rose-300 flex items-center justify-between bg-rose-500/10 border-b border-rose-500/20">
+            <span>فشل تحميل قائمة المستخدمين</span>
+            <button onClick={() => q.refetch()} className="rounded-md border border-zinc-700 px-2 py-1 hover:bg-zinc-800">
+              إعادة المحاولة
+            </button>
+          </div>
+        )}
         <table className="w-full text-xs">
           <thead className="bg-zinc-900">
             <tr>

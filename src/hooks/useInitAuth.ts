@@ -4,7 +4,6 @@ import { useAuth } from './useAuth'
 
 export function useInitAuth() {
   const refreshProfile = useAuth(s => s.refreshProfile)
-  const setProfile = useAuth(s => s.setProfile)
   const setSession = useAuth(s => s.setSession)
   const loading = useAuth(s => s.loading)
 
@@ -17,6 +16,7 @@ export function useInitAuth() {
         const { data: { session } } = await supabase.auth.getSession()
         if (session && mounted) {
           setSession(session)
+          useAuth.getState().setLoading(false)
           // Profile will be refreshed in the background or via event
         }
         
@@ -60,7 +60,7 @@ export function useInitAuth() {
       mounted = false
       sub.subscription.unsubscribe()
     }
-  }, [refreshProfile, setProfile])
+  }, [refreshProfile, setSession])
 
   return { loading }
 }

@@ -4,6 +4,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { supabase } from '../../lib/supabase'
 import { ShieldCheck, Lock, ArrowRight } from 'lucide-react'
 import { toast } from 'sonner'
+import { PageLoader } from '../../components/common/PageLoader'
 
 const API_BASE = import.meta.env.VITE_API_BASE || ''
 
@@ -42,7 +43,7 @@ export const SetupAdmin = () => {
     }
   }
 
-  if (loading) return null
+  if (loading) return <PageLoader />
 
   if (!user) {
     return (

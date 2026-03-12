@@ -1,6 +1,7 @@
 import React, { lazy } from 'react'
 import { Route, Navigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import { PageLoader } from '../components/common/PageLoader'
 
 const Auth = lazy(() => import('../pages/Auth').then(m => ({ default: m.default })))
 const Profile = lazy(() => import('../pages/user/Profile').then(m => ({ default: m.Profile })))
@@ -9,7 +10,7 @@ const RequestPage = lazy(() => import('../pages/user/Request').then(m => ({ defa
 
 const ProtectedRoute = ({ children }: { children: React.JSX.Element }) => {
   const { user, loading } = useAuth()
-  if (loading) return null
+  if (loading) return <PageLoader />
   if (!user) return <Navigate to="/login" replace />
   return children
 }

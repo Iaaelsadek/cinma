@@ -33,11 +33,13 @@ const adminTokenMinLength = 32;
 const uuidV4LikePattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 // Supabase Admin Client
-const supabaseUrl = process.env.VITE_SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
 const supabase = (supabaseUrl && supabaseServiceKey) 
   ? createClient(supabaseUrl, supabaseServiceKey) 
   : null;
+let warnedLoggingNotConfigured = false;
+let warnedTmdbNotConfigured = false;
 
 let lastSyncAt = null;
 let lastSyncStatus = 'idle';
@@ -299,8 +301,11 @@ app.post('/api/log', regularLimiter, async (req, res) => {
   const { message, severity, category, context, stack, url, user_agent } = req.body;
   
   if (!supabase) {
-    console.error('Supabase not configured for logging');
-    return res.status(500).json({ error: 'Server logging unavailable' });
+    if (!warnedLoggingNotConfigured) {
+      console.warn('Supabase not configured for logging');
+      warnedLoggingNotConfigured = true;
+    }
+    return res.status(204).end();
   }
 
   try {
@@ -764,6 +769,222 @@ app.get('/api/check-link', sensitiveLimiter, async (req, res) => {
   }
 });
 
+app.get('/api/embed-proxy', sensitiveLimiter, async (req, res) => {
+  const rawUrl = String(req.query.url || '').trim();
+  if (!rawUrl) {
+    return res.status(400).send('missing_url');
+  }
+
+  let parsed;
+  try {
+    parsed = new URL(rawUrl);
+  } catch {
+    return res.status(400).send('invalid_url');
+  }
+
+  if (!['http:', 'https:'].includes(parsed.protocol)) {
+    return res.status(400).send('invalid_protocol');
+  }
+  if (isPrivateHost(parsed.hostname)) {
+    return res.status(400).send('blocked_host');
+  }
+
+  const host = parsed.hostname.replace(/^www\./i, '').toLowerCase();
+  const allowedHosts = [
+    'vidrock.net',
+    'vsembed.ru',
+    'vsembed.su',
+    'vidsrc.net',
+    'vidsrc.me',
+    'vidsrc.vip',
+    'vidsrc.io',
+    'vidsrc.xyz',
+    'vidsrc.cc',
+    '2embed.cc',
+    '2embed.skin',
+    'autoembed.co',
+    '111movies.com',
+    '111movies.net',
+    'smashy.stream',
+    'player.smashy.stream'
+  ];
+  const allowed = allowedHosts.some((item) => host === item || host.endsWith(`.${item}`));
+  if (!allowed) {
+    return res.status(403).send('host_not_allowed');
+  }
+
+  try {
+    const response = await axios.get(parsed.toString(), {
+      timeout: 12000,
+      responseType: 'text',
+      maxRedirects: 4,
+      validateStatus: (status) => status >= 200 && status < 400,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
+        Accept: 'text/html,application/xhtml+xml'
+      }
+    });
+    const upstreamType = String(response.headers['content-type'] || '');
+    const contentType = upstreamType.includes('text/html') ? upstreamType : 'text/html; charset=utf-8';
+    let body = response.data;
+    if (contentType.includes('text/html')) {
+      const html = String(response.data || '');
+      const origin = `${parsed.protocol}//${parsed.host}`;
+      const isPopupProneHost = host === '2embed.cc' || host.endsWith('.2embed.cc');
+      const hasBase = /<base\s+/i.test(html);
+      let rewritten = html;
+      if (hasBase) {
+        rewritten = rewritten.replace(/(<base\s+href=["'])([^"']*)(["'])/i, `$1${parsed.toString()}$3`);
+      } else if (/<head[^>]*>/i.test(rewritten)) {
+        rewritten = rewritten.replace(/<head[^>]*>/i, (match) => `${match}<base href="${parsed.toString()}">`);
+      } else {
+        rewritten = `<base href="${parsed.toString()}">${rewritten}`;
+      }
+      if (isPopupProneHost) {
+        rewritten = rewritten.replace(
+          /<head[^>]*>/i,
+          (match) => `${match}<script>(function(){try{window.open=function(){return null};document.addEventListener('click',function(e){var a=e.target&&e.target.closest?e.target.closest('a[target=\"_blank\"],a[rel*=\"noopener\"],a[rel*=\"noreferrer\"]'):null;if(a){e.preventDefault();e.stopPropagation();}} ,true);}catch(_){}})();</script>`
+        );
+      }
+      rewritten = rewritten
+        .replace(/<meta[^>]+http-equiv=["']Content-Security-Policy["'][^>]*>/gi, '')
+        .replace(/((?:src|href|poster|action)=["'])\/(?!\/)/gi, `$1${origin}/`)
+        .replace(/url\((["']?)\/(?!\/)/gi, `url($1${origin}/`);
+      body = rewritten;
+    }
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Content-Security-Policy', "default-src * data: blob: 'unsafe-inline' 'unsafe-eval'; script-src * data: blob: 'unsafe-inline' 'unsafe-eval'; style-src * data: blob: 'unsafe-inline'; img-src * data: blob:; media-src * data: blob:; connect-src * data: blob: ws: wss:; frame-src * data: blob:;");
+    res.removeHeader('X-Frame-Options');
+    return res.status(200).send(body);
+  } catch {
+    return res.redirect(parsed.toString());
+  }
+});
+
+app.get('/api/admin/backup/export', async (req, res) => {
+  const isAdmin = await ensureAdmin(req, res);
+  if (isAdmin !== true) return;
+  if (!supabase) return res.status(500).json({ error: 'Supabase not configured' });
+
+  const allowedTables = [
+    'movies',
+    'tv_series',
+    'seasons',
+    'episodes',
+    'profiles',
+    'ads',
+    'settings',
+    'history',
+    'watchlist',
+    'continue_watching',
+    'server_provider_configs',
+    'link_checks'
+  ];
+
+  const requested = String(req.query.tables || '')
+    .split(',')
+    .map((v) => v.trim())
+    .filter(Boolean);
+
+  const tables = requested.length > 0
+    ? requested.filter((t) => allowedTables.includes(t))
+    : allowedTables;
+
+  try {
+    const backup = {};
+    for (const table of tables) {
+      const { data, error } = await supabase.from(table).select('*');
+      if (error) throw new Error(`${table}: ${error.message}`);
+      backup[table] = data || [];
+    }
+    return res.json({
+      exportedAt: new Date().toISOString(),
+      tableCount: tables.length,
+      tables,
+      data: backup
+    });
+  } catch (err) {
+    return res.status(500).json({ error: err.message || 'backup_export_failed' });
+  }
+});
+
+app.post('/api/admin/backup/import', async (req, res) => {
+  const isAdmin = await ensureAdmin(req, res);
+  if (isAdmin !== true) return;
+  if (!supabase) return res.status(500).json({ error: 'Supabase not configured' });
+
+  const payload = req.body || {};
+  const mode = payload.mode === 'replace' ? 'replace' : 'upsert';
+  const inputData = payload.data && typeof payload.data === 'object' ? payload.data : {};
+  const allowedTables = new Set([
+    'movies',
+    'tv_series',
+    'seasons',
+    'episodes',
+    'profiles',
+    'ads',
+    'settings',
+    'history',
+    'watchlist',
+    'continue_watching',
+    'server_provider_configs',
+    'link_checks'
+  ]);
+  const onConflictByTable = {
+    movies: 'id',
+    tv_series: 'id',
+    seasons: 'id',
+    episodes: 'id',
+    profiles: 'id',
+    ads: 'id',
+    settings: 'key',
+    history: 'id',
+    watchlist: 'id',
+    continue_watching: 'id',
+    server_provider_configs: 'id',
+    link_checks: 'id'
+  };
+
+  try {
+    const imported = {};
+    for (const [table, rows] of Object.entries(inputData)) {
+      if (!allowedTables.has(table)) continue;
+      if (!Array.isArray(rows) || rows.length === 0) {
+        imported[table] = 0;
+        continue;
+      }
+
+      if (mode === 'replace') {
+        const { error: delErr } = await supabase.from(table).delete().not('id', 'is', null);
+        if (delErr && table !== 'settings') throw new Error(`${table}: ${delErr.message}`);
+        if (table === 'settings' && delErr) {
+          const { error: delKeyErr } = await supabase.from(table).delete().not('key', 'is', null);
+          if (delKeyErr) throw new Error(`${table}: ${delKeyErr.message}`);
+        }
+      }
+
+      const onConflict = onConflictByTable[table];
+      if (onConflict) {
+        const { error } = await supabase.from(table).upsert(rows, { onConflict });
+        if (error) throw new Error(`${table}: ${error.message}`);
+        imported[table] = rows.length;
+      } else {
+        const { error } = await supabase.from(table).insert(rows);
+        if (error) throw new Error(`${table}: ${error.message}`);
+        imported[table] = rows.length;
+      }
+    }
+    return res.json({
+      success: true,
+      mode,
+      imported
+    });
+  } catch (err) {
+    return res.status(500).json({ error: err.message || 'backup_import_failed' });
+  }
+});
+
 // --- HOME & CONTINUE-WATCHING AGGREGATION ENDPOINTS ---
 
 // Simple in-memory cache for hot aggregation endpoints
@@ -784,7 +1005,7 @@ function setCache(key, value, ttlMs) {
 }
 
 async function tmdbGet(path, params = {}) {
-  const apiKey = process.env.TMDB_API_KEY;
+  const apiKey = process.env.TMDB_API_KEY || process.env.VITE_TMDB_API_KEY;
   if (!apiKey) {
     throw new Error('TMDB_API_KEY not configured on server');
   }
@@ -810,11 +1031,14 @@ app.get('/api/home', regularLimiter, async (req, res) => {
       return res.json(cached);
     }
 
-    const [trending, popularMovies, topRatedMovies] = await Promise.all([
-      tmdbGet('trending/movie/week', { language: lang }),
-      tmdbGet('movie/popular', { language: lang, page: 1 }),
-      tmdbGet('movie/top_rated', { language: lang, page: 1 }),
-    ]);
+    const hasTmdb = Boolean(process.env.TMDB_API_KEY || process.env.VITE_TMDB_API_KEY);
+    const [trending, popularMovies, topRatedMovies] = hasTmdb
+      ? await Promise.all([
+          tmdbGet('trending/movie/week', { language: lang }),
+          tmdbGet('movie/popular', { language: lang, page: 1 }),
+          tmdbGet('movie/top_rated', { language: lang, page: 1 }),
+        ])
+      : [{ results: [] }, { results: [] }, { results: [] }];
 
     let mvTrending = null;
     if (supabase) {
@@ -844,6 +1068,22 @@ app.get('/api/home', regularLimiter, async (req, res) => {
     setCache(cacheKey, payload, 90 * 1000);
     res.json(payload);
   } catch (error) {
+    if (String(error?.message || '').includes('TMDB_API_KEY not configured on server')) {
+      if (!warnedTmdbNotConfigured) {
+        console.warn('/api/home warning: TMDB_API_KEY not configured on server');
+        warnedTmdbNotConfigured = true;
+      }
+      return res.json({
+        tmdb: {
+          trending: { results: [] },
+          popularMovies: { results: [] },
+          topRatedMovies: { results: [] },
+        },
+        supabase: {
+          mvTrending: null,
+        },
+      });
+    }
     console.error('/api/home error:', error?.message || error);
     res.status(502).json({ error: 'home_aggregation_failed' });
   }

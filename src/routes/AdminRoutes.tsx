@@ -16,54 +16,83 @@ const AdminSettingsPage = lazy(() => import('../pages/admin/settings').then(m =>
 const AdminAdsPage = lazy(() => import('../pages/admin/ads').then(m => ({ default: m.default })))
 const AdminBackupPage = lazy(() => import('../pages/admin/backup').then(m => ({ default: m.default })))
 const AdminSystemControl = lazy(() => import('../pages/admin/system').then(m => ({ default: m.default })))
-const AddMovie = lazy(() => import('../pages/admin/AddMovie').then(m => ({ default: m.AddMovie })))
 const MoviesManage = lazy(() => import('../pages/admin/MoviesManage').then(m => ({ default: m.MoviesManage })))
 const ContentHealth = lazy(() => import('../pages/admin/ContentHealth').then(m => ({ default: m.ContentHealth })))
 const ServerTester = lazy(() => import('../pages/admin/ServerTester').then(m => ({ default: m.ServerTester })))
 
+const withTimeout = async <T,>(promise: Promise<T>, ms: number) => {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error('timeout')), ms)
+  })
+  try {
+    return await Promise.race([promise, timeoutPromise])
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId)
+  }
+}
+
 const ProtectedAdmin = ({ children }: { children: React.JSX.Element }) => {
-  const { user, loading } = useAuth()
+  const { user, profile, loading } = useAuth()
   const [allowed, setAllowed] = useState<boolean | null>(null)
   useEffect(() => {
     let cancelled = false
+    setAllowed(null)
     ;(async () => {
       if (loading) return
       if (!user) {
         setAllowed(false)
         return
       }
-      const p = await getProfile(user.id)
-      if (cancelled) return
-      setAllowed(p?.role === 'admin' || p?.role === 'supervisor')
+      if (profile) {
+        setAllowed(profile.role === 'admin' || profile.role === 'supervisor')
+        return
+      }
+      try {
+        const p = await withTimeout(getProfile(user.id), 4000)
+        if (cancelled) return
+        setAllowed(p?.role === 'admin' || p?.role === 'supervisor')
+      } catch {
+        if (!cancelled) setAllowed(false)
+      }
     })()
     return () => {
       cancelled = true
     }
-  }, [user, loading])
+  }, [user, profile, loading])
   if (loading || allowed === null) return <PageLoader />
   if (!allowed) return <Navigate to="/" replace />
   return children
 }
 
 const ProtectedSuperAdmin = ({ children }: { children: React.JSX.Element }) => {
-  const { user, loading } = useAuth()
+  const { user, profile, loading } = useAuth()
   const [allowed, setAllowed] = useState<boolean | null>(null)
   useEffect(() => {
     let cancelled = false
+    setAllowed(null)
     ;(async () => {
       if (loading) return
       if (!user) {
         setAllowed(false)
         return
       }
-      const p = await getProfile(user.id)
-      if (cancelled) return
-      setAllowed(p?.role === 'admin')
+      if (profile) {
+        setAllowed(profile.role === 'admin')
+        return
+      }
+      try {
+        const p = await withTimeout(getProfile(user.id), 4000)
+        if (cancelled) return
+        setAllowed(p?.role === 'admin')
+      } catch {
+        if (!cancelled) setAllowed(false)
+      }
     })()
     return () => {
       cancelled = true
     }
-  }, [user, loading])
+  }, [user, profile, loading])
   if (loading || allowed === null) return <PageLoader />
   if (!allowed) return <Navigate to="/admin/dashboard" replace />
   return children
@@ -74,7 +103,7 @@ export const AdminRoutes = () => (
     <Route path="/admin/setup" element={<SetupAdmin />} />
     <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
     <Route path="/admin/login" element={<AdminLogin />} />
-    <Route path="/server-tester" element={<ServerTester />} />
+    <Route path="/server-tester" element={<Navigate to="/admin/servers" replace />} />
 
     <Route
       path="/admin/*"
@@ -90,8 +119,9 @@ export const AdminRoutes = () => (
       <Route path="series/:id" element={<SeriesManage />} />
       <Route path="series/:id/season/:seasonId" element={<SeasonManage />} />
       <Route path="movies" element={<MoviesManage />} />
-      <Route path="add-movie" element={<AddMovie />} />
+      <Route path="add-movie" element={<Navigate to="/admin/movies" replace />} />
       <Route path="content-health" element={<ContentHealth />} />
+      <Route path="servers" element={<ServerTester />} />
       <Route
         path="users"
         element={
@@ -118,6 +148,14 @@ export const AdminRoutes = () => (
       />
       <Route
         path="backup"
+        element={
+          <ProtectedSuperAdmin>
+            <AdminBackupPage />
+          </ProtectedSuperAdmin>
+        }
+      />
+      <Route
+        path="backups"
         element={
           <ProtectedSuperAdmin>
             <AdminBackupPage />

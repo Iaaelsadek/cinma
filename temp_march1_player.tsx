@@ -6,7 +6,6 @@ import { clsx } from 'clsx'
 
 type Props = {
   server: Server | undefined
-  serverIndex?: number
   cinemaMode: boolean
   toggleCinemaMode: () => void
   loading: boolean
@@ -19,10 +18,9 @@ type Props = {
   onPause?: () => void
   playing?: boolean
   seekTo?: number
-  lang?: 'ar' | 'en'
 }
 
-export const EmbedPlayer = ({ server, serverIndex = 0, cinemaMode, toggleCinemaMode, loading, onNextServer, onReport, reporting, title, onProgress, onPlay, onPause, playing, seekTo, lang = 'ar' }: Props) => {
+export const EmbedPlayer = ({ server, cinemaMode, toggleCinemaMode, loading, onNextServer, onReport, reporting, title, onProgress, onPlay, onPause, playing, seekTo }: Props) => {
   const [isIframeLoading, setIsIframeLoading] = useState(true)
   const [retryCount, setRetryCount] = useState(0)
   const [isSlowConnection, setIsSlowConnection] = useState(false)
@@ -68,13 +66,6 @@ export const EmbedPlayer = ({ server, serverIndex = 0, cinemaMode, toggleCinemaM
     setIsIframeLoading(true)
     setRetryCount(0)
   }, [server?.url])
-
-  const iframeUrl = (() => {
-    if (!server?.url) return ''
-    const directOnlyByIndex = serverIndex === 3 || serverIndex === 9
-    if (directOnlyByIndex) return server.url
-    return `/api/embed-proxy?url=${encodeURIComponent(server.url)}`
-  })()
 
   if (loading) {
     return (
@@ -175,8 +166,8 @@ export const EmbedPlayer = ({ server, serverIndex = 0, cinemaMode, toggleCinemaM
         <div className="h-full w-full relative">
           {server ? (
             <iframe
-              key={`${iframeUrl}-${retryCount}`}
-              src={iframeUrl}
+              key={`${server.url}-${retryCount}`}
+              src={server.url}
               className={clsx(
                 "h-full w-full bg-black transition-opacity duration-1000",
                 isIframeLoading ? "opacity-0" : "opacity-100"
@@ -184,6 +175,7 @@ export const EmbedPlayer = ({ server, serverIndex = 0, cinemaMode, toggleCinemaM
               allowFullScreen
               scrolling="no"
               onLoad={handleIframeLoad}
+              referrerPolicy="origin"
               style={{ border: 'none', overflow: 'hidden' }}
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
               title={`Stream ${server.name}`}

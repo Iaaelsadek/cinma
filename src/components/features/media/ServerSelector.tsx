@@ -13,11 +13,13 @@ type Props = {
 export const ServerSelector = ({ servers, active, onSelect, lang = 'ar' }: Props) => {
   const t = (ar: string, en: string) => (lang === 'ar' ? ar : en)
 
-  const getShortName = (name: string, idx: number) => {
-    if (name.toLowerCase().includes('vidsrc')) return `V${idx + 1}`
-    if (name.toLowerCase().includes('embed')) return `E${idx + 1}`
-    if (name.toLowerCase().includes('vidlink')) return `L${idx + 1}`
-    return name.substring(0, 2).toUpperCase()
+  const handleSelect = (idx: number) => {
+    if (idx === active) return
+    window.setTimeout(() => onSelect(idx), 0)
+  }
+
+  const getShortName = (_name: string, idx: number) => {
+    return `V${idx + 1}`
   }
 
   const getIcon = (name: string, idx: number, status?: Server['status']) => {
@@ -60,7 +62,8 @@ export const ServerSelector = ({ servers, active, onSelect, lang = 'ar' }: Props
                 key={`${s.name}-${idx}`}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                onClick={() => onSelect(idx)}
+                onClick={() => handleSelect(idx)}
+                onPointerDown={(e) => e.preventDefault()}
                 className={clsx(
                   "group relative flex items-center justify-center rounded-lg border transition-all duration-300 h-11 w-full overflow-hidden",
                   isActive
