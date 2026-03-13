@@ -63,6 +63,27 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false,
 }));
 
+// CSP tailored for SPA + external APIs + Media Freedom
+app.use((req, res, next) => {
+  const csp = [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https:",
+    "style-src 'self' 'unsafe-inline' https:",
+    "img-src 'self' data: blob: https:",
+    "font-src 'self' data: https:",
+    "media-src * blob: data:", // Freedom for audio/video
+    "connect-src 'self' https: wss: http:", // Allow http for radio mixed content if browser permits
+    "frame-src * data:", // Freedom for iframes
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'self'",
+    "upgrade-insecure-requests",
+  ].join('; ');
+  res.setHeader('Content-Security-Policy', csp);
+  next();
+});
+
 function isPrivateHost(hostname) {
   if (!hostname) return true;
   const host = hostname.toLowerCase();
@@ -833,6 +854,8 @@ app.get('/api/embed-proxy', sensitiveLimiter, async (req, res) => {
     }
     res.setHeader('Content-Type', contentType);
     res.setHeader('Cache-Control', 'no-store');
+    // Ensure proxy allows absolutely everything for embedded content
+    res.setHeader('Content-Security-Policy', "default-src * data: blob: 'unsafe-inline' 'unsafe-eval'; script-src * data: blob: 'unsafe-inline' 'unsafe-eval'; style-src * data: blob: 'unsafe-inline'; img-src * data: blob:; media-src * data: blob:; connect-src * data: blob: ws: wss:; frame-src * data: blob:;");
     res.removeHeader('X-Frame-Options');
     return res.status(200).send(body);
   } catch {
