@@ -7,95 +7,37 @@ interface ReciterHeaderProps {
   reciter: QuranReciter
 }
 
-export const ReciterHeader = ({ reciter }: ReciterHeaderProps) => {
-  const { lang } = useLang()
-  
+export const ReciterHeader = ({ reciter }: { reciter: QuranReciter }) => {
+  // Helper to clean reciter name
+  const cleanName = (name: string) => {
+    return name.replace(/\s*\[.*?\]\s*/g, '').trim()
+  }
+
   return (
-    <motion.div 
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="relative shrink-0 mb-3 rounded-3xl overflow-hidden bg-amber-950/20 border border-amber-500/10 shadow-[0_20px_50px_rgba(0,0,0,0.3)] h-[8vh] min-h-[64px] group"
-    >
-      {/* Background with Islamic Pattern & Blur */}
-      <div className="absolute inset-0 z-0">
-        <ReciterImage 
-          src={reciter.image} 
-          alt={reciter.name} 
-          className="w-full h-full object-cover opacity-20 blur-md scale-110 group-hover:scale-100 transition-transform duration-1000"
-          id={reciter.id}
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-amber-950 via-amber-950/60 to-transparent" />
-        <div className="absolute inset-0 opacity-10 mix-blend-overlay" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 0l10 10v10l-10 10-10-10V10z' fill='%23f59e0b' fill-opacity='0.2'/%3E%3C/svg%3E")` }} />
-      </div>
-
-      <div className="relative z-10 h-full flex items-end p-2">
-        <div className="flex items-center gap-3 w-full">
-          <motion.div 
-            whileHover={{ rotate: 5, scale: 1.05 }}
-            className="w-10 h-10 md:w-11 md:h-11 rounded-2xl overflow-hidden border-2 border-amber-500/30 shadow-2xl shrink-0 bg-amber-900/20 relative group-hover:border-amber-500/60 transition-colors duration-500"
-          >
-            <ReciterImage 
-              src={reciter.image} 
-              alt={reciter.name} 
-              className="w-full h-full object-cover"
-              id={reciter.id}
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-amber-900/40 to-transparent" />
-          </motion.div>
-          
-          <div className="flex-1 flex flex-col justify-center h-full">
-            <div className="flex items-center gap-2 mb-0.5">
-              <motion.h1 
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.3 }}
-                className="text-sm md:text-base font-bold text-white drop-shadow-2xl font-amiri tracking-tight"
-              >
-                {reciter.name}
-              </motion.h1>
-
-              <motion.div 
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.2 }}
-                className="flex items-center gap-1.5"
-              >
-                <span className="px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 text-[8px] font-bold uppercase tracking-widest border border-amber-500/20 backdrop-blur-md whitespace-nowrap">
-                  {reciter.rewaya || (lang === 'ar' ? 'رواية حفص' : 'Hafs')}
-                </span>
-                {reciter.featured && (
-                  <div className="flex items-center gap-1 text-yellow-500/80 text-[8px] font-bold whitespace-nowrap">
-                    {lang === 'ar' ? 'معتمد' : 'Verified'}
-                  </div>
-                )}
-              </motion.div>
-            </div>
-            
-            <motion.p 
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.4 }}
-              className="text-amber-200/60 text-[9px] md:text-[10px] font-amiri italic leading-none"
-            >
-              {lang === 'ar' 
-                ? 'تلاوة عطرة خاشعة بجودة صوتية فائقة' 
-                : 'Fragrant and humble recitation'}
-            </motion.p>
-          </div>
-          
-          {/* Visualizer Decoration */}
-          <div className="hidden lg:flex items-end gap-1 h-8">
-            {[...Array(8)].map((_, i) => (
-              <motion.div
-                key={i}
-                className="w-1 bg-amber-500/30 rounded-full"
-                animate={{ height: [10, 40, 20, 35, 15] }}
-                transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.1 }}
-              />
-            ))}
+    <div className="relative overflow-hidden rounded-2xl bg-[#0a0a0a] border border-amber-900/20 p-6 mb-6 shrink-0">
+      {/* Background Ambience */}
+      <div className="absolute inset-0 bg-gradient-to-r from-amber-900/10 via-transparent to-transparent opacity-50" />
+      <div className="absolute -right-20 -top-20 w-64 h-64 bg-amber-600/5 rounded-full blur-3xl" />
+      
+      <div className="relative z-10 flex items-center gap-6">
+        {/* Reciter Image (if available) or Initial */}
+        <div className="w-20 h-20 rounded-full border-2 border-amber-500/30 overflow-hidden bg-[#151515] flex items-center justify-center shrink-0 shadow-lg shadow-amber-900/10">
+          <span className="text-2xl font-bold text-amber-500 font-amiri">{reciter.letter}</span>
+        </div>
+        
+        <div>
+          <h2 className="text-2xl md:text-3xl font-bold text-white font-amiri mb-1 drop-shadow-sm">
+            {cleanName(reciter.name)}
+          </h2>
+          <div className="flex items-center gap-3 text-sm text-zinc-400">
+            <span className="bg-amber-900/20 text-amber-500 px-2 py-0.5 rounded text-xs border border-amber-900/30">
+              {reciter.rewaya}
+            </span>
+            <span>•</span>
+            <span>{reciter.count} سورة</span>
           </div>
         </div>
       </div>
-    </motion.div>
+    </div>
   )
 }

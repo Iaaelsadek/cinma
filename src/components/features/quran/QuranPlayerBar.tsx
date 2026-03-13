@@ -134,6 +134,27 @@ export const QuranPlayerBar = () => {
     return NATURE_IMAGES[idNum % NATURE_IMAGES.length]
   }
 
+  // Ensure store actions are used correctly
+  const handleToggle = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    toggle()
+  }
+
+  const handleStop = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    stop()
+  }
+
+  const handleSkipNextClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    handleSkipNext()
+  }
+
+  const handleSkipPrevClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    handleSkipPrev()
+  }
+
   return (
     <AnimatePresence>
       {isVisible && (
@@ -154,21 +175,30 @@ export const QuranPlayerBar = () => {
               className="absolute top-0 left-0 right-0 h-1 bg-white/10 cursor-pointer group/progress"
               onClick={(e) => {
                 const rect = e.currentTarget.getBoundingClientRect()
-                const percent = (e.clientX - rect.left) / rect.width
+                // RTL-aware calculation:
+                // If lang is 'ar' (dir="rtl"), progress from right to left
+                const percent = lang === 'ar' 
+                  ? (rect.right - e.clientX) / rect.width
+                  : (e.clientX - rect.left) / rect.width
                 seek(percent * duration)
               }}
             >
               <div 
                 className="h-full bg-lumen-gold relative"
-                style={{ width: `${(currentTime / duration) * 100}%` }}
+                style={{ 
+                  width: `${(currentTime / duration) * 100}%`,
+                  // In RTL mode, the bar should grow from the right
+                  marginLeft: lang === 'ar' ? 'auto' : undefined,
+                  marginRight: lang === 'ar' ? undefined : 'auto'
+                }}
               >
-                <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow-lg opacity-0 group-hover/progress:opacity-100 transition-opacity" />
+                <div className={`absolute ${lang === 'ar' ? 'left-0' : 'right-0'} top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow-lg opacity-0 group-hover/progress:opacity-100 transition-opacity`} />
               </div>
             </div>
 
             {/* Close Button */}
             <button 
-              onClick={stop}
+              onClick={handleStop}
               className="absolute -top-3 -right-3 bg-red-500/80 hover:bg-red-600 text-white rounded-full p-1 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-20"
             >
               <X size={14} />
@@ -212,18 +242,18 @@ export const QuranPlayerBar = () => {
 
             {/* Controls */}
             <div className="flex items-center gap-2 sm:gap-4">
-              <button onClick={handleSkipPrev} className="p-2 text-white/60 hover:text-white transition-colors">
+              <button onClick={handleSkipPrevClick} className="p-2 text-white/60 hover:text-white transition-colors">
                 <SkipForward size={20} className={lang === 'ar' ? '' : 'rotate-180'} />
               </button>
               
               <button 
-                onClick={toggle}
+                onClick={handleToggle}
                 className="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-lg shadow-white/10"
               >
                 {isPlaying ? <Pause size={20} fill="currentColor" /> : <Play size={20} fill="currentColor" className="ml-0.5" />}
               </button>
 
-              <button onClick={handleSkipNext} className="p-2 text-white/60 hover:text-white transition-colors">
+              <button onClick={handleSkipNextClick} className="p-2 text-white/60 hover:text-white transition-colors">
                 <SkipBack size={20} className={lang === 'ar' ? '' : 'rotate-180'} />
               </button>
             </div>

@@ -15,6 +15,8 @@ export type QuranReciter = {
   surah_list?: string | null
   featured?: boolean
   category?: string
+  letter: string
+  count: number
 }
 
 interface ReciterListProps {
@@ -28,6 +30,11 @@ export const ReciterList = ({ reciters, selectedReciter, onSelect, isLoading }: 
   const { lang } = useLang()
   const [searchQuery, setSearchQuery] = useState('')
   const [showFeaturedOnly, setShowFeaturedOnly] = useState(false)
+
+  // Helper to clean reciter name
+  const cleanName = (name: string) => {
+    return name.replace(/\s*\[.*?\]\s*/g, '').trim()
+  }
 
   const filteredReciters = reciters.filter(r => {
     if (showFeaturedOnly && !r.featured) return false
@@ -106,7 +113,7 @@ export const ReciterList = ({ reciters, selectedReciter, onSelect, isLoading }: 
                 
                 <div className="flex-1 text-left overflow-hidden">
                   <h3 className={`font-bold font-amiri truncate text-sm ${selectedReciter?.id === reciter.id ? 'text-amber-400' : 'text-amber-100/70 group-hover:text-white'}`}>
-                    {reciter.name}
+                    {cleanName(reciter.name)}
                   </h3>
                   <p className={`text-[10px] font-sans truncate transition-colors ${selectedReciter?.id === reciter.id ? 'text-amber-500/60' : 'text-amber-900'}`}>
                     {reciter.rewaya || (lang === 'ar' ? 'رواية حفص عن عاصم' : 'Hafs an Asim')}
