@@ -63,27 +63,6 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false,
 }));
 
-// Strong CSP tailored for SPA + external APIs
-app.use((req, res, next) => {
-  const csp = [
-    "default-src 'self'",
-    "script-src 'self'",
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-    "font-src 'self' https://fonts.gstatic.com data:",
-    "img-src 'self' https://image.tmdb.org data: blob: https:",
-    "media-src 'self' https: data:",
-    "connect-src 'self' https: wss:",
-    "frame-src 'self' https:",
-    "object-src 'none'",
-    "base-uri 'self'",
-    "form-action 'self'",
-    "frame-ancestors 'self'",
-    "upgrade-insecure-requests",
-  ].join('; ');
-  res.setHeader('Content-Security-Policy', csp);
-  next();
-});
-
 function isPrivateHost(hostname) {
   if (!hostname) return true;
   const host = hostname.toLowerCase();
@@ -854,7 +833,6 @@ app.get('/api/embed-proxy', sensitiveLimiter, async (req, res) => {
     }
     res.setHeader('Content-Type', contentType);
     res.setHeader('Cache-Control', 'no-store');
-    res.setHeader('Content-Security-Policy', "default-src * data: blob: 'unsafe-inline' 'unsafe-eval'; script-src * data: blob: 'unsafe-inline' 'unsafe-eval'; style-src * data: blob: 'unsafe-inline'; img-src * data: blob:; media-src * data: blob:; connect-src * data: blob: ws: wss:; frame-src * data: blob:;");
     res.removeHeader('X-Frame-Options');
     return res.status(200).send(body);
   } catch {
@@ -1495,11 +1473,9 @@ app.get(/^\/api\/tmdb\/(.*)/, regularLimiter, async (req, res) => {
   }
 });
 
-if (!process.env.VERCEL) {
-  app.listen(port, () => {
-    console.log(`Server running at http://localhost:${port}`);
-  });
-}
+app.listen(port, () => {
+  console.log(`Server running at http://localhost:${port}`);
+});
 
 async function refreshHomeViews() {
   if (!supabase) return;

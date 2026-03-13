@@ -28,18 +28,7 @@ export const useServers = (tmdbId: number, type: 'movie' | 'tv', season?: number
     }
     const loadProviders = async () => {
       setLoading(true)
-      const runtimeHost = typeof window !== 'undefined' ? window.location.hostname.toLowerCase() : ''
-      const isProductionDomain = runtimeHost === 'cinma.online' || runtimeHost.endsWith('.cinma.online')
-      const blockedInProduction = new Set(['autoembed_co', 'vidsrc_xyz', 'vidsrc_net'])
-      const priorityDelta = (providerId: string) => {
-        if (!isProductionDomain) return 0
-        if (providerId === 'vidsrc_vip') return -50
-        if (providerId === '2embed_cc') return -30
-        if (providerId === 'smashystream') return -20
-        if (providerId === '2embed_skin') return -10
-        if (providerId === '111movies') return -5
-        return 0
-      }
+      
       const { data, error } = await supabase
         .from('server_provider_configs')
         .select('*')
@@ -64,7 +53,6 @@ export const useServers = (tmdbId: number, type: 'movie' | 'tv', season?: number
         if (provider.is_active === false) return false
         if (type === 'movie' && provider.supports_movie === false) return false
         if (type === 'tv' && provider.supports_tv === false) return false
-        if (isProductionDomain && blockedInProduction.has(provider.id)) return false
         return true
       })
       const rankedProviders = filtered
@@ -72,7 +60,7 @@ export const useServers = (tmdbId: number, type: 'movie' | 'tv', season?: number
           const basePriority = Number.isFinite(Number(provider.priority)) ? Number(provider.priority) : index
           return {
             provider,
-            priority: basePriority + priorityDelta(provider.id)
+            priority: basePriority
           }
         })
         .sort((a, b) => a.priority - b.priority)
