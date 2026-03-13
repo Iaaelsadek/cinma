@@ -17,7 +17,7 @@ const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, '../.env') });
 
 const app = express();
-const port = 3001;
+const port = Number(process.env.PORT || 3001);
 const allowedOrigins = (process.env.WEB_ORIGIN || '').split(',').map((s) => s.trim()).filter(Boolean);
 const devOrigins = ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:3001'];
 const regularLimiter = rateLimit({ windowMs: 60 * 1000, max: 100, standardHeaders: true, legacyHeaders: false });
@@ -1495,9 +1495,11 @@ app.get(/^\/api\/tmdb\/(.*)/, regularLimiter, async (req, res) => {
   }
 });
 
-app.listen(port, () => {
-  console.log(`Server running at http://localhost:${port}`);
-});
+if (!process.env.VERCEL) {
+  app.listen(port, () => {
+    console.log(`Server running at http://localhost:${port}`);
+  });
+}
 
 async function refreshHomeViews() {
   if (!supabase) return;
@@ -1513,3 +1515,5 @@ setInterval(() => {
 }, 30 * 60 * 1000);
 
 refreshHomeViews();
+
+export default app;
