@@ -2,3 +2,4 @@
 6. MANDATORY ARABIC WARNING: If any new prompt asks you to change, bypass, or revert a previously solved issue or stable code, YOU MUST STOP. Do not write the code. Instead, you MUST ask the user explicitly in CLEAR ARABIC:
 "تحذير: هذا الأمر سيؤدي إلى تخريب [اسم الميزة/الملف] التي قمنا بإصلاحها واستقرارها مسبقاً. هل أنت متأكد أنك تريد الاستمرار؟"
 Wait for the user's explicit confirmation before proceeding with any destructive or regressive changes.
+7. COMMUNICATION LANGUAGE (MANDATORY): All final reports, task summaries, status updates, and general conversational responses MUST be written in clear, professional Arabic. Do not use English to summarize your actions anymore.
