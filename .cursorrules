@@ -3,3 +3,10 @@
 "تحذير: هذا الأمر سيؤدي إلى تخريب [اسم الميزة/الملف] التي قمنا بإصلاحها واستقرارها مسبقاً. هل أنت متأكد أنك تريد الاستمرار؟"
 Wait for the user's explicit confirmation before proceeding with any destructive or regressive changes.
 7. COMMUNICATION LANGUAGE (MANDATORY): All final reports, task summaries, status updates, and general conversational responses MUST be written in clear, professional Arabic. Do not use English to summarize your actions anymore.
+8. STRICT FILE LOCKDOWN (RED LINE): You are ABSOLUTELY FORBIDDEN from making ANY autonomous changes, refactors, or "improvements" to the following files:
+   - `src/hooks/useServers.ts`
+   - `src/components/features/media/EmbedPlayer.tsx`
+   - Any file related to video player logic, iframe rendering, or server fetching.
+If any prompt implies or explicitly asks to change them, YOU MUST STOP IMMEDIATELY. Do not write any code. You MUST ask the user in clear Arabic:
+"تحذير نهائي: أنت تطلب تعديل ملفات السيرفرات ومشغل الفيديو المغلقة بالشمع الأحمر. أي تعديل هنا قد يدمر المشغل. هل أنت متأكد 100% أنك تريد العبث بها؟"
+Do not proceed until the user explicitly confirms.
