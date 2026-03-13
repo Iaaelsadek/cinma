@@ -34,6 +34,7 @@ type CriticalHomeData = {
   popularAr: TmdbMedia[]
   arabicSeries: TmdbMedia[]
   kids: TmdbMedia[]
+  bollywood: TmdbMedia[]
 }
 
 type HomeBelowFoldSectionsProps = {
@@ -206,7 +207,7 @@ const HomeBelowFoldSectionsInner = ({ criticalHomeData, topRatedMovies }: HomeBe
       })
       return data
     },
-    enabled: !!CONFIG.TMDB_API_KEY,
+    enabled: !!CONFIG.TMDB_API_KEY && (!criticalHomeData?.bollywood || criticalHomeData.bollywood.length === 0),
     staleTime: 300000,
   })
 
@@ -362,7 +363,7 @@ const HomeBelowFoldSectionsInner = ({ criticalHomeData, topRatedMovies }: HomeBe
           </>
         ) : (
           <QuantumTrain
-            items={sanitizeMediaItems(bollywoodMovies.data?.results)}
+            items={sanitizeMediaItems((criticalHomeData?.bollywood && criticalHomeData.bollywood.length > 0) ? criticalHomeData.bollywood : bollywoodMovies.data?.results)}
             title={lang === 'ar' ? 'أفلام بوليوود' : 'Bollywood Movies'}
             icon={<Film />}
             link="/bollywood"

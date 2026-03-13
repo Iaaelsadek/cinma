@@ -245,7 +245,7 @@ export const Home = () => {
 
   const plays = useCategoryVideos('plays', { limit: 20 })
 
-  const criticalHomeData = useQuery<{ popularAr: TmdbMedia[]; arabicSeries: TmdbMedia[]; kids: TmdbMedia[] }>({
+  const criticalHomeData = useQuery<{ popularAr: TmdbMedia[]; arabicSeries: TmdbMedia[]; kids: TmdbMedia[]; bollywood: TmdbMedia[] }>({
     queryKey: ['home-critical-lcp'],
     queryFn: async () => {
       const mapRows = (rows: HomeViewRow[] | null | undefined): TmdbMedia[] =>
@@ -269,8 +269,64 @@ export const Home = () => {
             Boolean(resolveTitleWithFallback(item))
           )
 
-      const [trendingView, kidsTmdb, arabicSeriesTmdb] = await Promise.all([
+      const mapMovies = (rows: any[] | null | undefined): TmdbMedia[] =>
+        (rows || [])
+          .map((item) => ({
+            id: Number(item.tmdb_id || item.id),
+            title: item.title || undefined,
+            media_type: 'movie' as const,
+            poster_path: item.poster_path || undefined,
+            backdrop_path: item.backdrop_path || undefined,
+            vote_average: item.vote_average || 0,
+            overview: item.overview || undefined,
+            release_date: item.release_date || undefined
+          }))
+          .filter((item) =>
+            Number.isFinite(Number(item.id)) &&
+            Number(item.id) > 0 &&
+            Boolean(item.poster_path && item.poster_path.trim()) &&
+            Boolean(resolveTitleWithFallback(item))
+          )
+
+      const mapSeries = (rows: any[] | null | undefined): TmdbMedia[] =>
+        (rows || [])
+          .map((item) => ({
+            id: Number(item.id),
+            name: item.name || item.title || undefined,
+            media_type: 'tv' as const,
+            poster_path: item.poster_path || undefined,
+            backdrop_path: item.backdrop_path || undefined,
+            vote_average: item.vote_average || 0,
+            overview: item.overview || undefined,
+            first_air_date: item.first_air_date || undefined
+          }))
+          .filter((item) =>
+            Number.isFinite(Number(item.id)) &&
+            Number(item.id) > 0 &&
+            Boolean(item.poster_path && item.poster_path.trim()) &&
+            Boolean(resolveTitleWithFallback(item))
+          )
+
+      const [trendingView, arabicSeriesView, kidsView, bollywoodView, kidsTmdb, arabicSeriesTmdb, bollywoodTmdb] = await Promise.all([
         supabase.from('mv_home_trending').select('*').limit(20),
+        supabase
+          .from('tv_series')
+          .select('id,name,title,poster_path,backdrop_path,vote_average,overview,first_air_date,is_ramadan,original_language,origin_country,popularity')
+          .or('is_ramadan.eq.true,original_language.eq.ar,origin_country.cs.{EG},origin_country.cs.{SA},origin_country.cs.{SY},origin_country.cs.{AE},origin_country.cs.{KW}')
+          .order('popularity', { ascending: false })
+          .limit(50),
+        supabase
+          .from('movies')
+          .select('id,tmdb_id,title,poster_path,backdrop_path,vote_average,overview,release_date,category,popularity')
+          .in('category', ['kids-family', 'kids', 'family', 'animation'])
+          .order('popularity', { ascending: false })
+          .limit(50),
+        supabase
+          .from('movies')
+          .select('id,tmdb_id,title,poster_path,backdrop_path,vote_average,overview,release_date,original_language,origin_country,category,popularity')
+          .or('category.eq.bollywood,original_language.eq.hi,origin_country.cs.{IN}')
+          .order('popularity', { ascending: false })
+          .limit(50),
         tmdb.get('/discover/movie', {
           params: {
             with_genres: '16,10751',
@@ -289,21 +345,37 @@ export const Home = () => {
             'vote_count.gte': 10,
             page: 1
           }
+        }),
+        tmdb.get('/discover/movie', {
+          params: {
+            with_original_language: 'hi',
+            region: 'IN',
+            sort_by: 'primary_release_date.desc',
+            'release_date.lte': new Date().toISOString().split('T')[0],
+            'vote_count.gte': 50,
+            page: 1
+          }
         })
       ])
 
       const popularArFromView = !trendingView.error ? mapRows(trendingView.data as HomeViewRow[]) : []
+      const arabicSeriesFromDb = !arabicSeriesView.error ? mapSeries(arabicSeriesView.data as any[]) : []
+      const kidsFromDb = !kidsView.error ? mapMovies(kidsView.data as any[]) : []
+      const bollywoodFromDb = !bollywoodView.error ? mapMovies(bollywoodView.data as any[]) : []
 
       const popularAr = popularArFromView.length > 0
         ? popularArFromView
         : ((await tmdb.get('/discover/movie', { params: { region: 'EG', sort_by: 'primary_release_date.desc', page: 1 } })).data.results || [])
 
-      const arabicSeries = arabicSeriesTmdb.data?.results || []
+      const arabicSeries = arabicSeriesFromDb.length > 0 ? arabicSeriesFromDb : (arabicSeriesTmdb.data?.results || [])
+      const kids = kidsFromDb.length > 0 ? kidsFromDb : (kidsTmdb.data?.results || [])
+      const bollywood = bollywoodFromDb.length > 0 ? bollywoodFromDb : (bollywoodTmdb.data?.results || [])
 
       return {
         popularAr,
         arabicSeries,
-        kids: kidsTmdb.data?.results || []
+        kids,
+        bollywood
       }
     },
     staleTime: 300000
