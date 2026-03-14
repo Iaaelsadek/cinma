@@ -440,17 +440,17 @@ export const Home = () => {
         {/* 3. MASONRY GRID & CONTENT */}
         <div className="relative z-30 space-y-2 pb-4">
         
-        {/* Section: Trending Egypt (Aflam) */}
+        {/* Section: Trending Middle East (Aflam) */}
         <section>
           {criticalHomeData.isLoading ? (
             <>
-              <SectionHeader title={lang === 'ar' ? 'الأعلى مشاهدة في مصر' : 'Top Trending in Egypt'} icon={<Zap />} link="/movies" />
+              <SectionHeader title={lang === 'ar' ? 'الأعلى مشاهدة في الشرق الأوسط' : 'Top Trending in Middle East'} icon={<Zap />} link="/movies" />
               <SkeletonGrid count={6} variant="poster" />
             </>
           ) : (
             <QuantumTrain 
               items={sanitizeMediaItems(criticalHomeData.data?.popularAr)} 
-              title={lang === 'ar' ? 'الأعلى مشاهدة في مصر' : 'Top Trending in Egypt'} 
+              title={lang === 'ar' ? 'الأعلى مشاهدة في الشرق الأوسط' : 'Top Trending in Middle East'} 
               icon={<Zap />} 
               link="/movies" 
             />

@@ -156,7 +156,7 @@ const HomeBelowFoldSectionsInner = ({ criticalHomeData, topRatedMovies }: HomeBe
       })
       return data
     },
-    enabled: !!CONFIG.TMDB_API_KEY,
+    enabled: true,
     staleTime: 300000,
   })
 
@@ -172,7 +172,7 @@ const HomeBelowFoldSectionsInner = ({ criticalHomeData, topRatedMovies }: HomeBe
       })
       return { results: data.results.map((i: any) => ({ ...i, media_type: 'tv' })) }
     },
-    enabled: !!CONFIG.TMDB_API_KEY,
+    enabled: true,
     staleTime: 300000,
   })
 
@@ -188,7 +188,7 @@ const HomeBelowFoldSectionsInner = ({ criticalHomeData, topRatedMovies }: HomeBe
       })
       return data
     },
-    enabled: !!CONFIG.TMDB_API_KEY,
+    enabled: true,
     staleTime: 300000,
   })
 
@@ -207,7 +207,7 @@ const HomeBelowFoldSectionsInner = ({ criticalHomeData, topRatedMovies }: HomeBe
       })
       return data
     },
-    enabled: !!CONFIG.TMDB_API_KEY && (!criticalHomeData?.bollywood || criticalHomeData.bollywood.length === 0),
+    enabled: true && (!criticalHomeData?.bollywood || criticalHomeData.bollywood.length === 0),
     staleTime: 300000,
   })
 
@@ -223,7 +223,7 @@ const HomeBelowFoldSectionsInner = ({ criticalHomeData, topRatedMovies }: HomeBe
         })
         return data.results
       },
-      enabled: needsFallback && !!CONFIG.TMDB_API_KEY,
+      enabled: needsFallback && true,
       staleTime: 300000,
     }
   )
@@ -245,7 +245,7 @@ const HomeBelowFoldSectionsInner = ({ criticalHomeData, topRatedMovies }: HomeBe
       })
       return data
     },
-    enabled: !!CONFIG.TMDB_API_KEY,
+    enabled: true,
     staleTime: 300000,
   })
 
@@ -257,7 +257,7 @@ const HomeBelowFoldSectionsInner = ({ criticalHomeData, topRatedMovies }: HomeBe
       })
       return data.results
     },
-    enabled: !!CONFIG.TMDB_API_KEY,
+    enabled: true,
     staleTime: 300000,
   })
 
@@ -273,7 +273,7 @@ const HomeBelowFoldSectionsInner = ({ criticalHomeData, topRatedMovies }: HomeBe
       })
       return data
     },
-    enabled: !!CONFIG.TMDB_API_KEY,
+    enabled: true,
     staleTime: 300000,
   })
 

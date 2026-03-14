@@ -45,6 +45,7 @@ let lastSyncAt = null;
 let lastSyncStatus = 'idle';
 let lastSyncLogs = [];
 
+app.get('/ping', (req, res) => res.send('pong'));
 app.set('trust proxy', 1);
 app.use(cors({
   origin(origin, callback) {

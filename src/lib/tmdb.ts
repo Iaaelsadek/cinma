@@ -17,8 +17,8 @@ function shouldRetry(status?: number) {
 }
 
 export const tmdb = axios.create({
-  baseURL: 'https://api.themoviedb.org/3',
-  params: { api_key: CONFIG.TMDB_API_KEY, language: 'ar-SA' },
+  baseURL: `${CONFIG.API_BASE || ''}/api/tmdb`,
+  params: { language: 'ar-SA' },
   timeout: TMDB_TIMEOUT_MS
 })
 
