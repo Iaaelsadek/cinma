@@ -99,6 +99,11 @@ const fetchPopular = async (type: 'movie' | 'tv' = 'movie') => {
   return data.results.map((item: any) => ({ ...item, media_type: type }))
 }
 
+const fetchUpcoming = async () => {
+  const { data } = await tmdb.get('/movie/upcoming')
+  return data.results.map((item: any) => ({ ...item, media_type: 'movie' }))
+}
+
 export const MoviesPage = () => {
   const { lang } = useLang()
   const [sp] = useSearchParams()
@@ -159,6 +164,7 @@ export const MoviesPage = () => {
   const arabic = useQuery({ queryKey: ['movies-arabic-db'], queryFn: fetchArabicMoviesDB, enabled })
   const nowPlaying = useQuery({ queryKey: ['movies-latest-db'], queryFn: fetchLatestDB, enabled })
   
+  const upcoming = useQuery({ queryKey: ['movies-upcoming'], queryFn: async () => await fetchUpcoming(), enabled })
   const popular = useQuery({ queryKey: ['movies-popular'], queryFn: async () => await fetchPopular('movie'), enabled })
   
   const classics = useQuery({ queryKey: ['movies-classics'], queryFn: async () => {
@@ -268,6 +274,12 @@ export const MoviesPage = () => {
           items={nowPlaying.data || []} 
           title={lang === 'ar' ? 'يعرض الآن في السينما' : 'Now Playing in Theaters'} 
           link="/search?types=movie&sort=release_date.desc"
+        />
+
+        <QuantumTrain 
+          items={upcoming.data || []} 
+          title={lang === 'ar' ? 'قريباً في السينما' : 'Coming Soon'} 
+          link="/search?types=movie&year=2026"
         />
 
         <QuantumTrain 
