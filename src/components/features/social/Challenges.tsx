@@ -161,10 +161,9 @@ export const Challenges = ({ userId, lang = 'ar' }: ChallengesProps) => {
         })}
       </div>
 
-      {/* Bonus/Coming Soon */}
       <div className="p-8 rounded-[2.5rem] border border-dashed border-white/5 text-center">
         <Flame size={32} className="mx-auto text-zinc-800 mb-4" />
-        <h4 className="text-sm font-black text-white mb-2 uppercase tracking-widest">{t('تحديات موسمية قريباً', 'Seasonal Challenges Coming Soon')}</h4>
+        <h4 className="text-sm font-black text-white mb-2 uppercase tracking-widest">{t('تحديات موسمية', 'Seasonal Challenges')}</h4>
         <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-[0.2em]">{t('ترقبوا الجوائز الكبرى', 'Stay tuned for legendary rewards')}</p>
       </div>
     </div>

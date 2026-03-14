@@ -1106,7 +1106,7 @@ export const Profile = () => {
                     </h4>
                     <div className="flex flex-col items-center justify-center py-10 text-center opacity-40">
                       <Clock size={32} className="text-zinc-700 mb-2" />
-                      <p className="text-[10px] font-bold uppercase text-zinc-500">قريباً...</p>
+                      <p className="text-[10px] font-bold uppercase text-zinc-500">لا توجد بيانات حالياً</p>
                     </div>
                   </div>
                 </div>
