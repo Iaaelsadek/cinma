@@ -278,7 +278,7 @@ export const Search = () => {
       })
       return res as PageRes
     },
-    enabled: true && (q.trim().length > 0 || genres.length > 0 || !!yfrom || !!yto || !!rfrom || !!rto || rcolor.length > 0 || !!sort || !!filterLang || !!keywords)
+    enabled: !!CONFIG.TMDB_API_KEY && (q.trim().length > 0 || genres.length > 0 || !!yfrom || !!yto || !!rfrom || !!rto || rcolor.length > 0 || !!sort || !!filterLang || !!keywords)
   })
   const gq = useQuery<GenreItem[]>({
     queryKey: ['genres', types.join(',')],
