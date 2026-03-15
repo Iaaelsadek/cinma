@@ -486,7 +486,7 @@ export const Search = () => {
                     </select>
                   </div>
 
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex overflow-x-auto whitespace-nowrap gap-2 pb-2 scrollbar-hide">
                     {(gq.data || []).map((g) => {
                       const on = genres.includes(g.id)
                       return (

@@ -6,7 +6,7 @@ export const Footer = () => {
   const { lang } = useLang()
   
   return (
-    <footer className="relative z-10 bg-[#08080c]/80 backdrop-blur-xl pt-24 pb-12 mt-24 overflow-hidden border-t border-white/5">
+    <footer className="relative z-10 bg-[#08080c]/80 backdrop-blur-xl pt-12 pb-8 mt-12 overflow-hidden border-t border-white/5">
       {/* Artery Line Top */}
       <div className="absolute top-0 left-0 right-0 h-[1px] bg-zinc-800/50">
         {/* Circuit Pattern */}

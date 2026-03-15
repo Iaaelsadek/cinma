@@ -816,7 +816,7 @@ export const Watch = () => {
 
 
         {/* NEW LAYOUT: Full Width Stack */}
-        <section id="player" className="flex flex-col gap-6">
+        <section id="player" className="flex flex-col gap-10 md:gap-12 mt-4 md:mt-8">
             
             {/* Top Row: Player and Servers */}
             <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-6">
