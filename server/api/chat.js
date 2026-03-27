@@ -203,19 +203,19 @@ async function searchMovies({ query: q, genre, min_rating, year, limit = 10 }) {
   if (q) {
     params.push('%' + q + '%')
     const idx = params.length
-    conditions.push(`(title ILIKE ${idx} OR overview ILIKE ${idx})`)
+    conditions.push(`(title ILIKE $${idx} OR overview ILIKE $${idx})`)
   }
   if (genre) {
     params.push('%' + genre + '%')
-    conditions.push(`genres::text ILIKE ${params.length}`)
+    conditions.push(`genres::text ILIKE $${params.length}`)
   }
   if (min_rating) {
     params.push(min_rating)
-    conditions.push(`vote_average >= ${params.length}`)
+    conditions.push(`vote_average >= $${params.length}`)
   }
   if (year) {
     params.push(year)
-    conditions.push(`EXTRACT(YEAR FROM release_date) = ${params.length}`)
+    conditions.push(`EXTRACT(YEAR FROM release_date) = $${params.length}`)
   }
   const sql = buildSQL(
     'SELECT id, title, overview, poster_path, release_date, vote_average, popularity, genres FROM movies',
