@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import {useEffect, useMemo, useState} from 'react'
 import { useAdmin } from '../../context/AdminContext'
 import { supabase } from '../../lib/supabase'
+import { fetchDB } from '../../lib/db'
 import {
   AreaChart,
   Area,
@@ -90,15 +91,18 @@ const AdminDashboard = () => {
     const prev30StartIso = new Date(now - 60 * 24 * 60 * 60 * 1000).toISOString()
     const prev30EndIso = last30Iso
 
+    // Use CockroachDB for content stats and Supabase for social stats
     const [
       brokenCountRes,
       totalCountRes,
       lastCheckRes,
       recentChecksRes,
-      moviesSizeRes,
-      seriesSizeRes,
+      moviesCountRes,
+      seriesCountRes,
       moviesRecentRes,
-      seriesRecentRes
+      seriesRecentRes,
+      prev30MoviesRes,
+      prev30SeriesRes
     ] = await Promise.all([
       supabase
         .from('link_checks')
@@ -107,10 +111,14 @@ const AdminDashboard = () => {
       supabase.from('link_checks').select('*', { count: 'exact', head: true }),
       supabase.from('link_checks').select('checked_at').order('checked_at', { ascending: false }).limit(1),
       supabase.from('link_checks').select('status_code, checked_at').gte('checked_at', oneHourAgoIso).limit(5000),
-      supabase.from('movies').select('id,title,overview,poster_path,backdrop_path,release_date,genres,created_at'),
-      supabase.from('tv_series').select('id,name,overview,poster_path,backdrop_path,first_air_date,genres,created_at'),
-      supabase.from('movies').select('id,created_at').gte('created_at', last30Iso),
-      supabase.from('tv_series').select('id,created_at').gte('created_at', last30Iso)
+      // Use CockroachDB API for counts instead of fetching all rows from Supabase
+      fetchDB('/api/db/query', { method: 'POST', body: JSON.stringify({ query: 'SELECT COUNT(*) as count FROM movies' }) }),
+      fetchDB('/api/db/query', { method: 'POST', body: JSON.stringify({ query: 'SELECT COUNT(*) as count FROM tv_series' }) }),
+      fetchDB('/api/db/query', { method: 'POST', body: JSON.stringify({ query: 'SELECT COUNT(*) as count FROM movies WHERE created_at >= $1', params: [last30Iso] }) }),
+      fetchDB('/api/db/query', { method: 'POST', body: JSON.stringify({ query: 'SELECT COUNT(*) as count FROM tv_series WHERE created_at >= $1', params: [last30Iso] }) }),
+      // Previous 30 days counts
+      fetchDB('/api/db/query', { method: 'POST', body: JSON.stringify({ query: 'SELECT COUNT(*) as count FROM movies WHERE created_at >= $1 AND created_at < $2', params: [prev30StartIso, prev30EndIso] }) }),
+      fetchDB('/api/db/query', { method: 'POST', body: JSON.stringify({ query: 'SELECT COUNT(*) as count FROM tv_series WHERE created_at >= $1 AND created_at < $2', params: [prev30StartIso, prev30EndIso] }) })
     ])
 
     const brokenLinks = brokenCountRes.count || 0
@@ -120,15 +128,17 @@ const AdminDashboard = () => {
     const brokenRecent = recentChecks.filter((item) => !healthCodes.has(Number(item.status_code))).length
     const brokenRatio = recentChecks.length > 0 ? brokenRecent / recentChecks.length : (totalChecks > 0 ? brokenLinks / totalChecks : 0)
 
-    const moviesData = Array.isArray(moviesSizeRes.data) ? moviesSizeRes.data : []
-    const seriesData = Array.isArray(seriesSizeRes.data) ? seriesSizeRes.data : []
-    const usedBytes = JSON.stringify(moviesData).length + JSON.stringify(seriesData).length
+    // Estimate storage used based on row counts (much faster than fetching all rows)
+    const moviesCount = moviesCountRes?.rows?.[0]?.count || 0
+    const seriesCount = seriesCountRes?.rows?.[0]?.count || 0
+    const avgMovieRowSize = 1024 // ~1KB per movie
+    const avgSeriesRowSize = 1536 // ~1.5KB per series
+    const usedBytes = (moviesCount * avgMovieRowSize) + (seriesCount * avgSeriesRowSize)
     const usedSpaceMB = Number((usedBytes / (1024 * 1024)).toFixed(2))
 
-    const current30Count = (moviesRecentRes.data?.length || 0) + (seriesRecentRes.data?.length || 0)
-    const previous30MoviesRes = await supabase.from('movies').select('id', { count: 'exact', head: true }).gte('created_at', prev30StartIso).lt('created_at', prev30EndIso)
-    const previous30SeriesRes = await supabase.from('tv_series').select('id', { count: 'exact', head: true }).gte('created_at', prev30StartIso).lt('created_at', prev30EndIso)
-    const previous30Count = Number(previous30MoviesRes.count || 0) + Number(previous30SeriesRes.count || 0)
+    const current30Count = Number(moviesRecentRes?.rows?.[0]?.count || 0) + Number(seriesRecentRes?.rows?.[0]?.count || 0)
+    const previous30Count = Number(prev30MoviesRes?.rows?.[0]?.count || 0) + Number(prev30SeriesRes?.rows?.[0]?.count || 0)
+    
     const storageGrowth = growthPercent(current30Count, previous30Count)
 
     let status: HealthStats['status'] = 'Online'

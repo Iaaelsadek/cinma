@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Terminal, Database, FileCode, Play, Server, Save, RefreshCw, HardDrive, Command, Folder, File, ChevronRight, ChevronDown, Trash, Upload, Activity } from 'lucide-react';
+import {Terminal, Database, FileCode, Play, Server, Save, Folder, File, Activity} from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../../../lib/supabase';
 

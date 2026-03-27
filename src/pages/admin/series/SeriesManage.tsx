@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../../../lib/supabase'
 import { toast } from 'sonner'
-import { ChevronRight, Tv, Calendar, Plus, Layers, Trash2, Pencil, Save, X, Film } from 'lucide-react'
+import {ChevronRight, Tv, Plus, Layers, Trash2, Pencil, Save, X, Film} from 'lucide-react'
 
 type SeriesRecord = {
   id: number

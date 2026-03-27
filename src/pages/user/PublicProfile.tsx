@@ -3,14 +3,13 @@ import { useQuery } from '@tanstack/react-query'
 import { getProfileByUsername, getFollowers, getFollowing, getUserAchievements, getActivityFeed, followUser, unfollowUser, isFollowing } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { Helmet } from 'react-helmet-async'
-import { motion } from 'framer-motion'
 import { SkeletonProfile } from '../../components/common/Skeletons'
 import { Users, Heart, Award, Activity, Star, PlayCircle, Globe, Twitter, Instagram, Facebook, UserPlus, UserMinus, Shield } from 'lucide-react'
 import clsx from 'clsx'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
-const ICON_MAP: Record<string, any> = {
+const ICON_MAP: Record<string, React.ComponentType<any>> = {
   Award, Star, Activity, PlayCircle, Heart, Users
 }
 
@@ -21,42 +20,60 @@ export const PublicProfile = () => {
 
   const { data: profile, isLoading: loadingProfile } = useQuery({
     queryKey: ['public-profile', username],
-    queryFn: () => getProfileByUsername(username!),
+    queryFn: () => {
+      if (!username) return null
+      return getProfileByUsername(username)
+    },
     enabled: !!username
   })
 
   const { data: followers, refetch: refetchFollowers } = useQuery({
     queryKey: ['followers', profile?.id],
-    queryFn: () => getFollowers(profile!.id),
-    enabled: !!profile
+    queryFn: () => {
+      if (!profile?.id) return []
+      return getFollowers(profile.id)
+    },
+    enabled: !!profile?.id
   })
 
   const { data: following } = useQuery({
     queryKey: ['following', profile?.id],
-    queryFn: () => getFollowing(profile!.id),
-    enabled: !!profile
+    queryFn: () => {
+      if (!profile?.id) return []
+      return getFollowing(profile.id)
+    },
+    enabled: !!profile?.id
   })
 
   const { data: achievements } = useQuery({
     queryKey: ['achievements', profile?.id],
-    queryFn: () => getUserAchievements(profile!.id),
-    enabled: !!profile
+    queryFn: () => {
+      if (!profile?.id) return []
+      return getUserAchievements(profile.id)
+    },
+    enabled: !!profile?.id
   })
 
   const { data: activityFeed } = useQuery({
     queryKey: ['activity-feed', profile?.id],
-    queryFn: () => getActivityFeed(profile!.id),
-    enabled: !!profile && profile.is_public
+    queryFn: () => {
+      if (!profile?.id) return []
+      return getActivityFeed(profile.id)
+    },
+    enabled: !!profile?.id && profile.is_public
   })
 
   const { data: followingStatus, refetch: refetchStatus } = useQuery({
     queryKey: ['following-status', currentUser?.id, profile?.id],
-    queryFn: () => isFollowing(currentUser!.id, profile!.id),
-    enabled: !!currentUser && !!profile && currentUser.id !== profile.id
+    queryFn: () => {
+      if (!currentUser?.id || !profile?.id) return false
+      return isFollowing(currentUser.id, profile.id)
+    },
+    enabled: !!currentUser?.id && !!profile?.id && currentUser.id !== profile.id
   })
 
   const handleFollow = async () => {
-    if (!currentUser || !profile) return
+    if (!currentUser?.id || !profile?.id) return
     setBusy(true)
     try {
       if (followingStatus) {
@@ -68,7 +85,7 @@ export const PublicProfile = () => {
       }
       refetchStatus()
       refetchFollowers()
-    } catch (e: any) {
+    } catch {
       toast.error('حدث خطأ أثناء تنفيذ العملية')
     } finally {
       setBusy(false)
@@ -270,8 +287,9 @@ export const PublicProfile = () => {
               
               <div className="grid grid-cols-2 gap-3">
                 {achievements && achievements.length > 0 ? (
-                  achievements.slice(0, 4).map((ua) => {
-                    const achievement = ua.achievement!
+                  achievements.slice(0, 4).map((ua: any) => {
+                    const achievement = ua.achievement
+                    if (!achievement) return null
                     const Icon = ICON_MAP[achievement.icon] || Award
                     return (
                       <div key={achievement.id} className="p-4 rounded-2xl bg-white/[0.03] border border-white/5 flex flex-col items-center text-center">

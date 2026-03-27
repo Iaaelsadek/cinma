@@ -1,50 +1,40 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
-import { useParams } from 'react-router-dom'
-import { Star, Download, Image as ImageIcon } from 'lucide-react'
-import { incrementClicks, supabase } from '../../lib/supabase'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
+import {Star, Download} from 'lucide-react'
+import {getGameByIdDB} from '../../lib/db'
+import { resolveSlug } from '../../lib/slugResolver'
+import { logger } from '../../lib/logger'
 import { SectionHeader } from '../../components/common/SectionHeader'
 import { useLang } from '../../state/useLang'
 import { motion } from 'framer-motion'
 
-type GameRow = {
-  id: number
-  title: string
-  poster_url?: string | null
-  backdrop_url?: string | null
-  rating?: number | null
-  year?: number | null
-  release_year?: number | null
-  description?: string | null
-  category?: string | null
-  download_url?: string | null
-  screenshots?: string[]
-}
-
 export const GameDetails = () => {
-  const { id } = useParams()
+  const { slug } = useParams()
+  const navigate = useNavigate()
+  const location = useLocation()
   const { lang } = useLang()
-  const [row, setRow] = useState<GameRow | null>(null)
+  const [row, setRow] = useState<Game | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let cancelled = false
     const load = async () => {
-      if (!id) return
+      if (!slug) return
       setLoading(true)
-      const { data } = await supabase.from('games').select('*').eq('id', Number(id)).maybeSingle()
+      const game = await getGameByIdDB(slug)
       if (!cancelled) {
-        setRow((data || null) as GameRow | null)
+        setRow(game)
         setLoading(false)
       }
     }
     load()
     return () => { cancelled = true }
-  }, [id])
+  }, [slug])
 
   const title = row?.title || (lang === 'ar' ? 'لعبة' : 'Game')
   const rating = typeof row?.rating === 'number' ? row.rating : 0
-  const year = row?.year ?? row?.release_year ?? null
+  const year = row?.release_date ? new Date(row.release_date).getFullYear() : null
   const category = row?.category || 'Others'
   const description = row?.description || (lang === 'ar' ? 'لا يوجد وصف متاح' : 'No description available')
   const poster = row?.poster_url || ''

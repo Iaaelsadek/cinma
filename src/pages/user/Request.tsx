@@ -3,11 +3,13 @@ import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { supabase } from '../../lib/supabase'
 import { tmdb } from '../../lib/tmdb'
+import { api } from '../../lib/api'
 import { errorLogger } from '../../services/errorLogging'
 import { useLang } from '../../state/useLang'
 import { useAuth } from '../../hooks/useAuth'
+import { useNavigate } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
-import { Send, Film, X, Check, Play, AlertCircle, Star } from 'lucide-react'
+import { Send, Film, X, Check, Play, AlertCircle, Star, Loader2 } from 'lucide-react'
 import { Button } from '../../components/common/Button'
 import { Input } from '../../components/common/Input'
 import { Link } from 'react-router-dom'
@@ -20,39 +22,124 @@ type RequestForm = {
 
 export const RequestPage = () => {
   const { lang } = useLang()
-  const { user } = useAuth()
+  const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [pendingData, setPendingData] = useState<RequestForm | null>(null)
   const [existingContent, setExistingContent] = useState<any[]>([])
+  const [selectedItem, setSelectedItem] = useState<any>(null)
   
   const { register, handleSubmit, reset, formState: { errors } } = useForm<RequestForm>()
+
+  const instantAddContent = async (tmdbId: number, mediaType: 'movie' | 'tv', title: string, notes: string) => {
+    setLoading(true)
+    try {
+      const response = await api.post('/api/instant-add', {
+        tmdbId,
+        mediaType,
+        title,
+        notes
+      })
+
+      const data = response.data
+
+      if (data.instant) {
+        // Instant success - redirect to watch page
+        toast.success(
+          lang === 'ar' 
+            ? '✨ تمت الإضافة فوراً! جاري التحويل...' 
+            : '✨ Added instantly! Redirecting...'
+        )
+        
+        setTimeout(() => {
+          navigate(data.redirectUrl)
+        }, 500)
+      } else if (data.queued) {
+        // Queued - show message
+        toast.success(
+          lang === 'ar' 
+            ? '📋 تم استلام طلبك! سيتم إضافته تلقائياً قريباً' 
+            : '📋 Request received! It will be added automatically soon'
+        )
+        reset()
+        setShowSuggestions(false)
+        setSearchResults([])
+        setExistingContent([])
+        setPendingData(null)
+        setSelectedItem(null)
+      }
+    } catch (error: any) {
+      if (error.response?.status === 429) {
+        // Rate limit reached
+        toast.error(
+          lang === 'ar' 
+            ? '⏰ لقد وصلت للحد الأقصى من الطلبات. حاول مرة أخرى لاحقاً' 
+            : '⏰ Rate limit reached. Please try again later'
+        )
+      } else {
+        toast.error(
+          lang === 'ar' 
+            ? 'حدث خطأ أثناء معالجة الطلب' 
+            : 'Error processing request'
+        )
+      }
+      
+      errorLogger.logError({
+        message: 'Instant add failed',
+        severity: 'high',
+        category: 'network',
+        context: { error, tmdbId, mediaType }
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const submitToSupabase = async (data: RequestForm) => {
     setLoading(true)
     try {
-      const { error } = await supabase.from('requests').insert({
-        title: data.title,
-        notes: data.notes,
-        user_id: user?.id || null
+      // 1. Get CSRF token
+      const csrfResponse = await fetch('/api/csrf-token')
+      const { csrfToken } = await csrfResponse.json()
+
+      // 2. Submit request directly to instant-add API which will queue it correctly in CockroachDB
+      const response = await fetch('/api/instant-add', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken
+        },
+        body: JSON.stringify({
+          title: data.title,
+          notes: data.notes,
+          mediaType: 'movie', // default to movie for manual requests since we don't know yet
+          tmdbId: 0 // 0 means it's a manual request without a known TMDB ID
+        })
       })
 
-      if (error) throw error
+      if (!response.ok) {
+        throw new Error('Failed to submit request')
+      }
 
-      toast.success(lang === 'ar' ? 'تم إرسال طلبك بنجاح' : 'Request sent successfully')
+      toast.success(
+        lang === 'ar' 
+          ? '📋 تم إرسال طلبك بنجاح! سيتم معالجته من قبل فريقنا قريباً.' 
+          : '📋 Request sent successfully! It will be processed by our team soon.'
+      )
       reset()
       setShowSuggestions(false)
       setSearchResults([])
       setExistingContent([])
       setPendingData(null)
-    } catch (error) {
+      setSelectedItem(null)
+    } catch {
       toast.error(lang === 'ar' ? 'حدث خطأ أثناء الإرسال' : 'Error sending request')
       errorLogger.logError({
         message: 'Error sending request',
         severity: 'high',
         category: 'database',
-        context: { error, data }
+        context: { data }
       })
     } finally {
       setLoading(false)
@@ -196,7 +283,10 @@ export const RequestPage = () => {
                 disabled={loading}
               >
                 {loading ? (
-                  <span className="animate-pulse">{lang === 'ar' ? 'جاري التحقق...' : 'Checking...'}</span>
+                  <div className="flex items-center gap-2">
+                    <Loader2 size={16} className="animate-spin" />
+                    <span>{lang === 'ar' ? 'جاري المعالجة...' : 'Processing...'}</span>
+                  </div>
                 ) : (
                   <div className="flex items-center gap-2">
                     <Send size={16} />
@@ -286,14 +376,25 @@ export const RequestPage = () => {
                                 </div>
                              </div>
                              <Button
-                                onClick={() => {
-                                   if (pendingData) {
-                                      submitToSupabase({ ...pendingData, title: item.title || item.name })
+                                onClick={async () => {
+                                   if (pendingData && item.id) {
+                                      setSelectedItem(item)
+                                      await instantAddContent(
+                                        item.id,
+                                        item.media_type === 'tv' ? 'tv' : 'movie',
+                                        item.title || item.name,
+                                        pendingData.notes || ''
+                                      )
                                    }
                                 }}
-                                className="h-8 px-3 text-xs bg-primary hover:bg-primary/80 text-black font-bold rounded-lg"
+                                disabled={loading && selectedItem?.id === item.id}
+                                className="h-8 px-3 text-xs bg-primary hover:bg-primary/80 text-black font-bold rounded-lg disabled:opacity-50"
                              >
-                                {lang === 'ar' ? 'طلب هذا' : 'Request This'}
+                                {loading && selectedItem?.id === item.id ? (
+                                  <Loader2 size={14} className="animate-spin" />
+                                ) : (
+                                  lang === 'ar' ? 'طلب هذا' : 'Request This'
+                                )}
                              </Button>
                           </div>
                        ))}

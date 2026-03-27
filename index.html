@@ -11,9 +11,10 @@
 
       gtag('config', 'G-P3S2TD97ZL');
     </script>
+    <!-- Basic CSP for security -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: blob: https:; font-src 'self' data: https:; connect-src 'self' https: wss: http:; media-src * blob: data:; frame-src * data:; object-src 'none'; base-uri 'self';"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: blob: https:; font-src 'self' data: https:; connect-src 'self' https: wss: http:; media-src *; frame-src *; object-src 'none'; base-uri 'self'; block-all-mixed-content;"
     />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#0f172a" />
@@ -49,6 +50,8 @@
     <link rel="manifest" href="/manifest.webmanifest">
     <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700&family=Syne:wght@400;600;700;800&display=swap" />
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+    <!-- Preload ChatBot Lottie animation to prevent FOUC -->
+    <link rel="preload" as="fetch" href="/cinmabot.json" crossorigin />
     <noscript>
       <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet" />
     </noscript>

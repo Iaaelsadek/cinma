@@ -47,7 +47,7 @@ export const useQuranPlayerStore = create<QuranPlayerState>()(
       error: null,
 
       playTrack: (track) => {
-        const { currentTrack, isPlaying } = get()
+        const { currentTrack } = get()
         if (currentTrack?.id === track.id) {
           get().toggle()
           return

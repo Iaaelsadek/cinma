@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { PlayCircle, Star, Award, Activity as ActivityIcon, Heart, MessageCircle, Send, Trash2, X, Smile, Reply } from 'lucide-react'
+import {PlayCircle, Star, Award, Heart, MessageCircle, Send, Trash2, X, Smile, Reply} from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { 
   addActivityReaction,
@@ -23,7 +23,7 @@ import {
 } from '../../../lib/supabase'
 import { toast } from 'sonner'
 import clsx from 'clsx'
-import { MoreVertical, Flag, Shield, UserX, AtSign } from 'lucide-react'
+import {MoreVertical, Flag, UserX} from 'lucide-react'
 import { logger } from '../../../lib/logger'
 
 const MentionText = ({ text }: { text: string }) => {

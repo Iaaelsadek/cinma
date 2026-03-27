@@ -1,6 +1,7 @@
 import React, { lazy } from 'react'
 import { Route, Navigate } from 'react-router-dom'
 import { SeriesRouteHandler } from '../components/routing/SeriesRouteHandler'
+import { LegacyRedirect } from '../components/utils/LegacyRedirect'
 
 const MovieDetails = lazy(() => import('../pages/media/MovieDetails').then(m => ({ default: m.MovieDetails })))
 const Watch = lazy(() => import('../pages/media/Watch').then(m => ({ default: m.Watch })))
@@ -14,42 +15,40 @@ const Actor = lazy(() => import('../pages/media/Actor').then(m => ({ default: m.
 const PartyJoin = lazy(() => import('../pages/media/PartyJoin').then(m => ({ default: m.PartyJoin })))
 const ReciterDetails = lazy(() => import('../pages/media/ReciterDetails').then(m => ({ default: m.ReciterDetails })))
 
-const WatchFromSeries = () => {
-  const { id, s, e } = ({} as any) // placeholder, legacy redirect handled elsewhere
-  return <Navigate to="/" replace />
-}
-
 export const MediaRoutes = () => (
   <>
-    <Route path="/movie/:id" element={<MovieDetails />} />
+    <Route path="/movie/:slug" element={<MovieDetails />} />
+    <Route path="/movie/id/:id" element={<LegacyRedirect type="movie" />} />
+    
     <Route path="/party/:partyId" element={<PartyJoin />} />
 
     <Route path="/video/:id" element={<WatchVideo />} />
-    <Route path="/watch/yt/:id" element={<WatchVideo />} />
-    <Route path="/watch/video/:id" element={<WatchVideo />} />
-    <Route path="/watch/dm/:id" element={<WatchVideo />} />
 
-    <Route path="/watch/:type/:id/:s/:e" element={<Watch />} />
-    <Route path="/watch/:type/:id/:s" element={<Watch />} />
-    <Route path="/watch/:type/:id" element={<Watch />} />
+    <Route path="/watch/:type/:slug/:s/:e" element={<Watch />} />
+    <Route path="/watch/:type/:slug/:s" element={<Watch />} />
+    <Route path="/watch/:type/:slug" element={<Watch />} />
     <Route path="/watch/:id" element={<Watch />} />
 
-    <Route path="/watch/:lang/summaries/:genre/:slug" element={<WatchVideo />} />
-    <Route path="/watch/:lang/video/:category/:genre/:slug" element={<WatchVideo />} />
-    <Route path="/watch/:lang/:type/:genre/:slug" element={<Watch />} />
+    <Route path="/parts/:type/:slug" element={<Parts />} />
+    <Route path="/actor/:slug" element={<Actor />} />
+    <Route path="/actor/id/:id" element={<LegacyRedirect type="actor" />} />
 
-    <Route path="/parts/:type/:id" element={<Parts />} />
-    <Route path="/actor/:id" element={<Actor />} />
-    <Route path="/series/:id/season/:s/episode/:e" element={<Watch />} />
-    <Route path="/series/:id" element={<SeriesRouteHandler />} />
+    <Route path="/series/:slug/season/:s/episode/:e" element={<Watch />} />
+    <Route path="/series/:slug" element={<SeriesRouteHandler />} />
+    <Route path="/series/id/:id" element={<LegacyRedirect type="tv" />} />
+    <Route path="/tv/:slug" element={<Navigate to="/series/:slug" replace />} />
 
-    <Route path="/cinematic/:type/:id" element={<CinematicDetails />} />
-    <Route path="/cinematic/:id" element={<CinematicDetails />} />
-    <Route path="/demo/details" element={<CinematicDetails />} />
+    <Route path="/series/details/:slug" element={<SeriesDetails />} />
 
-    <Route path="/game/:id" element={<GameDetails />} />
-    <Route path="/software/:id" element={<SoftwareDetails />} />
+    <Route path="/cinematic/:type/:slug" element={<CinematicDetails />} />
+    <Route path="/cinematic/:slug" element={<CinematicDetails />} />
+
+    <Route path="/game/:slug" element={<GameDetails />} />
+    <Route path="/game/id/:id" element={<LegacyRedirect type="game" />} />
+    
+    <Route path="/software/:slug" element={<SoftwareDetails />} />
+    <Route path="/software/id/:id" element={<LegacyRedirect type="software" />} />
+    
     <Route path="/quran/reciter/:id" element={<ReciterDetails />} />
   </>
 )
-

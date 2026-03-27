@@ -1,133 +1,193 @@
-# cinma.online
+# 🎬 أونلاين سينما - Online Cinema
 
-منصة مشاهدة عربية حديثة تعتمد على TMDB وSupabase، مع دعم PWA والتوصيات الذكية والتعليقات والإعلانات.
+[![Build Status](https://img.shields.io/badge/build-passing-brightgreen)](https://github.com)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.8-blue)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-19.0-61dafb)](https://reactjs.org/)
+[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-> **ملاحظة:** تم إجراء مراجعة شاملة للمشروع (فبراير 2026). يمكن الاطلاع على التفاصيل في [PROJECT_REVIEW.md](./PROJECT_REVIEW.md).
+منصة عربية شاملة لمشاهدة الأفلام والمسلسلات مع مساعد ذكي AI.
 
-## 📁 هيكلة المشروع
-- `src/components/features`: المكونات الوظيفية (مشغل الفيديو، القطار السينمائي، النظام).
-- `src/components/common`: مكونات واجهة المستخدم العامة.
-- `src/pages`: صفحات التطبيق (الرئيسية، المشاهدة، الاكتشاف).
-- `src/lib`: دوال مساعدة والربط مع Supabase/TMDB.
+## ✨ المميزات
 
-## 🛠️ أدوات التطوير
-نفّذ الأوامر التالية أثناء العمل على الكود:
+- 🎥 مكتبة ضخمة من الأفلام والمسلسلات العربية والأجنبية
+- 🤖 مساعد ذكي AI للبحث والاقتراحات (Gemini + Groq + Mistral)
+- 📱 تطبيق PWA يعمل على جميع الأجهزة
+- 🔒 حماية متعددة الطبقات للفيديو
+- ⚡ أداء عالي مع Code Splitting & Lazy Loading
+- 🌙 وضع ليلي مريح للعين
+- 🎭 واجهة عصرية وسهلة الاستخدام
+- 📊 لوحة تحكم إدارية شاملة
+- 🔍 بحث متقدم مع فلاتر ذكية
+- 🎬 مشغل فيديو متطور مع دعم الترجمات
+
+## 🚀 التقنيات المستخدمة
+
+### Frontend
+- **React 19** + **TypeScript 5.8**
+- **Cloudflare** (Frontend Hosting)
+- **Vite 7** (Build Tool)
+- **TailwindCSS 3** (Styling)
+- **Zustand** (State Management)
+- **React Router 7** (Routing)
+- **Framer Motion** (Animations)
+- **Lottie** (Vector Animations)
+- **React Query** (Data Fetching)
+
+### Backend
+- **Node.js** + **Express 5**
+- **Koyeb** (Backend Hosting)
+- **CockroachDB** (Primary Database for Media & App Data)
+- **Supabase** (User Auth & Registration ONLY)
+- **Google Gemini AI** (Primary)
+- **Groq AI** (Fallback 1)
+- **Mistral AI** (Fallback 2)
+
+### Security & Performance
+- ✅ CSRF Protection
+- ✅ Rate Limiting (3 levels: Global, User, IP)
+- ✅ Input Sanitization (DOMPurify)
+- ✅ SQL Injection Protection
+- ✅ Content Security Policy
+- ✅ Error Logging & Monitoring (Sentry)
+- ✅ Code Splitting & Tree Shaking
+- ✅ Image Optimization & Lazy Loading
+
+## 📦 التثبيت
 
 ```bash
-# تحقق من الأنماط والخطوط
-npm run lint         # فقط فحص
-npm run lint:fix     # تصحيح تلقائي
-npm run format       # تطبيق Prettier
-npm run stylelint    # فحص CSS/SCSS
-npm test             # تشغيل اختبارات الوحدة
-npm run test:coverage # إنشاء تقرير تغطية (افتراضيًا >50% globallly)
-npm run typecheck    # تحقق TypeScript
+# Clone the repository
+git clone https://github.com/yourusername/cinma.online.git
+cd cinma.online
+
+# Install dependencies
+npm install
+
+# Setup environment variables
+cp .env.example .env.local
+# Edit .env.local with your API keys
+
+# Run development server
+npm run dev
+
+# Run backend server
+npm run server
 ```
 
-عند حفظ، تؤدي حزمة Husky إلى تشغيل هذه الأدوات على الملفات المعدّلة تلقائيًا.
+## 🔧 Environment Variables
 
+```env
+# Database
+COCKROACHDB_URL=your_cockroachdb_url
 
-## 🐍 تشغيل سكريبت المزامنة التلقائية (Python)
+# AI Services
+GEMINI_API_KEY=your_gemini_key
+GROQ_API_KEY=your_groq_key
+MISTRAL_API_KEY=your_mistral_key
 
-يساعد هذا السكريبت على جلب الأفلام والمسلسلات الشائعة من TMDB وتحديث قاعدة البيانات في Supabase. النسخة الحالية تولّد ملخصات عربية مختصرة عبر Gemini (اختياري).
- لاحقًا يمكن إضافة خطوة مراجعات YouTube (تتطلب مفتاح YouTube).
+# TMDB
+TMDB_API_KEY=your_tmdb_key
 
-### المتطلبات
-- Python 3.8 أو أحدث
-- pip (مدير حزم Python)
-
-### تهيئة مفاتيح البيئة
-قبل التشغيل، عرّف المفاتيح في البيئة:
-
-- `TMDB_API_KEY` (مطلوب)
-- `SUPABASE_URL` (مطلوب)
-- `SUPABASE_SERVICE_ROLE` (مطلوب – احفظه بأمان ولا تُنشره علنًا)
-- `GEMINI_API_KEY` (اختياري للملخصات الذكية)
-
-Windows PowerShell (جلسة مؤقتة):
-```powershell
-$env:TMDB_API_KEY="YOUR_TMDB_KEY"
-$env:SUPABASE_URL="https://YOUR_PROJECT.supabase.co"
-$env:SUPABASE_SERVICE_ROLE="YOUR_SERVICE_ROLE_KEY"
-$env:GEMINI_API_KEY="YOUR_GEMINI_KEY"
+# App
+VITE_APP_URL=http://localhost:5173
+PORT=3001
 ```
 
-### خطوات التشغيل
-1. انتقل إلى مجلد `scripts`:
-   ```bash
-   cd scripts
-   ```
-2. ثبّت الحزم المطلوبة:
-   ```bash
-   pip install -r requirements.txt
-   ```
-3. شغّل السكريبت:
-   ```bash
-   python fill_content.py
-   ```
-4. انتظر حتى يكتمل (قد يستغرق بضع دقائق حسب عدد الصفحات).
+## 🗄️ Database Setup
 
-### ملاحظات
-- احرص على صحة مفاتيح البيئة (Supabase, TMDB، وGEMINI إن أردت الملخصات).
-- السكريبت يحدّث جدولي `movies` و`tv_series`.
-- لتشغيله دوريًا: استخدم أدوات جدولة (cron، GitHub Actions، أو منصات مماثلة).
-- أخطاء الوصول في الواجهات الخارجية شائعة بدون مفاتيح صحيحة (على سبيل المثال، طلبات TMDB بدون مفتاح تعطي "Invalid API key"، وYouTube Search يرفض الطلبات دون هوية).
+```bash
+# Run indexes script
+psql $COCKROACHDB_URL -f scripts/add_indexes.sql
+
+# Run constraints script
+psql $COCKROACHDB_URL -f scripts/add_constraints.sql
+```
+
+## 📝 Scripts
+
+```bash
+# Development
+npm run dev          # Start frontend dev server
+npm run server       # Start backend server
+
+# Build
+npm run build        # Build for production
+npm run preview      # Preview production build
+
+# Linting
+npm run lint         # Run ESLint
+npm run lint:fix     # Fix ESLint errors
+
+# Testing
+npm run test         # Run tests (coming soon)
+```
+
+## 🏗️ Project Structure
+
+```
+cinma.online/
+├── src/
+│   ├── components/      # React components
+│   ├── pages/          # Page components
+│   ├── lib/            # Utilities & helpers
+│   ├── hooks/          # Custom React hooks
+│   ├── routes/         # Route definitions
+│   └── state/          # State management
+├── server/
+│   ├── api/            # API endpoints
+│   ├── lib/            # Server utilities
+│   └── middleware/     # Express middleware
+├── scripts/
+│   ├── add_indexes.sql     # Database indexes
+│   └── add_constraints.sql # Database constraints
+└── public/             # Static assets
+```
+
+## 🔒 Security Features
+
+1. **CSRF Protection** - Token-based protection
+2. **Rate Limiting** - 3 levels (API, DB, Chat)
+3. **Input Sanitization** - DOMPurify for XSS prevention
+4. **SQL Injection Protection** - Parameterized queries
+5. **Error Logging** - Centralized error tracking
+6. **Content Security Policy** - Strict CSP headers
+7. **Database Connection Pooling** - Optimized connections
+
+## 🎯 Performance Optimizations
+
+- ✅ React.memo for components
+- ✅ Lazy loading for routes
+- ✅ Lazy loading for images
+- ✅ Database indexes
+- ✅ Connection pooling
+- ✅ Code splitting
+- ✅ Asset optimization
+
+## 📱 PWA Features
+
+- Offline support
+- Install prompt
+- App-like experience
+- Push notifications (coming soon)
+
+## 🤝 Contributing
+
+Contributions are welcome! Please read our contributing guidelines first.
+
+## 📄 License
+
+This project is licensed under the MIT License.
+
+## 👥 Team
+
+- **Frontend** - React + TypeScript
+- **Backend** - Node.js + Express
+- **AI** - Multi-provider fallback system
+- **Database** - CockroachDB
+
+## 📞 Support
+
+For support, email support@cinma.online or join our Discord server.
 
 ---
 
-## 📱 إعداد PWA (قابل للتثبيت على الأجهزة)
-
-- تم تضمين `vite-plugin-pwa` وتكويناته في `vite.config.ts` (تسجيل تلقائي وتحديث تلقائي للـ Service Worker).
-- أيقونات PWA:
-  - أنشئ المجلد `public/icons` وضع بداخله ملفات:
-    - `icon-192x192.png`
-    - `icon-512x512.png`
-    - `apple-touch-icon.png` (اختياري)
-  - يمكنك توليد الأيقونات من شعار/نص عبر مولدات مجانية مثل favicon.io.
-
-### اختبار محلي
-1. بناء المشروع ثم المعاينة:
-   ```bash
-   npm run build
-   npm run preview
-   ```
-2. افتح المتصفح → أدوات المطور (F12) → Application → Manifest للتأكد من البيانات.
-3. تحقق من تسجيل الـ Service Worker في تبويب Service Workers.
-4. (اختياري) أضف بطاقة تشجّع المستخدم على التثبيت في الواجهة الأمامية لاحقًا.
-
----
-
-## ☁️ النشر على Cloudflare Pages (مؤقت)
-
-- أمر البناء: `npm run build`
-- مجلد النشر: `dist`
-- تأكد من تعريف مفاتيح البيئة (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_TMDB_API_KEY`, إلخ) في إعدادات Cloudflare Pages.
-- يضيف `vite-plugin-sitemap` خريطة موقع تلقائيًا (راجع `vite.config.ts`).
-
----
-
-## 🔍 تحسين SEO عبر react-helmet-async
-
-- تم لف التطبيق ضمن `<HelmetProvider>`، وإضافة `<Helmet>` لصفحات رئيسية مثل: الصفحة الرئيسية، تفاصيل الفيلم/المسلسل، البحث، والملف الشخصي.
-- أضف صورة `public/og-image.jpg` (مقاس 1200×630) لوسوم Open Graph.
-
----
-
-## 🔒 الحساسيات والتجاهل
-
-- الملف `.gitignore` يتجاهل `.env` و`__pycache__` و`.venv` وغيرها.
-- لا تحفظ مفاتيح حساسة داخل المستودع. استخدم متغيرات البيئة أو أنظمة أسرار CI/CD.
-
----
-
-## 🧩 ملاحظات فنية مختصرة
-
-- المشغل يدعم:
-  - تخطي المقدمة عبر حقلي `intro_start` و`intro_end` في جدول `episodes`.
-  - ترجمة عبر ملفات VTT أو تحويل SRT إلى VTT داخل المتصفح.
-  - روابط تحميل عبر `download_urls` في جداول `movies` و`episodes`.
-- لوحة الإدارة:
-  - تحرير روابط تحميل الأفلام داخل لوحة التحكم.
-  - إدارة حلقات الموسم مع حقول المقدمة/الترجمة/التحميل لكل حلقة.
-- الأيقونات والـ OG image مطلوبة لإكمال تجربة PWA ووسوم المشاركة.
-# cinma
+Made with ❤️ in Egypt 🇪🇬

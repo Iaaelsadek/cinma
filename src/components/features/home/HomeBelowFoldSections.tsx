@@ -13,9 +13,10 @@ import { MovieCard } from '../../features/media/MovieCard'
 import { HolographicCard } from '../../effects/HolographicCard'
 import { PrefetchLink } from '../../common/PrefetchLink'
 import { QuantumTrain } from '../../features/media/QuantumTrain'
-import { getRecommendations, type RecommendationItem } from '../../../services/recommendations'
+import {getRecommendations} from '../../../services/recommendations'
 import { useAuth } from '../../../hooks/useAuth'
 import { useLang } from '../../../state/useLang'
+import { generateWatchUrl } from '../../../lib/utils'
 
 type TmdbMedia = {
   id: number
@@ -42,13 +43,16 @@ type HomeBelowFoldSectionsProps = {
   topRatedMovies?: TmdbMedia[]
 }
 
-export const sanitizeMediaItems = (items: TmdbMedia[] | undefined) =>
-  (items || []).filter((item) =>
-    Number.isFinite(Number(item?.id)) &&
-    Number(item.id) > 0 &&
-    Boolean(item.poster_path && item.poster_path.trim()) &&
-    Boolean(resolveTitleWithFallback(item))
-  )
+export const sanitizeMediaItems = (items: TmdbMedia[] | undefined) => {
+  return (items || []).filter((item) => {
+    return (
+      Number.isFinite(Number(item?.id)) &&
+      Number(item.id) > 0 &&
+      Boolean(item.poster_path && item.poster_path.trim()) &&
+      Boolean(resolveTitleWithFallback(item))
+    )
+  })
+}
 
 const BentoBox = ({
   title,
@@ -75,7 +79,7 @@ const BentoBox = ({
               ? `https://image.tmdb.org/t/p/w500${item.backdrop_path}`
               : `https://image.tmdb.org/t/p/w500${item.poster_path}`)
           const link = isTmdb
-            ? `/watch/${item.media_type === 'tv' ? 'tv' : 'movie'}/${item.id}`
+            ? generateWatchUrl({ ...item, media_type: item.media_type === 'tv' ? 'tv' : 'movie' })
             : `/watch/yt/${item.id}`
 
           return (
@@ -123,7 +127,7 @@ const AIRecommended = ({ userId }: { userId: string }) => {
     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
       {q.data.slice(0, 5).map((m) => (
         <HolographicCard key={m.id} className="aspect-[2/3]">
-          <PrefetchLink to={`/watch/movie/${m.id}`}>
+          <PrefetchLink to={generateWatchUrl({ ...m, media_type: 'movie' })}>
             <img
               src={`https://image.tmdb.org/t/p/w300${m.poster_path}`}
               className="w-full h-full object-cover"

@@ -1,4 +1,4 @@
-import { getHistory, getContinueWatching, supabase } from '../lib/supabase'
+import { getHistory, getContinueWatching } from '../lib/supabase'
 import { tmdb } from '../lib/tmdb'
 import { callGeminiWithFallback } from '../lib/gemini'
 import { logger } from '../lib/logger'
@@ -130,8 +130,8 @@ async function tmdbFallback(userId: string): Promise<RecommendationItem[]> {
           tmdb.get('/discover/tv', { params: { with_genres: genreIds.slice(0, 2).join(','), sort_by: 'popularity.desc', page: 1 } })
         ])
         const combined = [
-          ...(movieData.results || []).map((m: RecommendationItem) => ({ ...m, media_type: 'movie' as const })),
-          ...(tvData.results || []).map((t: RecommendationItem) => ({ ...t, media_type: 'tv' as const }))
+          ...(movieData.results || []).map((m: any) => ({ ...m, media_type: 'movie' as const })),
+          ...(tvData.results || []).map((t: any) => ({ ...t, media_type: 'tv' as const }))
         ]
         for (const m of combined) {
           const key = `${m.media_type}-${m.id}`
@@ -141,7 +141,9 @@ async function tmdbFallback(userId: string): Promise<RecommendationItem[]> {
           }
         }
       }
-    } catch {}
+    } catch (err) {
+      logger.error('Error in discover by top genres', err)
+    }
   }
 
   // 5. Fallback: trending if nothing
@@ -155,7 +157,9 @@ async function tmdbFallback(userId: string): Promise<RecommendationItem[]> {
           results.push({ ...m, media_type: m.media_type || 'movie' })
         }
       }
-    } catch {}
+    } catch (err) {
+      logger.error('Error in trending fallback', err)
+    }
   }
 
   return results.slice(0, 15)

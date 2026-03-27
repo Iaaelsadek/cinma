@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
-import { Plus, List, Trash2, Globe, Lock, ExternalLink, Share2 } from 'lucide-react'
+import {List, Trash2, Globe, Lock, ExternalLink, Share2} from 'lucide-react'
 import { getUserLists, deleteUserList } from '../../../lib/supabase'
 import { Link } from 'react-router-dom'
-import { motion, AnimatePresence } from 'framer-motion'
+import {motion} from 'framer-motion'
 import { toast } from 'sonner'
 import { logger } from '../../../lib/logger'
 

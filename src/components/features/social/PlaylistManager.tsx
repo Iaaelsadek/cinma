@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import {motion} from 'framer-motion'
 import { Sparkles, Plus, Loader2, ListMusic, Trash2, Share2, Globe, Lock } from 'lucide-react'
 import { useAuth } from '../../../hooks/useAuth'
 import { generateAiPlaylist } from '../../../lib/gemini'

@@ -1,10 +1,17 @@
 import type { Config } from 'tailwindcss'
 // @ts-ignore
 import rtl from 'tailwindcss-rtl'
+import { colorTokens } from './src/styles/tokens/colors'
+import { spacingTokens } from './src/styles/tokens/spacing'
+import { shadowTokens } from './src/styles/tokens/shadows'
+import { animationTokens } from './src/styles/tokens/animations'
+import { typographyTokens } from './src/styles/tokens/typography'
 
 /**
  * LUMEN Design System — Light through darkness.
  * Cinema Online. Premium, cinematic, universal (TV/tablet/mobile/desktop).
+ * 
+ * Extended with Design Token System for consistency and maintainability.
  */
 export default {
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
@@ -17,38 +24,89 @@ export default {
         '5xl': '3840px',
       },
       colors: {
-        /* LUMEN palette */
+        /* LUMEN palette - Legacy compatibility */
         lumen: {
-          void: '#08080C',
-          surface: '#0F0F14',
-          muted: '#1C1B1F',
-          cream: '#E8E4DC',
-          silver: '#A8A5A0',
-          gold: '#C9A962',
+          void: colorTokens.surface.void,
+          surface: colorTokens.surface.base,
+          muted: colorTokens.surface.raised,
+          cream: colorTokens.text.primary,
+          silver: colorTokens.text.secondary,
+          gold: colorTokens.semantic.primary.main,
+        },
+        /* Design Token System - Semantic Colors */
+        semantic: {
+          primary: colorTokens.semantic.primary.main,
+          'primary-light': colorTokens.semantic.primary.light,
+          'primary-dark': colorTokens.semantic.primary.dark,
+          success: colorTokens.semantic.success.main,
+          'success-light': colorTokens.semantic.success.light,
+          'success-dark': colorTokens.semantic.success.dark,
+          warning: colorTokens.semantic.warning.main,
+          'warning-light': colorTokens.semantic.warning.light,
+          'warning-dark': colorTokens.semantic.warning.dark,
+          error: colorTokens.semantic.error.main,
+          'error-light': colorTokens.semantic.error.light,
+          'error-dark': colorTokens.semantic.error.dark,
+          info: colorTokens.semantic.info.main,
+          'info-light': colorTokens.semantic.info.light,
+          'info-dark': colorTokens.semantic.info.dark,
         },
         /* Legacy compatibility */
         primary: {
-          DEFAULT: '#C9A962',
-          glow: 'rgba(201, 169, 98, 0.4)',
+          DEFAULT: colorTokens.semantic.primary.main,
+          glow: colorTokens.semantic.primary.opacity[50],
         },
         luxury: {
-          obsidian: '#08080C',
-          charcoal: '#0F0F14',
-          emerald: '#C9A962',
-          blue: '#3B82F6',
-          frost: '#0F0F14',
+          obsidian: colorTokens.surface.void,
+          charcoal: colorTokens.surface.base,
+          emerald: colorTokens.semantic.primary.main,
+          blue: colorTokens.semantic.info.main,
+          frost: colorTokens.surface.base,
         },
         neon: {
-          emerald: '#C9A962',
-          blue: '#3B82F6',
+          emerald: colorTokens.semantic.primary.main,
+          blue: colorTokens.semantic.info.main,
           cyan: '#22D3EE',
         },
       },
       fontFamily: {
         syne: ['Syne', 'system-ui', 'sans-serif'],
-        dm: ['DM Sans', 'system-ui', 'sans-serif'],
-        cairo: ['Cairo', 'system-ui', 'sans-serif'],
+        dm: typographyTokens.fontFamilies.english.split(', '),
+        cairo: typographyTokens.fontFamilies.arabic.split(', '),
         inter: ['Inter', 'system-ui', 'sans-serif'],
+      },
+      fontSize: {
+        xs: typographyTokens.fontSizes.xs,
+        sm: typographyTokens.fontSizes.sm,
+        base: typographyTokens.fontSizes.base,
+        lg: typographyTokens.fontSizes.lg,
+        xl: typographyTokens.fontSizes.xl,
+        '2xl': typographyTokens.fontSizes['2xl'],
+        '3xl': typographyTokens.fontSizes['3xl'],
+        '4xl': typographyTokens.fontSizes['4xl'],
+        '5xl': typographyTokens.fontSizes['5xl'],
+      },
+      fontWeight: {
+        normal: String(typographyTokens.fontWeights.normal),
+        medium: String(typographyTokens.fontWeights.medium),
+        semibold: String(typographyTokens.fontWeights.semibold),
+        bold: String(typographyTokens.fontWeights.bold),
+      },
+      lineHeight: {
+        tight: String(typographyTokens.lineHeights.tight),
+        normal: String(typographyTokens.lineHeights.normal),
+        relaxed: String(typographyTokens.lineHeights.relaxed),
+      },
+      spacing: {
+        1: '4px',
+        2: '8px',
+        3: '12px',
+        4: '16px',
+        6: '24px',
+        8: '32px',
+        12: '48px',
+        16: '64px',
+        24: '96px',
       },
       backgroundImage: {
         'glass-gradient': 'linear-gradient(135deg, rgba(232, 228, 220, 0.06) 0%, rgba(232, 228, 220, 0.02) 100%)',
@@ -59,11 +117,14 @@ export default {
         'lumen-mesh': 'linear-gradient(135deg, rgba(201, 169, 98, 0.03) 0%, transparent 50%, rgba(201, 169, 98, 0.02) 100%)',
       },
       boxShadow: {
+        ...shadowTokens.elevation,
         glass: '0 12px 36px 0 rgba(0, 0, 0, 0.5)',
-        'lumen-card': '0 4px 24px -4px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(28, 27, 31, 0.6)',
-        'lumen-card-hover': '0 24px 48px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(201, 169, 98, 0.35), 0 0 40px -8px rgba(201, 169, 98, 0.2)',
+        'lumen-card': shadowTokens.lumenCard.default,
+        'lumen-card-hover': shadowTokens.lumenCard.hover,
         'lumen-gold': '0 0 0 3px rgba(201, 169, 98, 0.5)',
-        'lumen-glow': '0 0 24px -4px rgba(201, 169, 98, 0.25)',
+        'lumen-glow': shadowTokens.goldGlow.sm,
+        'lumen-glow-md': shadowTokens.goldGlow.md,
+        'lumen-glow-lg': shadowTokens.goldGlow.lg,
         'neon-emerald': '0 0 18px rgba(201, 169, 98, 0.4)',
         'neon-blue': '0 0 18px rgba(59, 130, 246, 0.55)',
       },
@@ -77,6 +138,7 @@ export default {
         'neon-flicker-cyan-alt': 'neon-flicker-cyan-alt 2.5s infinite alternate-reverse',
         'pulse-white': 'pulse-white 3s ease-in-out infinite',
         'neon-flash': 'neon-flash 1.5s infinite ease-in-out',
+        'shimmer': 'shimmer 1.5s infinite',
       },
       keyframes: {
         'lumen-breathe': {
@@ -132,10 +194,22 @@ export default {
         'neon-flash': {
           '0%, 100%': { opacity: '1', textShadow: '0 0 5px #22d3ee, 0 0 10px #22d3ee' },
           '50%': { opacity: '0.5', textShadow: 'none' },
-        }
+        },
+        shimmer: {
+          '0%': { transform: 'translateX(-100%)' },
+          '100%': { transform: 'translateX(100%)' },
+        },
       },
       transitionTimingFunction: {
-        lumen: 'cubic-bezier(0.22, 1, 0.36, 1)',
+        lumen: animationTokens.easing['ease-lumen'],
+        'ease-in-out': animationTokens.easing['ease-in-out'],
+        'ease-out': animationTokens.easing['ease-out'],
+        'ease-in': animationTokens.easing['ease-in'],
+      },
+      transitionDuration: {
+        fast: animationTokens.durations.fast,
+        normal: animationTokens.durations.normal,
+        slow: animationTokens.durations.slow,
       },
     },
   },

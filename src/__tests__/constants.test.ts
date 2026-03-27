@@ -1,11 +1,11 @@
-// test the standalone helper rather than the full constants module
 import { envVar } from '../lib/envHelper';
+import { vi } from 'vitest';
 
 describe('envVar helper', () => {
   const ORIGINAL_ENV = process.env;
 
   beforeEach(() => {
-    jest.resetModules();
+    vi.resetModules();
     process.env = { ...ORIGINAL_ENV };
   });
 
@@ -28,8 +28,8 @@ describe('envVar helper', () => {
     expect(envVar('NONEXISTENT')).toBeUndefined();
   });
 
-  it('provides FLAGS via module mock', () => {
-    const { FLAGS } = require('../lib/constants');
+  it('provides FLAGS via module mock', async () => {
+    const { FLAGS } = await import('../lib/constants');
     expect(typeof FLAGS.ADS_ENABLED).toBe('boolean');
   });
 });

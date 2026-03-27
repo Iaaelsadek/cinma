@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { translateTitleToArabic } from '../../lib/gemini'
 import { useAdmin } from '../../context/AdminContext'
 import { errorLogger } from '../../services/errorLogging'
-import { Search, Plus, Save, Trash2, Server, Film, Link as LinkIcon, CheckCircle, XCircle, Upload } from 'lucide-react'
+import {Search, Plus, Save, Trash2, Server, Film, Upload} from 'lucide-react'
 import { toast } from 'sonner'
 
 const GENRES: Record<number, string> = {

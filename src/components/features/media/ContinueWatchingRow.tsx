@@ -3,6 +3,7 @@ import { PrefetchLink } from '../../common/PrefetchLink'
 import { Clock } from 'lucide-react'
 import { SectionHeader } from '../../common/SectionHeader'
 import { useLang } from '../../../state/useLang'
+import { generateWatchUrl } from '../../../lib/utils'
 
 type ApiCwItem = {
   content_id: number
@@ -14,6 +15,7 @@ type ApiCwItem = {
   updated_at: string
   meta?: {
     id: number
+    slug?: string | null
     poster_path?: string | null
     title?: string | null
     name?: string | null
@@ -55,9 +57,11 @@ export const ContinueWatchingRow = ({ userId }: { userId: string }) => {
       <SectionHeader title={lang === 'ar' ? 'تابع المشاهدة' : 'Continue Watching'} icon={<Clock />} />
       <div className="flex gap-4 overflow-x-auto pb-6 snap-x scrollbar-none -mx-4 px-4 md:mx-0 md:px-0">
         {data.map((r, i) => {
-          const href = r.content_type === 'movie'
-            ? `/watch/movie/${r.content_id}`
-            : `/watch/tv/${r.content_id}/s${r.season || 1}/ep${r.episode || 1}`
+          const href = generateWatchUrl(
+            { id: r.content_id, slug: r.meta?.slug, media_type: r.content_type },
+            r.season || 1,
+            r.episode || 1
+          )
           const progress = r.duration && r.duration > 0
             ? Math.min(99, Math.round(((r.progress || 0) / r.duration) * 100))
             : 0

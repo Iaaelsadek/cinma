@@ -5,7 +5,7 @@ import { supabase } from '../../lib/supabase'
 import { useLang } from '../../state/useLang'
 import { useQuranPlayerStore } from '../../state/useQuranPlayerStore'
 import { SURAHS } from '../../data/quran'
-import { Play, Share2, ArrowLeft, ArrowRight, Pause } from 'lucide-react'
+import {Play, ArrowLeft, ArrowRight, Pause} from 'lucide-react'
 import { motion } from 'framer-motion'
 import { Helmet } from 'react-helmet-async'
 

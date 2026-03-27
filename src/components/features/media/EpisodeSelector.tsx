@@ -1,4 +1,4 @@
-import { ChevronDown, Calendar, PlayCircle, ListVideo, Layers } from 'lucide-react'
+import {ChevronDown, ListVideo, Layers} from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import clsx from 'clsx'

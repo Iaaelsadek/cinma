@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
-import { useParams, Link, useLocation } from 'react-router-dom'
+import {useParams, Link} from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { VideoPlayer } from '../../components/features/media/VideoPlayer'
 import { ChevronLeft, Eye, Clock, Calendar, Users, Send, X, Sparkles, AlertTriangle } from 'lucide-react'
@@ -8,8 +8,6 @@ import { useLang } from '../../state/useLang'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../../hooks/useAuth'
 import { toast } from 'sonner'
-import { errorLogger } from '../../services/errorLogging'
-import { FALLBACK_SUMMARIES, LEGACY_ID_MAP } from '../../lib/constants'
 import { logger } from '../../lib/logger'
 
 type VideoData = {

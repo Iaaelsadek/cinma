@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Zap, Award, PlayCircle, MessageSquare, Users, CheckCircle2, Trophy, Flame } from 'lucide-react'
-import { getUserChallenges, getAvailableChallenges, type UserChallenge, type Challenge } from '../../../lib/supabase'
-import { motion, AnimatePresence } from 'framer-motion'
+import {getUserChallenges, getAvailableChallenges} from '../../../lib/supabase'
+import {motion} from 'framer-motion'
 import clsx from 'clsx'
 import { logger } from '../../../lib/logger'
 

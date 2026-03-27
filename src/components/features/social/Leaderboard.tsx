@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
-import { Trophy, Star, Film, MessageSquare, TrendingUp, User as UserIcon, Medal } from 'lucide-react'
-import { getLeaderboard, type LeaderboardEntry } from '../../../lib/supabase'
+import {Trophy, Film, MessageSquare, TrendingUp, Medal} from 'lucide-react'
+import {getLeaderboard} from '../../../lib/supabase'
 import { Link } from 'react-router-dom'
-import { motion, AnimatePresence } from 'framer-motion'
+import {motion} from 'framer-motion'
 import clsx from 'clsx'
 import { logger } from '../../../lib/logger'
 

@@ -1,9 +1,6 @@
 import { toast } from 'sonner';
 import { logger } from '../lib/logger';
 
-// Define process for browser environment
-declare const process: { env: { NODE_ENV?: string } } | undefined;
-
 // Configuration
 // Using public anon key for client-side logging. RLS must allow inserts.
 
@@ -32,7 +29,7 @@ export interface AppError {
   stack?: string;
   severity: ErrorSeverity;
   category: ErrorCategory;
-  context?: Record<string, any>;
+  context?: Record<string, unknown>;
   url?: string;
   user_agent?: string;
   timestamp?: string;

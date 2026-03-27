@@ -20,6 +20,7 @@ import { logger } from '../../lib/logger'
 
 type SearchItem = {
   id: number
+  slug?: string
   media_type: 'movie' | 'tv'
   title?: string
   name?: string
@@ -134,30 +135,27 @@ export const Search = () => {
   })
 
   const mediaSearchQuery = useQuery<SearchItem[]>({
-    queryKey: ['search-media-rpc', q, types.join(',')],
+    queryKey: ['search-media', q, types.join(','), rawGenres, keywords],
     queryFn: async () => {
       if (!q || q.length < 2) return []
-      const mediaTypes = types.length ? types : ['movie']
-      const allowMovie = mediaTypes.includes('movie')
-      const allowTv = mediaTypes.includes('tv')
-      if (!allowMovie && !allowTv) return []
-      const { data, error } = await supabase.rpc('search_movies_series', {
-        query_text: q,
-        result_limit: 30
+      
+      const { searchDB } = await import('../../lib/db')
+      const results = await searchDB({
+        query: q,
+        type: types.includes('movie') && types.includes('tv') ? 'all' : types.includes('movie') ? 'movies' : 'tv',
+        limit: 20
       })
-      if (error || !data) return []
-      const rows = (data as MediaSearchRow[])
-        .filter((row) => (allowMovie && row.media_type === 'movie') || (allowTv && row.media_type === 'tv'))
-        .map((row) => ({
-          id: Number(row.id),
-          media_type: row.media_type,
-          title: row.title || undefined,
-          name: row.name || undefined,
-          poster_path: row.poster_path,
-          backdrop_path: row.backdrop_path,
-          vote_average: row.vote_average || 0
-        }))
-      return rows
+      
+      return results.map(item => ({
+        id: item.id,
+        slug: item.slug,
+        media_type: item.media_type as 'movie' | 'tv',
+        title: item.media_type === 'movie' ? item.name : undefined,
+        name: item.media_type === 'tv' ? item.name : undefined,
+        poster_path: item.poster_path,
+        backdrop_path: item.backdrop_path,
+        vote_average: item.vote_average
+      }))
     },
     enabled: q.length >= 2
   })
@@ -165,19 +163,23 @@ export const Search = () => {
   const gamesQuery = useQuery<GameRow[]>({
     queryKey: ['search-games', q, types.join(','), rawGenres, keywords],
     queryFn: async () => {
-      let query = supabase.from('games').select('id,title,poster_url,category,rating')
+      if (!types.includes('game')) return []
       
-      if (q && q.length >= 2) {
-        query = query.ilike('title', `%${q}%`)
-      } else if (types.includes('game')) {
-        if (keywords) query = query.ilike('category', `%${keywords}%`)
-        else if (rawGenres) query = query.ilike('category', `%${rawGenres}%`)
-      } else {
-        return []
-      }
-
-      const { data } = await query.limit(20)
-      return (data as GameRow[]) || []
+      // Use CockroachDB API
+      const { searchGamesDB } = await import('../../lib/db')
+      const results = await searchGamesDB({
+        query: q || undefined,
+        category: keywords || rawGenres || undefined,
+        limit: 20
+      })
+      
+      return results.map(item => ({
+        id: item.id,
+        title: item.title,
+        poster_url: item.poster_url || null,
+        category: item.category || null,
+        rating: item.rating || null
+      }))
     },
     enabled: (q.length >= 2) || (types.includes('game') && (keywords.length > 0 || rawGenres.length > 0))
   })
@@ -185,19 +187,23 @@ export const Search = () => {
   const softwareQuery = useQuery<SoftwareRow[]>({
     queryKey: ['search-software', q, types.join(','), rawGenres, keywords],
     queryFn: async () => {
-      let query = supabase.from('software').select('id,title,poster_url,category,rating')
+      if (!types.includes('software')) return []
       
-      if (q && q.length >= 2) {
-        query = query.ilike('title', `%${q}%`)
-      } else if (types.includes('software')) {
-        if (keywords) query = query.ilike('category', `%${keywords}%`)
-        else if (rawGenres) query = query.ilike('category', `%${rawGenres}%`)
-      } else {
-        return []
-      }
-
-      const { data } = await query.limit(20)
-      return (data as SoftwareRow[]) || []
+      // Use CockroachDB API
+      const { searchSoftwareDB } = await import('../../lib/db')
+      const results = await searchSoftwareDB({
+        query: q || undefined,
+        category: keywords || rawGenres || undefined,
+        limit: 20
+      })
+      
+      return results.map(item => ({
+        id: item.id,
+        title: item.title,
+        poster_url: item.poster_url || null,
+        category: item.category || null,
+        rating: item.rating || null
+      }))
     },
     enabled: (q.length >= 2) || (types.includes('software') && (keywords.length > 0 || rawGenres.length > 0))
   })

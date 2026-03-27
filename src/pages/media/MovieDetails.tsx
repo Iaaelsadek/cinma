@@ -1,16 +1,19 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import {useParams, useNavigate, useLocation} from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { resolveSlug } from '../../lib/slugResolver'
+import { logger } from '../../lib/logger'
 import { supabase } from '../../lib/supabase'
+import {getMovieByIdDB} from '../../lib/db'
 import { tmdb } from '../../lib/tmdb'
 import { TrafficLightBadge } from '../../components/common/TrafficLightBadge'
 import { MovieCard } from '../../components/features/media/MovieCard'
 import { useAuth } from '../../hooks/useAuth'
-import { getProfile, incrementClicks, addToWatchlist, isInWatchlist, removeFromWatchlist } from '../../lib/supabase'
+import {getProfile, addToWatchlist, isInWatchlist, removeFromWatchlist} from '../../lib/supabase'
 import { toast } from 'sonner'
 import { Helmet } from 'react-helmet-async'
-import { motion, AnimatePresence } from 'framer-motion'
-import { Star, Heart, Play, Share2, Clock, Calendar, Globe, AlertCircle } from 'lucide-react'
+import {motion} from 'framer-motion'
+import {Star, Heart, Play} from 'lucide-react'
 import { clsx } from 'clsx'
 import { ShareButton } from '../../components/common/ShareButton'
 import { useLang } from '../../state/useLang'
@@ -40,8 +43,9 @@ type TmdbSimilarItem = {
 }
 
 export const MovieDetails = () => {
-  const { id } = useParams()
-  const movieId = Number(id)
+  const { slug } = useParams()
+  const navigate = useNavigate()
+  const location = useLocation()
   const { user } = useAuth()
   const { lang } = useLang()
   const queryClient = useQueryClient()
@@ -51,36 +55,40 @@ export const MovieDetails = () => {
   const [showTrailer, setShowTrailer] = useState(false)
   const [dbTrailerUrl, setDbTrailerUrl] = useState<string | null>(null)
   const [aiSummary, setAiSummary] = useState<string | null>(null)
+  const [movieId, setMovieId] = useState<number | null>(null)
 
   // 1. Fetch from DB
   const { data: dbMovie, isLoading: isDbLoading } = useQuery({
-    queryKey: ['movie-db', movieId],
+    queryKey: ['movie-db', slug],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('movies')
-        .select('*')
-        .eq('id', movieId)
-        .maybeSingle()
-      if (error) return null
-      return data
+      if (!slug) return null;
+      return getMovieByIdDB(slug)
     },
-    enabled: Number.isFinite(movieId)
+    enabled: !!slug
   })
+
+  // Update movieId when dbMovie is loaded
+  useEffect(() => {
+    if (dbMovie?.id) {
+      setMovieId(dbMovie.id)
+    }
+  }, [dbMovie])
 
   // 2. Fetch from TMDB (Fallback)
   const { data: tmdbMovie, isLoading: isTmdbLoading } = useQuery({
     queryKey: ['movie-tmdb', movieId],
     queryFn: async () => {
+      if (!movieId) return null;
       try {
         const { data } = await tmdb.get(`/movie/${movieId}`, {
           params: { append_to_response: 'release_dates,credits,videos' }
         })
         return data
-      } catch {
+      } catch (err) {
         return null
       }
     },
-    enabled: Number.isFinite(movieId) && !dbMovie
+    enabled: !!movieId
   })
 
   const data = dbMovie || tmdbMovie
@@ -101,26 +109,26 @@ export const MovieDetails = () => {
       const p = await getProfile(user.id)
       if (cancelled) return
       setIsAdmin(p?.role === 'admin')
-      if (id) {
-        const inside = await isInWatchlist(user.id, Number(id), 'movie')
+      if (movieId) {
+        const inside = await isInWatchlist(user.id, movieId, 'movie')
         if (!cancelled) setHeart(inside)
       }
     })()
     return () => { cancelled = true }
-  }, [user, id])
+  }, [user, movieId])
 
   // Get AI Summary & Trailer from DB if available
   useEffect(() => {
     let cancelled = false
     ;(async () => {
-      if (!id) return
-      const { data } = await supabase.from('movies').select('ai_summary,trailer_url').eq('id', String(id)).maybeSingle()
+      if (!movieId) return
+      const { data: dbData } = await supabase.from('movies').select('ai_summary,trailer_url').eq('id', movieId).maybeSingle()
       if (cancelled) return
-      if (data?.ai_summary) setAiSummary(data.ai_summary)
-      setDbTrailerUrl(data?.trailer_url || null)
+      if (dbData?.ai_summary) setAiSummary(dbData.ai_summary)
+      setDbTrailerUrl(dbData?.trailer_url || null)
     })()
     return () => { cancelled = true }
-  }, [id])
+  }, [movieId])
 
   // Auto-translate overview if needed
   useEffect(() => {
@@ -138,11 +146,11 @@ export const MovieDetails = () => {
   // Watchlist Mutation
   const toggleWatchlist = useMutation({
     mutationFn: async () => {
-      if (!user) throw new Error('auth')
+      if (!user || !movieId) throw new Error('auth')
       if (heart) {
-        await removeFromWatchlist(user.id, Number(id), 'movie')
+        await removeFromWatchlist(user.id, movieId, 'movie')
       } else {
-        await addToWatchlist(user.id, Number(id), 'movie')
+        await addToWatchlist(user.id, movieId, 'movie')
       }
     },
     onSuccess: () => {
@@ -216,17 +224,17 @@ export const MovieDetails = () => {
 
   return (
     <>
-      <Helmet>
-        <title>{title} - Cinema Online</title>
-        <meta name="description" content={overview.slice(0, 160)} />
-        <link rel="canonical" href={`https://cinma.online/movie/${id}`} />
-        <meta property="og:title" content={title} />
-        <meta property="og:description" content={overview.slice(0, 200)} />
-        <meta property="og:image" content={poster} />
-        <meta property="og:url" content={`https://cinma.online/movie/${id}`} />
-        <meta property="twitter:card" content="summary_large_image" />
-        {schemaData && <script type="application/ld+json">{JSON.stringify(schemaData)}</script>}
-      </Helmet>
+      <SeoHead 
+        title={title}
+        description={overview}
+        image={poster}
+        type="video.movie"
+        rating={data.vote_average}
+        ratingCount={data.vote_count}
+        releaseDate={data.release_date}
+        genres={genres.map((g: any) => g.name)}
+        schema={schemaData}
+      />
 
       <div className="min-h-screen bg-black text-white relative w-full overflow-hidden">
         {/* Backdrop */}

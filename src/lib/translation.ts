@@ -108,21 +108,25 @@ export async function getTranslation(movie: any): Promise<TranslatedContent | nu
     const overview_ar = arOverviewFromDetails || fromTxAr.overview || ''
     const overview_en = enOverviewFromDetails || fromTxEn.overview || ''
 
-    const resolvedTitle = resolveTitleWithFallback({
-      ...movie,
-      title_ar,
-      title_en,
-      original_title: originalTitle
-    })
+    // CRITICAL FIX: To prevent infinite loops with useTranslatedContent hook,
+    // we use pickFirst directly instead of calling resolveTitleWithFallback recursively
+    const resolvedTitle = pickFirst(
+      title_ar, 
+      title_en, 
+      originalTitle,
+      movie?.title,
+      movie?.name
+    )
     if (!resolvedTitle) return null
 
-    const resolvedOverview = resolveOverviewWithFallback({
+    const resolvedOverview = pickFirst(
       overview_ar,
-      overview_en
-    })
+      overview_en,
+      movie?.overview
+    )
 
     const cachedTitleAr = title_ar || resolvedTitle
-    const cachedOverviewAr = overview_ar || overview_en || ''
+    const cachedOverviewAr = overview_ar || resolvedOverview || ''
 
     const result: TranslatedContent = {
       title_ar: cachedTitleAr,
@@ -131,21 +135,38 @@ export async function getTranslation(movie: any): Promise<TranslatedContent | nu
       overview_en: resolvedOverview
     }
 
-    const { error: insertError } = await supabase.from('content_translations').upsert({
-      tmdb_id: tmdbId,
-      media_type: mediaType,
-      title_ar: cachedTitleAr,
-      overview_ar: cachedOverviewAr,
-      title_en,
-      overview_en: resolvedOverview
-    }, { onConflict: 'tmdb_id,media_type' })
-
-    if (insertError) {
-      return result
+    // Mute any errors from Supabase to prevent React Query from retrying infinitely
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      // Check session and specifically look for admin/supervisor role
+      // to completely prevent 401 Unauthorized loops for regular visitors
+      if (session?.user?.id) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', session.user.id)
+          .maybeSingle()
+          
+        if (profile && (profile.role === 'admin' || profile.role === 'supervisor')) {
+          const { error: insertError } = await supabase.from('content_translations').upsert({
+            tmdb_id: tmdbId,
+            media_type: mediaType,
+            title_ar: cachedTitleAr,
+            overview_ar: cachedOverviewAr,
+            title_en,
+            overview_en: resolvedOverview
+          }, { onConflict: 'tmdb_id,media_type' })
+          
+        }
+      }
+    } catch (e) {
+      // Intentionally swallow errors related to session/db writing to prevent UI freezing
     }
 
     return result
-  } catch {
-    return null
+  } catch (error) {
+    // Return a valid empty object instead of null to break the retry cycle
+    return { title_ar: '', overview_ar: '', title_en: '', overview_en: '' }
   }
 }

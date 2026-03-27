@@ -1,10 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Pause, Play, Volume2, VolumeX, SkipBack, SkipForward, X, Share2, Music } from 'lucide-react'
+import {Pause, Play, Volume2, VolumeX, SkipBack, SkipForward, X} from 'lucide-react'
 import { useLang } from '../../../state/useLang'
 import { useQuranPlayerStore } from '../../../state/useQuranPlayerStore'
 import { NATURE_IMAGES, SURAHS } from '../../../data/quran'
-import { toast } from 'sonner'
 import { logger } from '../../../lib/logger'
 
 export const QuranPlayerBar = () => {
