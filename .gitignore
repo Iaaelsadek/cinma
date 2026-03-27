@@ -12,3 +12,7 @@ __pycache__/
 temp_*
 .vercel
 dev-dist
+scripts/migration/data/
+on/data/
+server/migration/data/
+*.log
