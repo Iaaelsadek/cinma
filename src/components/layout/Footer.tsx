@@ -1,6 +1,6 @@
 import { useLang } from '../../state/useLang'
 import { PrefetchLink } from '../common/PrefetchLink'
-import { Zap, Activity, Heart, ShieldCheck, Lock, BadgeCheck, Server, Facebook } from 'lucide-react'
+import {Zap, Activity, ShieldCheck, Lock, BadgeCheck, Server, Facebook} from 'lucide-react'
 
 export const Footer = () => {
   const { lang } = useLang()

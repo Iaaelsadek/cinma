@@ -1,4 +1,0 @@
-ALTER TABLE movies ADD COLUMN IF NOT EXISTS seo_title TEXT;
-ALTER TABLE movies ADD COLUMN IF NOT EXISTS meta_description TEXT;
-ALTER TABLE tv_series ADD COLUMN IF NOT EXISTS seo_title TEXT;
-ALTER TABLE tv_series ADD COLUMN IF NOT EXISTS meta_description TEXT;

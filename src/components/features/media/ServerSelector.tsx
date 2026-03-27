@@ -1,6 +1,6 @@
-import { Server as ServerIcon, Zap, ShieldCheck, Globe, Wifi, Activity, X as CloseIcon } from 'lucide-react'
+import {Zap, ShieldCheck, Globe, Wifi, Activity, X} from 'lucide-react'
 import { Server } from '../../../hooks/useServers'
-import { motion, AnimatePresence } from 'framer-motion'
+import {motion} from 'framer-motion'
 import clsx from 'clsx'
 
 type Props = {
@@ -23,7 +23,7 @@ export const ServerSelector = ({ servers, active, onSelect, lang = 'ar' }: Props
   }
 
   const getIcon = (name: string, idx: number, status?: Server['status']) => {
-    if (status === 'offline') return <CloseIcon size={10} className="text-rose-500" />
+    if (status === 'offline') return <X size={10} className="text-rose-500" />
     if (status === 'unknown') return <div className="w-1 h-1 rounded-full bg-zinc-600 animate-pulse" />
     const n = name.toLowerCase()
     if (n.includes('vidsrc')) return <Zap size={10} />
@@ -95,7 +95,7 @@ export const ServerSelector = ({ servers, active, onSelect, lang = 'ar' }: Props
                   
                   {isOffline && (
                     <div className="absolute top-1 right-1">
-                      <CloseIcon size={8} className="text-rose-500" />
+                      <X size={8} className="text-rose-500" />
                     </div>
                   )}
                 </div>

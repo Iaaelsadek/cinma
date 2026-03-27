@@ -50,7 +50,11 @@ export const PwaInstallPrompt = () => {
 
   return (
     <div
-      className="fixed bottom-4 left-4 right-4 md:left-auto md:right-6 md:max-w-sm z-[200] rounded-2xl border border-lumen-muted bg-lumen-surface/95 backdrop-blur-xl shadow-2xl p-4 animate-in slide-in-from-bottom-4"
+      className="fixed bottom-6 z-[99999] rounded-2xl border-2 border-lumen-gold/30 bg-lumen-surface/95 backdrop-blur-xl shadow-2xl p-5 animate-in slide-in-from-bottom-4 max-w-[380px] w-[calc(100%-2rem)]"
+      style={{
+        right: '1rem',
+        boxShadow: '0 25px 50px -12px rgba(201, 169, 98, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1)',
+      }}
       role="dialog"
       aria-label={lang === 'ar' ? 'تثبيت التطبيق' : 'Install app'}
     >

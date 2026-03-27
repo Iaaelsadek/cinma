@@ -4,15 +4,15 @@ import 'swiper/css'
 import 'swiper/css/navigation'
 import 'swiper/css/free-mode'
 import { Link, useParams, useSearchParams, useNavigate, useLocation } from 'react-router-dom'
-import { useEffect, useMemo, useState, useRef } from 'react'
+import {useEffect, useMemo, useState} from 'react'
 import { createPortal } from 'react-dom'
 import { useAuth } from '../../hooks/useAuth'
-import { supabase, createWatchParty, updateWatchParty, grantAchievement } from '../../lib/supabase'
+import {supabase, createWatchParty, grantAchievement} from '../../lib/supabase'
 import { AdsManager } from '../../components/features/system/AdsManager'
 import { tmdb } from '../../lib/tmdb'
 import { MovieCard } from '../../components/features/media/MovieCard'
 import { SeoHead } from '../../components/common/SeoHead'
-import { AlertTriangle, X, Sparkles, Layers, ChevronLeft, ChevronRight, ExternalLink, Calendar, Clock, Star, Users, Play as PlayIcon } from 'lucide-react'
+import {AlertTriangle, X, Heart, Layers, ChevronLeft, ChevronRight, Calendar, Clock, Star, Users, ThumbsUp, Sparkles, Play} from 'lucide-react'
 import { ShareButton } from '../../components/common/ShareButton'
 import { NotFound } from '../NotFound'
 import { SkeletonGrid } from '../../components/common/Skeletons'
@@ -20,11 +20,8 @@ import { SubtitleManager } from '../../components/features/media/SubtitleManager
 import { useServers } from '../../hooks/useServers'
 import { useWatchProgress } from '../../hooks/useWatchProgress'
 import { useDualTitles } from '../../hooks/useDualTitles'
-import { generateArabicSummary } from '../../lib/gemini'
-import { errorLogger } from '../../services/errorLogging'
 
 import { EmbedPlayer } from '../../components/features/media/EmbedPlayer'
-import { ServerSelector } from '../../components/features/media/ServerSelector'
 import { EpisodeSelector } from '../../components/features/media/EpisodeSelector'
 import { WatchParty } from '../../components/features/social/WatchParty'
 import { toast } from 'sonner'
@@ -32,10 +29,13 @@ import { motion, AnimatePresence } from 'framer-motion'
 import clsx from 'clsx'
 import { logger } from '../../lib/logger'
 
+import { generateWatchUrl } from '../../lib/utils'
+
 type TmdbCastMember = {
   id: number
   name: string
   profile_path?: string | null
+  slug?: string
 }
 
 type TmdbCrewMember = {
@@ -231,24 +231,12 @@ export const Watch = () => {
 
   const [details, setDetails] = useState<TmdbDetails | null>(null)
   
-  // Translation Logic
-  const [translatedOverview, setTranslatedOverview] = useState<string | null>(null)
+  const translatedOverview = null; // Translation is now handled by backend
   const dualTitles = useDualTitles(details as any)
-
-  useEffect(() => {
-    if (!details || !details.overview) return
-    const isArabic = /[\u0600-\u06FF]/.test(details.overview)
-    if (!isArabic && !translatedOverview) {
-      generateArabicSummary(details.title || '', details.overview).then(summary => {
-        if (summary && summary !== details.overview) {
-          setTranslatedOverview(summary)
-        }
-      })
-    }
-  }, [details?.overview, details?.title])
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
+  const [fetchError, setFetchError] = useState<boolean>(false)
   const [cinemaMode, setCinemaMode] = useState(false)
   const [isPlaying, setIsPlaying] = useState(false)
   const [partyId, setPartyId] = useState<string | null>(sp.get('partyId'))
@@ -350,6 +338,8 @@ export const Watch = () => {
 
   // Hook 1: Remove redundant SearchParams sync that causes infinite redirect loops
   // Path params are already the primary source of truth.
+  // COMMENTED OUT TO FIX INFINITE LOOP BUG
+  /*
   useEffect(() => {
     // Only update SearchParams if we are using an ID route and need to preserve other query params
     // But DON'T set season/episode if we are already using path params like /s1/ep1
@@ -361,61 +351,76 @@ export const Watch = () => {
     // If we are here, it means we might be at /watch/tv/:id (without s/ep).
     // In that case, we should probably default to s1/ep1 in the URL for consistency.
     
-    /* 
     // This logic is dangerous and causing loops. Let's rely on `initialSeason` and `initialEpisode` defaults.
     // If the user navigates to /watch/tv/123, `sNum` and `eNum` will be null (or 1 from defaults).
     // We can just update the internal state without changing URL, or redirect once.
-    */
    
   }, [season, episode, type, setSp, sNum, eNum])
+  */
 
   // Hook 2: Fetch Details
   useEffect(() => {
     // If using slug and not yet resolved, wait
     if (slug && !id) return
 
+    const controller = new AbortController()
+    const signal = controller.signal
+
     let mounted = true
     setLoading(true)
     setError(false)
+    setFetchError(false)
     ;(async () => {
       if (!id) {
         // If we have no ID, and no slug, we can't do anything.
         // But if we have slug and it failed resolution, we already set error in resolveSlug
         if (!slug) {
            setError(true)
+           setFetchError(true)
            setLoading(false)
         }
         return
       }
       try {
         const path = type === 'movie' ? `/movie/${id}` : `/tv/${id}`
-        const { data } = await tmdb.get(path, { params: { append_to_response: 'credits,videos,external_ids,recommendations,similar' } })
+        const { data } = await tmdb.get(path, { 
+          params: { append_to_response: 'credits,videos,external_ids,recommendations,similar' },
+          signal
+        })
         
         // If it's a movie and belongs to a collection, fetch the collection
         if (type === 'movie' && data.belongs_to_collection) {
           try {
-            const { data: collectionData } = await tmdb.get(`/collection/${data.belongs_to_collection.id}`)
+            const { data: collectionData } = await tmdb.get(`/collection/${data.belongs_to_collection.id}`, { signal })
             data.collection = collectionData
           } catch (err) {
             logger.error('Failed to fetch collection:', err)
           }
         }
         
-        if (mounted) {
+        if (mounted && !signal.aborted) {
             setDetails(data)
             setLoading(false)
         }
-      } catch (e) {
+      } catch (e: any) {
         // Only set error if we really can't find anything
         // Don't redirect immediately, show error UI
+        if (signal.aborted) {
+          logger.info('Fetch aborted')
+          return
+        }
         logger.error('TMDB Fetch Error:', e)
         if (mounted) {
             setError(true)
+            setFetchError(true)
             setLoading(false)
         }
       }
     })()
-    return () => { mounted = false }
+    return () => { 
+      mounted = false
+      controller.abort()
+    }
   }, [id, type, slug])
 
   // Hook 3: Progress Tracking (REPLACED by useWatchProgress)
@@ -628,6 +633,7 @@ export const Watch = () => {
   }
 
   // Early Returns (Now safe because all hooks are declared above)
+  if (fetchError) return <NotFound />
   if (error) return <NotFound />
   if (loading && !details) return <div className="min-h-screen bg-[#0f0f0f] p-8"><SkeletonGrid count={1} variant="video" /></div>
 
@@ -792,7 +798,7 @@ export const Watch = () => {
               >
                 <div className="absolute inset-0 z-10 flex items-center justify-center opacity-0 group-hover/poster:opacity-100 transition-all duration-500 bg-black/60 backdrop-blur-[2px]">
                   <div className="bg-[#e50914] rounded-full p-5 shadow-2xl transform scale-75 group-hover/poster:scale-100 transition-transform duration-500">
-                    <PlayIcon size={32} fill="white" className="text-white" />
+                    <Play size={32} fill="white" className="text-white" />
                   </div>
                 </div>
                 <div className="h-full w-full bg-[#1a1a1a]">
@@ -821,49 +827,49 @@ export const Watch = () => {
             {/* Top Row: Player and Servers */}
             <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-6">
                 {/* Video Player */}
-                <div id="player" className="space-y-6">
-                    <div className="relative w-full">
-                        {showPreroll ? (
-                        <div className="aspect-video w-full overflow-hidden rounded-2xl border border-zinc-800 bg-black">
-                            <AdsManager type="preroll" position="player" onDone={() => setShowPreroll(false)} />
-                        </div>
-                        ) : (
-                        <EmbedPlayer
-                            server={servers[active]}
-                            serverIndex={active}
-                            cinemaMode={cinemaMode}
-                            toggleCinemaMode={() => setCinemaMode(!cinemaMode)}
-                            loading={serversLoading}
-                            onNextServer={() => active < servers.length - 1 ? setActive(active + 1) : setActive(0)}
-                            onReport={reportBroken}
-                            reporting={reporting}
-                            lang={lang}
-                        />
-                        )}
+                <div id="player" className="space-y-4">
+                    {showPreroll ? (
+                    <div className="aspect-video w-full max-h-[65vh] overflow-hidden rounded-2xl border border-zinc-800 bg-black">
+                        <AdsManager type="preroll" position="player" onDone={() => setShowPreroll(false)} />
                     </div>
+                    ) : (
+                    <EmbedPlayer
+                        server={servers[active]}
+                        serverIndex={active}
+                        cinemaMode={cinemaMode}
+                        toggleCinemaMode={() => setCinemaMode(!cinemaMode)}
+                        loading={serversLoading}
+                        onNextServer={() => active < servers.length - 1 ? setActive(active + 1) : setActive(0)}
+                        onReport={reportBroken}
+                        reporting={reporting}
+                        lang={lang}
+                        servers={servers}
+                        activeServerIndex={active}
+                        onServerSelect={setActive}
+                        downloadUrl={dlUrl}
+                    />
+                    )}
 
                     {/* Disclaimer Notice */}
-                    <div className="flex flex-col gap-4">
-                      <motion.div 
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="p-4 rounded-2xl bg-white/[0.02] border border-dashed border-white/10 text-center"
-                      >
-                      <div className="flex items-center justify-center gap-2 mb-1 text-zinc-500">
-                        <AlertTriangle size={12} />
+                    <motion.div 
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="p-4 rounded-2xl bg-white/[0.02] border border-dashed border-white/10"
+                    >
+                      <div className="flex items-center justify-center gap-2 mb-2 text-zinc-500">
+                        <AlertTriangle size={14} />
                         <span className="text-xs font-black uppercase tracking-widest">{t('إخلاء مسؤولية', 'DISCLAIMER')}</span>
                       </div>
-                      <p className="text-xs text-zinc-500 font-bold leading-relaxed max-w-2xl mx-auto">
+                      <p className="text-xs text-zinc-500 leading-relaxed text-center max-w-3xl mx-auto">
                         {t(
                           'تُجلب كافة المحتويات المعروضة آلياً من مصادر خارجية؛ الموقع غير مسؤول عن أي إعلانات تظهر داخل المشغلات أو أي مشاهد قد لا تلائم البعض. لا يقوم الموقع بتخزين أي ملفات فيديو على خوادمه الخاصة، وتعود حقوق الملكية الفكرية لأصحابها الأصليين.',
                           'All content displayed is automatically fetched from external sources; the site is not responsible for any advertisements appearing within the players or any content that may not be suitable for all audiences. The site does not host any video files on its servers; all intellectual property rights belong to their respective owners.'
                         )}
                       </p>
                     </motion.div>
-                  </div>
                 </div>
 
-                {/* Sidebar: Servers, Seasons, and Episodes */}
+                {/* Sidebar: Seasons, and Episodes */}
                 <div className="space-y-4">
                     {/* Summary Button */}
                     {summaryId && (
@@ -884,38 +890,6 @@ export const Watch = () => {
                             <ChevronLeft size={20} className={`relative z-10 ${lang === 'ar' ? '' : 'rotate-180'} group-hover:-translate-x-1 transition-transform`} />
                         </Link>
                     )}
-
-
-
-                    {/* Server Selector */}
-                    <div className="bg-black/40 border border-white/5 rounded-2xl p-4 backdrop-blur-sm">
-                        <ServerSelector 
-                            servers={servers}
-                            active={active}
-                            onSelect={setActive}
-                            lang={lang}
-                        />
-                    </div>
-
-                    <div className="bg-black/40 border border-white/5 rounded-2xl p-4 backdrop-blur-sm space-y-3">
-                      <div className="flex items-center justify-between px-1">
-                        <h3 className="text-[11px] font-black text-white uppercase tracking-tight">
-                          {t('سيرفرات التحميل', 'Download Servers')}
-                        </h3>
-                        <span className="text-[10px] text-zinc-500">{type === 'tv' ? `S${season}E${episode}` : 'Movie'}</span>
-                      </div>
-                      <div className="grid grid-cols-1 gap-2">
-                        <a
-                          href={dlUrl}
-                          target="_blank"
-                          rel="noopener noreferrer nofollow"
-                          className="px-3 py-2 rounded-xl bg-white/5 border border-white/10 hover:border-primary/40 hover:bg-primary/10 text-center transition-all"
-                        >
-                          <div className="text-[10px] font-black text-zinc-400 mb-0.5">{t('مصدر التحميل', 'Download Source')}</div>
-                          <div className="text-[11px] font-bold text-white truncate">dl.vidsrc.vip</div>
-                        </a>
-                      </div>
-                    </div>
 
                     {/* Seasons Selector (TV Only) */}
                     {type === 'tv' && (
@@ -982,7 +956,7 @@ export const Watch = () => {
                             .map((p) => (
                               <Link
                                 key={p.id}
-                                to={`/watch/movie/${p.id}`}
+                                to={generateWatchUrl({ id: p.id, type: 'movie' })}
                                 className={clsx(
                                   "px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-tight transition-all border text-center",
                                   Number(id) === p.id 
@@ -1023,7 +997,7 @@ export const Watch = () => {
                     <div className="flex items-center justify-between px-1">
                       <div className="flex items-center gap-3">
                         <div className="p-2 rounded-xl bg-primary/20 text-primary">
-                          <Sparkles size={18} />
+                          <Heart size={18} />
                         </div>
                         <h2 className="text-xl font-black text-white uppercase tracking-tight">
                           {t('قد يعجبك أيضاً', 'You Might Also Like')}
@@ -1118,7 +1092,7 @@ export const Watch = () => {
 
                 <div className="rounded-2xl bg-primary/5 border border-primary/10 p-4 flex gap-4">
                   <div className="p-2 h-fit rounded-lg bg-primary/20 text-primary">
-                    <Sparkles size={18} />
+                    <ThumbsUp size={18} />
                   </div>
                   <div className="text-xs text-zinc-300 leading-relaxed">
                     {lang === 'ar' 
@@ -1136,7 +1110,7 @@ export const Watch = () => {
                     <div className="h-5 w-5 animate-spin rounded-full border-2 border-black/20 border-t-black" />
                   ) : (
                     <>
-                      <PlayIcon size={18} fill="currentColor" />
+                      <Play size={18} fill="currentColor" />
                       {lang === 'ar' ? 'بدء الحفلة الآن' : 'Start Group Party Now'}
                     </>
                   )}
@@ -1150,3 +1124,5 @@ export const Watch = () => {
     </div>
   )
 }
+
+

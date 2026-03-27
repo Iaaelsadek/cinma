@@ -5,11 +5,10 @@ import { AdsManager } from '../components/features/system/AdsManager'
 import { useCategoryVideos } from '../hooks/useFetchContent'
 import { resolveTitleWithFallback } from '../lib/translation'
 import { useAuth } from '../hooks/useAuth'
-import { CONFIG } from '../lib/constants'
 import { useLang } from '../state/useLang'
 import { useRecommendations } from '../hooks/useRecommendations'
-import { Zap, Tv, Sparkles, Smile } from 'lucide-react'
-import { SkeletonGrid, SkeletonHero } from '../components/common/Skeletons'
+import { Zap, Tv, Smile } from 'lucide-react'
+import { SkeletonHero } from '../components/common/Skeletons'
 import { supabase } from '../lib/supabase'
 import { SeoHead } from '../components/common/SeoHead'
 import { QuantumHero } from '../components/features/hero/QuantumHero'
@@ -130,12 +129,18 @@ export const Home = () => {
 
       const promises = endpoints.map(async ep => {
         try {
+          const today = new Date().toISOString().split('T')[0]
           const params: any = { 
             with_original_language: ep.lang,
-            sort_by: ep.type === 'movie' ? 'primary_release_date.desc' : 'first_air_date.desc',
+            sort_by: 'popularity.desc',
             'vote_count.gte': 10, // Basic filter to avoid junk
             page: 1,
             language: 'ar-SA'
+          }
+          if (ep.type === 'movie') {
+            params['release_date.lte'] = today
+          } else {
+            params['first_air_date.lte'] = today
           }
           if ('genres' in ep) params.with_genres = ep.genres
 
@@ -161,10 +166,12 @@ export const Home = () => {
   const chineseSeries = useQuery<{ results: TmdbMedia[] }>({
     queryKey: ['home', 'chinese-series-initial'],
     queryFn: async () => {
+      const today = new Date().toISOString().split('T')[0]
       const { data } = await tmdb.get('/discover/tv', {
         params: {
           with_original_language: 'zh',
-          sort_by: 'first_air_date.desc',
+          sort_by: 'popularity.desc',
+          'first_air_date.lte': today,
           page: 1,
         },
       })
@@ -178,10 +185,12 @@ export const Home = () => {
   const bollywoodMovies = useQuery<{ results: TmdbMedia[] }>({
     queryKey: ['home', 'bollywood-initial'],
     queryFn: async () => {
+      const today = new Date().toISOString().split('T')[0]
       const { data } = await tmdb.get('/discover/movie', {
         params: {
           with_original_language: 'hi',
-          sort_by: 'primary_release_date.desc',
+          sort_by: 'popularity.desc',
+          'release_date.lte': today,
           page: 1,
           region: 'IN',
         },
@@ -195,10 +204,12 @@ export const Home = () => {
   const koreanSeries = useQuery<{ results: TmdbMedia[] }>({
     queryKey: ['home', 'k-drama-initial'],
     queryFn: async () => {
+      const today = new Date().toISOString().split('T')[0]
       const { data } = await tmdb.get('/discover/tv', {
         params: {
           with_original_language: 'ko',
-          sort_by: 'first_air_date.desc',
+          sort_by: 'popularity.desc',
+          'first_air_date.lte': today,
           page: 1,
         },
       })
@@ -211,10 +222,12 @@ export const Home = () => {
   const documentaries = useQuery<{ results: TmdbMedia[] }>({
     queryKey: ['home', 'docs-initial'],
     queryFn: async () => {
+      const today = new Date().toISOString().split('T')[0]
       const { data } = await tmdb.get('/discover/movie', {
         params: {
           with_genres: '99',
-          sort_by: 'primary_release_date.desc',
+          sort_by: 'popularity.desc',
+          'release_date.lte': today,
           page: 1,
         },
       })
@@ -227,18 +240,31 @@ export const Home = () => {
   const homeAggregated = useQuery({
     queryKey: ['home-aggregated', lang],
     queryFn: async () => {
-      const res = await fetch(`/api/home?lang=${lang === 'ar' ? 'ar' : 'en'}`)
-      if (!res.ok) throw new Error('home_aggregated_failed')
-      return res.json() as Promise<{
-        tmdb?: {
-          trending?: { results?: TmdbMedia[] }
-          popularMovies?: { results?: TmdbMedia[] }
-          topRatedMovies?: { results?: TmdbMedia[] }
+      try {
+        const res = await fetch(`/api/home?lang=${lang === 'ar' ? 'ar' : 'en'}`)
+        if (res.ok) {
+          return res.json() as Promise<{
+            tmdb?: {
+              trending?: { results?: TmdbMedia[] }
+              popularMovies?: { results?: TmdbMedia[] }
+              topRatedMovies?: { results?: TmdbMedia[] }
+            }
+            supabase?: {
+              mvTrending?: any[] | null
+            }
+          }>
         }
-        supabase?: {
-          mvTrending?: any[] | null
+      } catch (e) {
+        logger.warn('home_aggregated_failed, falling back to direct TMDB fetch')
+      }
+      
+      // Fallback if /api/home doesn't exist or fails
+      const { data } = await tmdb.get('/movie/popular', { params: { page: 1 } }).catch(() => ({ data: { results: [] } }))
+      return {
+        tmdb: {
+          popularMovies: data
         }
-      }>
+      }
     },
     staleTime: 300000,
   })
@@ -248,10 +274,11 @@ export const Home = () => {
   const criticalHomeData = useQuery<{ popularAr: TmdbMedia[]; arabicSeries: TmdbMedia[]; kids: TmdbMedia[]; bollywood: TmdbMedia[] }>({
     queryKey: ['home-critical-lcp'],
     queryFn: async () => {
-      const mapRows = (rows: HomeViewRow[] | null | undefined): TmdbMedia[] =>
-        (rows || [])
+      const mapRows = (rows: HomeViewRow[] | null | undefined): TmdbMedia[] => {
+        return (rows || [])
           .map((item) => ({
             id: Number(item.tmdb_id),
+            slug: (item as any).slug || undefined,
             title: item.title || undefined,
             name: item.name || undefined,
             media_type: item.media_type,
@@ -262,17 +289,21 @@ export const Home = () => {
             release_date: item.release_date || undefined,
             first_air_date: item.first_air_date || undefined
           }))
-          .filter((item) =>
-            Number.isFinite(Number(item.id)) &&
-            Number(item.id) > 0 &&
-            Boolean(item.poster_path && item.poster_path.trim()) &&
-            Boolean(resolveTitleWithFallback(item))
-          )
+          .filter((item) => {
+            return (
+              Number.isFinite(Number(item.id)) &&
+              Number(item.id) > 0 &&
+              Boolean(item.poster_path && item.poster_path.trim()) &&
+              Boolean(resolveTitleWithFallback(item))
+            )
+          })
+      }
 
-      const mapMovies = (rows: any[] | null | undefined): TmdbMedia[] =>
-        (rows || [])
+      const mapMovies = (rows: any[] | null | undefined): TmdbMedia[] => {
+        return (rows || [])
           .map((item) => ({
             id: Number(item.tmdb_id || item.id),
+            slug: item.slug || undefined,
             title: item.title || undefined,
             media_type: 'movie' as const,
             poster_path: item.poster_path || undefined,
@@ -281,17 +312,21 @@ export const Home = () => {
             overview: item.overview || undefined,
             release_date: item.release_date || undefined
           }))
-          .filter((item) =>
-            Number.isFinite(Number(item.id)) &&
-            Number(item.id) > 0 &&
-            Boolean(item.poster_path && item.poster_path.trim()) &&
-            Boolean(resolveTitleWithFallback(item))
-          )
+          .filter((item) => {
+            return (
+              Number.isFinite(Number(item.id)) &&
+              Number(item.id) > 0 &&
+              Boolean(item.poster_path && item.poster_path.trim()) &&
+              Boolean(resolveTitleWithFallback(item))
+            )
+          })
+      }
 
-      const mapSeries = (rows: any[] | null | undefined): TmdbMedia[] =>
-        (rows || [])
+      const mapSeries = (rows: any[] | null | undefined): TmdbMedia[] => {
+        return (rows || [])
           .map((item) => ({
             id: Number(item.id),
+            slug: item.slug || undefined,
             name: item.name || item.title || undefined,
             media_type: 'tv' as const,
             poster_path: item.poster_path || undefined,
@@ -300,62 +335,70 @@ export const Home = () => {
             overview: item.overview || undefined,
             first_air_date: item.first_air_date || undefined
           }))
-          .filter((item) =>
-            Number.isFinite(Number(item.id)) &&
-            Number(item.id) > 0 &&
-            Boolean(item.poster_path && item.poster_path.trim()) &&
-            Boolean(resolveTitleWithFallback(item))
-          )
+          .filter((item) => {
+            return (
+              Number.isFinite(Number(item.id)) &&
+              Number(item.id) > 0 &&
+              Boolean(item.poster_path && item.poster_path.trim()) &&
+              Boolean(resolveTitleWithFallback(item))
+            )
+          })
+      }
 
+      const today = new Date().toISOString().split('T')[0]
+      
       const [trendingView, arabicSeriesView, kidsView, bollywoodView, kidsTmdb, arabicSeriesTmdb, bollywoodTmdb] = await Promise.all([
         supabase.from('mv_home_trending').select('*').limit(20),
         supabase
           .from('tv_series')
-          .select('id,name,title,poster_path,backdrop_path,vote_average,overview,first_air_date,is_ramadan,original_language,origin_country,popularity')
+          .select('id,slug,name,title,poster_path,backdrop_path,vote_average,overview,first_air_date,is_ramadan,original_language,origin_country,popularity')
           .or('is_ramadan.eq.true,original_language.eq.ar,origin_country.cs.{EG},origin_country.cs.{SA},origin_country.cs.{SY},origin_country.cs.{AE},origin_country.cs.{KW}')
+          .lte('first_air_date', today)
           .order('popularity', { ascending: false })
           .limit(50),
         supabase
           .from('movies')
-          .select('id,tmdb_id,title,poster_path,backdrop_path,vote_average,overview,release_date,category,popularity')
+          .select('id,slug,tmdb_id,title,poster_path,backdrop_path,vote_average,overview,release_date,category,popularity')
           .in('category', ['kids-family', 'kids', 'family', 'animation'])
+          .lte('release_date', today)
           .order('popularity', { ascending: false })
           .limit(50),
         supabase
           .from('movies')
-          .select('id,tmdb_id,title,poster_path,backdrop_path,vote_average,overview,release_date,original_language,origin_country,category,popularity')
+          .select('id,slug,tmdb_id,title,poster_path,backdrop_path,vote_average,overview,release_date,original_language,origin_country,category,popularity')
           .or('category.eq.bollywood,original_language.eq.hi,origin_country.cs.{IN}')
+          .lte('release_date', today)
           .order('popularity', { ascending: false })
           .limit(50),
         tmdb.get('/discover/movie', {
           params: {
             with_genres: '16,10751',
-            sort_by: 'primary_release_date.desc',
-            'release_date.lte': new Date().toISOString().split('T')[0],
+            sort_by: 'popularity.desc',
+            'release_date.lte': today,
             'vote_count.gte': 50,
             page: 1
           }
-        }),
+        }).catch(() => ({ data: { results: [] } })),
         tmdb.get('/discover/tv', {
           params: {
             with_original_language: 'ar',
             with_origin_country: 'EG|SA|SY|AE|KW',
-            sort_by: 'first_air_date.desc',
-            'first_air_date.lte': new Date().toISOString().split('T')[0],
+            sort_by: 'popularity.desc',
+            'first_air_date.lte': today,
             'vote_count.gte': 10,
             page: 1
           }
-        }),
+        }).catch(() => ({ data: { results: [] } })),
         tmdb.get('/discover/movie', {
           params: {
             with_original_language: 'hi',
-            region: 'IN',
-            sort_by: 'primary_release_date.desc',
-            'release_date.lte': new Date().toISOString().split('T')[0],
-            'vote_count.gte': 50,
+            with_origin_country: 'IN',
+            sort_by: 'popularity.desc',
+            'release_date.lte': today,
+            'vote_count.gte': 20,
             page: 1
           }
-        })
+        }).catch(() => ({ data: { results: [] } }))
       ])
 
       const popularArFromView = !trendingView.error ? mapRows(trendingView.data as HomeViewRow[]) : []
@@ -365,11 +408,11 @@ export const Home = () => {
 
       const popularAr = popularArFromView.length > 0
         ? popularArFromView
-        : ((await tmdb.get('/discover/movie', { params: { region: 'EG', sort_by: 'primary_release_date.desc', page: 1 } })).data.results || [])
+        : mapMovies((await tmdb.get('/discover/movie', { params: { region: 'EG', sort_by: 'popularity.desc', 'release_date.lte': today, page: 1 } }).catch(() => ({ data: { results: [] } }))).data.results || [])
 
-      const arabicSeries = arabicSeriesFromDb.length > 0 ? arabicSeriesFromDb : (arabicSeriesTmdb.data?.results || [])
-      const kids = kidsFromDb.length > 0 ? kidsFromDb : (kidsTmdb.data?.results || [])
-      const bollywood = bollywoodFromDb.length > 0 ? bollywoodFromDb : (bollywoodTmdb.data?.results || [])
+      const arabicSeries = arabicSeriesFromDb.length > 0 ? arabicSeriesFromDb : mapSeries(arabicSeriesTmdb.data?.results || [])
+      const kids = kidsFromDb.length > 0 ? kidsFromDb : mapMovies(kidsTmdb.data?.results || [])
+      const bollywood = bollywoodFromDb.length > 0 ? bollywoodFromDb : mapMovies(bollywoodTmdb.data?.results || [])
 
       return {
         popularAr,
@@ -394,7 +437,7 @@ export const Home = () => {
         description={description}
       />
 
-      <div className="max-w-[2400px] mx-auto px-4 md:px-12 w-full">
+      <div className="max-w-[2400px] mx-auto px-4 md:px-12 w-full relative">
         {/* 1. QUANTUM HERO PORTAL */}
         <section className="relative z-10 w-full">
            {diverseHero.isLoading ? <SkeletonHero /> : <QuantumHero items={heroItems} />}
@@ -417,7 +460,7 @@ export const Home = () => {
                <QuantumTrain 
                  items={recommendations} 
                  title={lang === 'ar' ? 'مقترح لك' : 'Picked for You'}
-                 icon={<Sparkles className="text-amber-400 animate-pulse" />}
+                 icon={<Zap className="text-amber-400" />}
                  badge={lang === 'ar' ? 'ذكاء اصطناعي' : 'AI Powered'}
                  color="purple"
                  className="!py-8"
@@ -427,30 +470,36 @@ export const Home = () => {
         )}
 
         {/* 2. THE INFINITE TRAIN */}
-        <section className="relative z-20 -mt-12 w-full overflow-hidden pb-4 rounded-3xl">
+        <section className="relative z-20 mt-8 w-full overflow-hidden pb-4 rounded-3xl">
           {homeAggregated.isLoading ? (
-            <div className="flex gap-4 overflow-hidden px-4">
-              <SkeletonGrid count={6} variant="poster" />
+            <div className="w-full grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 px-4 md:px-12 mt-8 mb-12">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="w-full aspect-[2/3] rounded-xl bg-gray-800/40 animate-pulse border border-gray-700/30 shadow-lg" />
+              ))}
             </div>
           ) : (
-            <QuantumTrain items={homeAggregated.data?.tmdb?.popularMovies?.results || []} />
+            <QuantumTrain items={sanitizeMediaItems(homeAggregated.data?.tmdb?.popularMovies?.results || [])} />
           )}
         </section>
 
         {/* 3. MASONRY GRID & CONTENT */}
-        <div className="relative z-30 space-y-2 pb-4">
+        <div className="relative z-30 space-y-2 pb-4 mt-16">
         
         {/* Section: Trending Egypt (Aflam) */}
         <section>
           {criticalHomeData.isLoading ? (
             <>
-              <SectionHeader title={lang === 'ar' ? 'الأعلى مشاهدة في مصر' : 'Top Trending in Egypt'} icon={<Zap />} link="/movies" />
-              <SkeletonGrid count={6} variant="poster" />
+              <SectionHeader title={lang === 'ar' ? 'الأعلى مشاهدة' : 'Top Trending'} icon={<Zap />} link="/movies" />
+              <div className="w-full grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 px-4 md:px-12 mt-8 mb-12">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="w-full aspect-[2/3] rounded-xl bg-gray-800/40 animate-pulse border border-gray-700/30 shadow-lg" />
+                ))}
+              </div>
             </>
           ) : (
             <QuantumTrain 
               items={sanitizeMediaItems(criticalHomeData.data?.popularAr)} 
-              title={lang === 'ar' ? 'الأعلى مشاهدة في مصر' : 'Top Trending in Egypt'} 
+              title={lang === 'ar' ? 'الأعلى مشاهدة' : 'Top Trending'} 
               icon={<Zap />} 
               link="/movies" 
             />
@@ -462,7 +511,11 @@ export const Home = () => {
           {criticalHomeData.isLoading ? (
             <>
               <SectionHeader title={lang === 'ar' ? 'مسلسلات عربية ورمضانية' : 'Arabic & Ramadan Series'} icon={<Tv />} link="/ramadan" />
-              <SkeletonGrid count={6} variant="poster" />
+              <div className="w-full grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 px-4 md:px-12 mt-8 mb-12">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="w-full aspect-[2/3] rounded-xl bg-gray-800/40 animate-pulse border border-gray-700/30 shadow-lg" />
+                ))}
+              </div>
             </>
           ) : (
             <QuantumTrain 
@@ -479,7 +532,11 @@ export const Home = () => {
           {criticalHomeData.isLoading ? (
             <>
               <SectionHeader title={lang === 'ar' ? 'أطفال وعائلة' : 'Kids & Family'} icon={<Smile />} link="/kids" />
-              <SkeletonGrid count={6} variant="poster" />
+              <div className="w-full grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 px-4 md:px-12 mt-8 mb-12">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="w-full aspect-[2/3] rounded-xl bg-gray-800/40 animate-pulse border border-gray-700/30 shadow-lg" />
+                ))}
+              </div>
             </>
           ) : (
             <QuantumTrain 
@@ -497,9 +554,11 @@ export const Home = () => {
         {canLoadBelowFold ? (
           <Suspense
             fallback={
-              <section>
-                <SkeletonGrid count={6} variant="poster" />
-              </section>
+              <div className="w-full grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 px-4 md:px-12 mt-8 mb-12">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="w-full aspect-[2/3] rounded-xl bg-gray-800/40 animate-pulse border border-gray-700/30 shadow-lg" />
+                ))}
+              </div>
             }
           >
             <HomeBelowFoldSections
@@ -508,9 +567,11 @@ export const Home = () => {
             />
           </Suspense>
         ) : (
-          <section>
-            <SkeletonGrid count={6} variant="poster" />
-          </section>
+          <div className="w-full grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 px-4 md:px-12 mt-8 mb-12">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="w-full aspect-[2/3] rounded-xl bg-gray-800/40 animate-pulse border border-gray-700/30 shadow-lg" />
+            ))}
+          </div>
         )}
 
         </div>

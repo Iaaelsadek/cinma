@@ -15,6 +15,7 @@ import { MediaRoutes } from './routes/MediaRoutes'
 import { DiscoveryRoutes } from './routes/DiscoveryRoutes'
 import { UserRoutes } from './routes/UserRoutes'
 import { AdminRoutes } from './routes/AdminRoutes'
+import ChatBot from './components/ChatBot'
 
 const App = () => {
   useInitAuth()
@@ -44,6 +45,7 @@ const App = () => {
         <AdsManager type="popunder" position="global" />
         <Toaster richColors position="top-center" toastOptions={{ style: { zIndex: 999999 } }} />
       </MainLayout>
+      <ChatBot />
     </PwaProvider>
   )
 }

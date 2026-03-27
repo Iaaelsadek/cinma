@@ -7,7 +7,6 @@ import { useLocation } from 'react-router-dom'
 import { useLang } from '../../state/useLang'
 import { QuranPlayerBar } from '../features/quran/QuranPlayerBar'
 import { useAudioController } from '../../hooks/useAudioController'
-import { PwaInstallPrompt } from '../features/system/PwaInstallPrompt'
 import { ErrorBoundary } from '../common/ErrorBoundary'
 
 interface MainLayoutProps {
@@ -53,7 +52,6 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
 
       <Footer />
       <QuranPlayerBar />
-      <PwaInstallPrompt />
     </div>
   )
 }

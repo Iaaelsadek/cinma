@@ -1,32 +1,41 @@
-import { Link, useNavigate } from 'react-router-dom'
+import {useNavigate} from 'react-router-dom'
 import { PrefetchLink } from '../common/PrefetchLink'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useQuery } from '@tanstack/react-query'
 import { SearchBar } from '../common/SearchBar'
 import { useLang } from '../../state/useLang'
 import { useAuth } from '../../hooks/useAuth'
-import { usePwa } from '../../context/PwaContext'
 import { getContinueWatching } from '../../lib/supabase'
 import { useEffect, useState, useRef, useMemo, memo, Fragment } from 'react'
-import { Home, Film, Tv, Gamepad2, Zap, User, Search, Menu, X, Clock, ChevronDown, BookOpen, History, Smile, Drama, Radio, ListVideo, Moon, Download, MapPin, Star, Mic, Loader2, Shuffle, Monitor, Smartphone, Apple, Terminal } from 'lucide-react'
+import {Home, Film, Tv, Gamepad2, Zap, User, Search, Menu, X, Clock, BookOpen, History, Smile, Drama, ListVideo, Moon, MapPin, Star, Mic, Loader2, Monitor, Smartphone, Apple, Terminal, Flame, Laugh, Skull, Rocket, Heart, Palette, Popcorn, Trophy, TrendingUp, Eye, Compass, Clapperboard, Ticket} from 'lucide-react'
 
 
 export const QuantumNavbar = memo(() => {
   const { user, loading, profile } = useAuth()
   const { lang, toggle } = useLang()
-  const { isSupported, isInstalled, install } = usePwa()
   
   const leaveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const enterTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const handleMouseEnter = (label: string) => {
     if (leaveTimeout.current) {
       clearTimeout(leaveTimeout.current)
       leaveTimeout.current = null
     }
-    setHoveredLink(label)
+    if (enterTimeout.current) {
+      clearTimeout(enterTimeout.current)
+    }
+    enterTimeout.current = setTimeout(() => {
+      setHoveredLink(label)
+      enterTimeout.current = null
+    }, 300)
   }
 
   const handleMouseLeave = () => {
+    if (enterTimeout.current) {
+      clearTimeout(enterTimeout.current)
+      enterTimeout.current = null
+    }
     leaveTimeout.current = setTimeout(() => {
       setHoveredLink(null)
       leaveTimeout.current = null
@@ -49,21 +58,22 @@ export const QuantumNavbar = memo(() => {
       hasMega: true,
       featuredImage: 'https://image.tmdb.org/t/p/w1280/pwsD91G2R6r8keDrx6u7hOEZhXp.jpg',
       subLinks: [
-        { to: '/movies/popular', label: lang === 'ar' ? 'الأكثر شعبية' : 'Popular', icon: Zap },
-        { to: '/movies/top_rated', label: lang === 'ar' ? 'الأعلى تقييماً' : 'Top Rated', icon: Star },
-        { to: '/movies/now_playing', label: lang === 'ar' ? 'يعرض حالياً' : 'Now Playing', icon: Film },
-        { to: '/search?types=movie&lang=ar', label: lang === 'ar' ? 'أفلام عربية' : 'Arabic Movies', icon: Film },
-        { to: '/search?types=movie&lang=en', label: lang === 'ar' ? 'أفلام أجنبية' : 'Foreign Movies', icon: Film },
-        { to: '/search?types=movie&lang=hi', label: lang === 'ar' ? 'أفلام هندية' : 'Indian Movies', icon: Film },
+        { to: '/movies/popular', label: lang === 'ar' ? 'الأكثر شعبية' : 'Popular', icon: TrendingUp },
+        { to: '/movies/top_rated', label: lang === 'ar' ? 'الأعلى تقييماً' : 'Top Rated', icon: Trophy },
+        { to: '/movies/now_playing', label: lang === 'ar' ? 'يعرض حالياً' : 'Now Playing', icon: Eye },
+        { to: '/search?types=movie&lang=ar', label: lang === 'ar' ? 'أفلام عربية' : 'Arabic Movies', icon: MapPin },
+        { to: '/search?types=movie&lang=en', label: lang === 'ar' ? 'أفلام أجنبية' : 'Foreign Movies', icon: Compass },
+        { to: '/search?types=movie&lang=hi', label: lang === 'ar' ? 'أفلام هندية' : 'Indian Movies', icon: Popcorn },
         { to: '/classics', label: lang === 'ar' ? 'كلاسيكيات' : 'Classics', icon: History },
+        { to: '/summaries', label: lang === 'ar' ? 'ملخصات' : 'Summaries', icon: ListVideo },
       ],
       categories: [
-        { id: 'Action', label: { en: 'Action', ar: 'أكشن' } },
-        { id: 'Comedy', label: { en: 'Comedy', ar: 'كوميديا' } },
-        { id: 'Horror', label: { en: 'Horror', ar: 'رعب' } },
-        { id: 'Sci-Fi', label: { en: 'Sci-Fi', ar: 'خيال علمي' } },
-        { id: 'Drama', label: { en: 'Drama', ar: 'دراما' } },
-        { id: 'Animation', label: { en: 'Animation', ar: 'انميشن' } }
+        { id: 'Action', label: { en: 'Action', ar: 'أكشن' }, icon: Flame },
+        { id: 'Comedy', label: { en: 'Comedy', ar: 'كوميديا' }, icon: Laugh },
+        { id: 'Horror', label: { en: 'Horror', ar: 'رعب' }, icon: Skull },
+        { id: 'Sci-Fi', label: { en: 'Sci-Fi', ar: 'خيال علمي' }, icon: Rocket },
+        { id: 'Drama', label: { en: 'Drama', ar: 'دراما' }, icon: Heart },
+        { id: 'Animation', label: { en: 'Animation', ar: 'انميشن' }, icon: Palette }
       ]
     },
     { 
@@ -75,19 +85,19 @@ export const QuantumNavbar = memo(() => {
       featuredImage: 'https://image.tmdb.org/t/p/w1280/2rmK7mnchw9Xr3XdiTFSxTTlxI.jpg',
       subLinks: [
         { to: '/ramadan', label: lang === 'ar' ? 'مسلسلات رمضان' : 'Ramadan Series', icon: Moon },
-        { to: '/series/popular', label: lang === 'ar' ? 'الأكثر شعبية' : 'Popular', icon: Zap },
-        { to: '/series/top_rated', label: lang === 'ar' ? 'الأعلى تقييماً' : 'Top Rated', icon: Star },
-        { to: '/search?types=tv&lang=ar', label: lang === 'ar' ? 'مسلسلات عربية' : 'Arabic Series', icon: Tv },
-        { to: '/search?types=tv&lang=tr', label: lang === 'ar' ? 'مسلسلات تركية' : 'Turkish Series', icon: Tv },
-        { to: '/search?types=tv&lang=en', label: lang === 'ar' ? 'مسلسلات أجنبية' : 'Foreign Series', icon: Tv },
-        { to: '/search?types=tv&lang=ko', label: lang === 'ar' ? 'مسلسلات كورية' : 'Korean Series', icon: Tv },
+        { to: '/series/popular', label: lang === 'ar' ? 'الأكثر شعبية' : 'Popular', icon: TrendingUp },
+        { to: '/series/top_rated', label: lang === 'ar' ? 'الأعلى تقييماً' : 'Top Rated', icon: Trophy },
+        { to: '/search?types=tv&lang=ar', label: lang === 'ar' ? 'مسلسلات عربية' : 'Arabic Series', icon: MapPin },
+        { to: '/search?types=tv&lang=tr', label: lang === 'ar' ? 'مسلسلات تركية' : 'Turkish Series', icon: Compass },
+        { to: '/search?types=tv&lang=en', label: lang === 'ar' ? 'مسلسلات أجنبية' : 'Foreign Series', icon: Clapperboard },
+        { to: '/search?types=tv&lang=ko', label: lang === 'ar' ? 'مسلسلات كورية' : 'Korean Series', icon: Star },
       ],
       categories: [
-        { id: 'Drama', label: { en: 'Drama', ar: 'دراما' } },
-        { id: 'Comedy', label: { en: 'Comedy', ar: 'كوميديا' } },
-        { id: 'Action', label: { en: 'Action', ar: 'أكشن' } },
-        { id: 'Romance', label: { en: 'Romance', ar: 'رومانسي' } },
-        { id: 'Sci-Fi', label: { en: 'Sci-Fi', ar: 'خيال علمي' } }
+        { id: 'Drama', label: { en: 'Drama', ar: 'دراما' }, icon: Heart },
+        { id: 'Comedy', label: { en: 'Comedy', ar: 'كوميديا' }, icon: Laugh },
+        { id: 'Action', label: { en: 'Action', ar: 'أكشن' }, icon: Flame },
+        { id: 'Romance', label: { en: 'Romance', ar: 'رومانسي' }, icon: Ticket },
+        { id: 'Sci-Fi', label: { en: 'Sci-Fi', ar: 'خيال علمي' }, icon: Rocket }
       ]
     },
     { 
@@ -98,7 +108,7 @@ export const QuantumNavbar = memo(() => {
       hasMega: true,
       subLinks: [
         { to: '/plays/masrah-masr', label: lang === 'ar' ? 'مسرح مصر' : 'Masrah Masr', icon: Smile },
-        { to: '/plays/adel-imam', label: lang === 'ar' ? 'عادل إمام' : 'Adel Imam', icon: User },
+        { to: '/plays/adel-imam', label: lang === 'ar' ? 'عادل إمام' : 'Adel Imam', icon: Laugh },
         { to: '/plays/gulf', label: lang === 'ar' ? 'مسرحيات خليجية' : 'Gulf Plays', icon: MapPin },
         { to: '/plays/classics', label: lang === 'ar' ? 'كلاسيكيات' : 'Classics', icon: History }
       ]
@@ -141,20 +151,6 @@ export const QuantumNavbar = memo(() => {
         { to: '/software?cat=apple', label: lang === 'ar' ? 'أبل' : 'Apple', icon: Apple },
         { to: '/software?cat=terminal', label: lang === 'ar' ? 'أدوات المطورين' : 'Dev Tools', icon: Terminal }
       ]
-    },
-    { 
-      to: '/summaries', 
-      label: lang === 'ar' ? 'ملخصات' : 'Summaries', 
-      icon: ListVideo, 
-      color: '#ff00ff',
-      hasMega: false
-    },
-    { 
-      to: '/top-watched', 
-      label: lang === 'ar' ? 'الأكثر مشاهدة' : 'Trending', 
-      icon: Zap, 
-      color: '#ff4400',
-      hasMega: false
     }
   ], [lang])
 
@@ -292,7 +288,7 @@ export const QuantumNavbar = memo(() => {
             exit={{ opacity: 0, y: 10, scale: 0.95 }}
             transition={{ duration: 0.2 }}
             id={`mega-menu-${link.label}`}
-            className="absolute top-full left-1/2 -translate-x-1/2 w-max z-50 pt-4"
+            className="absolute top-full left-1/2 -translate-x-1/2 z-[9999999] pt-4 flex justify-center pointer-events-none"
             onMouseEnter={() => handleMouseEnter(link.label)}
             onMouseLeave={handleMouseLeave}
             onKeyDown={(e) => {
@@ -302,9 +298,9 @@ export const QuantumNavbar = memo(() => {
             }}
           >
             <div 
-              className="bg-[#0a0a0a]/95 border border-white/10 rounded-2xl shadow-xl overflow-hidden p-6 backdrop-blur-sm min-w-[280px]"
+              className="bg-[#0a0a0a]/95 border border-white/10 rounded-2xl shadow-xl overflow-hidden p-6 backdrop-blur-sm min-w-max max-w-[80vw] pointer-events-auto"
             >
-               <div className="w-full flex flex-col gap-6">
+               <div className="flex flex-row gap-10 justify-center">
                   {/* SubLinks Section */}
                   {link.subLinks && (
                     <div>
@@ -316,7 +312,7 @@ export const QuantumNavbar = memo(() => {
                           <li key={`${sub.to}-${i}`}>
                             <PrefetchLink to={sub.to} target="_self" className="flex items-center gap-3 text-zinc-300 hover:text-cyan-400 transition-colors py-1 group/sub">
                               {sub.icon && <sub.icon size={18} className="text-zinc-500 group-hover/sub:text-cyan-400 transition-colors" />}
-                              <span className="font-medium">{sub.label}</span>
+                              <span className="font-medium text-sm whitespace-nowrap">{sub.label}</span>
                             </PrefetchLink>
                           </li>
                         ))}
@@ -327,15 +323,16 @@ export const QuantumNavbar = memo(() => {
                   {/* Categories Section */}
                   {link.categories && (
                     <div>
-                      <h3 className="text-white font-bold mb-4 flex items-center gap-2">
+                      <h3 className="text-white font-bold mb-3 flex items-center gap-2 border-b border-white/10 pb-2">
                         <link.icon size={18} style={{ color: link.color }} />
                         {lang === 'ar' ? 'التصنيفات' : 'Categories'}
                       </h3>
-                      <ul className="grid grid-cols-2 gap-2">
+                      <ul className="grid grid-cols-1 gap-2">
                         {link.categories.map(cat => (
                           <li key={cat.id}>
-                            <PrefetchLink to={`${link.to}?cat=${cat.id.toLowerCase()}`} target="_self" className="text-zinc-400 hover:text-cyan-400 text-sm transition-colors block py-1">
-                              {lang === 'ar' ? cat.label.ar : cat.label.en}
+                            <PrefetchLink to={`${link.to}?cat=${cat.id.toLowerCase()}`} target="_self" className="text-zinc-400 hover:text-cyan-400 text-sm transition-colors block py-1 flex items-center gap-2">
+                              {cat.icon && <cat.icon size={16} className="text-zinc-500" />}
+                              <span className="whitespace-nowrap">{lang === 'ar' ? cat.label.ar : cat.label.en}</span>
                             </PrefetchLink>
                           </li>
                         ))}
@@ -382,19 +379,6 @@ export const QuantumNavbar = memo(() => {
                   </button>
                 </div>
               </div>
-
-              {isSupported && !isInstalled && (
-                <button
-                  type="button"
-                  onClick={install}
-                  aria-label={lang === 'ar' ? 'تثبيت التطبيق' : 'Install app'}
-                  className="hidden sm:inline-flex items-center gap-1 px-2 py-1.5 rounded-full border border-lumen-gold/50 text-lumen-gold/90 hover:bg-lumen-gold/10 text-xs font-bold transition-colors"
-                  title={lang === 'ar' ? 'تثبيت التطبيق' : 'Install App'}
-                >
-                  <Download size={14} />
-                  {lang === 'ar' ? 'تثبيت التطبيق' : 'Install App'}
-                </button>
-              )}
 
               {user && continueCount > 0 && (
                 <PrefetchLink to="/" target="_self" className="relative p-1.5 rounded-full hover:bg-white/10 text-zinc-400 hover:text-cyan-400 transition-colors" title={lang === 'ar' ? 'تابع المشاهدة' : 'Continue Watching'} aria-label={lang === 'ar' ? 'تابع المشاهدة' : 'Continue Watching'}>
@@ -573,17 +557,6 @@ export const QuantumNavbar = memo(() => {
                     )}
                   </Fragment>
                 ))}
-                {isSupported && !isInstalled && (
-                  <div className="col-span-2 mt-4">
-                    <button
-                      onClick={() => { install(); setMenuOpen(false); }}
-                      className="flex items-center justify-center gap-3 p-4 rounded-xl border border-lumen-gold/40 bg-lumen-gold/5 text-lumen-gold hover:bg-lumen-gold/10 transition-colors w-full"
-                    >
-                      <Download size={20} />
-                      <span className="font-bold text-lg">{lang === 'ar' ? 'تثبيت التطبيق' : 'Install App'}</span>
-                    </button>
-                  </div>
-                )}
               </div>
             </motion.div>
           )}

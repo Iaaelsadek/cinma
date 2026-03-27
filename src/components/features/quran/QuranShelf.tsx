@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../../lib/supabase'
 import { useLang } from '../../../state/useLang'
-import { BookOpen, User } from 'lucide-react'
+import {BookOpen} from 'lucide-react'
 import { SectionHeader } from '../../common/SectionHeader'
 import { PrefetchLink } from '../../common/PrefetchLink'
 import { SkeletonGrid } from '../../common/Skeletons'

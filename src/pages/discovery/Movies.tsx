@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
+import { getTrendingMoviesDB, searchMoviesDB } from '../../lib/db'
 import { tmdb, advancedSearch } from '../../lib/tmdb'
 import { QuantumHero } from '../../components/features/hero/QuantumHero'
 import { QuantumTrain } from '../../components/features/media/QuantumTrain'
@@ -23,49 +24,53 @@ const fetchByGenre = async (genreId: number, type: 'movie' | 'tv' = 'movie') => 
 // --- Database Fetchers (Preferred) ---
 
 const fetchTrendingDB = async () => {
-  const { data, error } = await supabase
-    .from('movies')
-    .select('id, title, poster_path, backdrop_path, vote_average, release_date, genre_ids, overview')
-    .order('popularity', { ascending: false })
-    .limit(20)
-  
-  if (error || !data || data.length === 0) return fetchTrendingTMDB()
-  return data.map((item: any) => ({ ...item, media_type: 'movie' }))
+  try {
+    const data = await getTrendingMoviesDB(20);
+    if (!data || data.length === 0) return fetchTrendingTMDB()
+    return data.map((item: any) => ({ ...item, media_type: 'movie' }))
+  } catch {
+    return fetchTrendingTMDB()
+  }
 }
 
 const fetchTopRatedDB = async () => {
-  const { data, error } = await supabase
-    .from('movies')
-    .select('id, title, poster_path, backdrop_path, vote_average, release_date, genre_ids, overview')
-    .gte('vote_average', 8)
-    .order('vote_average', { ascending: false })
-    .limit(20)
-
-  if (error || !data || data.length === 0) return fetchTopRatedTMDB()
-  return data.map((item: any) => ({ ...item, media_type: 'movie' }))
+  try {
+    const data = await searchMoviesDB({ min_rating: 8, limit: 20 });
+    if (!data || data.length === 0) return fetchTopRatedTMDB()
+    return data.map((item: any) => ({ ...item, media_type: 'movie' }))
+  } catch {
+    return fetchTopRatedTMDB()
+  }
 }
 
 const fetchArabicMoviesDB = async () => {
-  const { data, error } = await supabase
-    .from('movies')
-    .select('id, title, poster_path, backdrop_path, vote_average, release_date, genre_ids, overview')
-    .eq('original_language', 'ar')
-    .order('release_date', { ascending: false })
-    .limit(20)
-
-  if (error || !data || data.length === 0) return fetchArabicMoviesTMDB()
-  return data.map((item: any) => ({ ...item, media_type: 'movie' }))
+  try {
+    const data = await searchMoviesDB({ genre: 'arabic', limit: 20 }); // Assuming searchMoviesDB can handle this or I should add a specific param
+    if (!data || data.length === 0) {
+      // Fallback to direct supabase for now if searchMoviesDB is too limited
+      const { data: sbData } = await supabase
+        .from('movies')
+        .select('id, slug, title, poster_path, backdrop_path, vote_average, release_date, genre_ids, overview')
+        .eq('original_language', 'ar')
+        .order('release_date', { ascending: false })
+        .limit(20)
+      if (!sbData || sbData.length === 0) return fetchArabicMoviesTMDB()
+      return sbData.map((item: any) => ({ ...item, media_type: 'movie' }))
+    }
+    return data.map((item: any) => ({ ...item, media_type: 'movie' }))
+  } catch {
+    return fetchArabicMoviesTMDB()
+  }
 }
 
 const fetchLatestDB = async () => {
-  const { data, error } = await supabase
-    .from('movies')
-    .select('id, title, poster_path, backdrop_path, vote_average, release_date, genre_ids, overview')
-    .order('release_date', { ascending: false })
-    .limit(20)
-    
-  if (error || !data || data.length === 0) return fetchNowPlayingTMDB()
-  return data.map((item: any) => ({ ...item, media_type: 'movie' }))
+  try {
+    const data = await searchMoviesDB({ limit: 20 });
+    if (!data || data.length === 0) return fetchNowPlayingTMDB()
+    return data.map((item: any) => ({ ...item, media_type: 'movie' }))
+  } catch {
+    return fetchNowPlayingTMDB()
+  }
 }
 
 // --- TMDB Fallbacks ---

@@ -1,10 +1,12 @@
-import { useParams, Link } from 'react-router-dom'
+import {useParams} from 'react-router-dom'
 import { useEffect, useState, useMemo } from 'react'
 import { tmdb } from '../../lib/tmdb'
 import { MovieCard } from '../../components/features/media/MovieCard'
 import { SeoHead } from '../../components/common/SeoHead'
-import { Calendar, MapPin, Star, User, Image as ImageIcon, Film, Tv, Info, ArrowRight, ArrowLeft } from 'lucide-react'
+import {Calendar, MapPin, Star, User, Film, Tv, Info} from 'lucide-react'
 import { motion } from 'framer-motion'
+import { resolveSlug } from '../../lib/slugResolver'
+import { logger } from '../../lib/logger'
 import { SkeletonGrid } from '../../components/common/Skeletons'
 import { useLang } from '../../state/useLang'
 
@@ -24,8 +26,10 @@ type ActorDetails = {
   }
 }
 
+import { getActorByIdDB } from '../../lib/db'
+
 export const Actor = () => {
-  const { id } = useParams()
+  const { slug } = useParams()
   const { lang } = useLang()
   const t = (ar: string, en: string) => (lang === 'ar' ? ar : en)
   
@@ -33,6 +37,31 @@ export const Actor = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
   const [activeTab, setActiveTab] = useState<'all' | 'movie' | 'tv'>('all')
+  const [actorId, setActorId] = useState<number | null>(null)
+
+  useEffect(() => {
+    const resolve = async () => {
+      if (!slug) return
+      
+      try {
+        // 1. Try DB first
+        const local = await getActorByIdDB(slug)
+        if (local?.tmdb_id) {
+          setActorId(Number(local.tmdb_id))
+          return
+        }
+
+        // 2. Fallback to resolver
+        const contentId = await resolveSlug(slug, 'actor');
+        setActorId(contentId);
+      } catch (error) {
+        logger.error('Error resolving slug for actor:', error);
+        setActorId(null);
+      }
+    };
+
+    resolve();
+  }, [slug]);
 
   useEffect(() => {
     let mounted = true
@@ -40,8 +69,9 @@ export const Actor = () => {
     setError(false)
     
     const fetchActor = async () => {
+      if (!actorId) return;
       try {
-        const { data } = await tmdb.get(`/person/${id}`, {
+        const { data } = await tmdb.get(`/person/${actorId}`, {
           params: { append_to_response: 'combined_credits,images' }
         })
         if (mounted) setDetails(data)
@@ -54,7 +84,7 @@ export const Actor = () => {
 
     fetchActor()
     return () => { mounted = false }
-  }, [id])
+  }, [actorId])
 
   const works = useMemo(() => {
     if (!details?.combined_credits?.cast) return []

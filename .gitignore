@@ -8,11 +8,7 @@ coverage
 *.log
 __pycache__/
 .venv/
-scripts/__pycache__/
 *.bak
-temp_*.tsx
-# kids_content_engine/ # Unignored to track code
-kids_content_engine/temp/
-kids_content_engine/output/
-kids_content_engine/.env
-kids_content_engine/__pycache__/
+temp_*
+.vercel
+dev-dist

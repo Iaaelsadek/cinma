@@ -1,4 +1,4 @@
-5. ANTI-REGRESSION (CRITICAL): Once a problem is solved or a feature is stable (especially video players, iframes, and API routing), DO NOT modify its core logic again.
+؟5. ANTI-REGRESSION (CRITICAL): Once a problem is solved or a feature is stable (especially video players, iframes, and API routing), DO NOT modify its core logic again.
 6. MANDATORY ARABIC WARNING: If any new prompt asks you to change, bypass, or revert a previously solved issue or stable code, YOU MUST STOP. Do not write the code. Instead, you MUST ask the user explicitly in CLEAR ARABIC:
 "تحذير: هذا الأمر سيؤدي إلى تخريب [اسم الميزة/الملف] التي قمنا بإصلاحها واستقرارها مسبقاً. هل أنت متأكد أنك تريد الاستمرار؟"
 Wait for the user's explicit confirmation before proceeding with any destructive or regressive changes.
@@ -10,3 +10,18 @@ Wait for the user's explicit confirmation before proceeding with any destructive
 If any prompt implies or explicitly asks to change them, YOU MUST STOP IMMEDIATELY. Do not write any code. You MUST ask the user in clear Arabic:
 "تحذير نهائي: أنت تطلب تعديل ملفات السيرفرات ومشغل الفيديو المغلقة بالشمع الأحمر. أي تعديل هنا قد يدمر المشغل. هل أنت متأكد 100% أنك تريد العبث بها؟"
 Do not proceed until the user explicitly confirms.
+
+9. EMBED PLAYER CORE PRINCIPLES (VIDEO PROTECTION DIRECTIVES):
+   These rules MUST be respected whenever interacting with `EmbedPlayer.tsx` or related systems. They are the non-negotiable constitution of video handling:
+   
+   A) THE BLACKLIST (NEVER DO THIS):
+      1. NO SANDBOX: NEVER add `sandbox` attributes to any `<iframe/>` displaying a video.
+      2. NO PROXY: NEVER use a proxy server (`/api/embed-proxy` or similar) to fetch and render the video link. The `server.url` MUST be injected directly into the iframe `src`.
+
+   B) THE WHITELIST (MUST IMPLEMENT/MAINTAIN):
+      1. TRANSPORT MODE LOGIC: Keep the player smart. Implement reliable Error Handling (if a server fails to load, silently fallback to the next available server).
+      2. TOKEN AUTHENTICATION: Support the appending of dynamic tokens to the `server.url` securely to pass authentication requirements of specific external video providers.
+      3. ORIGIN & REFERRER CHECKING: Ensure outgoing requests to external video players carry the correct `Referer` and `Origin` headers (wherever possible on the frontend) to avoid blocking from strict video hosts.
+      4. CONTENT SECURITY POLICY (CSP): Implement and maintain strict CSP rules specifically for the iframe and related endpoints. This includes allowing media sources, preventing unauthorized script execution, and restricting framing to our domains to prevent XSS and unauthorized tracking.
+      5. CORS CONFIGURATION: The application backend APIs MUST maintain proper Cross-Origin Resource Sharing settings to communicate effectively with our UI and external player events.
+      6. IFRAME ATTRIBUTES: Every iframe MUST include all standard media permissions: `allow="autoplay; fullscreen; encrypted-media; picture-in-picture; web-share"` and cosmetic attributes like `scrolling="no"` or `allowFullScreen`.

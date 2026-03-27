@@ -101,26 +101,26 @@ export const SeoHead = ({
     schema || contentSchema
   ].filter(Boolean)
 
+  const fullUrl = `https://cinma.online${pathname}`
+
   return (
     <Helmet>
-      {/* Standard Metadata */}
-      <title>{fullTitle}</title>
+      <title>{title}</title>
       <meta name="description" content={description} />
-      <link rel="canonical" href={url} />
-      <meta name="robots" content={robots} />
-
+      <link rel="canonical" href={fullUrl} />
+      
       {/* Open Graph */}
-      <meta property="og:site_name" content="Online Cinema" />
-      <meta property="og:title" content={fullTitle} />
+      <meta property="og:title" content={title} />
       <meta property="og:description" content={description} />
       <meta property="og:image" content={image} />
-      <meta property="og:url" content={url} />
+      <meta property="og:url" content={fullUrl} />
       <meta property="og:type" content={type} />
       <meta property="og:locale" content="ar_SA" />
+      <meta property="og:site_name" content="Cinma Online" />
 
-      {/* Twitter Cards */}
+      {/* Twitter */}
       <meta name="twitter:card" content="summary_large_image" />
-      <meta name="twitter:title" content={fullTitle} />
+      <meta name="twitter:title" content={title} />
       <meta name="twitter:description" content={description} />
       <meta name="twitter:image" content={image} />
 

@@ -6,9 +6,11 @@ export const slugify = (text: string) => {
     .toString()
     .toLowerCase()
     .trim()
-    .replace(/\s+/g, '-')     // Replace spaces with -
-    .replace(/[^\w\-]+/g, '') // Remove all non-word chars
-    .replace(/\-\-+/g, '-')   // Replace multiple - with single -
+    .replace(/[\s_]+/g, '-') // Replace spaces and underscores with -
+    // Allow English, Arabic, and CJK (Chinese, Japanese, Korean) characters
+    .replace(/[^\w-\u0621-\u064A\u0660-\u0669\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uff00-\uff9f\u4e00-\u9faf\u3400-\u4dbf]/g, '') 
+    .replace(/--+/g, '-')   // Replace multiple - with single -
+    .replace(/^-+|-+$/g, '')  // Trim - from ends
 }
 
 export const getGenreSlug = (genreId: number) => {
@@ -16,19 +18,65 @@ export const getGenreSlug = (genreId: number) => {
   return slugify(genre)
 }
 
-export const generateWatchPath = (item: any) => {
-  // Determine Type
-  let type = 'movie'
-  if (item.media_type === 'tv' || item.media_type === 'anime' || item.name) type = 'tv'
-  if (item.media_type === 'movie' || item.title) type = 'movie'
+export const generateContentUrl = (item: { id: number | string, slug?: string | null, media_type?: string, type?: string, title?: string | null, name?: string | null }) => {
+  const type = item.media_type || item.type || 'movie'
+  let identifier = item.slug
   
-  const id = item.id
-
-  if (type === 'tv') {
-    return `/watch/tv/${id}/s1/ep1`
+  // CRITICAL: Ignore legacy slugs that look like "content-12345" or just numbers
+  if (identifier && (/^content-\d+$/.test(identifier) || /^\d+$/.test(identifier))) {
+    identifier = undefined
   }
   
-  return `/watch/movie/${id}`
+  if (!identifier) {
+    // CRITICAL: User demands PURE SLUGS ONLY. If slug is missing, generate it on the fly from title
+    const title = item.title || item.name || 'content'
+    identifier = slugify(title)
+    
+    // If slugify fails or returns empty, use a generic slug (never raw ID)
+    if (!identifier) identifier = 'content'
+  }
+  
+  switch (type) {
+    case 'movie': return `/movie/${identifier}`
+    case 'tv':
+    case 'series':
+    case 'anime': return `/series/${identifier}`
+    case 'actor':
+    case 'person': return `/actor/${identifier}`
+    case 'game': return `/game/${identifier}`
+    case 'software': return `/software/${identifier}`
+    default: return `/${type}/${identifier}`
+  }
+}
+
+export const generateWatchUrl = (item: { id: number | string, slug?: string | null, media_type?: string, type?: string, name?: string | null, title?: string | null }, season?: number, episode?: number) => {
+  const type = item.media_type || item.type || (item.name && !item.title ? 'tv' : 'movie')
+  let identifier = item.slug
+  
+  // CRITICAL: Ignore legacy slugs that look like "content-12345" or just numbers
+  if (identifier && (/^content-\d+$/.test(identifier) || /^\d+$/.test(identifier))) {
+    identifier = undefined
+  }
+  
+  if (!identifier) {
+    const title = item.title || item.name || 'content'
+    identifier = slugify(title)
+    if (!identifier) identifier = 'content'
+  }
+
+  const isSeries = type === 'tv' || type === 'series' || type === 'anime'
+  
+  if (isSeries) {
+    const s = season || 1
+    const e = episode || 1
+    return `/watch/tv/${identifier}/s${s}/ep${e}`
+  }
+  
+  return `/watch/movie/${identifier}`
+}
+
+export const generateWatchPath = (item: any) => {
+  return generateWatchUrl(item, 1, 1)
 }
 
 export const parseWatchPath = (slug: string) => {

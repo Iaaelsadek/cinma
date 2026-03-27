@@ -1,23 +1,22 @@
 import { useMemo, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
-import { Link, useSearchParams } from 'react-router-dom'
+import {useSearchParams} from 'react-router-dom'
 import { useLang } from '../../state/useLang'
-import { supabase } from '../../lib/supabase'
+import {getTrendingSoftwareDB} from '../../lib/db'
 import { useQuery } from '@tanstack/react-query'
-import { Download, Monitor, Smartphone, Apple, Terminal, Star, Search, Shield, Cpu, Grid, Filter, Box } from 'lucide-react'
+import { Download, Monitor, Smartphone, Apple, Terminal, Star, Search, Grid } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { SOFTWARE_MOCK_ITEMS, type SoftwareRow } from '../../data/software'
 
 // Static Fallback Images per Category
 const FALLBACK_IMAGES = {
-  pc: 'https://images.unsplash.com/photo-1587620962725-abab7fe55159?q=80&w=1000&auto=format&fit=crop', // Computer Code / Setup
-  android: 'https://images.unsplash.com/photo-1607252650355-f7fd0460ccdb?q=80&w=1000&auto=format&fit=crop', // Android Robot
-  apple: 'https://images.unsplash.com/photo-1611186871348-b1ce696e52c9?q=80&w=1000&auto=format&fit=crop', // Apple MacBook
-  terminal: 'https://images.unsplash.com/photo-1629654297299-c8506221ca97?q=80&w=1000&auto=format&fit=crop', // Matrix / Terminal
-  other: 'https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=1000&auto=format&fit=crop' // Chip / Tech
+  pc: 'https://images.unsplash.com/photo-1587620962725-abab7fe55159?q=80&w=1000&auto=format&fit=crop',
+  android: 'https://images.unsplash.com/photo-1607252650355-f7fd0460ccdb?q=80&w=1000&auto=format&fit=crop',
+  apple: 'https://images.unsplash.com/photo-1611186871348-b1ce696e52c9?q=80&w=1000&auto=format&fit=crop',
+  terminal: 'https://images.unsplash.com/photo-1629654297299-c8506221ca97?q=80&w=1000&auto=format&fit=crop',
+  other: 'https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=1000&auto=format&fit=crop'
 }
 
-const SoftwareCard = ({ item }: { item: SoftwareRow }) => {
+const SoftwareCard = ({ item }: { item: Software }) => {
   const [imgError, setImgError] = useState(false)
   const fallback = FALLBACK_IMAGES[item.platform || 'other'] || FALLBACK_IMAGES.other
 
@@ -80,22 +79,8 @@ export const Software = () => {
   const { data: allSoftware, isLoading } = useQuery({
     queryKey: ['software-all-grid'],
     queryFn: async () => {
-      const { data } = await supabase.from('software').select('*').order('rating', { ascending: false })
-      
-      const dbItems = (data || []).map((item: any) => ({
-        ...item,
-        title: item.title,
-        poster_url: item.poster_url,
-        category: item.category,
-        rating: item.rating,
-        download_url: item.download_url,
-        description: item.description || 'Powerful software tool.',
-        version: item.version || 'Latest',
-        size: item.size || 'N/A',
-        platform: item.platform || 'pc'
-      })) as SoftwareRow[]
-
-      return [...dbItems, ...SOFTWARE_MOCK_ITEMS]
+      const dbItems = await getTrendingSoftwareDB(100)
+      return dbItems
     },
     staleTime: 1000 * 60 * 60
   })

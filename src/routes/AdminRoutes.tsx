@@ -19,6 +19,7 @@ const AdminSystemControl = lazy(() => import('../pages/admin/system').then(m => 
 const MoviesManage = lazy(() => import('../pages/admin/MoviesManage').then(m => ({ default: m.MoviesManage })))
 const ContentHealth = lazy(() => import('../pages/admin/ContentHealth').then(m => ({ default: m.ContentHealth })))
 const ServerTester = lazy(() => import('../pages/admin/ServerTester').then(m => ({ default: m.ServerTester })))
+const ProcessRequests = lazy(() => import('../pages/admin/ProcessRequests').then(m => ({ default: m.default })))
 
 const withTimeout = async <T,>(promise: Promise<T>, ms: number) => {
   let timeoutId: ReturnType<typeof setTimeout> | undefined
@@ -37,7 +38,6 @@ const ProtectedAdmin = ({ children }: { children: React.JSX.Element }) => {
   const [allowed, setAllowed] = useState<boolean | null>(null)
   useEffect(() => {
     let cancelled = false
-    setAllowed(null)
     ;(async () => {
       if (loading) return
       if (!user) {
@@ -70,7 +70,6 @@ const ProtectedSuperAdmin = ({ children }: { children: React.JSX.Element }) => {
   const [allowed, setAllowed] = useState<boolean | null>(null)
   useEffect(() => {
     let cancelled = false
-    setAllowed(null)
     ;(async () => {
       if (loading) return
       if (!user) {
@@ -120,6 +119,7 @@ export const AdminRoutes = () => (
       <Route path="series/:id/season/:seasonId" element={<SeasonManage />} />
       <Route path="movies" element={<MoviesManage />} />
       <Route path="add-movie" element={<Navigate to="/admin/movies" replace />} />
+      <Route path="requests" element={<ProcessRequests />} />
       <Route path="content-health" element={<ContentHealth />} />
       <Route path="servers" element={<ServerTester />} />
       <Route

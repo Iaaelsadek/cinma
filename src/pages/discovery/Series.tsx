@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
+import { getTrendingTVDB, searchTVDB } from '../../lib/db'
 import { tmdb, advancedSearch } from '../../lib/tmdb'
 import { QuantumHero } from '../../components/features/hero/QuantumHero'
 import { QuantumTrain } from '../../components/features/media/QuantumTrain'
@@ -12,73 +13,78 @@ import { Helmet } from 'react-helmet-async'
 // --- Database Fetchers (Preferred) ---
 
 const fetchTrendingDB = async () => {
-  const { data, error } = await supabase
-    .from('tv_series')
-    .select('id, name, poster_path, backdrop_path, vote_average, first_air_date, genre_ids, overview')
-    .order('popularity', { ascending: false })
-    .limit(20)
-    
-  if (error || !data || data.length === 0) return fetchTrendingTMDB()
-  return data.map((item: any) => ({ ...item, media_type: 'tv', title: item.name }))
+  try {
+    const data = await getTrendingTVDB(20);
+    if (!data || data.length === 0) return fetchTrendingTMDB()
+    return data.map((item: any) => ({ ...item, media_type: 'tv', title: item.name }))
+  } catch {
+    return fetchTrendingTMDB()
+  }
 }
 
 const fetchTopRatedDB = async () => {
-  const { data, error } = await supabase
-    .from('tv_series')
-    .select('id, name, poster_path, backdrop_path, vote_average, first_air_date, genre_ids, overview')
-    .gte('vote_average', 8)
-    .order('vote_average', { ascending: false })
-    .limit(20)
-
-  if (error || !data || data.length === 0) return fetchTopRatedTMDB()
-  return data.map((item: any) => ({ ...item, media_type: 'tv', title: item.name }))
+  try {
+    const data = await searchTVDB({ min_rating: 8, limit: 20 });
+    if (!data || data.length === 0) return fetchTopRatedTMDB()
+    return data.map((item: any) => ({ ...item, media_type: 'tv', title: item.name }))
+  } catch {
+    return fetchTopRatedTMDB()
+  }
 }
 
 const fetchArabicDB = async () => {
-  const { data, error } = await supabase
-    .from('tv_series')
-    .select('id, name, poster_path, backdrop_path, vote_average, first_air_date, genre_ids, overview')
-    .eq('original_language', 'ar')
-    .order('first_air_date', { ascending: false })
-    .limit(20)
-
-  if (error || !data || data.length === 0) return fetchArabicTMDB()
-  return data.map((item: any) => ({ ...item, media_type: 'tv', title: item.name }))
+  try {
+    const { data, error } = await supabase
+      .from('tv_series')
+      .select('id, slug, name, poster_path, backdrop_path, vote_average, first_air_date, genre_ids, overview')
+      .eq('original_language', 'ar')
+      .order('first_air_date', { ascending: false })
+      .limit(20)
+    if (error || !data || data.length === 0) return fetchArabicTMDB()
+    return data.map((item: any) => ({ ...item, media_type: 'tv', title: item.name }))
+  } catch {
+    return fetchArabicTMDB()
+  }
 }
 
 const fetchLatestDB = async () => {
-  const { data, error } = await supabase
-    .from('tv_series')
-    .select('id, name, poster_path, backdrop_path, vote_average, first_air_date, genre_ids, overview')
-    .order('first_air_date', { ascending: false })
-    .limit(20)
-    
-  if (error || !data || data.length === 0) return fetchOnTheAirTMDB()
-  return data.map((item: any) => ({ ...item, media_type: 'tv', title: item.name }))
+  try {
+    const data = await searchTVDB({ limit: 20 });
+    if (!data || data.length === 0) return fetchOnTheAirTMDB()
+    return data.map((item: any) => ({ ...item, media_type: 'tv', title: item.name }))
+  } catch {
+    return fetchOnTheAirTMDB()
+  }
 }
 
 const fetchTurkishDB = async () => {
-  const { data, error } = await supabase
-    .from('tv_series')
-    .select('id, name, poster_path, backdrop_path, vote_average, first_air_date, genre_ids, overview')
-    .eq('original_language', 'tr')
-    .order('popularity', { ascending: false })
-    .limit(20)
-
-  if (error || !data || data.length === 0) return fetchTurkishTMDB()
-  return data.map((item: any) => ({ ...item, media_type: 'tv', title: item.name }))
+  try {
+    const { data, error } = await supabase
+      .from('tv_series')
+      .select('id, slug, name, poster_path, backdrop_path, vote_average, first_air_date, genre_ids, overview')
+      .eq('original_language', 'tr')
+      .order('popularity', { ascending: false })
+      .limit(20)
+    if (error || !data || data.length === 0) return fetchTurkishTMDB()
+    return data.map((item: any) => ({ ...item, media_type: 'tv', title: item.name }))
+  } catch {
+    return fetchTurkishTMDB()
+  }
 }
 
 const fetchKoreanDB = async () => {
-  const { data, error } = await supabase
-    .from('tv_series')
-    .select('id, name, poster_path, backdrop_path, vote_average, first_air_date, genre_ids, overview')
-    .eq('original_language', 'ko')
-    .order('popularity', { ascending: false })
-    .limit(20)
-
-  if (error || !data || data.length === 0) return fetchKoreanTMDB()
-  return data.map((item: any) => ({ ...item, media_type: 'tv', title: item.name }))
+  try {
+    const { data, error } = await supabase
+      .from('tv_series')
+      .select('id, slug, name, poster_path, backdrop_path, vote_average, first_air_date, genre_ids, overview')
+      .eq('original_language', 'ko')
+      .order('popularity', { ascending: false })
+      .limit(20)
+    if (error || !data || data.length === 0) return fetchKoreanTMDB()
+    return data.map((item: any) => ({ ...item, media_type: 'tv', title: item.name }))
+  } catch {
+    return fetchKoreanTMDB()
+  }
 }
 
 // --- TMDB Fallbacks ---

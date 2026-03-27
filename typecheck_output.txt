@@ -1,0 +1,124 @@
+
+> cinma-online@0.1.0 typecheck
+> tsc --noEmit
+
+src/components/features/home/HomeBelowFoldSections.tsx(116,22): error TS2304: Cannot find name 'RecommendationItem'.
+src/components/features/media/VideoCard.tsx(150,32): error TS2315: Type 'MouseEvent' is not generic.
+src/components/features/social/ActivityItem.tsx(293,24): error TS2304: Cannot find name 'ActivityIcon'.
+src/components/features/social/Challenges.tsx(18,56): error TS2304: Cannot find name 'UserChallenge'.
+src/components/features/social/Challenges.tsx(19,66): error TS2304: Cannot find name 'Challenge'.
+src/components/features/social/FollowList.tsx(7,10): error TS2304: Cannot find name 'ProfileType'.
+src/components/features/social/Leaderboard.tsx(15,42): error TS2304: Cannot find name 'LeaderboardEntry'.
+src/components/routing/SeriesRouteHandler.tsx(23,27): error TS2322: Type '{ id: string | undefined; }' is not assignable to type 'IntrinsicAttributes & SeriesDetailsProps'.
+  Property 'id' does not exist on type 'IntrinsicAttributes & SeriesDetailsProps'.
+src/components/ui/Button.tsx(36,10): error TS2304: Cannot find name 'ReactNode'.
+src/components/ui/Button.tsx(42,14): error TS2304: Cannot find name 'ReactNode'.
+src/components/ui/Card.tsx(28,41): error TS2304: Cannot find name 'HTMLMotionProps'.
+src/components/ui/Card.tsx(42,13): error TS2304: Cannot find name 'ReactNode'.
+src/components/ui/Card.tsx(50,14): error TS2304: Cannot find name 'ReactNode'.
+src/components/ui/Card.tsx(152,39): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type 'Record<AspectRatio, string>'.
+src/components/ui/Card.tsx(242,34): error TS7006: Parameter 'item' implicitly has an 'any' type.
+src/components/ui/Card.tsx(242,40): error TS7006: Parameter 'index' implicitly has an 'any' type.
+src/components/ui/Input.tsx(26,42): error TS2304: Cannot find name 'InputHTMLAttributes'.
+src/components/ui/Input.tsx(34,10): error TS2304: Cannot find name 'ReactNode'.
+src/components/ui/Input.tsx(118,17): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type 'Record<InputSize, string>'.
+src/components/ui/Modal.tsx(34,13): error TS2304: Cannot find name 'ReactNode'.
+src/context/AdminContext.tsx(296,47): error TS7006: Parameter 'acc' implicitly has an 'any' type.
+src/context/AdminContext.tsx(296,52): error TS7006: Parameter 'm' implicitly has an 'any' type.
+src/context/AdminContext.tsx(297,47): error TS7006: Parameter 'acc' implicitly has an 'any' type.
+src/context/AdminContext.tsx(297,52): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/context/AdminContext.tsx(314,29): error TS7006: Parameter 'm' implicitly has an 'any' type.
+src/context/AdminContext.tsx(320,29): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/context/AdminContext.tsx(339,29): error TS7006: Parameter 'm' implicitly has an 'any' type.
+src/context/AdminContext.tsx(345,29): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/context/AdminContext.tsx(356,30): error TS7006: Parameter 'm' implicitly has an 'any' type.
+src/context/AdminContext.tsx(363,30): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/context/AdminContext.tsx(375,30): error TS7006: Parameter 'm' implicitly has an 'any' type.
+src/context/AdminContext.tsx(375,76): error TS7006: Parameter 'acc' implicitly has an 'any' type.
+src/context/AdminContext.tsx(375,81): error TS7006: Parameter 'm' implicitly has an 'any' type.
+src/context/AdminContext.tsx(376,30): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/context/AdminContext.tsx(376,76): error TS7006: Parameter 'acc' implicitly has an 'any' type.
+src/context/AdminContext.tsx(376,81): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/context/AdminContext.tsx(488,7): error TS2448: Block-scoped variable 'refreshStats' used before its declaration.
+src/context/AdminContext.tsx(488,7): error TS2454: Variable 'refreshStats' is used before being assigned.
+src/context/AdminContext.tsx(561,7): error TS2448: Block-scoped variable 'refreshStats' used before its declaration.
+src/context/AdminContext.tsx(561,7): error TS2454: Variable 'refreshStats' is used before being assigned.
+src/contexts/AuthContext.tsx(13,9): error TS2304: Cannot find name 'Role'.
+src/contexts/AuthContext.tsx(21,56): error TS2304: Cannot find name 'ReactNode'.
+src/contexts/AuthContext.tsx(23,34): error TS2304: Cannot find name 'Role'.
+src/contexts/ToastContext.tsx(15,9): error TS2304: Cannot find name 'ToastType'.
+src/contexts/ToastContext.tsx(21,21): error TS2304: Cannot find name 'ToastType'.
+src/contexts/ToastContext.tsx(30,57): error TS2304: Cannot find name 'ReactNode'.
+src/contexts/ToastContext.tsx(33,40): error TS2304: Cannot find name 'ToastType'.
+src/examples/InputExample.tsx(98,26): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/examples/InputExample.tsx(107,26): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/examples/InputExample.tsx(116,26): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/examples/InputExample.tsx(125,26): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/hooks/useAuth.ts(9,12): error TS2304: Cannot find name 'Profile'.
+src/hooks/useAuth.ts(17,19): error TS2304: Cannot find name 'Profile'.
+src/hooks/useAuth.ts(131,45): error TS2304: Cannot find name 'Profile'.
+src/hooks/useAuth.ts(140,40): error TS2304: Cannot find name 'Profile'.
+src/hooks/useAuth.ts(143,34): error TS2304: Cannot find name 'Profile'.
+src/pages/admin/AddMovie.tsx(292,24): error TS2304: Cannot find name 'LinkIcon'.
+src/pages/admin/index.tsx(353,9): error TS2304: Cannot find name 'ReactNode'.
+src/pages/admin/ProcessRequests.tsx(95,30): error TS2304: Cannot find name 'tmdb'.
+src/pages/auth/AdminLogin.tsx(7,20): error TS2304: Cannot find name 'useNavigate'.
+src/pages/discovery/Category.tsx(287,22): error TS2304: Cannot find name 'Movie'.
+src/pages/discovery/Category.tsx(309,22): error TS2304: Cannot find name 'Movie'.
+src/pages/discovery/Quran.tsx(20,58): error TS2304: Cannot find name 'QuranReciter'.
+src/pages/discovery/Quran.tsx(55,67): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/pages/discovery/Search.tsx(142,15): error TS2339: Property 'searchDB' does not exist on type 'typeof import("D:/cinma.online/src/lib/db")'.
+src/pages/discovery/Search.tsx(149,26): error TS7006: Parameter 'item' implicitly has an 'any' type.
+src/pages/discovery/Software.tsx(19,41): error TS2749: 'Software' refers to a value, but is being used as a type here. Did you mean 'typeof Software'?
+src/pages/discovery/Software.tsx(21,20): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type '{ pc: string; android: string; apple: string; terminal: string; other: string; }'.
+src/pages/Home.tsx(431,53): error TS2339: Property 'topRatedMovies' does not exist on type '{ trending?: { results?: TmdbMedia[] | undefined; } | undefined; popularMovies?: { results?: TmdbMedia[] | undefined; } | undefined; topRatedMovies?: { results?: TmdbMedia[] | undefined; } | undefined; } | { ...; }'.
+  Property 'topRatedMovies' does not exist on type '{ popularMovies: any; }'.
+src/pages/media/Actor.tsx(233,77): error TS2304: Cannot find name 'ImageIcon'.
+src/pages/media/GameDetails.tsx(17,34): error TS2304: Cannot find name 'Game'.
+src/pages/media/GameDetails.tsx(158,26): error TS2304: Cannot find name 'ImageIcon'.
+src/pages/media/GameDetails.tsx(162,37): error TS7006: Parameter 'shot' implicitly has an 'any' type.
+src/pages/media/GameDetails.tsx(162,43): error TS7006: Parameter 'idx' implicitly has an 'any' type.
+src/pages/media/MovieDetails.tsx(236,9): error TS2322: Type '{ "@context": string; "@type": string; name: any; image: string | undefined; description: any; datePublished: any; aggregateRating: { "@type": string; ratingValue: any; bestRating: string; ratingCount: any; } | undefined; } | null' is not assignable to type 'Record<string, any> | undefined'.
+  Type 'null' is not assignable to type 'Record<string, any> | undefined'.
+src/pages/media/SeriesDetails.tsx(97,27): error TS2552: Cannot find name 'getSeriesById'. Did you mean 'setSeriesId'?
+src/pages/media/SeriesDetails.tsx(198,21): error TS2304: Cannot find name 'tvId'.
+src/pages/media/SeriesDetails.tsx(199,51): error TS2304: Cannot find name 'tvId'.
+src/pages/media/SeriesDetails.tsx(203,13): error TS2304: Cannot find name 'tvId'.
+src/pages/media/SeriesDetails.tsx(209,44): error TS2304: Cannot find name 'tvId'.
+src/pages/media/SeriesDetails.tsx(211,39): error TS2304: Cannot find name 'tvId'.
+src/pages/media/SeriesDetails.tsx(229,67): error TS2304: Cannot find name 'id'.
+src/pages/media/SeriesDetails.tsx(256,10): error TS2304: Cannot find name 'tvId'.
+src/pages/media/SeriesDetails.tsx(259,37): error TS2304: Cannot find name 'tvId'.
+src/pages/media/SeriesDetails.tsx(260,7): error TS2304: Cannot find name 'tvId'.
+src/pages/media/SeriesDetails.tsx(266,34): error TS2304: Cannot find name 'tvId'.
+src/pages/media/SeriesDetails.tsx(267,32): error TS2304: Cannot find name 'tvId'.
+src/pages/media/SeriesDetails.tsx(268,30): error TS2304: Cannot find name 'tvId'.
+src/pages/media/SeriesDetails.tsx(284,19): error TS2304: Cannot find name 'id'.
+src/pages/media/SeriesDetails.tsx(293,27): error TS2304: Cannot find name 'id'.
+src/pages/media/SeriesDetails.tsx(343,55): error TS2304: Cannot find name 'id'.
+src/pages/media/SeriesDetails.tsx(347,75): error TS2304: Cannot find name 'id'.
+src/pages/media/SeriesDetails.tsx(520,33): error TS2304: Cannot find name 'id'.
+src/pages/media/SeriesDetails.tsx(523,33): error TS2304: Cannot find name 'id'.
+src/pages/media/SeriesDetails.tsx(726,24): error TS2304: Cannot find name 'tvId'.
+src/pages/media/SoftwareDetails.tsx(14,34): error TS2304: Cannot find name 'Software'.
+src/pages/user/Profile.tsx(295,66): error TS2304: Cannot find name 'useRQ'.
+src/pages/user/Profile.tsx(301,31): error TS2304: Cannot find name 'useRQ'.
+src/pages/user/Profile.tsx(307,29): error TS2304: Cannot find name 'useRQ'.
+src/pages/user/Profile.tsx(313,37): error TS2304: Cannot find name 'useRQ'.
+src/pages/user/Profile.tsx(639,52): error TS7006: Parameter 'acc' implicitly has an 'any' type.
+src/pages/user/Profile.tsx(639,57): error TS7006: Parameter 'ua' implicitly has an 'any' type.
+src/pages/user/Profile.tsx(730,64): error TS2304: Cannot find name 'ProfileType'.
+src/pages/user/Profile.tsx(773,64): error TS2304: Cannot find name 'ProfileType'.
+src/pages/user/Profile.tsx(842,66): error TS2304: Cannot find name 'UserIcon'.
+src/pages/user/Profile.tsx(875,30): error TS2304: Cannot find name 'UserIcon'.
+src/pages/user/Profile.tsx(1346,73): error TS2304: Cannot find name 'UserAchievement'.
+src/pages/user/Profile.tsx(1440,49): error TS2304: Cannot find name 'useRQ'.
+src/pages/user/Profile.tsx(1512,56): error TS2304: Cannot find name 'useRQ'.
+src/pages/user/Profile.tsx(1581,47): error TS2304: Cannot find name 'useRQ'.
+src/services/contentQueries.ts(233,15): error TS18046: 'moviesResult' is of type 'unknown'.
+src/services/contentQueries.ts(234,17): error TS18046: 'tvResult' is of type 'unknown'.
+src/services/contentQueries.ts(235,19): error TS18046: 'moviesResult' is of type 'unknown'.
+src/services/contentQueries.ts(235,40): error TS18046: 'tvResult' is of type 'unknown'.
+src/services/streamService.ts(233,5): error TS2304: Cannot find name 'logger'.
+src/services/streamService.ts(249,5): error TS2304: Cannot find name 'logger'.
+src/services/streamService.ts(277,5): error TS2304: Cannot find name 'logger'.

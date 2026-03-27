@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useParams } from 'react-router-dom'
 import { tmdb, fetchGenres } from '../../lib/tmdb'
@@ -214,7 +213,7 @@ export const AsianDramaPage = ({ type }: Props) => {
   })
 
   // Apply translation hook
-  const filteredDramaList = dramaList || []
+  const filteredDramaList = Array.isArray(dramaList) ? dramaList : []
   const translatedContent = useTranslatedContent(filteredDramaList)
   
   const displayItems = translatedContent.data || filteredDramaList

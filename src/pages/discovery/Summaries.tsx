@@ -1,11 +1,10 @@
 import { Helmet } from 'react-helmet-async'
 import { useParams } from 'react-router-dom'
-import { useMemo } from 'react'
 import { useLang } from '../../state/useLang'
 import { QuantumHero } from '../../components/features/hero/QuantumHero'
 import { QuantumTrain } from '../../components/features/media/QuantumTrain'
 import { VideoCard } from '../../components/features/media/VideoCard'
-import { useCategoryVideos, VideoItem } from '../../hooks/useFetchContent'
+import {useCategoryVideos} from '../../hooks/useFetchContent'
 import { PageLoader } from '../../components/common/PageLoader'
 import { FALLBACK_SUMMARIES } from '../../lib/constants'
 

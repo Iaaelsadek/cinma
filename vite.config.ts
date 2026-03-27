@@ -4,31 +4,15 @@ import { VitePWA } from 'vite-plugin-pwa'
 import sitemap from 'vite-plugin-sitemap'
 
 export default defineConfig({
+  assetsInclude: ['**/*.glsl'],
   plugins: [
     react(),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png'],
-      manifest: {
-        name: 'أونلاين سينما | Online Cinema',
-        short_name: 'سينما',
-        description: 'منصة المشاهدة العربية الأقوى — أفلام ومسلسلات',
-        theme_color: '#08080C',
-        background_color: '#08080C',
-        display: 'standalone',
-        display_override: ['standalone', 'minimal-ui', 'browser'],
-        start_url: '/?source=pwa',
-        scope: '/',
-        dir: 'rtl',
-        lang: 'ar',
-        orientation: 'any',
-        categories: ['entertainment', 'video'],
-        icons: [
-          { src: '/android-chrome-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
-          { src: '/android-chrome-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' }
-        ],
-        prefer_related_applications: false
-      },
+      // Disable install prompt - we're promoting the Android app instead
+      injectRegister: 'auto',
+      manifest: false, // Disable manifest to prevent PWA install prompts
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         navigateFallback: '/index.html',
@@ -75,6 +59,15 @@ export default defineConfig({
               cacheName: 'home-static-data',
               cacheableResponse: { statuses: [0, 200] },
               expiration: { maxEntries: 20, maxAgeSeconds: 60 * 60 * 6 }
+            }
+          },
+          {
+            urlPattern: /\/api\/db\/(movies|tv)\/(trending|search)(\?.*)?$/i,
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'crdb-api',
+              cacheableResponse: { statuses: [0, 200] },
+              expiration: { maxEntries: 100, maxAgeSeconds: 60 * 5 }
             }
           }
         ]
@@ -135,5 +128,10 @@ export default defineConfig({
         }
       }
     }
+  },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: './src/test/setup.ts',
   }
 })

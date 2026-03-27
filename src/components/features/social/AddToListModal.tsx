@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Plus, List, Check, Lock, Globe } from 'lucide-react'
 import { getUserLists, createUserList, addItemToList, removeItemFromList, getListItems } from '../../../lib/supabase'
-import { motion, AnimatePresence } from 'framer-motion'
+import {motion} from 'framer-motion'
 import { toast } from 'sonner'
 import { clsx } from 'clsx'
 import { logger } from '../../../lib/logger'

@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { UserMinus, UserPlus, Users, Heart, ExternalLink, X, Plus } from 'lucide-react'
-import { Profile as ProfileType } from '../../../lib/supabase'
 import clsx from 'clsx'
 
 interface FollowListProps {

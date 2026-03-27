@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase'
+import { upsertContentDB } from '../lib/db'
 import { fetchTrending, getUsMovieCertification, getUsTvRating, getRatingColorFromCert } from '../lib/tmdb'
 
 export async function fetchAndUpsertTrending() {
@@ -10,7 +10,7 @@ export async function fetchAndUpsertTrending() {
     movieResults.slice(0, 20).map(async (m: any) => {
       const cert = await getUsMovieCertification(m.id)
       return {
-        id: String(m.id),
+        id: m.id,
         title: m.title || '',
         arabic_title: m.title || '',
         overview: m.overview || '',
@@ -30,14 +30,14 @@ export async function fetchAndUpsertTrending() {
     tvResults.slice(0, 20).map(async (t: any) => {
       const cert = await getUsTvRating(t.id)
       return {
-        id: Number(t.id),
-        title: t.name || '',
-        arabic_title: t.name || '',
+        id: t.id,
+        name: t.name || '',
+        arabic_name: t.name || '',
         overview: t.overview || '',
         ai_summary: null,
         rating_color: getRatingColorFromCert(cert),
         genres: null,
-        release_date: t.first_air_date || null,
+        first_air_date: t.first_air_date || null,
         poster_path: t.poster_path || null,
         backdrop_path: t.backdrop_path || null,
         embed_urls: null,
@@ -46,9 +46,12 @@ export async function fetchAndUpsertTrending() {
     })
   )
 
-  const { error: mErr } = await supabase.from('movies').upsert(movieRows, { onConflict: 'id' })
-  if (mErr) throw mErr
-  const { error: tErr } = await supabase.from('tv_series').upsert(tvRows, { onConflict: 'id' })
-  if (tErr) throw tErr
+  if (movieRows.length > 0) {
+    await upsertContentDB('movies', movieRows)
+  }
+  if (tvRows.length > 0) {
+    await upsertContentDB('tv_series', tvRows)
+  }
+  
   return { movies: movieRows.length, tv: tvRows.length }
 }

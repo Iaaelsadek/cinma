@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { motion, AnimatePresence } from 'framer-motion'
+import {motion} from 'framer-motion'
 import { supabase } from '../lib/supabase'
 import { CONFIG } from '../lib/constants'
 import { ensureProfile } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { logAuthError, errorLogger } from '../services/errorLogging'
-import { Eye, EyeOff, Mail, Lock, User, Chrome, ArrowRight, Sparkles } from 'lucide-react'
+import { Eye, EyeOff, Mail, Lock, User, Chrome, ArrowRight, Film } from 'lucide-react'
 import { toast } from 'sonner'
 
 const FORBIDDEN_USERNAMES = [
@@ -403,7 +403,7 @@ const Auth = () => {
               className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-lumen-gold mb-4 shadow-lg shadow-lumen-gold/20"
               whileHover={{ scale: 1.05, rotate: 5 }}
             >
-              <Sparkles className="text-lumen-void w-6 h-6" />
+              <Film className="text-lumen-void w-6 h-6" />
             </motion.div>
             <h1 className="text-2xl font-black text-lumen-cream tracking-tight mb-2 font-syne">
               {getTitle()}

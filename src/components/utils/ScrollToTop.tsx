@@ -8,5 +8,10 @@ export const ScrollToTop = () => {
     window.scrollTo(0, 0)
   }, [pathname])
 
+  // Scroll to top on initial mount (page refresh)
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [])
+
   return null
 }

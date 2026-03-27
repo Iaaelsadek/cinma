@@ -1,40 +1,33 @@
-import { useEffect, useMemo, useState } from 'react'
+import {useEffect, useState} from 'react'
 import { Helmet } from 'react-helmet-async'
 import { useParams, Link } from 'react-router-dom'
-import { Download, Star, ArrowLeft, Monitor, Smartphone, Apple, Terminal, Cpu } from 'lucide-react'
+import { Download, Star, ArrowLeft, Cpu } from 'lucide-react'
 import { motion } from 'framer-motion'
-import { incrementClicks, supabase } from '../../lib/supabase'
+import {getSoftwareByIdDB} from '../../lib/db'
+import { resolveSlug } from '../../lib/slugResolver'
+import { logger } from '../../lib/logger'
 import { useLang } from '../../state/useLang'
-import { SOFTWARE_MOCK_ITEMS, type SoftwareRow } from '../../data/software'
 
 export const SoftwareDetails = () => {
-  const { id } = useParams()
+  const { slug } = useParams()
   const { lang } = useLang()
-  const [row, setRow] = useState<SoftwareRow | null>(null)
+  const [row, setRow] = useState<Software | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let cancelled = false
     const load = async () => {
-      if (!id) return
+      if (!slug) return
       setLoading(true)
-
-      // Try fetching from DB first
-      const { data } = await supabase.from('software').select('*').eq('id', Number(id)).maybeSingle()
-      
+      const software = await getSoftwareByIdDB(slug)
       if (!cancelled) {
-        if (data) {
-          setRow(data as SoftwareRow)
-        } else {
-          const found = SOFTWARE_MOCK_ITEMS.find(i => i.id === Number(id))
-          setRow(found || null)
-        }
+        setRow(software)
         setLoading(false)
       }
     }
     load()
     return () => { cancelled = true }
-  }, [id])
+  }, [slug])
 
   if (loading) {
     return (
@@ -56,15 +49,15 @@ export const SoftwareDetails = () => {
     )
   }
 
-  const title = row.title || (lang === 'ar' ? 'برنامج' : 'Software')
-  const rating = typeof row.rating === 'number' ? row.rating : 0
-  const version = row.version || row.year || row.release_year || 'Latest'
-  const platform = row.platform || row.category || 'PC'
-  const description = row.description || (lang === 'ar' ? 'لا يوجد وصف متاح' : 'No description available')
-  const poster = row.poster_url || ''
-  const backdrop = row.backdrop_url || row.poster_url || ''
-  const downloadUrl = row.download_url || '#'
-  const size = row.size || 'N/A'
+  const title = row?.title || (lang === 'ar' ? 'برنامج' : 'Software')
+  const rating = typeof row?.rating === 'number' ? row.rating : 0
+  const version = row?.version || (row?.release_date ? new Date(row.release_date).getFullYear().toString() : 'Latest')
+  const platform = row?.platform || row?.category || 'PC'
+  const description = row?.description || (lang === 'ar' ? 'لا يوجد وصف متاح' : 'No description available')
+  const poster = row?.poster_url || ''
+  const backdrop = row?.backdrop_url || row?.poster_url || ''
+  const downloadUrl = row?.download_url || '#'
+  const size = row?.size || 'N/A'
 
   return (
     <div className="min-h-screen bg-[#050505] pb-12 text-zinc-100 font-cairo">

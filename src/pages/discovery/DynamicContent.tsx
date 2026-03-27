@@ -7,8 +7,8 @@ import { Helmet } from 'react-helmet-async'
 import { slugify } from '../../lib/utils'
 import { SkeletonGrid } from '../../components/common/Skeletons'
 import { SectionHeader } from '../../components/common/SectionHeader'
-import { Tv, Film, Clapperboard, Globe, Moon, BookOpen, Baby, Sparkles } from 'lucide-react'
-import { useState, useEffect, useMemo } from 'react'
+import {Film, Globe, Moon, BookOpen, Baby, Sparkles} from 'lucide-react'
+import {useState, useEffect} from 'react'
 
 export type ContentPreset = 
   | 'disney' 

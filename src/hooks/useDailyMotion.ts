@@ -1,5 +1,4 @@
 import { useQuery } from '@tanstack/react-query'
-import { isCJK } from '../lib/utils'
 
 export type DailyMotionVideo = {
   id: string

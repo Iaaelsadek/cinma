@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { errorLogger } from '../../../services/errorLogging';
-import { Server as ServerIcon, AlertTriangle, Loader2 } from 'lucide-react';
+import {AlertTriangle, Loader2, Server} from 'lucide-react';
 
 interface Server {
   name: string;
@@ -27,88 +27,91 @@ const ServerSwitcher = ({
   const [reporting, setReporting] = useState(false);
 
   useEffect(() => {
-    loadServers();
+    let cancelled = false;
+
+    const run = async () => {
+      setLoading(true);
+      
+      let dbLinks: Record<string, string> = {};
+      
+      if (type === 'movie') {
+        const { data } = await supabase
+          .from('movies')
+          .select('embed_links')
+          .eq('id', tmdbId)
+          .maybeSingle();
+        if (data?.embed_links) dbLinks = data.embed_links;
+      } else if (type === 'tv' && season && episode) {
+          const { data: seasonData } = await supabase
+              .from('seasons')
+              .select('id')
+              .eq('series_id', tmdbId)
+              .eq('season_number', season)
+              .maybeSingle();
+              
+          if (seasonData) {
+               const { data: epData } = await supabase
+                  .from('episodes')
+                  .select('embed_links')
+                  .eq('season_id', seasonData.id)
+                  .eq('episode_number', episode)
+                  .maybeSingle();
+               if (epData?.embed_links) dbLinks = epData.embed_links;
+          }
+      }
+
+      const defaultServers = ['vidsrc', '2embed', 'embed_su', 'autoembed'];
+      defaultServers.forEach(server => {
+          if (!dbLinks[server]) {
+              let url = '';
+              if (server === 'vidsrc') {
+                  url = type === 'movie' 
+                      ? `https://vidsrc.to/embed/movie/${tmdbId}`
+                      : `https://vidsrc.to/embed/tv/${tmdbId}/${season}/${episode}`;
+              } else if (server === '2embed') {
+                  url = type === 'movie'
+                      ? `https://www.2embed.cc/embed/${tmdbId}`
+                      : `https://www.2embed.cc/embed/tv/${tmdbId}&s=${season}&e=${episode}`;
+              } else if (server === 'embed_su') {
+                  url = type === 'movie'
+                      ? `https://embed.su/embed/movie/${tmdbId}`
+                      : `https://embed.su/embed/tv/${tmdbId}/${season}/${episode}`;
+              } else if (server === 'autoembed') {
+                   url = type === 'movie'
+                      ? `https://autoembed.to/movie/tmdb/${tmdbId}`
+                      : `https://autoembed.to/tv/tmdb/${tmdbId}-${season}x${episode}`;
+              }
+              if (url) dbLinks[server] = url;
+          }
+      });
+
+      const { data: sources } = await supabase
+          .from('embed_sources')
+          .select('name, priority, response_time_ms')
+          .in('name', Object.keys(dbLinks));
+
+      const serverList = Object.entries(dbLinks).map(([name, url]) => {
+          const source = sources?.find(s => s.name === name);
+          return {
+              name,
+              url: url as string,
+              priority: source?.priority || 5,
+              responseTime: source?.response_time_ms
+          };
+      }).sort((a, b) => a.priority - b.priority);
+
+      if (!cancelled) {
+        setServers(serverList);
+        setLoading(false);
+      }
+    };
+
+    void run();
+
+    return () => {
+      cancelled = true;
+    };
   }, [tmdbId, type, season, episode]);
-
-  const loadServers = async () => {
-    setLoading(true);
-    
-    let dbLinks: Record<string, string> = {};
-    
-    // 1. Try to fetch from DB
-    if (type === 'movie') {
-      const { data } = await supabase
-        .from('movies')
-        .select('embed_links')
-        .eq('id', tmdbId)
-        .maybeSingle();
-      if (data?.embed_links) dbLinks = data.embed_links;
-    } else if (type === 'tv' && season && episode) {
-        // Try to find episode links
-        // First find season id
-        const { data: seasonData } = await supabase
-            .from('seasons')
-            .select('id')
-            .eq('series_id', tmdbId)
-            .eq('season_number', season)
-            .maybeSingle();
-            
-        if (seasonData) {
-             const { data: epData } = await supabase
-                .from('episodes')
-                .select('embed_links')
-                .eq('season_id', seasonData.id)
-                .eq('episode_number', episode)
-                .maybeSingle();
-             if (epData?.embed_links) dbLinks = epData.embed_links;
-        }
-    }
-
-    // 2. Generate fallback links for common reliable servers if not in DB
-    const defaultServers = ['vidsrc', '2embed', 'embed_su', 'autoembed'];
-    defaultServers.forEach(server => {
-        if (!dbLinks[server]) {
-            let url = '';
-            if (server === 'vidsrc') {
-                url = type === 'movie' 
-                    ? `https://vidsrc.to/embed/movie/${tmdbId}`
-                    : `https://vidsrc.to/embed/tv/${tmdbId}/${season}/${episode}`;
-            } else if (server === '2embed') {
-                url = type === 'movie'
-                    ? `https://www.2embed.cc/embed/${tmdbId}`
-                    : `https://www.2embed.cc/embed/tv/${tmdbId}&s=${season}&e=${episode}`;
-            } else if (server === 'embed_su') {
-                url = type === 'movie'
-                    ? `https://embed.su/embed/movie/${tmdbId}`
-                    : `https://embed.su/embed/tv/${tmdbId}/${season}/${episode}`;
-            } else if (server === 'autoembed') {
-                 url = type === 'movie'
-                    ? `https://autoembed.to/movie/tmdb/${tmdbId}`
-                    : `https://autoembed.to/tv/tmdb/${tmdbId}-${season}x${episode}`;
-            }
-            if (url) dbLinks[server] = url;
-        }
-    });
-
-    // 3. Get priorities and response times
-    const { data: sources } = await supabase
-        .from('embed_sources')
-        .select('name, priority, response_time_ms')
-        .in('name', Object.keys(dbLinks));
-
-    const serverList = Object.entries(dbLinks).map(([name, url]) => {
-        const source = sources?.find(s => s.name === name);
-        return {
-            name,
-            url: url as string,
-            priority: source?.priority || 5,
-            responseTime: source?.response_time_ms
-        };
-    }).sort((a, b) => a.priority - b.priority);
-
-    setServers(serverList);
-    setLoading(false);
-  };
 
   const reportBroken = async () => {
     setReporting(true);
@@ -159,7 +162,7 @@ const ServerSwitcher = ({
               border
             `}
           >
-            <ServerIcon size={14} className={currentServer === idx ? 'animate-pulse' : ''} />
+            <Server size={14} className={currentServer === idx ? 'animate-pulse' : ''} />
             <span>{server.name === 'vidsrc' ? 'VidSrc' : server.name === '2embed' ? '2Embed' : server.name}</span>
             {server.responseTime && server.responseTime < 1000 && (
                 <div className="w-1.5 h-1.5 rounded-full bg-green-500 ml-1" title={`${server.responseTime}ms`} />

@@ -12,6 +12,8 @@ import { Swiper, SwiperSlide } from 'swiper/react'
 import { Autoplay } from 'swiper/modules'
 import 'swiper/css'
 
+import { generateWatchUrl } from '../../../lib/utils'
+
 const getLocalizedType = (type: string, lang: string) => {
   if (lang !== 'ar') return type === 'tv' ? 'Series' : 'Movie'
   return type === 'tv' ? 'مسلسل' : 'فيلم'
@@ -115,7 +117,8 @@ export const QuantumHero = memo(({ items }: { items: any[] }) => {
           1024: { slidesPerView: 4 },
           1280: { slidesPerView: 5 },
         }}
-        className="h-full w-full"
+        pagination={false}
+        className="h-full w-full [&_.swiper-pagination]:!hidden"
       >
         {heroItems.map((item) => {
           const trailerKey = trailers[item.id]
@@ -127,7 +130,7 @@ export const QuantumHero = memo(({ items }: { items: any[] }) => {
                 className="relative h-full w-full border-r border-white/10 overflow-hidden group cursor-pointer"
                 onMouseEnter={() => setActiveId(item.id)}
                 onMouseLeave={() => setActiveId(null)}
-                onClick={() => navigate(`/watch/${item.media_type || 'movie'}/${item.id}`)}
+                onClick={() => navigate(generateWatchUrl(item))}
               >
                 {/* Background Image */}
                 <div className="absolute inset-0 z-0">

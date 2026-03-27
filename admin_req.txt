@@ -1,0 +1,300 @@
+     1	import { useEffect, useState } from 'react'
+     2	import { supabase } from '../../lib/supabase'
+     3	import { tmdbOptimized as tmdb } from '../../lib/tmdbOptimized'
+     4	import { CheckCircle, XCircle, Loader2, Search, Film, Tv } from 'lucide-react'
+     5	
+     6	interface Request {
+     7	  id: string
+     8	  title: string
+     9	  notes: string | null
+    10	  user_id: string
+    11	  created_at: string
+    12	  status: string
+    13	  processed_at: string | null
+    14	}
+    15	
+    16	interface TmdbSearchResult {
+    17	  id: number
+    18	  title?: string
+    19	  name?: string
+    20	  poster_path: string | null
+    21	  overview: string
+    22	  release_date?: string
+    23	  first_air_date?: string
+    24	  vote_average: number
+    25	}
+    26	
+    27	const ProcessRequests = () => {
+    28	  const [requests, setRequests] = useState<Request[]>([])
+    29	  const [loading, setLoading] = useState(true)
+    30	  const [processing, setProcessing] = useState<string | null>(null)
+    31	  const [searchResults, setSearchResults] = useState<Record<string, TmdbSearchResult[]>>({})
+    32	  const [selectedMediaType, setSelectedMediaType] = useState<Record<string, 'movie' | 'tv'>>({})
+    33	  const [selectedTmdbId, setSelectedTmdbId] = useState<Record<string, number>>({})
+    34	  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+    35	
+    36	  const fetchRequests = async () => {
+    37	    setLoading(true)
+    38	    try {
+    39	      const { data, error } = await supabase
+    40	        .from('requests')
+    41	        .select('*')
+    42	        .order('created_at', { ascending: false })
+    43	        .limit(50)
+    44	
+    45	      if (error) throw error
+    46	      setRequests(data || [])
+    47	    } catch (error) {
+    48	      console.error('Failed to fetch requests:', error)
+    49	      setMessage({ type: 'error', text: 'فشل تحميل الطلبات' })
+    50	    } finally {
+    51	      setLoading(false)
+    52	    }
+    53	  }
+    54	
+    55	  const searchTmdb = async (requestId: string, title: string, mediaType: 'movie' | 'tv') => {
+    56	    try {
+    57	      const endpoint = mediaType === 'movie' ? '/search/movie' : '/search/tv'
+    58	      const response = await tmdb.get(endpoint, {
+    59	        params: {
+    60	          query: title,
+    61	          language: 'ar'
+    62	        }
+    63	      })
+    64	
+    65	      setSearchResults(prev => ({
+    66	        ...prev,
+    67	        [requestId]: response.data.results.slice(0, 5)
+    68	      }))
+    69	    } catch (error) {
+    70	      console.error('TMDB search failed:', error)
+    71	      setMessage({ type: 'error', text: 'فشل البحث في TMDB' })
+    72	    }
+    73	  }
+    74	
+    75	  const processRequest = async (request: Request) => {
+    76	    const mediaType = selectedMediaType[request.id]
+    77	    const tmdbId = selectedTmdbId[request.id]
+    78	
+    79	    if (!mediaType) {
+    80	      setMessage({ type: 'error', text: 'يرجى اختيار نوع المحتوى (فيلم أو مسلسل)' })
+    81	      return
+    82	    }
+    83	
+    84	    setProcessing(request.id)
+    85	    setMessage(null)
+    86	
+    87	    try {
+    88	      // Get current session token
+    89	      const { data: { session } } = await supabase.auth.getSession()
+    90	      if (!session?.access_token) {
+    91	        throw new Error('Not authenticated')
+    92	      }
+    93	
+    94	      // Get CSRF token
+    95	      const csrfResponse = await fetch('/api/csrf-token', {
+    96	        credentials: 'include'
+    97	      })
+    98	      const { csrfToken } = await csrfResponse.json()
+    99	
+   100	      // Call backend API
+   101	      const response = await fetch('/api/admin/process-request', {
+   102	        method: 'POST',
+   103	        headers: {
+   104	          'Content-Type': 'application/json',
+   105	          'Authorization': `Bearer ${session.access_token}`,
+   106	          'X-CSRF-Token': csrfToken
+   107	        },
+   108	        credentials: 'include',
+   109	        body: JSON.stringify({
+   110	          request_id: request.id,
+   111	          media_type: mediaType,
+   112	          tmdb_id: tmdbId
+   113	        })
+   114	      })
+   115	
+   116	      if (!response.ok) {
+   117	        const errorData = await response.json()
+   118	        throw new Error(errorData.error || 'Processing failed')
+   119	      }
+   120	
+   121	      const result = await response.json()
+   122	      setMessage({ 
+   123	        type: 'success', 
+   124	        text: `تمت معالجة "${result.title}" بنجاح` 
+   125	      })
+   126	
+   127	      // Refresh requests list
+   128	      await fetchRequests()
+   129	    } catch (error: any) {
+   130	      console.error('Process request error:', error)
+   131	      setMessage({ 
+   132	        type: 'error', 
+   133	        text: error.message || 'فشلت معالجة الطلب' 
+   134	      })
+   135	    } finally {
+   136	      setProcessing(null)
+   137	    }
+   138	  }
+   139	
+   140	  useEffect(() => {
+   141	    fetchRequests()
+   142	  }, [])
+   143	
+   144	  if (loading) {
+   145	    return (
+   146	      <div className="p-8 text-center text-zinc-500 animate-pulse">
+   147	        جاري تحميل الطلبات...
+   148	      </div>
+   149	    )
+   150	  }
+   151	
+   152	  return (
+   153	    <div className="space-y-6 p-4">
+   154	      <div className="flex items-center justify-between">
+   155	        <div>
+   156	          <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-zinc-400">
+   157	            طلبات المحتوى
+   158	          </h1>
+   159	          <p className="text-xs text-zinc-500">معالجة طلبات المستخدمين وإضافة المحتوى من TMDB</p>
+   160	        </div>
+   161	        <button
+   162	          onClick={fetchRequests}
+   163	          className="text-xs bg-zinc-800 hover:bg-zinc-700 text-white px-3 py-1.5 rounded-lg transition-colors"
+   164	        >
+   165	          تحديث
+   166	        </button>
+   167	      </div>
+   168	
+   169	      {message && (
+   170	        <div
+   171	          className={`p-4 rounded-lg border ${
+   172	            message.type === 'success'
+   173	              ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+   174	              : 'bg-rose-500/10 border-rose-500/30 text-rose-400'
+   175	          }`}
+   176	        >
+   177	          {message.text}
+   178	        </div>
+   179	      )}
+   180	
+   181	      <div className="space-y-4">
+   182	        {requests.length === 0 ? (
+   183	          <div className="bg-zinc-900/40 border border-zinc-800/50 rounded-xl p-8 text-center text-zinc-500">
+   184	            لا توجد طلبات
+   185	          </div>
+   186	        ) : (
+   187	          requests.map((request) => {
+   188	            const mediaType = selectedMediaType[request.id]
+   189	            const results = searchResults[request.id] || []
+   190	            const isProcessed = request.status === 'processed'
+   191	
+   192	            return (
+   193	              <div
+   194	                key={request.id}
+   195	                className="bg-zinc-900/40 border border-zinc-800/50 rounded-xl p-4 backdrop-blur-sm"
+   196	              >
+   197	                <div className="flex items-start justify-between mb-4">
+   198	                  <div className="flex-1">
+   199	                    <h3 className="text-lg font-semibold text-white mb-1">{request.title}</h3>
+   200	                    {request.notes && (
+   201	                      <p className="text-sm text-zinc-400 mb-2">{request.notes}</p>
+   202	                    )}
+   203	                    <div className="flex items-center gap-4 text-xs text-zinc-500">
+   204	                      <span>تاريخ الطلب: {new Date(request.created_at).toLocaleDateString('ar')}</span>
+   205	                      {isProcessed && request.processed_at && (
+   206	                        <span className="text-emerald-400">
+   207	                          ✓ تمت المعالجة: {new Date(request.processed_at).toLocaleDateString('ar')}
+   208	                        </span>
+   209	                      )}
+   210	                    </div>
+   211	                  </div>
+   212	
+   213	                  {isProcessed ? (
+   214	                    <div className="flex items-center gap-2 text-emerald-400 text-sm">
+   215	                      <CheckCircle size={16} />
+   216	                      <span>تمت المعالجة</span>
+   217	                    </div>
+   218	                  ) : (
+   219	                    <div className="flex items-center gap-2">
+   220	                      <select
+   221	                        value={mediaType || ''}
+   222	                        onChange={(e) => {
+   223	                          const type = e.target.value as 'movie' | 'tv'
+   224	                          setSelectedMediaType(prev => ({ ...prev, [request.id]: type }))
+   225	                          setSearchResults(prev => ({ ...prev, [request.id]: [] }))
+   226	                          setSelectedTmdbId(prev => ({ ...prev, [request.id]: 0 }))
+   227	                        }}
+   228	                        className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-500"
+   229	                      >
+   230	                        <option value="">اختر النوع</option>
+   231	                        <option value="movie">فيلم</option>
+   232	                        <option value="tv">مسلسل</option>
+   233	                      </select>
+   234	
+   235	                      {mediaType && (
+   236	                        <button
+   237	                          onClick={() => searchTmdb(request.id, request.title, mediaType)}
+   238	                          className="bg-zinc-800 hover:bg-zinc-700 text-white px-3 py-1.5 rounded-lg transition-colors flex items-center gap-2 text-sm"
+   239	                        >
+   240	                          <Search size={14} />
+   241	                          بحث
+   242	                        </button>
+   243	                      )}
+   244	                    </div>
+   245	                  )}
+   246	                </div>
+   247	
+   248	                {!isProcessed && results.length > 0 && (
+   249	                  <div className="space-y-2 mb-4">
+   250	                    <h4 className="text-sm font-semibold text-zinc-400">نتائج البحث من TMDB:</h4>
+   251	                    <div className="grid gap-2">
+   252	                      {results.map((result) => (
+   253	                        <div
+   254	                          key={result.id}
+   255	                          onClick={() => setSelectedTmdbId(prev => ({ ...prev, [request.id]: result.id }))}
+   256	                          className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+   257	                            selectedTmdbId[request.id] === result.id
+   258	                              ? 'bg-cyan-500/10 border-cyan-500/50'
+   259	                              : 'bg-zinc-800/50 border-zinc-700/50 hover:border-zinc-600'
+   260	                          }`}
+   261	                        >
+   262	                          {result.poster_path ? (
+   263	                            <img
+   264	                              src={`https://image.tmdb.org/t/p/w92${result.poster_path}`}
+   265	                              alt={result.title || result.name}
+   266	                              className="w-12 h-18 object-cover rounded"
+   267	                            />
+   268	                          ) : (
+   269	                            <div className="w-12 h-18 bg-zinc-700 rounded flex items-center justify-center">
+   270	                              {mediaType === 'movie' ? <Film size={16} /> : <Tv size={16} />}
+   271	                            </div>
+   272	                          )}
+   273	                          <div className="flex-1 min-w-0">
+   274	                            <h5 className="text-sm font-semibold text-white truncate">
+   275	                              {result.title || result.name}
+   276	                            </h5>
+   277	                            <p className="text-xs text-zinc-400 line-clamp-2">{result.overview}</p>
+   278	                            <div className="flex items-center gap-3 mt-1 text-xs text-zinc-500">
+   279	                              <span>{result.release_date || result.first_air_date}</span>
+   280	                              <span>⭐ {result.vote_average.toFixed(1)}</span>
+   281	                              <span className="text-cyan-400">TMDB ID: {result.id}</span>
+   282	                            </div>
+   283	                          </div>
+   284	                        </div>
+   285	                      ))}
+   286	                    </div>
+   287	                  </div>
+   288	                )}
+   289	
+   290	                {!isProcessed && mediaType && (
+   291	                  <div className="flex justify-end">
+   292	                    <button
+   293	                      onClick={() => processRequest(request)}
+   294	                      disabled={processing === request.id || !selectedTmdbId[request.id]}
+   295	                      className="bg-cyan-600 hover:bg-cyan-500 disabled:bg-zinc-700 disabled:text-zinc-500 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2 text-sm font-medium"
+   296	                    >
+   297	                      {processing === request.id ? (
+   298	                        <>
+   299	                          <Loader2 size={16} className="animate-spin" />
+   300	                          جاري المعالجة...

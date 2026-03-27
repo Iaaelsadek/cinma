@@ -32,24 +32,21 @@ export const SkeletonPosterCard = memo(() => {
 
 export const SkeletonHero = memo(() => {
   return (
-    <div className="relative h-[85vh] w-full bg-black flex flex-col md:flex-row overflow-hidden">
-      {[1, 2, 3, 4, 5].map((i) => (
+    <div className="relative h-[85vh] w-full bg-black flex gap-0 overflow-hidden">
+      {[1, 2, 3, 4, 5, 6].map((i) => (
         <div 
           key={i} 
-          className={`
-            relative h-full border-b md:border-b-0 md:border-r border-white/5 bg-zinc-900 overflow-hidden
-            ${i === 1 ? 'flex-[3]' : 'flex-1'}
-          `}
+          className="relative h-full w-64 sm:w-80 shrink-0 border-r border-white/5 bg-zinc-900 overflow-hidden"
         >
           <div className="absolute inset-0 animate-pulse bg-zinc-800/50" />
-          <div className="absolute bottom-0 left-0 p-8 w-full space-y-4">
-            <div className="h-10 w-3/4 animate-pulse rounded bg-zinc-700" />
+          <div className="absolute bottom-0 left-0 p-6 w-full space-y-3">
+            <div className="h-8 w-3/4 animate-pulse rounded bg-zinc-700" />
             {i === 1 && (
               <>
-                <div className="h-20 w-full animate-pulse rounded bg-zinc-700/50" />
-                <div className="flex gap-4 pt-2">
-                  <div className="h-10 w-32 animate-pulse rounded bg-zinc-700" />
-                  <div className="h-10 w-32 animate-pulse rounded bg-zinc-700" />
+                <div className="h-16 w-full animate-pulse rounded bg-zinc-700/50" />
+                <div className="flex gap-3 pt-2">
+                  <div className="h-9 w-28 animate-pulse rounded bg-zinc-700" />
+                  <div className="h-9 w-28 animate-pulse rounded bg-zinc-700" />
                 </div>
               </>
             )}

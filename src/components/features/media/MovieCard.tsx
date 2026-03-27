@@ -1,4 +1,5 @@
-import { memo, useState, type MouseEvent, useEffect, useRef, lazy, Suspense } from 'react'
+import {memo, useState, useEffect, useRef, lazy, Suspense} from 'react'
+import type { DragEvent, MouseEvent } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Play, Star, Plus, Check } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
@@ -6,7 +7,7 @@ import { PrefetchLink } from '../../common/PrefetchLink'
 import { useAuth } from '../../../hooks/useAuth'
 import { addToWatchlist, isInWatchlist, removeFromWatchlist } from '../../../lib/supabase'
 import { getGenreName } from '../../../lib/genres'
-import { generateWatchPath } from '../../../lib/utils'
+import { generateWatchUrl, generateContentUrl } from '../../../lib/utils'
 import { useLang } from '../../../state/useLang'
 import { useDualTitles } from '../../../hooks/useDualTitles'
 import { TmdbImage } from '../../common/TmdbImage'
@@ -17,6 +18,7 @@ const LazyReactPlayer = lazy(() => import('react-player/youtube'))
 
 export type Movie = {
   id: number
+  slug?: string | null
   title?: string | null
   name?: string | null
   release_date?: string
@@ -69,8 +71,9 @@ export const MovieCard = memo(({ movie, index = 0 }: { movie: Movie; index?: num
   }
   
   const mediaType = getMediaType()
-  const watchUrl = generateWatchPath({ ...movie, media_type: mediaType })
-  const rating = typeof movie.vote_average === 'number' ? Math.round(movie.vote_average * 10) / 10 : null
+  const contentUrl = generateContentUrl({ ...movie, media_type: mediaType })
+  const watchUrl = generateWatchUrl({ ...movie, media_type: mediaType })
+  const rating = typeof movie.vote_average === 'number' && movie.vote_average > 0 ? Math.round(movie.vote_average * 10) / 10 : null
   
   const genre = getGenreName(movie.genre_ids?.[0], lang) || (movie as any).category
   const currentYear = new Date().getFullYear()
@@ -204,11 +207,11 @@ export const MovieCard = memo(({ movie, index = 0 }: { movie: Movie; index?: num
       className="relative z-0 group/card"
     >
       <PrefetchLink
-        to={watchUrl}
+        to={contentUrl}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         draggable={false}
-        onDragStart={(e) => e.preventDefault()}
+        onDragStart={(e: DragEvent<HTMLAnchorElement>) => e.preventDefault()}
         className="block relative h-full w-full lumen-focus-ring rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-lumen-gold focus-visible:outline-offset-2 select-none"
       >
         <div className="lumen-card h-full flex flex-col transition-transform duration-300 ease-lumen hover:scale-[1.03] focus-within:scale-[1.02]">
@@ -218,8 +221,9 @@ export const MovieCard = memo(({ movie, index = 0 }: { movie: Movie; index?: num
               <img
                 src={thumbSrc}
                 alt={title}
-                className={`h-full w-full object-cover transition-all duration-500 ease-lumen ${isHovered ? 'scale-105 brightness-75' : 'scale-100'}`}
                 loading="lazy"
+                decoding="async"
+                className={`h-full w-full object-cover transition-all duration-500 ease-lumen ${isHovered ? 'scale-105 brightness-75' : 'scale-100'}`}
                 onError={() => setThumbSrc('')}
               />
             ) : (

@@ -1,5 +1,5 @@
 import { useState, memo } from 'react'
-import { ImageOff, Loader2 } from 'lucide-react'
+import {Loader2} from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 // Fallback poster image (gradient with cinema theme)
@@ -50,6 +50,9 @@ export const TmdbImage = memo(({
 }: TmdbImageProps) => {
   const [status, setStatus] = useState<'loading' | 'loaded' | 'error'>('loading')
 
+  const dims = SIZE_DIMENSIONS[size]
+  const aspectRatio = dims ? `${dims.w} / ${dims.h}` : undefined
+
    if (!path) {
      return (
        <div className={`relative overflow-hidden bg-gradient-to-br from-zinc-800 to-zinc-900 ${className}`} style={{ ...(style || {}), aspectRatio }} {...props}>
@@ -68,8 +71,6 @@ export const TmdbImage = memo(({
   const srcSet = !path.startsWith('http') && size !== 'original'
     ? `${getUrl(path, 'w342')} 342w, ${getUrl(path, 'w500')} 500w, ${getUrl(path, 'w780')} 780w`
     : undefined
-  const dims = SIZE_DIMENSIONS[size]
-  const aspectRatio = dims ? `${dims.w} / ${dims.h}` : undefined
 
   return (
     <div className={`relative overflow-hidden bg-zinc-900 ${className}`} style={{ ...(style || {}), aspectRatio }} {...props}>

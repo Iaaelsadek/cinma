@@ -1,4 +1,4 @@
-import { X, Copy, Twitter, Facebook, MessageCircle, Send, Link as LinkIcon } from 'lucide-react'
+import {X, Copy, Twitter, Facebook, MessageCircle, Send, LinkIcon} from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import clsx from 'clsx'

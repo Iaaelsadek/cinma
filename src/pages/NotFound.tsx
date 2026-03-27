@@ -1,14 +1,62 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
-import { Home, Search, Ghost, Send, AlertTriangle } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Link, useLocation } from 'react-router-dom'
+import { Home, Search, Ghost, Send, AlertTriangle, ArrowRight } from 'lucide-react'
 import { useLang } from '../state/useLang'
 import { Button } from '../components/common/Button'
 import { supabase } from '../lib/supabase'
 import { errorLogger } from '../services/errorLogging'
+import { fetchDB } from '../lib/db'
 
 export const NotFound = () => {
   const { lang } = useLang()
+  const { pathname } = useLocation()
   const [reported, setReported] = useState(false)
+  const [suggestions, setSuggestions] = useState<any[]>([])
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false)
+
+  useEffect(() => {
+    const fetchSuggestions = async () => {
+      // Extract potential keywords from the path
+      const segments = pathname.split('/').filter(Boolean)
+      if (segments.length === 0) return
+
+      setLoadingSuggestions(true)
+      try {
+        const lastSegment = segments[segments.length - 1]
+        const keywords = lastSegment.replace(/[-_]/g, ' ')
+        
+        // Search across tables for similar content
+        const res = await fetchDB('/api/db/query', {
+          method: 'POST',
+          body: JSON.stringify({
+            query: `
+              (SELECT id, title as name, slug, 'movie' as type FROM movies WHERE title ILIKE $1 OR slug ILIKE $1 LIMIT 2)
+              UNION ALL
+              (SELECT id, name, slug, 'tv' as type FROM tv_series WHERE name ILIKE $1 OR slug ILIKE $1 LIMIT 2)
+              UNION ALL
+              (SELECT id, title as name, slug, 'game' as type FROM games WHERE title ILIKE $1 OR slug ILIKE $1 LIMIT 1)
+            `,
+            params: [`%${keywords}%`]
+          })
+        })
+
+        if (res?.rows) {
+          setSuggestions(res.rows)
+        }
+      } catch (err) {
+        errorLogger.logError({
+          message: 'Failed to fetch 404 suggestions',
+          severity: 'low',
+          category: 'database',
+          context: { error: err, pathname }
+        })
+      } finally {
+        setLoadingSuggestions(false)
+      }
+    }
+
+    fetchSuggestions()
+  }, [pathname])
 
   const handleReport = async () => {
     if (reported) return
@@ -53,6 +101,31 @@ export const NotFound = () => {
           ? 'يبدو أنك وصلت إلى طريق مسدود. الصفحة التي تبحث عنها قد تكون حذفت أو تم تغيير رابطها.'
           : 'It seems you hit a dead end. The page you are looking for might have been removed or renamed.'}
       </p>
+
+      {suggestions.length > 0 && (
+        <div className="mb-6 w-full max-w-sm overflow-hidden rounded-2xl bg-zinc-900/50 p-4 backdrop-blur-md border border-zinc-800/50">
+          <h3 className="mb-3 text-xs font-bold text-zinc-300 uppercase tracking-wider">
+            {lang === 'ar' ? 'هل كنت تبحث عن؟' : 'Were you looking for?'}
+          </h3>
+          <div className="space-y-2">
+            {suggestions.map((item, idx) => (
+              <Link 
+                key={idx} 
+                to={item.type === 'movie' ? `/movie/${item.slug || item.id}` : `/series/${item.slug || item.id}`}
+                className="flex items-center justify-between group rounded-xl bg-black/40 p-3 text-left transition-all hover:bg-zinc-800"
+              >
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-medium text-primary uppercase tracking-tighter mb-0.5">
+                    {item.type === 'movie' ? (lang === 'ar' ? 'فيلم' : 'Movie') : (lang === 'ar' ? 'مسلسل' : 'Series')}
+                  </span>
+                  <span className="text-sm font-bold text-white line-clamp-1">{item.name}</span>
+                </div>
+                <ArrowRight size={16} className="text-zinc-500 transition-transform group-hover:translate-x-1" />
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="mb-6 flex flex-col items-center gap-3">
         <div className="rounded-xl bg-gradient-to-r from-red-500/10 to-orange-500/10 p-[1px]">

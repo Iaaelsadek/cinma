@@ -8,7 +8,7 @@ import { QuantumHero } from '../../components/features/hero/QuantumHero'
 import { QuantumTrain } from '../../components/features/media/QuantumTrain'
 import { useLang } from '../../state/useLang'
 import { Helmet } from 'react-helmet-async'
-import { getGenreSlug, slugify } from '../../lib/utils'
+import {slugify} from '../../lib/utils'
 
 type AnimeItem = {
   id: number

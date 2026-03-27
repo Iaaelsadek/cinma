@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { ThumbsUp, ThumbsDown } from 'lucide-react'
 import { voteReview, removeReviewVote, getReviewVotes } from '../../../lib/supabase'
 import { clsx } from 'clsx'
-import { motion, AnimatePresence } from 'framer-motion'
+import {motion} from 'framer-motion'
 import { toast } from 'sonner'
 import { logger } from '../../../lib/logger'
 
