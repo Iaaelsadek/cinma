@@ -12,6 +12,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install production dependencies only
+# Updated: 2026-04-20 - Use --omit=dev and --legacy-peer-deps for React 19 compatibility
 RUN npm ci --omit=dev --legacy-peer-deps --ignore-scripts && \
     npm cache clean --force
 
