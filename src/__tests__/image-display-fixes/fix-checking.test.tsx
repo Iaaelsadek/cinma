@@ -26,12 +26,12 @@ describe('Fix Checking Properties - Image Display Fixes', () => {
           }),
           (input) => {
             const primarySource = getPrimaryImageSource(input)
-            
+
             // If we have a valid source, it must not be from TMDB
             if (primarySource) {
               expect(isTMDBURL(primarySource)).toBe(false)
             }
-            
+
             // All sources must not be TMDB URLs
             if (input.thumbnail) {
               expect(isTMDBURL(input.thumbnail)).toBe(false)
@@ -83,7 +83,7 @@ describe('Fix Checking Properties - Image Display Fixes', () => {
           }),
           (input) => {
             const result = getPrimaryImageSource(input)
-            
+
             // Result must be one of: poster_path, backdrop_path, or null
             if (result) {
               expect([input.poster_path, input.backdrop_path]).toContain(result)
@@ -134,9 +134,9 @@ describe('Fix Checking Properties - Image Display Fixes', () => {
 
     test('UnifiedPlaceholder renders when all sources are null', () => {
       render(
-        <UnifiedPlaceholder 
-          contentType="movie" 
-          size="md" 
+        <UnifiedPlaceholder
+          contentType="movie"
+          size="md"
           showText={true}
         />
       )
@@ -186,7 +186,7 @@ describe('Fix Checking Properties - Image Display Fixes', () => {
       // In real browser, this would use IntersectionObserver
       const priority = false
       const expectedLoading = priority ? 'eager' : 'lazy'
-      
+
       expect(expectedLoading).toBe('lazy')
     })
 
@@ -211,18 +211,18 @@ describe('Fix Checking Properties - Image Display Fixes', () => {
 
     test('cache stores and retrieves image status', () => {
       const url = 'https://example.com/image.jpg'
-      
+
       // Initially not cached
       expect(getCacheStatus(url)).toBe(null)
-      
+
       // Set to loading
       setCacheStatus(url, 'loading')
       expect(getCacheStatus(url)).toBe('loading')
-      
+
       // Set to success
       setCacheStatus(url, 'success')
       expect(getCacheStatus(url)).toBe('success')
-      
+
       // Set to error
       setCacheStatus(url, 'error')
       expect(getCacheStatus(url)).toBe('error')
@@ -231,15 +231,15 @@ describe('Fix Checking Properties - Image Display Fixes', () => {
     test('cache can be cleared', () => {
       const url1 = 'https://example.com/image1.jpg'
       const url2 = 'https://example.com/image2.jpg'
-      
+
       setCacheStatus(url1, 'success')
       setCacheStatus(url2, 'error')
-      
+
       expect(getCacheStatus(url1)).toBe('success')
       expect(getCacheStatus(url2)).toBe('error')
-      
+
       clearCache()
-      
+
       expect(getCacheStatus(url1)).toBe(null)
       expect(getCacheStatus(url2)).toBe(null)
     })
@@ -256,18 +256,18 @@ describe('Fix Checking Properties - Image Display Fixes', () => {
           ),
           (operations) => {
             clearCache()
-            
+
             // Perform all operations
             operations.forEach(op => {
               setCacheStatus(op.url, op.status)
             })
-            
+
             // Verify last status for each unique URL
             const lastStatuses = new Map<string, 'loading' | 'success' | 'error'>()
             operations.forEach(op => {
               lastStatuses.set(op.url, op.status)
             })
-            
+
             lastStatuses.forEach((expectedStatus, url) => {
               expect(getCacheStatus(url)).toBe(expectedStatus)
             })
@@ -319,32 +319,32 @@ describe('Fix Checking Properties - Image Display Fixes', () => {
   describe('Property 7: No White Boxes', () => {
     test('UnifiedPlaceholder renders instead of white box', () => {
       render(
-        <UnifiedPlaceholder 
-          contentType="movie" 
+        <UnifiedPlaceholder
+          contentType="movie"
           size="md"
         />
       )
 
       const placeholder = screen.getByRole('img')
       expect(placeholder).toBeInTheDocument()
-      
+
       // Should have gradient background (not white)
       expect(placeholder).toHaveClass('bg-gradient-to-br')
     })
 
     test('all content types have placeholders', () => {
-      const contentTypes: Array<'movie' | 'tv' | 'game' | 'software' | 'anime'> = [
-        'movie', 'tv', 'game', 'software', 'anime'
+      const contentTypes: Array<'movie' | 'tv' | 'anime'> = [
+        'movie', 'tv', 'anime'
       ]
 
       contentTypes.forEach(type => {
         const { unmount } = render(
           <UnifiedPlaceholder contentType={type} size="md" />
         )
-        
+
         const placeholder = screen.getByRole('img', { name: new RegExp(`${type} placeholder`, 'i') })
         expect(placeholder).toBeInTheDocument()
-        
+
         unmount()
       })
     })

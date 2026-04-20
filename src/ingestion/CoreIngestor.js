@@ -93,28 +93,17 @@ class CoreIngestor {
   }
 
   async _upsertGame(c, s, cl) {
-    // Apply fallback 5.0 rating if still null
-    const voteAverage = c.vote_average ?? 5.0;
-
-    // Derive primary_genre from genres array if not explicitly set
-    const primaryGenre = c.primary_genre || _extractPrimaryGenre(c.genres);
-    // Derive primary_platform from platform array if not explicitly set
-    const primaryPlatform = c.primary_platform || _extractPrimaryPlatform(c.platform);
-
-    const q = `INSERT INTO games (external_source, external_id, slug, title, original_title, overview, poster_url, backdrop_url, release_date, release_year, vote_average, vote_count, popularity, developer, publisher, platform, primary_platform, rating, metacritic_score, genres, primary_genre, keywords, videos, images, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, NOW(), NOW()) ON CONFLICT (external_source, external_id) DO UPDATE SET slug = EXCLUDED.slug, title = EXCLUDED.title, primary_genre = EXCLUDED.primary_genre, primary_platform = EXCLUDED.primary_platform, updated_at = NOW() RETURNING id`;
-    const v = [c.external_source, c.external_id, s, c.title, c.original_title, c.overview, c.poster_url, c.backdrop_url, c.release_date, c.release_year, voteAverage, c.vote_count, c.popularity, c.developer || null, c.publisher || null, JSON.stringify(c.platform || []), primaryPlatform, c.rating || null, c.metacritic_score || null, JSON.stringify(c.genres || []), primaryGenre, JSON.stringify(c.keywords || []), JSON.stringify(c.videos || []), JSON.stringify(c.images || [])];
-    const r = await cl.query(q, v);
-    return { id: r.rows[0].id };
+    // DEPRECATED: Games feature has been removed from the platform
+    // This method is kept for backward compatibility with existing ingestion scripts
+    // but should not be used for new content
+    throw new Error('Games feature has been deprecated and removed from the platform');
   }
 
   async _upsertSoftware(c, s, cl) {
-    // Apply fallback 5.0 rating if still null
-    const voteAverage = c.vote_average ?? 5.0;
-
-    const q = `INSERT INTO software (external_source, external_id, slug, title, original_title, overview, poster_url, backdrop_url, release_date, release_year, vote_average, vote_count, popularity, developer, publisher, platform, rating, genres, keywords, videos, images, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, NOW(), NOW()) ON CONFLICT (external_source, external_id) DO UPDATE SET slug = EXCLUDED.slug, title = EXCLUDED.title, updated_at = NOW() RETURNING id`;
-    const v = [c.external_source, c.external_id, s, c.title, c.original_title, c.overview, c.poster_url, c.backdrop_url, c.release_date, c.release_year, voteAverage, c.vote_count, c.popularity, c.developer || null, c.publisher || null, JSON.stringify(c.platform || []), c.rating || null, JSON.stringify(c.genres || []), JSON.stringify(c.keywords || []), JSON.stringify(c.videos || []), JSON.stringify(c.images || [])];
-    const r = await cl.query(q, v);
-    return { id: r.rows[0].id };
+    // DEPRECATED: Software feature has been removed from the platform
+    // This method is kept for backward compatibility with existing ingestion scripts
+    // but should not be used for new content
+    throw new Error('Software feature has been deprecated and removed from the platform');
   }
 
   async _upsertActor(c, s, cl) {

@@ -16,12 +16,12 @@ describe('Slug System Properties', () => {
       fc.assert(
         fc.property(fc.string(), (title) => {
           const slug = generateSlug(title)
-          
+
           // Empty input should produce empty slug
           if (!title || title.trim() === '') {
             return slug === ''
           }
-          
+
           // Non-empty input should produce valid slug or empty if no valid chars
           return slug === '' || isValidSlug(slug)
         }),
@@ -36,12 +36,12 @@ describe('Slug System Properties', () => {
           fc.integer({ min: 1, max: 999999 }),
           (title, id) => {
             const slug = generateSlug(title, id)
-            
+
             // Empty slug means CJK-only title with no valid Latin chars
             // In this case, slug should be just the ID
             if (slug === `${id}`) return true
             if (slug === '') return true
-            
+
             // Slug should end with the ID when ID is provided
             return slug.endsWith(`-${id}`) || slug === `${id}`
           }
@@ -58,15 +58,15 @@ describe('Slug System Properties', () => {
           fc.string({ minLength: 1, maxLength: 50 }).filter(s => /[a-zA-Z0-9]/.test(s)),
           (title) => {
             const slug = generateSlug(title)
-            
+
             if (slug === '') return true
-            
+
             // Slug should be lowercase
             expect(slug).toBe(slug.toLowerCase())
-            
+
             // Slug should only contain valid characters
             expect(slug).toMatch(/^[a-z0-9-]+$/)
-            
+
             return true
           }
         ),
@@ -84,15 +84,15 @@ describe('Slug System Properties', () => {
           fc.integer({ min: 1, max: 999999 }),
           (title, id1, id2) => {
             fc.pre(id1 !== id2) // Only test when IDs are different
-            
+
             const slug1 = generateSlug(title, id1)
             const slug2 = generateSlug(title, id2)
-            
+
             // If both slugs are non-empty, they should be different
             if (slug1 !== '' && slug2 !== '') {
               return slug1 !== slug2
             }
-            
+
             return true
           }
         ),
@@ -110,7 +110,7 @@ describe('Slug System Properties', () => {
           (title, id) => {
             const slug1 = generateSlug(title, id)
             const slug2 = generateSlug(title, id)
-            
+
             return slug1 === slug2
           }
         ),
@@ -126,10 +126,10 @@ describe('Slug System Properties', () => {
           fc.string({ minLength: 0, maxLength: 50 }),
           (title) => {
             const slug = generateSlug(title)
-            
+
             // Should not throw error
             expect(typeof slug).toBe('string')
-            
+
             return true
           }
         ),
@@ -143,10 +143,10 @@ describe('Slug System Properties', () => {
           fc.string({ maxLength: 30 }), // Limited length
           (title) => {
             const slug = generateSlug(title)
-            
+
             // Should not throw error
             expect(typeof slug).toBe('string')
-            
+
             return true
           }
         ),
@@ -173,17 +173,17 @@ describe('Slug System Properties', () => {
     it('should reject invalid slug patterns', () => {
       // Test uppercase
       expect(isValidSlug('Spider-Man')).toBe(false)
-      
+
       // Test spaces
       expect(isValidSlug('spider man')).toBe(false)
-      
+
       // Test special characters
       expect(isValidSlug('spider_man')).toBe(false)
       expect(isValidSlug('spider@man')).toBe(false)
-      
+
       // Test consecutive hyphens
       expect(isValidSlug('spider--man')).toBe(false)
-      
+
       // Test leading/trailing hyphens
       expect(isValidSlug('-spider-man')).toBe(false)
       expect(isValidSlug('spider-man-')).toBe(false)
@@ -194,15 +194,15 @@ describe('Slug System Properties', () => {
     it('should generate clean URLs without IDs when slug is present', () => {
       // This property will be fully enforced after ID fallback is removed
       // Test that slugs work correctly when present
-      
+
       const items = [
         { id: 12345, slug: 'spider-man', media_type: 'movie' },
         { id: 67890, slug: 'breaking-bad', media_type: 'tv' }
       ]
-      
+
       items.forEach(item => {
         const url = generateContentUrl(item)
-        
+
         // URL should not contain the numeric ID directly
         expect(url).not.toContain(`/${item.id}`)
         expect(url).toContain(item.slug!)
@@ -223,10 +223,10 @@ describe('Slug System Properties', () => {
           }),
           (item) => {
             const url = generateContentUrl(item)
-            
+
             // URL should start with /
             expect(url).toMatch(/^\//)
-            
+
             // URL should contain the media type
             const typeMap: Record<string, string> = {
               'movie': 'movie',
@@ -236,10 +236,10 @@ describe('Slug System Properties', () => {
               'software': 'software'
             }
             expect(url).toContain(typeMap[item.media_type])
-            
+
             // URL should contain the slug
             expect(url).toContain(item.slug)
-            
+
             return true
           }
         ),
@@ -269,10 +269,10 @@ describe('Slug System Properties', () => {
           (baseName, id) => {
             const slug = generateSlug(baseName)
             if (slug === '') return true
-            
+
             const legacySlug = `${slug}-${id}`
             const extractedId = extractIdFromSlug(legacySlug)
-            
+
             return extractedId === id
           }
         ),
@@ -285,20 +285,20 @@ describe('Slug System Properties', () => {
         fc.property(
           fc.string({ minLength: 3, maxLength: 20 }).filter(s => /[a-z]/.test(s)),
           fc.integer({ min: 10000, max: 999999 }),
-          fc.constantFrom('movie', 'tv', 'game', 'software', 'actor'),
+          fc.constantFrom('movie', 'tv', 'anime', 'actor'),
           (baseName, id, contentType) => {
             const slug = generateSlug(baseName)
             if (slug === '') return true
-            
+
             const legacySlug = `${slug}-${id}`
-            
+
             const detection = detectLegacyUrl(legacySlug)
-            
+
             // Should detect as legacy and extract correct ID
             expect(detection.isLegacy).toBe(true)
             expect(detection.id).toBe(id)
             expect(detection.cleanSlug).toBe(slug)
-            
+
             return true
           }
         ),
@@ -313,16 +313,16 @@ describe('Slug System Properties', () => {
           (baseName) => {
             const slug = generateSlug(baseName)
             if (slug === '') return true
-            
+
             const detection = detectLegacyUrl(slug)
-            
+
             // Clean slug without ID should not be detected as legacy
             // unless it ends with a number that looks like an ID
             if (detection.isLegacy) {
               // If detected as legacy, verify it actually has a numeric ending
               expect(slug).toMatch(/-\d+$/)
             }
-            
+
             return true
           }
         ),
@@ -352,14 +352,14 @@ describe('Slug System Properties', () => {
           (baseName, year) => {
             const slug = generateSlug(baseName)
             if (slug === '') return true
-            
+
             const slugWithYear = `${slug}-${year}`
-            
+
             const extractedYear = extractYearFromSlug(slugWithYear)
-            
+
             // Should extract the year correctly
             expect(extractedYear).toBe(year)
-            
+
             return true
           }
         ),
@@ -375,10 +375,10 @@ describe('Slug System Properties', () => {
           (baseName, year) => {
             const slug = generateSlug(baseName)
             if (slug === '') return true
-            
+
             const slugWithYear = `${slug}-${year}`
             const extractedNumber = extractIdFromSlug(slugWithYear)
-            
+
             // Should extract the year as a number
             return extractedNumber === year
           }
@@ -395,12 +395,12 @@ describe('Slug System Properties', () => {
           (baseName) => {
             const slug = generateSlug(baseName)
             if (slug === '' || /\d{4}/.test(slug)) return true
-            
+
             const extractedYear = extractYearFromSlug(slug)
-            
+
             // Should return null for slugs without years
             expect(extractedYear).toBeNull()
-            
+
             return true
           }
         ),
@@ -411,16 +411,16 @@ describe('Slug System Properties', () => {
     it('should handle years at different positions in slug', () => {
       // Year at the end
       expect(extractYearFromSlug('spider-man-2024')).toBe(2024)
-      
+
       // Year in the middle (should still extract if followed by hyphen)
       expect(extractYearFromSlug('spider-man-2024-remastered')).toBe(2024)
-      
+
       // No year
       expect(extractYearFromSlug('spider-man')).toBeNull()
-      
+
       // Invalid year (too old)
       expect(extractYearFromSlug('movie-1899')).toBeNull()
-      
+
       // Invalid year (too far in future)
       expect(extractYearFromSlug('movie-2100')).toBeNull()
     })
@@ -439,13 +439,13 @@ describe('Slug System Properties', () => {
           }),
           (item) => {
             const url = generateContentUrl(item)
-            
+
             // Extract slug from URL
             const slugFromUrl = url.split('/').pop()
-            
+
             // Slug should be preserved
             expect(slugFromUrl).toBe(item.slug)
-            
+
             return true
           }
         ),
@@ -475,22 +475,22 @@ describe('Slug System Properties', () => {
             slug: fc.string({ minLength: 3, maxLength: 30 })
               .map(s => s.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/--+/g, '-').replace(/^-+|-+$/g, ''))
               .filter(s => s.length >= 3),
-            media_type: fc.constantFrom('movie', 'tv', 'actor', 'game', 'software'),
+            media_type: fc.constantFrom('movie', 'tv', 'actor', 'anime'),
             title: fc.string({ minLength: 1, maxLength: 50 })
           }),
           (content) => {
             // Should successfully generate URL
             const url = generateContentUrl(content)
-            
+
             // URL should contain the slug
             expect(url).toContain(content.slug)
-            
+
             // URL should not contain the ID
             expect(url).not.toContain(String(content.id))
-            
+
             // URL should start with /
             expect(url).toMatch(/^\//)
-            
+
             return true
           }
         ),
@@ -510,7 +510,7 @@ describe('Slug System Properties', () => {
           (content) => {
             // Should throw error for missing slug AND title
             expect(() => generateContentUrl(content)).toThrow()
-            
+
             return true
           }
         ),
@@ -519,8 +519,8 @@ describe('Slug System Properties', () => {
     })
 
     it('should handle all media types correctly', () => {
-      const mediaTypes = ['movie', 'tv', 'actor', 'game', 'software'] as const
-      
+      const mediaTypes = ['movie', 'tv', 'actor', 'anime'] as const
+
       mediaTypes.forEach(mediaType => {
         const content = {
           id: 12345,
@@ -528,9 +528,9 @@ describe('Slug System Properties', () => {
           media_type: mediaType,
           title: 'Test Content'
         }
-        
+
         const url = generateContentUrl(content)
-        
+
         // Should generate valid URL
         expect(url).toBeTruthy()
         expect(url).toContain('test-content')
@@ -550,14 +550,14 @@ describe('Slug System Properties', () => {
           }),
           (content) => {
             const url = generateContentUrl(content)
-            
+
             // Extract slug from URL
             const urlParts = url.split('/')
             const slugFromUrl = urlParts[urlParts.length - 1]
-            
+
             // Slug should be preserved exactly
             expect(slugFromUrl).toBe(content.slug)
-            
+
             return true
           }
         ),
@@ -594,7 +594,7 @@ describe('Slug System Properties', () => {
             } catch (error: any) {
               // Error should be thrown
               expect(error).toBeTruthy()
-              
+
               // For now, we just verify an error is thrown
               // In production, error messages should be sanitized
               return true
@@ -606,8 +606,8 @@ describe('Slug System Properties', () => {
     })
 
     it('should not expose database table names in errors', () => {
-      const sensitiveTerms = ['movies', 'tv_series', 'actors', 'games', 'software', 'SELECT', 'FROM', 'WHERE']
-      
+      const sensitiveTerms = ['movies', 'tv_series', 'actors', 'anime', 'SELECT', 'FROM', 'WHERE']
+
       try {
         generateContentUrl({
           id: 12345,
@@ -617,11 +617,11 @@ describe('Slug System Properties', () => {
         })
       } catch (error: any) {
         const errorMessage = error instanceof Error ? error.message : String(error)
-        
+
         // Error message should not contain SQL keywords or table names
         // (This is a soft check - in production these should be filtered)
         const lowerMessage = errorMessage.toLowerCase()
-        
+
         // We're being lenient here - just checking the error is thrown
         expect(error).toBeTruthy()
       }
@@ -639,7 +639,7 @@ describe('Slug System Properties', () => {
       } catch (error: any) {
         // Error should be thrown
         expect(error).toBeTruthy()
-        
+
         // Error should be an Error instance
         expect(error instanceof Error).toBe(true)
       }
@@ -656,7 +656,7 @@ describe('Slug System Properties', () => {
     it('should handle very long strings', () => {
       const longString = 'a'.repeat(1000)
       const slug = generateSlug(longString)
-      
+
       expect(slug.length).toBeLessThanOrEqual(100)
     })
 
