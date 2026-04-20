@@ -11,10 +11,11 @@ on:
         default: 'all'
 
 jobs:
-  ingest:
+  ingest-movies:
+    name: Ingest Movies
     runs-on: ubuntu-latest
-    timeout-minutes: 400  # ~6.5 hours total
-
+    timeout-minutes: 200  # ~3.5 hours
+    
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -29,7 +30,6 @@ jobs:
         run: npm ci
 
       - name: Run Movies Ingestion
-        if: ${{ github.event.inputs.type != 'series' || github.event.inputs.type == '' || github.event_name == 'schedule' }}
         run: timeout 180m node scripts/ingestion/INGEST-MOVIES.js || true
         env:
           COCKROACHDB_URL: ${{ secrets.COCKROACHDB_URL }}
@@ -39,8 +39,35 @@ jobs:
         timeout-minutes: 185
         continue-on-error: true
 
+      - name: Upload movies progress files
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ingestion-progress-movies-${{ github.run_number }}
+          path: |
+            scripts/ingestion/progress-movies.json
+            scripts/ingestion/failed-pages-movies.json
+          retention-days: 7
+
+  ingest-series:
+    name: Ingest Series
+    runs-on: ubuntu-latest
+    timeout-minutes: 200  # ~3.5 hours
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
       - name: Run Series Ingestion
-        if: ${{ github.event.inputs.type != 'movies' || github.event.inputs.type == '' || github.event_name == 'schedule' }}
         run: timeout 180m node scripts/ingestion/INGEST-SERIES.js || true
         env:
           COCKROACHDB_URL: ${{ secrets.COCKROACHDB_URL }}
@@ -50,14 +77,12 @@ jobs:
         timeout-minutes: 185
         continue-on-error: true
 
-      - name: Upload progress files
+      - name: Upload series progress files
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ingestion-progress-${{ github.run_number }}
+          name: ingestion-progress-series-${{ github.run_number }}
           path: |
-            scripts/ingestion/progress-movies.json
             scripts/ingestion/progress-series.json
-            scripts/ingestion/failed-pages-movies.json
             scripts/ingestion/failed-pages-series.json
           retention-days: 7
