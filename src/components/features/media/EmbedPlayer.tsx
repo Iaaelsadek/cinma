@@ -262,7 +262,7 @@ export const EmbedPlayer = ({ server, serverIndex = 0, cinemaMode, toggleCinemaM
               title={`Stream ${server.name}`}
               // CRITICAL: Add importance="low" to deprioritize iframe loading
               // This helps reduce console spam from failed external resources
-              // @ts-ignore - importance is not in React types yet
+              // @ts-expect-error - importance is not in React types yet
               importance="low"
             />
           ) : (

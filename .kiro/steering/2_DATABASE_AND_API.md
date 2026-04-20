@@ -20,7 +20,6 @@ CockroachDB = ALL Content
 | الجدول | الاستخدام |
 |--------|-----------|
 | profiles | بيانات المستخدمين |
-| watchlist | قائمة المشاهدة |
 | continue_watching | متابعة المشاهدة |
 | history | السجل |
 

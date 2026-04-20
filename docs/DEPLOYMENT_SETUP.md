@@ -116,8 +116,8 @@ GitHub (المخزن الرئيسي)
 | `VITE_TMDB_API_KEY` | ✅ موجود | TMDB API |
 | `VITE_SUPABASE_URL` | ✅ موجود | Auth |
 | `VITE_SUPABASE_ANON_KEY` | ✅ موجود | Auth |
-| `VITE_GROQ_API_KEY` | ✅ موجود | Chatbot |
-| `VITE_GEMINI_API_KEY` | ✅ موجود | Chatbot |
+| `VITE_GROQ_API_KEY` | ✅ موجود | AI Chatbot |
+| `VITE_GEMINI_API_KEY` | ✅ موجود | AI Chatbot |
 
 ### للـ Deployment (اختيارية):
 

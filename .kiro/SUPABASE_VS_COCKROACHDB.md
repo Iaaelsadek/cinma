@@ -21,7 +21,6 @@ follows                     -- المتابعات بين المستخدمين
 
 ### User Activity
 ```sql
-watchlist                   -- قائمة المشاهدة
 continue_watching           -- استكمال المشاهدة
 history                     -- سجل المشاهدة
 activity_feed               -- نشاطات المستخدم
@@ -33,9 +32,7 @@ activity_reactions          -- تفاعلات
 
 ### Social Features
 ```sql
-watch_parties               -- حفلات المشاهدة
-watch_party_participants    -- المشاركين
-watch_party_messages        -- الرسائل
+-- المشاهدة الجماعية تم إلغاؤها
 ```
 
 ### Gamification
@@ -69,8 +66,6 @@ episodes                    -- الحلقات ⭐
 ### Additional Content
 ```sql
 anime                       -- الأنمي
-games                       -- الألعاب
-software                    -- البرامج
 actors                      -- الممثلين
 quran_reciters              -- القراء
 ```
@@ -100,9 +95,9 @@ const { data: profile } = await supabase
   .eq('id', userId)
   .single()
 
-// Add to watchlist
+// Add to continue watching
 await supabase
-  .from('watchlist')
+  .from('continue_watching')
   .insert({ user_id: userId, content_id: movieId, content_type: 'movie' })
 
 // Get watch history

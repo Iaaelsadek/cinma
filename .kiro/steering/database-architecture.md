@@ -27,8 +27,6 @@ await supabase.from('tv_series').select('*')
 await supabase.from('seasons').select('*')
 await supabase.from('episodes').select('*')
 await supabase.from('anime').select('*')
-await supabase.from('games').select('*')
-await supabase.from('software').select('*')
 await supabase.from('actors').select('*')
 await supabase.from('reviews').select('*') // Reviews are content data!
 ```
@@ -54,7 +52,6 @@ const seasons = await getSeasons(seriesId)
 import { supabase } from '../lib/supabase'
 
 await supabase.from('profiles').select('*')
-await supabase.from('watchlist').select('*')
 await supabase.from('continue_watching').select('*')
 await supabase.from('history').select('*')
 await supabase.from('follows').select('*')
@@ -65,13 +62,13 @@ await supabase.from('follows').select('*')
 ## 📋 Quick Reference
 
 ### Supabase Tables (Allowed):
-- profiles, follows, watchlist, continue_watching, history
+- profiles, follows, continue_watching, history
 - activity_feed, activity_likes, activity_comments
-- watch_parties, challenges, achievements, playlists, notifications
+- challenges, achievements, playlists, notifications
 
 ### CockroachDB Tables (Use API):
 - movies, tv_series, seasons, episodes
-- anime, games, software, actors
+- anime, actors
 - reviews, review_likes, review_reports
 - ads, settings, link_checks, error_reports
 - dailymotion_videos

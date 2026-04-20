@@ -56,7 +56,7 @@
 
 ### Database Architecture
 - **Supabase** = Auth & User Data ONLY (NO EXCEPTIONS)
-- **CockroachDB** = ALL Content (movies, tv, games, software, anime, actors, videos, dailymotion_videos)
+- **CockroachDB** = ALL Content (movies, tv, anime, actors, videos, dailymotion_videos)
 
 ### Content Pages
 - All content pages = Fetch from CockroachDB via API endpoints
