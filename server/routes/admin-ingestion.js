@@ -7,38 +7,39 @@
 
 import express from 'express';
 import pool from '../../src/db/pool.js';
-import StateManager from '../../src/ingestion/StateManager.js';
-import BatchProcessor from '../../src/ingestion/BatchProcessor.js';
-import AdapterManager from '../../src/adapters/AdapterManager.js';
+// Note: StateManager, BatchProcessor, and AdapterManager are not used in production
+// These were part of the ingestion system that runs separately
 
 const router = express.Router();
-
-// Initialize unified adapter manager
-const adapterManager = new AdapterManager({
-  tmdbApiKey: process.env.TMDB_API_KEY,
-  igdbClientId: process.env.IGDB_CLIENT_ID,
-  igdbClientSecret: process.env.IGDB_CLIENT_SECRET
-});
-
-const batchProcessor = new BatchProcessor(adapterManager);
 
 /**
  * GET /api/admin/ingestion/stats - Get ingestion statistics
  */
 router.get('/stats', async (req, res) => {
   try {
-    const stats = await batchProcessor.getStats();
-    const isProcessing = batchProcessor.isCurrentlyProcessing();
+    // Query stats directly from database
+    const statsQuery = `
+      SELECT 
+        COUNT(*) as total,
+        COUNT(*) FILTER (WHERE status = 'pending') as pending,
+        COUNT(*) FILTER (WHERE status = 'processing') as processing,
+        COUNT(*) FILTER (WHERE status = 'success') as success,
+        COUNT(*) FILTER (WHERE status = 'failed') as failed,
+        COUNT(*) FILTER (WHERE status = 'skipped') as skipped
+      FROM ingestion_log
+    `;
 
-    // Ensure all required fields exist
+    const result = await pool.query(statsQuery);
+    const stats = result.rows[0];
+
     const response = {
-      total: stats.total || 0,
-      pending: stats.pending || 0,
-      processing: stats.processing || 0,
-      success: stats.success || 0,
-      failed: stats.failed || 0,
-      skipped: stats.skipped || 0,
-      isProcessing: isProcessing || false
+      total: parseInt(stats.total) || 0,
+      pending: parseInt(stats.pending) || 0,
+      processing: parseInt(stats.processing) || 0,
+      success: parseInt(stats.success) || 0,
+      failed: parseInt(stats.failed) || 0,
+      skipped: parseInt(stats.skipped) || 0,
+      isProcessing: false // Ingestion runs separately, not via API
     };
 
     res.json(response);
@@ -127,104 +128,38 @@ router.get('/log', async (req, res) => {
 /**
  * POST /api/admin/ingestion/queue - Queue new items for ingestion
  * 
- * Body: {
- *   items: [
- *     { externalSource: 'TMDB', externalId: '550', contentType: 'movie' }
- *   ]
- * }
+ * Note: This endpoint is disabled in production.
+ * Ingestion is handled by separate scripts, not via API.
  */
 router.post('/queue', async (req, res) => {
-  const { items } = req.body;
-
-  if (!items || !Array.isArray(items) || items.length === 0) {
-    return res.status(400).json({ error: 'Items array is required' });
-  }
-
-  // Validate items
-  for (const item of items) {
-    if (!item.externalSource || !item.externalId || !item.contentType) {
-      return res.status(400).json({
-        error: 'Each item must have externalSource, externalId, and contentType'
-      });
-    }
-
-    const validTypes = ['movie', 'tv_series', 'software', 'actor'];
-    if (!validTypes.includes(item.contentType)) {
-      return res.status(400).json({
-        error: `Invalid contentType: ${item.contentType}. Must be one of: ${validTypes.join(', ')}`
-      });
-    }
-
-    // Check if adapter is available for this content type
-    if (!adapterManager.hasAdapter(item.contentType)) {
-      return res.status(400).json({
-        error: `No adapter configured for contentType: ${item.contentType}`,
-        message: item.contentType === 'software'
-          ? 'Software ingestion not yet implemented'
-          : `${item.contentType} requires additional configuration`
-      });
-    }
-  }
-
-  try {
-    const queuedCount = await batchProcessor.queueItems(items);
-
-    res.json({
-      success: true,
-      queued: queuedCount,
-      message: `Successfully queued ${queuedCount} items for ingestion`
-    });
-  } catch (error) {
-    console.error('Error queuing items:', error);
-    res.status(500).json({ error: 'Failed to queue items' });
-  }
+  res.status(501).json({
+    error: 'Not Implemented',
+    message: 'Ingestion is handled by separate scripts. Use the ingestion scripts in scripts/ingestion/ directory.'
+  });
 });
 
 /**
  * POST /api/admin/ingestion/requeue-failed - Re-queue failed items
+ * 
+ * Note: This endpoint is disabled in production.
  */
 router.post('/requeue-failed', async (req, res) => {
-  try {
-    const requeuedCount = await batchProcessor.requeueFailed();
-
-    res.json({
-      success: true,
-      requeued: requeuedCount,
-      message: `Successfully re-queued ${requeuedCount} failed items`
-    });
-  } catch (error) {
-    console.error('Error re-queuing failed items:', error);
-    res.status(500).json({ error: 'Failed to re-queue items' });
-  }
+  res.status(501).json({
+    error: 'Not Implemented',
+    message: 'Use ingestion scripts to requeue failed items.'
+  });
 });
 
 /**
  * POST /api/admin/ingestion/process - Trigger batch processing
+ * 
+ * Note: This endpoint is disabled in production.
  */
 router.post('/process', async (req, res) => {
-  const maxBatches = parseInt(req.body.maxBatches) || 1;
-
-  if (batchProcessor.isCurrentlyProcessing()) {
-    return res.status(409).json({
-      error: 'Processing already in progress',
-      message: 'Another batch is currently being processed'
-    });
-  }
-
-  try {
-    // Start processing asynchronously
-    batchProcessor.processAll(maxBatches).catch(error => {
-      console.error('Batch processing error:', error);
-    });
-
-    res.json({
-      success: true,
-      message: `Started processing up to ${maxBatches} batch(es)`
-    });
-  } catch (error) {
-    console.error('Error starting batch processing:', error);
-    res.status(500).json({ error: 'Failed to start processing' });
-  }
+  res.status(501).json({
+    error: 'Not Implemented',
+    message: 'Use ingestion scripts to process batches.'
+  });
 });
 
 export default router;
