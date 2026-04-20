@@ -30,7 +30,6 @@ jobs:
 
       - name: Run ESLint
         run: npm run lint
-        continue-on-error: true  # Don't block deployment on lint errors
 
   # ============================================
   # Job 2: TypeScript Type Checking
