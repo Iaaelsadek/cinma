@@ -245,9 +245,10 @@ if ($choice -eq "1") {
     
     Write-Host ""
     Write-Host "🚀 Starting mass deletion..." -ForegroundColor Cyan
+    Write-Host "⚠️  Will delete ALL runs in batches of 100 without asking!" -ForegroundColor Yellow
     Write-Host ""
     
-    # Delete in batches until no more runs
+    # Delete in batches until no more runs (NO CONFIRMATION)
     $batchNumber = 1
     do {
         Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor DarkGray
@@ -262,17 +263,6 @@ if ($choice -eq "1") {
             Write-Host "✅ Batch #$batchNumber complete: $deleted runs deleted" -ForegroundColor Green
             Write-Host "📊 Total deleted so far: $totalDeleted" -ForegroundColor Cyan
             Write-Host ""
-            
-            # Ask if user wants to continue
-            if ($deleted -eq 100) {
-                $continue = Read-Host "Continue with next batch? (y/n)"
-                if ($continue -ne "y" -and $continue -ne "Y") {
-                    Write-Host ""
-                    Write-Host "⏸️  Paused by user" -ForegroundColor Yellow
-                    break
-                }
-                Write-Host ""
-            }
         }
         
         $batchNumber++
