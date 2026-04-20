@@ -429,6 +429,8 @@ async function main() {
             if (attempt === 2) {
               console.error(`Page ${p} error:`, e.message);
               saveFailedPage('arabic', p, e.message);
+              // ✅ Skip this page and continue to next
+              success = true; // Mark as "done" to move on
             }
           }
         }
@@ -459,6 +461,8 @@ async function main() {
             if (attempt === 2) {
               console.error(`Page ${p} error:`, e.message);
               saveFailedPage('foreign', p, e.message);
+              // ✅ Skip this page and continue to next
+              success = true; // Mark as "done" to move on
             }
           }
         }
