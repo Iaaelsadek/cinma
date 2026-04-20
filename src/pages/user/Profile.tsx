@@ -16,7 +16,6 @@ import { motion, AnimatePresence } from 'framer-motion'
 
 import { QRCodeSVG } from 'qrcode.react'
 import { Shield, Smartphone, AlertCircle, CheckCircle2, Award, Star, Zap, Film, Trophy, Activity, Clock, Heart, Twitter, Instagram, Facebook, Globe, Users, User as UserIcon, Settings, LogOut, Sparkles, Trash2, Share2, Moon, PlayCircle, ThumbsUp, Eye, CheckCircle } from 'lucide-react'
-import { PlaylistManager } from '../../components/features/social/PlaylistManager'
 import { FollowList } from '../../components/features/social/FollowList'
 import { UserListsTab } from '../../components/features/social/UserListsTab'
 import { Challenges } from '../../components/features/social/Challenges'
@@ -837,7 +836,8 @@ export const Profile = () => {
 
                 {/* Profile Edit Form */}
                 <div className="rounded-[2.5rem] border border-white/5 bg-white/[0.01] p-8 backdrop-blur-md">
-                  <PlaylistManager />
+                  <h3 className="text-xl font-black text-white mb-6">تعديل الملف الشخصي</h3>
+                  {/* Playlist feature removed - focusing on core movie/TV content */}
                 </div>
 
                 {/* Content Sections */}
@@ -1860,13 +1860,13 @@ const UserReviewsSection = ({ userId }: { userId: string }) => {
       setHasMore(data.pagination?.hasMore || false)
 
       // Extract unique external_ids for batch content lookup
-      const uniqueItems = new Map<string, { id: string; content_type: 'movie' | 'tv' | 'game' | 'software' }>()
+      const uniqueItems = new Map<string, { id: string; content_type: 'movie' | 'tv' }>()
       data.reviews?.forEach((review: any) => {
         const key = `${review.external_id}-${review.content_type}`
-        if (!uniqueItems.has(key)) {
+        if (!uniqueItems.has(key) && (review.content_type === 'movie' || review.content_type === 'tv')) {
           uniqueItems.set(key, {
             id: review.external_id,
-            content_type: review.content_type as 'movie' | 'tv' | 'game' | 'software'
+            content_type: review.content_type as 'movie' | 'tv'
           })
         }
       })
