@@ -36,6 +36,7 @@ COPY src/db ./src/db
 COPY .env.example ./.env.example
 
 # Create non-root user for security
+# Force rebuild: 2026-04-20-v2
 RUN addgroup -S appuser && \
     adduser -S -G appuser appuser && \
     chown -R appuser:appuser /app
