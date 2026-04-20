@@ -35,6 +35,7 @@ import { readFileSync, writeFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { translateContent } from '../services/translation-service.js';
+import pLimit from 'p-limit';
 
 dotenv.config();
 
@@ -57,7 +58,13 @@ const CONFIG = {
   PAGES_PER_ROUND: 10,
   TARGETS: { tvSeries: 250000, animation: 250000 },
   MAX_RETRIES: 3,
+  CONCURRENCY: 50, // 50 concurrent requests for speed
 };
+
+// ══════════════════════════════════════════════
+// Concurrency Limiter
+// ══════════════════════════════════════════════
+const limiter = pLimit(CONFIG.CONCURRENCY);
 
 // ══════════════════════════════════════════════
 // Stats
@@ -483,7 +490,14 @@ async function main() {
           try {
             if (attempt > 0) { console.log(`  ↩️ Retry page ${p} (attempt ${attempt + 1})`); await sleep(3000 * attempt); }
             const data = await fetchTMDB('/discover/tv', { sort_by: 'popularity.desc', include_adult: false, page: p });
-            for (const s of (data.results || [])) { await processSeries(s.id, 'tvSeries'); await sleep(100); }
+
+            // Process series concurrently (50 at a time)
+            const promises = [];
+            for (const s of (data.results || [])) {
+              promises.push(limiter(() => processSeries(s.id, 'tvSeries')));
+            }
+            await Promise.all(promises);
+
             success = true;
           } catch (e) {
             if (attempt === 2) {
@@ -506,7 +520,14 @@ async function main() {
           try {
             if (attempt > 0) { console.log(`  ↩️ Retry page ${p} (attempt ${attempt + 1})`); await sleep(3000 * attempt); }
             const data = await fetchTMDB('/discover/tv', { with_genres: 16, sort_by: 'popularity.desc', include_adult: false, page: p });
-            for (const s of (data.results || [])) { await processSeries(s.id, 'animation'); await sleep(100); }
+
+            // Process series concurrently (50 at a time)
+            const promises = [];
+            for (const s of (data.results || [])) {
+              promises.push(limiter(() => processSeries(s.id, 'animation')));
+            }
+            await Promise.all(promises);
+
             success = true;
           } catch (e) {
             if (attempt === 2) {

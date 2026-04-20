@@ -24,6 +24,7 @@ import { readFileSync, writeFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { translateContent } from '../services/translation-service.js';
+import pLimit from 'p-limit';
 
 dotenv.config();
 
@@ -46,7 +47,13 @@ const CONFIG = {
   PAGES_PER_ROUND: 10,
   TARGETS: { arabic: 50000, foreign: 200000 },
   MAX_RETRIES: 3,
+  CONCURRENCY: 50, // 50 concurrent requests for speed
 };
+
+// ══════════════════════════════════════════════
+// Concurrency Limiter
+// ══════════════════════════════════════════════
+const limiter = pLimit(CONFIG.CONCURRENCY);
 
 // ══════════════════════════════════════════════
 // Stats
@@ -409,7 +416,14 @@ async function main() {
           try {
             if (attempt > 0) { console.log(`  ↩️ Retry page ${p} (attempt ${attempt + 1})`); await sleep(3000 * attempt); }
             const data = await fetchTMDB('/discover/movie', { with_original_language: 'ar', sort_by: 'popularity.desc', include_adult: false, page: p });
-            for (const m of (data.results || [])) { await processMovie(m.id, 'arabic'); await sleep(100); }
+
+            // Process movies concurrently (50 at a time)
+            const promises = [];
+            for (const m of (data.results || [])) {
+              promises.push(limiter(() => processMovie(m.id, 'arabic')));
+            }
+            await Promise.all(promises);
+
             success = true;
           } catch (e) {
             if (attempt === 2) {
@@ -432,7 +446,14 @@ async function main() {
           try {
             if (attempt > 0) { console.log(`  ↩️ Retry page ${p} (attempt ${attempt + 1})`); await sleep(3000 * attempt); }
             const data = await fetchTMDB('/discover/movie', { without_original_language: 'ar', sort_by: 'popularity.desc', include_adult: false, page: p });
-            for (const m of (data.results || [])) { await processMovie(m.id, 'foreign'); await sleep(100); }
+
+            // Process movies concurrently (50 at a time)
+            const promises = [];
+            for (const m of (data.results || [])) {
+              promises.push(limiter(() => processMovie(m.id, 'foreign')));
+            }
+            await Promise.all(promises);
+
             success = true;
           } catch (e) {
             if (attempt === 2) {
