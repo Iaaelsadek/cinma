@@ -167,6 +167,7 @@ GitHub (المخزن الرئيسي)
 ## 📚 الأدلة المساعدة
 
 - **إضافة Secrets:** `docs/GITHUB_SECRETS_GUIDE.md`
+- **إعداد Koyeb Environment Variables:** `docs/KOYEB_ENV_SETUP.md` ⭐ **جديد!**
 - **Cloudflare Setup:** [Cloudflare Pages Docs](https://developers.cloudflare.com/pages/)
 - **Koyeb Setup:** [Koyeb GitHub Integration](https://www.koyeb.com/docs/build-and-deploy/github)
 
@@ -187,6 +188,11 @@ GitHub (المخزن الرئيسي)
 3. **تحقق من الـ build settings:**
    - Cloudflare: Build command = `npm run build`
    - Koyeb: Start command = `npm run server`
+
+4. **إذا Koyeb يفشل بـ "COCKROACHDB_URL not set":**
+   - اتبع الدليل الشامل: `docs/KOYEB_ENV_SETUP.md`
+   - أضف جميع Environment Variables في Koyeb Dashboard
+   - Redeploy بعد الإضافة
 
 ---
 
