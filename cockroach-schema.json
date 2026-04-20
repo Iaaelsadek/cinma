@@ -1,0 +1,486 @@
+{
+  "movies": [
+    {
+      "column_name": "id",
+      "data_type": "bigint",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "title",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "title_ar",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "title_original",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "overview",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "overview_ar",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "poster_path",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "backdrop_path",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "release_date",
+      "data_type": "date",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "runtime",
+      "data_type": "bigint",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "vote_average",
+      "data_type": "numeric",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "vote_count",
+      "data_type": "bigint",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "popularity",
+      "data_type": "numeric",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "genres",
+      "data_type": "ARRAY",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "original_language",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "slug",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "primary_genre",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "keywords",
+      "data_type": "ARRAY",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "YES"
+    }
+  ],
+  "tv_series": [
+    {
+      "column_name": "id",
+      "data_type": "bigint",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "name",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "name_ar",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "name_original",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "overview",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "overview_ar",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "poster_path",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "backdrop_path",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "first_air_date",
+      "data_type": "date",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "last_air_date",
+      "data_type": "date",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "number_of_seasons",
+      "data_type": "bigint",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "number_of_episodes",
+      "data_type": "bigint",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "vote_average",
+      "data_type": "numeric",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "vote_count",
+      "data_type": "bigint",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "popularity",
+      "data_type": "numeric",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "genres",
+      "data_type": "ARRAY",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "language",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "original_language",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "slug",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "primary_genre",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "category",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "target_audience",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "keywords",
+      "data_type": "ARRAY",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "YES"
+    }
+  ],
+  "seasons": [
+    {
+      "column_name": "id",
+      "data_type": "bigint",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "series_id",
+      "data_type": "bigint",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "season_number",
+      "data_type": "bigint",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "name",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "name_ar",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "overview",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "overview_ar",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "poster_path",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "air_date",
+      "data_type": "date",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "episode_count",
+      "data_type": "bigint",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "YES"
+    }
+  ],
+  "episodes": [
+    {
+      "column_name": "id",
+      "data_type": "bigint",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "season_id",
+      "data_type": "bigint",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "series_id",
+      "data_type": "bigint",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "episode_number",
+      "data_type": "bigint",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "name",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "name_ar",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "overview",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "overview_ar",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "still_path",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "air_date",
+      "data_type": "date",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "runtime",
+      "data_type": "bigint",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "vote_average",
+      "data_type": "numeric",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "vote_count",
+      "data_type": "bigint",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "YES"
+    }
+  ],
+  "actors": [
+    {
+      "column_name": "id",
+      "data_type": "bigint",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "name",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "name_ar",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "biography",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "biography_ar",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "profile_path",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "birthday",
+      "data_type": "date",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "place_of_birth",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "popularity",
+      "data_type": "numeric",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "slug",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "YES"
+    }
+  ],
+  "movie_cast": [
+    {
+      "column_name": "id",
+      "data_type": "bigint",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "movie_id",
+      "data_type": "bigint",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "actor_id",
+      "data_type": "bigint",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "character_name",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "cast_order",
+      "data_type": "bigint",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "YES"
+    }
+  ],
+  "tv_cast": [
+    {
+      "column_name": "id",
+      "data_type": "bigint",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "series_id",
+      "data_type": "bigint",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "actor_id",
+      "data_type": "bigint",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "character_name",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "cast_order",
+      "data_type": "bigint",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "YES"
+    }
+  ]
+}

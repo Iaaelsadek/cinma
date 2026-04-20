@@ -474,15 +474,15 @@ async function main() {
 
   let round = 1;
   while (true) {
-    const doneTV = pages.tvSeries > 500 || stats.tvSeries.total >= CONFIG.TARGETS.tvSeries;
-    const doneAnim = pages.animation > 500 || stats.animation.total >= CONFIG.TARGETS.animation;
+    const doneTV = stats.tvSeries.total >= CONFIG.TARGETS.tvSeries;
+    const doneAnim = stats.animation.total >= CONFIG.TARGETS.animation;
     if (doneTV && doneAnim) break;
 
     console.log(`\n${'═'.repeat(50)}\n🔄 ROUND ${round}\n${'═'.repeat(50)}`);
 
     // TV Series
     if (!doneTV) {
-      const end = Math.min(pages.tvSeries + CONFIG.PAGES_PER_ROUND - 1, 500);
+      const end = pages.tvSeries + CONFIG.PAGES_PER_ROUND - 1;
       console.log(`\n📺 TV Series (pages ${pages.tvSeries}-${end})`);
       for (let p = pages.tvSeries; p <= end; p++) {
         let success = false;
@@ -512,7 +512,7 @@ async function main() {
 
     // Animation
     if (!doneAnim) {
-      const end = Math.min(pages.animation + CONFIG.PAGES_PER_ROUND - 1, 500);
+      const end = pages.animation + CONFIG.PAGES_PER_ROUND - 1;
       console.log(`\n🎨 Animation (pages ${pages.animation}-${end})`);
       for (let p = pages.animation; p <= end; p++) {
         let success = false;

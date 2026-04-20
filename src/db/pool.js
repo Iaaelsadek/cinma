@@ -11,6 +11,7 @@ import pkg from 'pg';
 const { Pool } = pkg;
 import dotenv from 'dotenv';
 
+// Load .env files (only works locally, not in production)
 dotenv.config({ path: '.env.local' });
 dotenv.config();
 
@@ -19,8 +20,12 @@ const connectionString = process.env.COCKROACHDB_URL;
 if (!connectionString) {
   console.error('❌ COCKROACHDB_URL environment variable is not set');
   console.error('   Check .env.local or .env file');
+  console.error('   In production (Koyeb), add it in Dashboard → Settings → Environment Variables');
+  console.error('   Current env keys:', Object.keys(process.env).filter(k => k.includes('COCKROACH') || k.includes('DATABASE')));
   process.exit(1);
 }
+
+console.log('✅ COCKROACHDB_URL found:', connectionString.substring(0, 30) + '...');
 
 const pool = new Pool({
   connectionString,
@@ -39,7 +44,7 @@ pool.on('error', (err) => {
 
 // Log successful connection
 pool.on('connect', () => {
-  // Connection established
+  console.log('✅ CockroachDB connection established');
 });
 
 export default pool;

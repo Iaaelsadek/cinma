@@ -400,15 +400,15 @@ async function main() {
 
   let round = 1;
   while (true) {
-    const doneArabic = pages.arabic > 500 || stats.arabic.total >= CONFIG.TARGETS.arabic;
-    const doneForeign = pages.foreign > 500 || stats.foreign.total >= CONFIG.TARGETS.foreign;
+    const doneArabic = stats.arabic.total >= CONFIG.TARGETS.arabic;
+    const doneForeign = stats.foreign.total >= CONFIG.TARGETS.foreign;
     if (doneArabic && doneForeign) break;
 
     console.log(`\n${'═'.repeat(50)}\n🔄 ROUND ${round}\n${'═'.repeat(50)}`);
 
     // Arabic movies
     if (!doneArabic) {
-      const end = Math.min(pages.arabic + CONFIG.PAGES_PER_ROUND - 1, 500);
+      const end = pages.arabic + CONFIG.PAGES_PER_ROUND - 1;
       console.log(`\n🎬 Arabic Movies (pages ${pages.arabic}-${end})`);
       for (let p = pages.arabic; p <= end; p++) {
         let success = false;
@@ -438,7 +438,7 @@ async function main() {
 
     // Foreign movies
     if (!doneForeign) {
-      const end = Math.min(pages.foreign + CONFIG.PAGES_PER_ROUND - 1, 500);
+      const end = pages.foreign + CONFIG.PAGES_PER_ROUND - 1;
       console.log(`\n🌍 Foreign Movies (pages ${pages.foreign}-${end})`);
       for (let p = pages.foreign; p <= end; p++) {
         let success = false;
