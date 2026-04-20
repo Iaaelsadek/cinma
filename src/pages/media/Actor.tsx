@@ -1,81 +1,82 @@
-import {useParams} from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { useEffect, useState, useMemo } from 'react'
-import { tmdb } from '../../lib/tmdb'
 import { MovieCard } from '../../components/features/media/MovieCard'
 import { SeoHead } from '../../components/common/SeoHead'
-import {Calendar, MapPin, Star, User, Film, Tv, Info} from 'lucide-react'
+import { Calendar, MapPin, Star, User, Film, Tv, Info } from 'lucide-react'
 import { motion } from 'framer-motion'
-import { resolveSlug } from '../../lib/slugResolver'
 import { logger } from '../../lib/logger'
 import { SkeletonGrid } from '../../components/common/Skeletons'
 import { useLang } from '../../state/useLang'
+import { translateLocation } from '../../lib/countries'
 
 type ActorDetails = {
-  id: number
+  id: string
+  slug: string
   name: string
+  name_ar?: string
+  name_en?: string
   biography: string
   birthday: string | null
   place_of_birth: string | null
+  profile_url: string | null
   profile_path: string | null
   known_for_department: string
-  combined_credits?: {
-    cast: any[]
-  }
-  images?: {
-    profiles: any[]
-  }
 }
 
-import { getActorByIdDB } from '../../lib/db'
+type ActorWork = {
+  id: string
+  slug: string
+  title?: string
+  name?: string
+  title_ar?: string
+  name_ar?: string
+  title_en?: string
+  name_en?: string
+  title_original?: string
+  name_original?: string
+  poster_path?: string | null
+  poster_url: string
+  vote_average: number
+  release_date?: string | null
+  first_air_date?: string | null
+  character_name?: string
+  media_type: 'movie' | 'tv'
+}
 
 export const Actor = () => {
   const { slug } = useParams()
   const { lang } = useLang()
   const t = (ar: string, en: string) => (lang === 'ar' ? ar : en)
-  
+
   const [details, setDetails] = useState<ActorDetails | null>(null)
+  const [works, setWorks] = useState<ActorWork[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
   const [activeTab, setActiveTab] = useState<'all' | 'movie' | 'tv'>('all')
-  const [actorId, setActorId] = useState<number | null>(null)
 
-  useEffect(() => {
-    const resolve = async () => {
-      if (!slug) return
-      
-      try {
-        // 1. Try DB first
-        const local = await getActorByIdDB(slug)
-        if (local?.tmdb_id) {
-          setActorId(Number(local.tmdb_id))
-          return
-        }
-
-        // 2. Fallback to resolver
-        const contentId = await resolveSlug(slug, 'actor');
-        setActorId(contentId);
-      } catch (error) {
-        logger.error('Error resolving slug for actor:', error);
-        setActorId(null);
-      }
-    };
-
-    resolve();
-  }, [slug]);
-
+  // Fetch actor details from our API
   useEffect(() => {
     let mounted = true
     setLoading(true)
     setError(false)
-    
+
     const fetchActor = async () => {
-      if (!actorId) return;
+      if (!slug) return
+
       try {
-        const { data } = await tmdb.get(`/person/${actorId}`, {
-          params: { append_to_response: 'combined_credits,images' }
-        })
-        if (mounted) setDetails(data)
-      } catch (e) {
+        const response = await fetch(`/api/actors/${slug}`)
+
+        if (!response.ok) {
+          throw new Error('Actor not found')
+        }
+
+        const data = await response.json()
+
+        if (mounted) {
+          setDetails(data)
+        }
+      } catch (e: any) {
+        // Silently fail
         if (mounted) setError(true)
       } finally {
         if (mounted) setLoading(false)
@@ -84,17 +85,38 @@ export const Actor = () => {
 
     fetchActor()
     return () => { mounted = false }
-  }, [actorId])
+  }, [slug])
 
-  const works = useMemo(() => {
-    if (!details?.combined_credits?.cast) return []
-    
-    // Filter and sort by popularity/date
-    return details.combined_credits.cast
-      .filter(w => w.poster_path) // Only with posters
-      .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
-      .filter((v, i, a) => a.findIndex(t => t.id === v.id) === i) // Unique
-  }, [details])
+  // Fetch actor works from our API
+  useEffect(() => {
+    let mounted = true
+
+    const fetchWorks = async () => {
+      if (!slug) return
+
+      try {
+        const response = await fetch(`/api/actors/${slug}/works?limit=100`)
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch works')
+        }
+
+        const data = await response.json()
+
+        if (mounted) {
+          setWorks(data.data || [])
+        }
+      } catch (e: any) {
+        // Silently fail
+      }
+    }
+
+    if (details) {
+      fetchWorks()
+    }
+
+    return () => { mounted = false }
+  }, [slug, details])
 
   const filteredWorks = useMemo(() => {
     if (activeTab === 'all') return works
@@ -104,38 +126,31 @@ export const Actor = () => {
   if (loading) return <div className="min-h-screen bg-[#0f0f0f] p-8"><SkeletonGrid count={8} variant="video" /></div>
   if (error || !details) return <div className="min-h-screen bg-[#0f0f0f] flex items-center justify-center text-white">Error loading actor profile</div>
 
-  const profileImg = details.profile_path ? `https://image.tmdb.org/t/p/h632${details.profile_path}` : null
-  const bgImg = details.combined_credits?.cast?.[0]?.backdrop_path 
-    ? `https://image.tmdb.org/t/p/original${details.combined_credits.cast[0].backdrop_path}` 
-    : null
+  const profileImg = details.profile_url || null
+  const displayName = lang === 'ar' ? (details.name_ar || details.name) : (details.name_en || details.name)
 
   return (
     <div className="min-h-screen bg-[#0f0f0f] text-white pb-20">
-      <SeoHead 
-        title={`${details.name} | Actor Profile`}
-        description={details.biography || `Profile and works of ${details.name}`}
+      <SeoHead
+        title={`${displayName} | Actor Profile`}
+        description={details.biography || `Profile and works of ${displayName}`}
         image={profileImg || undefined}
       />
 
       {/* Hero Section */}
       <div className="relative h-[40vh] md:h-[60vh] overflow-hidden">
-        {bgImg && (
-          <>
-            <img src={bgImg} alt="" className="absolute inset-0 w-full h-full object-cover opacity-20 blur-sm scale-105" />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#0f0f0f] via-[#0f0f0f]/60 to-transparent" />
-          </>
-        )}
-        
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0f0f0f] via-[#0f0f0f]/60 to-transparent" />
+
         <div className="absolute inset-0 flex items-end">
           <div className="mx-auto max-w-[2400px] w-full px-4 md:px-12 pb-12 flex flex-col md:flex-row items-center md:items-end gap-8">
             {/* Profile Picture */}
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               className="relative z-10 w-48 h-48 md:w-64 md:h-64 rounded-3xl overflow-hidden border-4 border-white/10 shadow-2xl shrink-0 bg-zinc-900"
             >
               {profileImg ? (
-                <img src={profileImg} alt={details.name} className="w-full h-full object-cover" />
+                <img src={profileImg} alt={displayName} className="w-full h-full object-cover" loading="lazy" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center"><User size={64} className="text-zinc-700" /></div>
               )}
@@ -143,14 +158,30 @@ export const Actor = () => {
 
             {/* Info */}
             <div className="flex-1 text-center md:text-right space-y-4">
-              <motion.h1 
+              <motion.h1
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="text-4xl md:text-7xl font-black tracking-tight"
               >
-                {details.name}
+                {displayName}
               </motion.h1>
-              
+
+              {/* Show both names if different */}
+              {details.name_ar && details.name_en && details.name_ar !== details.name_en && (
+                <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
+                  {lang === 'ar' && details.name_en && (
+                    <span className="text-lg md:text-2xl font-semibold text-zinc-400">
+                      {details.name_en}
+                    </span>
+                  )}
+                  {lang === 'en' && details.name_ar && (
+                    <span className="text-lg md:text-2xl font-semibold text-zinc-400">
+                      {details.name_ar}
+                    </span>
+                  )}
+                </div>
+              )}
+
               <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-sm text-zinc-400">
                 {details.birthday && (
                   <div className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-xl border border-white/10">
@@ -161,7 +192,7 @@ export const Actor = () => {
                 {details.place_of_birth && (
                   <div className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-xl border border-white/10">
                     <MapPin size={16} className="text-primary" />
-                    <span className="line-clamp-1">{details.place_of_birth}</span>
+                    <span className="line-clamp-1">{translateLocation(details.place_of_birth, lang)}</span>
                   </div>
                 )}
                 <div className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-xl border border-white/10">
@@ -187,11 +218,10 @@ export const Actor = () => {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-black transition-all ${
-                  activeTab === tab.id 
-                    ? 'bg-primary text-black shadow-lg shadow-primary/20' 
-                    : 'text-zinc-400 hover:text-white hover:bg-white/5'
-                }`}
+                className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-black transition-all ${activeTab === tab.id
+                  ? 'bg-primary text-black shadow-lg shadow-primary/20'
+                  : 'text-zinc-400 hover:text-white hover:bg-white/5'
+                  }`}
               >
                 <tab.icon size={18} />
                 {tab.label}
@@ -202,7 +232,22 @@ export const Actor = () => {
           {/* Grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
             {filteredWorks.slice(0, 24).map((work, idx) => (
-              <MovieCard key={`${work.id}-${idx}`} movie={work} index={idx} />
+              <MovieCard
+                key={`${work.id}-${idx}`}
+                movie={{
+                  id: typeof work.id === 'string' ? parseInt(work.id) : work.id,
+                  slug: work.slug,
+                  title: work.title || work.name || '',
+                  title_ar: work.title_ar || work.name_ar,
+                  title_en: work.title_en || work.name_en,
+                  original_title: work.title_original || work.name_original,
+                  poster_path: work.poster_path || null,
+                  vote_average: work.vote_average || 0,
+                  release_date: work.release_date || work.first_air_date || null,
+                  media_type: work.media_type // إضافة نوع المحتوى
+                }}
+                index={idx}
+              />
             ))}
           </div>
 
@@ -222,30 +267,11 @@ export const Actor = () => {
               <h3 className="text-xl font-black">{t('عن الممثل', 'Biography')}</h3>
             </div>
             <p className="text-zinc-400 leading-relaxed text-sm whitespace-pre-wrap">
-              {details.biography || t('لا تتوفر سيرة ذاتية لهذا الممثل حالياً.', 'No biography available for this actor at the moment.')}
+              {lang === 'ar' && details.biography_ar
+                ? details.biography_ar
+                : details.biography || t('لا تتوفر سيرة ذاتية لهذا الممثل حالياً.', 'No biography available for this actor at the moment.')}
             </p>
           </div>
-
-          {/* Photos Gallery */}
-          {details.images?.profiles && details.images.profiles.length > 0 && (
-            <div className="space-y-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-primary/20 text-primary"><ImageIcon size={20} /></div>
-                <h3 className="text-xl font-black">{t('صور الممثل', 'Photos')}</h3>
-              </div>
-              <div className="grid grid-cols-3 gap-2">
-                {details.images.profiles.slice(0, 9).map((img, i) => (
-                  <div key={i} className="aspect-[2/3] rounded-xl overflow-hidden bg-zinc-900 border border-white/5">
-                    <img 
-                      src={`https://image.tmdb.org/t/p/w185${img.file_path}`} 
-                      alt="" 
-                      className="w-full h-full object-cover hover:scale-110 transition-transform duration-500"
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>

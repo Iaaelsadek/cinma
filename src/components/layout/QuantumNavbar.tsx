@@ -1,4 +1,4 @@
-import {useNavigate} from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { PrefetchLink } from '../common/PrefetchLink'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useQuery } from '@tanstack/react-query'
@@ -7,15 +7,16 @@ import { useLang } from '../../state/useLang'
 import { useAuth } from '../../hooks/useAuth'
 import { getContinueWatching } from '../../lib/supabase'
 import { useEffect, useState, useRef, useMemo, memo, Fragment } from 'react'
-import {Home, Film, Tv, Gamepad2, Zap, User, Search, Menu, X, Clock, BookOpen, History, Smile, Drama, ListVideo, Moon, MapPin, Star, Mic, Loader2, Monitor, Smartphone, Apple, Terminal, Flame, Laugh, Skull, Rocket, Heart, Palette, Popcorn, Trophy, TrendingUp, Eye, Compass, Clapperboard, Ticket} from 'lucide-react'
+import { Home, Film, Tv, Gamepad2, Zap, User, Search, Menu, X, Clock, BookOpen, History, Smile, Drama, ListVideo, Moon, MapPin, Star, Mic, Loader2, Monitor, Smartphone, Apple, Terminal, Flame, Laugh, Skull, Rocket, Heart, Palette, Popcorn, Trophy, TrendingUp, Eye, Compass, Clapperboard, Ticket, ChevronDown } from 'lucide-react'
 
 
 export const QuantumNavbar = memo(() => {
   const { user, loading, profile } = useAuth()
   const { lang, toggle } = useLang()
-  
+
   const leaveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
   const enterTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const backdropTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const handleMouseEnter = (label: string) => {
     if (leaveTimeout.current) {
@@ -24,6 +25,10 @@ export const QuantumNavbar = memo(() => {
     }
     if (enterTimeout.current) {
       clearTimeout(enterTimeout.current)
+    }
+    if (backdropTimeout.current) {
+      clearTimeout(backdropTimeout.current)
+      backdropTimeout.current = null
     }
     enterTimeout.current = setTimeout(() => {
       setHoveredLink(label)
@@ -42,115 +47,58 @@ export const QuantumNavbar = memo(() => {
     }, 300)
   }
 
+  const handleBackdropInteraction = () => {
+    if (backdropTimeout.current) {
+      clearTimeout(backdropTimeout.current)
+    }
+    backdropTimeout.current = setTimeout(() => {
+      setHoveredLink(null)
+      backdropTimeout.current = null
+    }, 500)
+  }
+
   const navLinks = useMemo(() => [
-    { 
-      to: '/', 
-      label: lang === 'ar' ? 'الرئيسية' : 'Home', 
-      icon: Home, 
-      color: '#00ffcc',
-      hasMega: false
+    {
+      to: '/',
+      label: lang === 'ar' ? 'الرئيسية' : 'Home',
+      icon: Home,
+      color: '#00ffcc'
     },
-    { 
-      to: '/movies', 
-      label: lang === 'ar' ? 'أفلام' : 'Movies', 
-      icon: Film, 
-      color: '#00ccff',
-      hasMega: true,
-      featuredImage: 'https://image.tmdb.org/t/p/w1280/pwsD91G2R6r8keDrx6u7hOEZhXp.jpg',
-      subLinks: [
-        { to: '/movies/popular', label: lang === 'ar' ? 'الأكثر شعبية' : 'Popular', icon: TrendingUp },
-        { to: '/movies/top_rated', label: lang === 'ar' ? 'الأعلى تقييماً' : 'Top Rated', icon: Trophy },
-        { to: '/movies/now_playing', label: lang === 'ar' ? 'يعرض حالياً' : 'Now Playing', icon: Eye },
-        { to: '/search?types=movie&lang=ar', label: lang === 'ar' ? 'أفلام عربية' : 'Arabic Movies', icon: MapPin },
-        { to: '/search?types=movie&lang=en', label: lang === 'ar' ? 'أفلام أجنبية' : 'Foreign Movies', icon: Compass },
-        { to: '/search?types=movie&lang=hi', label: lang === 'ar' ? 'أفلام هندية' : 'Indian Movies', icon: Popcorn },
-        { to: '/classics', label: lang === 'ar' ? 'كلاسيكيات' : 'Classics', icon: History },
-        { to: '/summaries', label: lang === 'ar' ? 'ملخصات' : 'Summaries', icon: ListVideo },
-      ],
-      categories: [
-        { id: 'Action', label: { en: 'Action', ar: 'أكشن' }, icon: Flame },
-        { id: 'Comedy', label: { en: 'Comedy', ar: 'كوميديا' }, icon: Laugh },
-        { id: 'Horror', label: { en: 'Horror', ar: 'رعب' }, icon: Skull },
-        { id: 'Sci-Fi', label: { en: 'Sci-Fi', ar: 'خيال علمي' }, icon: Rocket },
-        { id: 'Drama', label: { en: 'Drama', ar: 'دراما' }, icon: Heart },
-        { id: 'Animation', label: { en: 'Animation', ar: 'انميشن' }, icon: Palette }
-      ]
+    {
+      to: '/movies',
+      label: lang === 'ar' ? 'أفلام' : 'Movies',
+      icon: Film,
+      color: '#00ccff'
     },
-    { 
-      to: '/series', 
-      label: lang === 'ar' ? 'مسلسلات' : 'Series', 
-      icon: Tv, 
-      color: '#aa00ff',
-      hasMega: true,
-      featuredImage: 'https://image.tmdb.org/t/p/w1280/2rmK7mnchw9Xr3XdiTFSxTTlxI.jpg',
-      subLinks: [
-        { to: '/ramadan', label: lang === 'ar' ? 'مسلسلات رمضان' : 'Ramadan Series', icon: Moon },
-        { to: '/series/popular', label: lang === 'ar' ? 'الأكثر شعبية' : 'Popular', icon: TrendingUp },
-        { to: '/series/top_rated', label: lang === 'ar' ? 'الأعلى تقييماً' : 'Top Rated', icon: Trophy },
-        { to: '/search?types=tv&lang=ar', label: lang === 'ar' ? 'مسلسلات عربية' : 'Arabic Series', icon: MapPin },
-        { to: '/search?types=tv&lang=tr', label: lang === 'ar' ? 'مسلسلات تركية' : 'Turkish Series', icon: Compass },
-        { to: '/search?types=tv&lang=en', label: lang === 'ar' ? 'مسلسلات أجنبية' : 'Foreign Series', icon: Clapperboard },
-        { to: '/search?types=tv&lang=ko', label: lang === 'ar' ? 'مسلسلات كورية' : 'Korean Series', icon: Star },
-      ],
-      categories: [
-        { id: 'Drama', label: { en: 'Drama', ar: 'دراما' }, icon: Heart },
-        { id: 'Comedy', label: { en: 'Comedy', ar: 'كوميديا' }, icon: Laugh },
-        { id: 'Action', label: { en: 'Action', ar: 'أكشن' }, icon: Flame },
-        { id: 'Romance', label: { en: 'Romance', ar: 'رومانسي' }, icon: Ticket },
-        { id: 'Sci-Fi', label: { en: 'Sci-Fi', ar: 'خيال علمي' }, icon: Rocket }
-      ]
+    {
+      to: '/series',
+      label: lang === 'ar' ? 'مسلسلات' : 'Series',
+      icon: Tv,
+      color: '#aa00ff'
     },
-    { 
-      to: '/plays', 
-      label: lang === 'ar' ? 'مسرحيات' : 'Plays', 
-      icon: Drama, 
-      color: '#ef4444',
-      hasMega: true,
-      subLinks: [
-        { to: '/plays/masrah-masr', label: lang === 'ar' ? 'مسرح مصر' : 'Masrah Masr', icon: Smile },
-        { to: '/plays/adel-imam', label: lang === 'ar' ? 'عادل إمام' : 'Adel Imam', icon: Laugh },
-        { to: '/plays/gulf', label: lang === 'ar' ? 'مسرحيات خليجية' : 'Gulf Plays', icon: MapPin },
-        { to: '/plays/classics', label: lang === 'ar' ? 'كلاسيكيات' : 'Classics', icon: History }
-      ]
+    {
+      to: '/anime',
+      label: lang === 'ar' ? 'أنمي' : 'Anime',
+      icon: Zap,
+      color: '#f59e0b'
     },
-    { 
-      to: '/ramadan', 
-      label: lang === 'ar' ? 'اسلاميات' : 'Islamics', 
-      icon: Moon, 
-      color: '#ffd700',
-      hasMega: true,
-      subLinks: [
-        { to: '/search?category=quran', label: lang === 'ar' ? 'القرآن الكريم' : 'Holy Quran', icon: BookOpen },
-        { to: '/search?category=prophets', label: lang === 'ar' ? 'قصص الأنبياء' : 'Prophets Stories', icon: History },
-        { to: '/search?category=fatwa', label: lang === 'ar' ? 'فتاوى' : 'Fatwas', icon: ListVideo },
-        { to: '/ramadan', label: lang === 'ar' ? 'برامج دينية' : 'Religious Programs', icon: Moon }
-      ]
+    {
+      to: '/plays',
+      label: lang === 'ar' ? 'مسرحيات' : 'Plays',
+      icon: Drama,
+      color: '#ef4444'
     },
-    { 
-      to: '/kids', 
-      label: lang === 'ar' ? 'أطفال' : 'Kids', 
-      icon: Smile, 
-      color: '#ffcc00',
-      hasMega: true,
-      subLinks: [
-        { to: '/search?types=movie&genres=16', label: lang === 'ar' ? 'أفلام كرتون' : 'Animation Movies', icon: Film },
-        { to: '/anime', label: lang === 'ar' ? 'أنمي' : 'Anime', icon: Gamepad2 },
-        { to: '/search?types=movie&company=disney', label: lang === 'ar' ? 'ديزني' : 'Disney', icon: Zap },
-        { to: '/search?types=tv&genres=10762', label: lang === 'ar' ? 'مسلسلات كرتون' : 'Cartoon Series', icon: Tv }
-      ]
+    {
+      to: '/software',
+      label: lang === 'ar' ? 'برمجيات' : 'Software',
+      icon: Monitor,
+      color: '#10b981'
     },
-    { 
-      to: '/software', 
-      label: lang === 'ar' ? 'برمجيات' : 'Software', 
-      icon: Monitor, 
-      color: '#0ea5e9',
-      hasMega: true,
-      subLinks: [
-        { to: '/software?cat=pc', label: lang === 'ar' ? 'كمبيوتر' : 'PC', icon: Monitor },
-        { to: '/software?cat=android', label: lang === 'ar' ? 'أندرويد' : 'Android', icon: Smartphone },
-        { to: '/software?cat=apple', label: lang === 'ar' ? 'أبل' : 'Apple', icon: Apple },
-        { to: '/software?cat=terminal', label: lang === 'ar' ? 'أدوات المطورين' : 'Dev Tools', icon: Terminal }
-      ]
+    {
+      to: '/quran',
+      label: lang === 'ar' ? 'القرآن الكريم' : 'Holy Quran',
+      icon: BookOpen,
+      color: '#ffd700'
     }
   ], [lang])
 
@@ -212,241 +160,188 @@ export const QuantumNavbar = memo(() => {
   return (
     <div className="w-full flex justify-center sticky top-0 z-[1000]">
       <nav
-        className={`transition-all duration-300 w-full ${
-          scrolled ? 'bg-black/95 backdrop-blur-xl py-2 shadow-2xl border-b border-white/10' : 'bg-gradient-to-b from-black/90 to-black/0 py-2'
-        }`}
+        className={`transition-all duration-300 w-full ${scrolled ? 'bg-black/95 backdrop-blur-xl py-2 shadow-2xl border-b border-white/10' : 'bg-gradient-to-b from-black/90 to-black/0 py-2'
+          }`}
       >
         <div className="max-w-[2400px] mx-auto px-4 md:px-12 flex items-center justify-between transition-all duration-300 h-16">
-            
-            {/* Logo */}
-            <PrefetchLink to="/" target="_self" className="group flex items-center gap-2 shrink-0">
-              <div className="relative flex items-center justify-center">
-                <div className="relative z-10 font-black text-3xl tracking-tighter uppercase group-hover:scale-105 transition-transform duration-300 flex items-center gap-1">
-                  <span 
-                    className="text-transparent bg-clip-text bg-gradient-to-r from-white via-white to-white/50 text-glitch-sm"
-                    data-text="Cinema"
-                  >
-                    Cinema
-                  </span>
-                  <span className="text-red-600 animate-pulse text-4xl mb-1 leading-[0] drop-shadow-[0_0_8px_rgba(220,38,38,0.8)]">.</span>
-                  <div className="flex" dir="ltr">
-                    <span className="text-cyan-400 animate-neon-flicker-cyan drop-shadow-[0_0_10px_rgba(34,211,238,0.8)]">
-                      On
-                    </span>
-                    <span className="text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.6)]">
-                      li
-                    </span>
-                    <span className="text-cyan-400 animate-neon-flicker-cyan-alt drop-shadow-[0_0_10px_rgba(34,211,238,0.8)]">
-                      n
-                    </span>
-                    <span className="text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.6)]">
-                      e
-                    </span>
-                  </div>
-                </div>
-                <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-purple-500/10 to-pink-500/10 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-full" />
-              </div>
-            </PrefetchLink>
 
-            {/* Desktop Nav - Hidden on smaller screens to prevent overlap */}
-            <div className="hidden xl:flex items-center gap-3">
-              {navLinks.map((link) => (
-                <div 
-                  key={link.to} 
-                  className="relative group h-full flex items-center"
-                  onMouseEnter={() => handleMouseEnter(link.label)}
-                  onMouseLeave={handleMouseLeave}
-                  onFocusCapture={() => handleMouseEnter(link.label)}
-                  onBlurCapture={(e) => {
-                    if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
-                      handleMouseLeave()
-                    }
-                  }}
+          {/* Logo */}
+          <PrefetchLink to="/" target="_self" className="group flex items-center gap-2 shrink-0">
+            <div className="relative flex items-center justify-center">
+              <div className="relative z-10 font-black text-3xl tracking-tighter uppercase group-hover:scale-105 transition-transform duration-300 flex items-center gap-1">
+                <span
+                  className="text-transparent bg-clip-text bg-gradient-to-r from-white via-white to-white/50 text-glitch-sm"
+                  data-text="Cinema"
                 >
-                  <PrefetchLink
-                    to={link.to}
-                    target="_self"
-                    aria-expanded={link.hasMega ? hoveredLink === link.label : undefined}
-                    aria-controls={link.hasMega ? `mega-menu-${link.label}` : undefined}
-                    className="flex flex-col items-center justify-center gap-1 px-2 py-1 text-xs font-bold text-zinc-400 group-hover:text-white transition-all duration-300 relative"
-                  >
-                    <div className="relative p-1.5 rounded-xl group-hover:bg-white/5 transition-colors duration-300">
-                      <link.icon size={18} style={{ color: link.color }} className="group-hover:scale-110 transition-transform duration-300" />
-                      {link.hasMega && (
-                        <div className={`absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-current opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${hoveredLink === link.label ? 'opacity-100' : ''}`} />
-                      )}
-                    </div>
-                    <span className="uppercase tracking-wider group-hover:tracking-widest transition-all duration-300">{link.label}</span>
-                  </PrefetchLink>
-                  
-                  {/* Mega Menu Dropdown */}
-      <AnimatePresence>
-        {link.hasMega && hoveredLink === link.label && (
-          <motion.div
-            initial={{ opacity: 0, y: 10, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 10, scale: 0.95 }}
-            transition={{ duration: 0.2 }}
-            id={`mega-menu-${link.label}`}
-            className="absolute top-full left-1/2 -translate-x-1/2 z-[9999999] pt-4 flex justify-center pointer-events-none"
-            onMouseEnter={() => handleMouseEnter(link.label)}
-            onMouseLeave={handleMouseLeave}
-            onKeyDown={(e) => {
-              if (e.key === 'Escape') {
-                setHoveredLink(null)
-              }
-            }}
-          >
-            <div 
-              className="bg-[#0a0a0a]/95 border border-white/10 rounded-2xl shadow-xl overflow-hidden p-6 backdrop-blur-sm min-w-max max-w-[80vw] pointer-events-auto"
-            >
-               <div className="flex flex-row gap-10 justify-center">
-                  {/* SubLinks Section */}
-                  {link.subLinks && (
-                    <div>
-                      <h3 className="text-white font-bold mb-3 flex items-center gap-2 border-b border-white/10 pb-2">
-                        {lang === 'ar' ? 'الأقسام' : 'Sections'}
-                      </h3>
-                      <ul className="grid grid-cols-1 gap-2">
-                        {link.subLinks.map((sub, i) => (
-                          <li key={`${sub.to}-${i}`}>
-                            <PrefetchLink to={sub.to} target="_self" className="flex items-center gap-3 text-zinc-300 hover:text-cyan-400 transition-colors py-1 group/sub">
-                              {sub.icon && <sub.icon size={18} className="text-zinc-500 group-hover/sub:text-cyan-400 transition-colors" />}
-                              <span className="font-medium text-sm whitespace-nowrap">{sub.label}</span>
-                            </PrefetchLink>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {/* Categories Section */}
-                  {link.categories && (
-                    <div>
-                      <h3 className="text-white font-bold mb-3 flex items-center gap-2 border-b border-white/10 pb-2">
-                        <link.icon size={18} style={{ color: link.color }} />
-                        {lang === 'ar' ? 'التصنيفات' : 'Categories'}
-                      </h3>
-                      <ul className="grid grid-cols-1 gap-2">
-                        {link.categories.map(cat => (
-                          <li key={cat.id}>
-                            <PrefetchLink to={`${link.to}?cat=${cat.id.toLowerCase()}`} target="_self" className="text-zinc-400 hover:text-cyan-400 text-sm transition-colors block py-1 flex items-center gap-2">
-                              {cat.icon && <cat.icon size={16} className="text-zinc-500" />}
-                              <span className="whitespace-nowrap">{lang === 'ar' ? cat.label.ar : cat.label.en}</span>
-                            </PrefetchLink>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-               </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-                </div>
-              ))}
-            </div>
-
-            {/* Actions */}
-            <div className="flex items-center gap-2 shrink-0">
-              {/* Desktop Search */}
-              <div className="hidden md:flex items-center gap-4 relative">
-                <div className="relative group">
-                   <input 
-                    type="text" 
-                    value={query || ''}
-                    onChange={(e) => setQuery(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                    placeholder={isListening ? (lang === 'ar' ? 'تحدث الآن...' : 'Listening...') : (lang === 'ar' ? 'بحث...' : 'Search...')}
-                    className="bg-zinc-900 border border-white/10 rounded-full py-2 pl-10 pr-10 text-sm text-zinc-300 w-36 lg:w-48 hover:bg-zinc-800 hover:border-cyan-500/30 transition-all focus:outline-none focus:border-cyan-500/50 placeholder:text-zinc-600"
-                  />
-                  <button 
-                    type="button"
-                    onClick={handleSearch}
-                    aria-label={lang === 'ar' ? 'بحث' : 'Search'}
-                    className={`absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 group-hover:text-cyan-400 transition-colors ${lang === 'ar' ? 'right-auto left-3' : 'left-3 right-auto'}`}
-                  >
-                    <Search className="w-4 h-4" />
-                  </button>
-                  <button 
-                    type="button"
-                    onClick={startListening}
-                    aria-label={lang === 'ar' ? 'بحث صوتي' : 'Voice search'}
-                    className={`absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-cyan-400 transition-colors ${isListening ? 'text-red-500 animate-pulse' : ''}`}
-                  >
-                    {isListening ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mic className="w-4 h-4" />}
-                  </button>
+                  Cinema
+                </span>
+                <span className="text-red-600 animate-pulse text-4xl mb-1 leading-[0] drop-shadow-[0_0_8px_rgba(220,38,38,0.8)]">.</span>
+                <div className="flex" dir="ltr">
+                  <span className="text-cyan-400 animate-neon-flicker-cyan drop-shadow-[0_0_10px_rgba(34,211,238,0.8)]">
+                    On
+                  </span>
+                  <span className="text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.6)]">
+                    li
+                  </span>
+                  <span className="text-cyan-400 animate-neon-flicker-cyan-alt drop-shadow-[0_0_10px_rgba(34,211,238,0.8)]">
+                    n
+                  </span>
+                  <span className="text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.6)]">
+                    e
+                  </span>
                 </div>
               </div>
+              <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-purple-500/10 to-pink-500/10 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-full" />
+            </div>
+          </PrefetchLink>
 
-              {user && continueCount > 0 && (
-                <PrefetchLink to="/" target="_self" className="relative p-1.5 rounded-full hover:bg-white/10 text-zinc-400 hover:text-cyan-400 transition-colors" title={lang === 'ar' ? 'تابع المشاهدة' : 'Continue Watching'} aria-label={lang === 'ar' ? 'تابع المشاهدة' : 'Continue Watching'}>
-                  <Clock size={20} />
-                  <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] rounded-full bg-cyan-500 text-[10px] font-black text-black flex items-center justify-center px-0.5">
-                    {continueCount > 9 ? '9+' : continueCount}
+          {/* Desktop Nav - Hidden on smaller screens to prevent overlap */}
+          <div className="hidden xl:flex items-center gap-3">
+            {/* Backdrop overlay when dropdown is open */}
+            <AnimatePresence>
+              {hoveredLink && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="fixed inset-0 z-[999]"
+                  onMouseEnter={handleBackdropInteraction}
+                  onClick={handleBackdropInteraction}
+                />
+              )}
+            </AnimatePresence>
+
+            {navLinks.map((link) => (
+              <div
+                key={link.to}
+                className="relative group h-full flex items-center z-[1000]"
+                onMouseEnter={() => handleMouseEnter(link.label)}
+                onMouseLeave={handleMouseLeave}
+                onFocusCapture={() => handleMouseEnter(link.label)}
+                onBlurCapture={(e) => {
+                  if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+                    handleMouseLeave()
+                  }
+                }}
+              >
+                <PrefetchLink
+                  to={link.to}
+                  target="_self"
+                  onClick={() => setHoveredLink(null)}
+                  className="flex flex-col items-center justify-center gap-1 px-2 py-1 text-xs font-bold text-zinc-400 hover:text-white transition-all duration-300 relative"
+                >
+                  <div className="relative p-1.5 rounded-xl hover:bg-white/5 transition-colors duration-300">
+                    <link.icon size={18} style={{ color: link.color }} className="hover:scale-110 transition-transform duration-300" />
+                  </div>
+                  <span className="uppercase tracking-wider hover:tracking-widest transition-all duration-300">
+                    {link.label}
                   </span>
                 </PrefetchLink>
-              )}
+              </div>
+            ))}
+          </div>
+
+          {/* Actions */}
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Desktop Search */}
+            <div className="hidden md:flex items-center gap-4 relative">
+              <div className="relative group">
+                <input
+                  id="navbar-search-desktop"
+                  name="search"
+                  type="text"
+                  value={query || ''}
+                  onChange={(e) => setQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                  placeholder={isListening ? (lang === 'ar' ? 'تحدث الآن...' : 'Listening...') : (lang === 'ar' ? 'بحث...' : 'Search...')}
+                  className="bg-zinc-900 border border-white/10 rounded-full py-2 pl-10 pr-10 text-sm text-zinc-300 w-36 lg:w-48 hover:bg-zinc-800 hover:border-cyan-500/30 transition-all focus:outline-none focus:border-cyan-500/50 placeholder:text-zinc-600"
+                />
+                <button
+                  type="button"
+                  onClick={handleSearch}
+                  aria-label={lang === 'ar' ? 'بحث' : 'Search'}
+                  className={`absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 group-hover:text-cyan-400 transition-colors ${lang === 'ar' ? 'right-auto left-3' : 'left-3 right-auto'}`}
+                >
+                  <Search className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={startListening}
+                  aria-label={lang === 'ar' ? 'بحث صوتي' : 'Voice search'}
+                  className={`absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-cyan-400 transition-colors ${isListening ? 'text-red-500 animate-pulse' : ''}`}
+                >
+                  {isListening ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mic className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            {user && continueCount > 0 && (
+              <PrefetchLink to="/" target="_self" className="relative p-1.5 rounded-full hover:bg-white/10 text-zinc-400 hover:text-cyan-400 transition-colors" title={lang === 'ar' ? 'تابع المشاهدة' : 'Continue Watching'} aria-label={lang === 'ar' ? 'تابع المشاهدة' : 'Continue Watching'}>
+                <Clock size={20} />
+                <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] rounded-full bg-cyan-500 text-[10px] font-black text-black flex items-center justify-center px-0.5">
+                  {continueCount > 9 ? '9+' : continueCount}
+                </span>
+              </PrefetchLink>
+            )}
 
             {user || loading ? ( // Show user icon (or skeleton) if logged in OR loading to prevent flicker
-                <PrefetchLink to={user ? "/profile" : "#"} target="_self">
-                  <div className={`w-9 h-9 rounded-full p-[1.5px] ${loading ? 'bg-white/10 animate-pulse' : 'bg-gradient-to-tr from-purple-500 to-cyan-500'}`}>
-                    <div className="w-full h-full rounded-full bg-black flex items-center justify-center overflow-hidden">
-                      {profile?.avatar_url ? (
-                        <img 
-                          src={profile.avatar_url} 
-                          alt="User" 
-                          width={36}
-                          height={36}
-                          style={{ aspectRatio: '1 / 1' }}
-                          className="w-full h-full object-cover"
-                          loading="lazy"
-                        />
-                      ) : (
-                        <User size={18} className="text-white" />
-                      )}
-                    </div>
+              <PrefetchLink to={user ? "/profile" : "#"} target="_self">
+                <div className={`w-9 h-9 rounded-full p-[1.5px] ${loading ? 'bg-white/10 animate-pulse' : 'bg-gradient-to-tr from-purple-500 to-cyan-500'}`}>
+                  <div className="w-full h-full rounded-full bg-black flex items-center justify-center overflow-hidden">
+                    {profile?.avatar_url ? (
+                      <img
+                        src={profile.avatar_url}
+                        alt="User"
+                        width={36}
+                        height={36}
+                        style={{ aspectRatio: '1 / 1' }}
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <User size={18} className="text-white" />
+                    )}
                   </div>
-                </PrefetchLink>
-              ) : (
-            <PrefetchLink to="/login" target="_self" className="hidden md:block">
-              <button className="px-4 py-2 rounded-full bg-white text-black text-xs font-black uppercase tracking-widest hover:scale-105 transition-transform border border-white/10">
-                {lang === 'ar' ? 'دخول' : 'Login'}
-              </button>
-            </PrefetchLink>
-          )}
+                </div>
+              </PrefetchLink>
+            ) : (
+              <PrefetchLink to="/login" target="_self" className="hidden md:block">
+                <button className="px-4 py-2 rounded-full bg-white text-black text-xs font-black uppercase tracking-widest hover:scale-105 transition-transform border border-white/10">
+                  {lang === 'ar' ? 'دخول' : 'Login'}
+                </button>
+              </PrefetchLink>
+            )}
 
-              {/* Mobile Search Icon */}
-              <button 
-                type="button"
-                className="xl:hidden p-0.5 text-white"
-                onClick={() => {
-                  setShowMobileSearch(!showMobileSearch);
-                  setMenuOpen(false);
-                }}
-                aria-label={showMobileSearch ? (lang === 'ar' ? 'إغلاق البحث' : 'Close search') : (lang === 'ar' ? 'فتح البحث' : 'Open search')}
-                aria-expanded={showMobileSearch}
-                aria-controls="mobile-search-panel"
-              >
-                <Search size={24} />
-              </button>
+            {/* Mobile Search Icon */}
+            <button
+              type="button"
+              className="xl:hidden p-0.5 text-white"
+              onClick={() => {
+                setShowMobileSearch(!showMobileSearch);
+                setMenuOpen(false);
+              }}
+              aria-label={showMobileSearch ? (lang === 'ar' ? 'إغلاق البحث' : 'Close search') : (lang === 'ar' ? 'فتح البحث' : 'Open search')}
+              aria-expanded={showMobileSearch}
+              aria-controls="mobile-search-panel"
+            >
+              <Search size={24} />
+            </button>
 
-              {/* Hamburger - Visible when Desktop Nav is hidden */}
-              <button 
-                type="button"
-                className="xl:hidden p-1.5 text-white"
-                onClick={() => {
-                  setMenuOpen(!menuOpen);
-                  setShowMobileSearch(false);
-                }}
-                aria-label={menuOpen ? (lang === 'ar' ? 'إغلاق القائمة' : 'Close menu') : (lang === 'ar' ? 'فتح القائمة' : 'Open menu')}
-                aria-expanded={menuOpen}
-                aria-controls="mobile-nav-panel"
-              >
-                {menuOpen ? <X size={24} /> : <Menu size={24} />}
-              </button>
-            </div>
+            {/* Hamburger - Visible when Desktop Nav is hidden */}
+            <button
+              type="button"
+              className="xl:hidden p-1.5 text-white"
+              onClick={() => {
+                setMenuOpen(!menuOpen);
+                setShowMobileSearch(false);
+              }}
+              aria-label={menuOpen ? (lang === 'ar' ? 'إغلاق القائمة' : 'Close menu') : (lang === 'ar' ? 'فتح القائمة' : 'Open menu')}
+              aria-expanded={menuOpen}
+              aria-controls="mobile-nav-panel"
+            >
+              {menuOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
+          </div>
         </div>
 
         {/* Mobile Search Overlay */}
@@ -469,31 +364,33 @@ export const QuantumNavbar = memo(() => {
               >
                 <div className="p-4">
                   <div className="relative group">
-                     <input 
-                      type="text" 
-                    value={query || ''}
-                    onChange={(e) => setQuery(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        handleSearch();
-                        setShowMobileSearch(false);
-                      }
-                    }}
-                    placeholder={lang === 'ar' ? 'بحث...' : 'Search...'}
-                    autoFocus
-                    className="w-full bg-zinc-900 border border-white/10 rounded-full py-3 pl-10 pr-10 text-base text-zinc-300 hover:bg-zinc-800 hover:border-cyan-500/30 transition-all focus:outline-none focus:border-cyan-500/50 placeholder:text-zinc-600"
-                  />
-                  <button 
-                    type="button"
-                    onClick={() => { handleSearch(); setShowMobileSearch(false); }}
-                    aria-label={lang === 'ar' ? 'تنفيذ البحث' : 'Run search'}
-                    className={`absolute top-1/2 -translate-y-1/2 text-zinc-500 hover:text-cyan-400 transition-colors ${lang === 'ar' ? 'left-4' : 'right-4'}`}
-                  >
-                    <Search size={20} />
-                  </button>
+                    <input
+                      id="navbar-search-mobile"
+                      name="search"
+                      type="text"
+                      value={query || ''}
+                      onChange={(e) => setQuery(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          handleSearch();
+                          setShowMobileSearch(false);
+                        }
+                      }}
+                      placeholder={lang === 'ar' ? 'بحث...' : 'Search...'}
+                      autoFocus
+                      className="w-full bg-zinc-900 border border-white/10 rounded-full py-3 pl-10 pr-10 text-base text-zinc-300 hover:bg-zinc-800 hover:border-cyan-500/30 transition-all focus:outline-none focus:border-cyan-500/50 placeholder:text-zinc-600"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => { handleSearch(); setShowMobileSearch(false); }}
+                      aria-label={lang === 'ar' ? 'تنفيذ البحث' : 'Run search'}
+                      className={`absolute top-1/2 -translate-y-1/2 text-zinc-500 hover:text-cyan-400 transition-colors ${lang === 'ar' ? 'left-4' : 'right-4'}`}
+                    >
+                      <Search size={20} />
+                    </button>
+                  </div>
                 </div>
-              </div>
-            </motion.div>
+              </motion.div>
             </>
           )}
         </AnimatePresence>
@@ -507,40 +404,21 @@ export const QuantumNavbar = memo(() => {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               id="mobile-nav-panel"
-              className="xl:hidden fixed inset-x-0 top-[80px] h-[calc(100vh-80px)] z-40 bg-black/95 backdrop-blur-md border-t border-white/10 overflow-y-auto overscroll-y-contain pb-32"
+              className="xl:hidden fixed inset-x-0 top-[80px] h-[calc(100vh-80px)] z-40 bg-black/95 backdrop-blur-md border-t border-white/10 overscroll-contain pb-32"
             >
               <div className="grid grid-cols-2 gap-3 p-4">
                 {navLinks.map((link, i) => (
                   <Fragment key={link.to}>
-                    <div className={`flex flex-col ${link.subLinks || link.hasMega ? 'col-span-2' : 'col-span-1'}`}>
+                    <div className="flex flex-col col-span-1">
                       <PrefetchLink
                         to={link.to}
                         target="_self"
                         onClick={() => setMenuOpen(false)}
-                        className={`
-                          flex items-center gap-3 p-3 rounded-xl hover:bg-white/10 text-zinc-400 hover:text-white transition-colors border border-white/5
-                          ${!(link.subLinks || link.hasMega) ? 'flex-col justify-center text-center h-24' : 'w-full'}
-                        `}
+                        className="flex flex-col items-center justify-center gap-3 p-3 rounded-xl hover:bg-white/10 text-zinc-400 hover:text-white transition-colors border border-white/5 h-24 text-center"
                       >
                         <link.icon size={24} style={{ color: link.color }} />
                         <span className="font-bold text-sm">{link.label}</span>
                       </PrefetchLink>
-                      {link.subLinks && (
-                        <div className="flex flex-col gap-1 mt-2 pl-4 border-l-2 border-white/5 ml-2">
-                          {link.subLinks.map((sub, j) => (
-                            <PrefetchLink
-                              key={`${sub.to}-${j}`}
-                              to={sub.to}
-                              target="_self"
-                              onClick={() => setMenuOpen(false)}
-                              className="flex items-center gap-3 p-3 rounded-lg text-zinc-400 hover:text-cyan-400 hover:bg-white/5 transition-colors"
-                            >
-                              {sub.icon && <sub.icon size={18} />}
-                              <span className="font-medium text-sm">{sub.label}</span>
-                            </PrefetchLink>
-                          ))}
-                        </div>
-                      )}
                     </div>
                     {i === 0 && !user && (
                       <div className="col-span-1 flex flex-col">

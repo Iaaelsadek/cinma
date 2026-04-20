@@ -1,38 +1,75 @@
 import { memo } from 'react'
 
+// Shimmer animation keyframes are defined in global CSS
+// @keyframes shimmer {
+//   0% { transform: translateX(-100%); }
+//   100% { transform: translateX(100%); }
+// }
+
 export const SkeletonVideoCard = memo(() => {
   return (
-    <div className="relative overflow-hidden rounded-xl border border-white/5 bg-luxury-charcoal">
-      <div className="aspect-video w-full overflow-hidden rounded-b-xl bg-zinc-900">
-        <div className="h-full w-full animate-pulse bg-gradient-to-r from-zinc-800 via-zinc-700/60 to-zinc-800" />
+    <div 
+      className="relative overflow-hidden rounded-xl border border-white/5 bg-luxury-charcoal"
+      role="status"
+      aria-label="جاري التحميل"
+      aria-busy="true"
+    >
+      <div className="aspect-video w-full overflow-hidden rounded-b-xl bg-zinc-900 relative">
+        <div className="h-full w-full bg-gradient-to-r from-zinc-800 via-zinc-700/60 to-zinc-800" />
+        <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/10 to-transparent" />
       </div>
       <div className="p-3 min-h-[64px]">
-        <div className="h-4 w-2/3 animate-pulse rounded bg-zinc-800 mb-2" />
-        <div className="h-3 w-1/2 animate-pulse rounded bg-zinc-800 mb-2" />
-        <div className="h-2 w-1/4 animate-pulse rounded bg-zinc-800" />
+        <div className="h-4 w-2/3 rounded bg-zinc-800 mb-2 relative overflow-hidden">
+          <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+        </div>
+        <div className="h-3 w-1/2 rounded bg-zinc-800 mb-2 relative overflow-hidden">
+          <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+        </div>
+        <div className="h-2 w-1/4 rounded bg-zinc-800 relative overflow-hidden">
+          <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+        </div>
       </div>
+      <span className="sr-only">جاري تحميل المحتوى...</span>
     </div>
   )
 })
 
 export const SkeletonPosterCard = memo(() => {
   return (
-    <div className="relative overflow-hidden rounded-xl border border-white/5 bg-luxury-charcoal">
-      <div className="aspect-[2/3] w-full overflow-hidden rounded-b-xl bg-zinc-900">
-        <div className="h-full w-full animate-pulse bg-gradient-to-r from-zinc-800 via-zinc-700/60 to-zinc-800" />
+    <div 
+      className="relative overflow-hidden rounded-xl border border-white/5 bg-luxury-charcoal"
+      role="status"
+      aria-label="جاري التحميل"
+      aria-busy="true"
+    >
+      <div className="aspect-[2/3] w-full overflow-hidden rounded-b-xl bg-zinc-900 relative">
+        <div className="h-full w-full bg-gradient-to-r from-zinc-800 via-zinc-700/60 to-zinc-800" />
+        <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/10 to-transparent" />
       </div>
       <div className="p-3 flex flex-col justify-end min-h-[80px]">
-        <div className="h-4 w-3/4 animate-pulse rounded bg-zinc-800 mb-2" />
-        <div className="h-3 w-1/2 animate-pulse rounded bg-zinc-800 mb-2" />
-        <div className="h-2 w-1/3 animate-pulse rounded bg-zinc-800" />
+        <div className="h-4 w-3/4 rounded bg-zinc-800 mb-2 relative overflow-hidden">
+          <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+        </div>
+        <div className="h-3 w-1/2 rounded bg-zinc-800 mb-2 relative overflow-hidden">
+          <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+        </div>
+        <div className="h-2 w-1/3 rounded bg-zinc-800 relative overflow-hidden">
+          <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+        </div>
       </div>
+      <span className="sr-only">جاري تحميل المحتوى...</span>
     </div>
   )
 })
 
 export const SkeletonHero = memo(() => {
   return (
-    <div className="relative h-[85vh] w-full bg-black flex gap-0 overflow-hidden">
+    <div 
+      className="relative h-[85vh] w-full bg-black flex gap-0 overflow-hidden"
+      role="status"
+      aria-label="جاري تحميل المحتوى الرئيسي"
+      aria-busy="true"
+    >
       {[1, 2, 3, 4, 5, 6].map((i) => (
         <div 
           key={i} 
@@ -53,6 +90,7 @@ export const SkeletonHero = memo(() => {
           </div>
         </div>
       ))}
+      <span className="sr-only">جاري تحميل المحتوى الرئيسي...</span>
     </div>
   )
 })
@@ -60,10 +98,16 @@ export const SkeletonHero = memo(() => {
 export const SkeletonGrid = ({ count = 8, variant = 'video' }: { count?: number; variant?: 'video' | 'poster' }) => {
   const Item = variant === 'poster' ? SkeletonPosterCard : SkeletonVideoCard
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
+    <div 
+      className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6"
+      role="status"
+      aria-label="جاري تحميل المحتوى"
+      aria-busy="true"
+    >
       {Array.from({ length: count }).map((_, i) => (
         <Item key={i} />
       ))}
+      <span className="sr-only">جاري تحميل {count} عنصر...</span>
     </div>
   )
 }

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Download, Upload, Database, CheckCircle2, AlertTriangle } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
-import { toast } from 'sonner'
+import { toast } from '../../lib/toast-manager'
 
 const API_BASE = import.meta.env.VITE_API_BASE || import.meta.env.VITE_API_URL || 'http://localhost:3001'
 const TABLES = [
@@ -15,8 +15,8 @@ const TABLES = [
   'history',
   'watchlist',
   'continue_watching',
-  'server_provider_configs',
-  'link_checks'
+  'server_provider_configs'
+  // link_checks removed - now in CockroachDB
 ]
 
 const AdminBackupPage = () => {
@@ -162,10 +162,10 @@ const AdminBackupPage = () => {
           <select
             value={importMode}
             onChange={(e) => setImportMode(e.target.value as 'upsert' | 'replace')}
-            className="rounded-md border border-zinc-700 bg-zinc-900 px-3 h-9 text-sm"
+            className="rounded-md border border-zinc-700 bg-[#1C1B1F] px-3 h-9 text-sm text-white hover:bg-[#0F0F14] transition-colors"
           >
-            <option value="upsert">Import Mode: Upsert</option>
-            <option value="replace">Import Mode: Replace</option>
+            <option value="upsert" className="bg-[#1C1B1F] text-white">Import Mode: Upsert</option>
+            <option value="replace" className="bg-[#1C1B1F] text-white">Import Mode: Replace</option>
           </select>
           <button
             onClick={onExport}

@@ -1,9 +1,10 @@
-import { useEffect } from 'react'
+﻿import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { supabase } from '../../lib/supabase'
 import * as Switch from '@radix-ui/react-switch'
-import { toast } from 'sonner'
+import { toast } from '../../lib/toast-manager'
+
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001'
 
 type SettingsForm = {
   site_name: string
@@ -31,48 +32,42 @@ const DEFAULTS: SettingsForm = {
   tmdb_sync_interval: 24
 }
 
-const parseLegacyRow = (row: any): Partial<SettingsForm> => ({
-  site_name: row?.site_name || DEFAULTS.site_name,
-  logo_url: row?.logo_url || DEFAULTS.logo_url,
-  seo_title: row?.seo_title || DEFAULTS.seo_title,
-  seo_desc: row?.seo_desc || DEFAULTS.seo_desc,
-  seo_keywords: row?.seo_keywords || DEFAULTS.seo_keywords,
+const parseLegacyRow = (row: Record<string, unknown>): Partial<SettingsForm> => ({
+  site_name: (row?.site_name as string) || DEFAULTS.site_name,
+  logo_url: (row?.logo_url as string) || DEFAULTS.logo_url,
+  seo_title: (row?.seo_title as string) || DEFAULTS.seo_title,
+  seo_desc: (row?.seo_desc as string) || DEFAULTS.seo_desc,
+  seo_keywords: (row?.seo_keywords as string) || DEFAULTS.seo_keywords,
   embed_servers_json: JSON.stringify(row?.embed_servers || JSON.parse(DEFAULTS.embed_servers_json), null, 2),
-  tmdb_sync_enabled: row?.tmdb_sync_enabled ?? DEFAULTS.tmdb_sync_enabled,
+  tmdb_sync_enabled: (row?.tmdb_sync_enabled as boolean) ?? DEFAULTS.tmdb_sync_enabled,
   tmdb_sync_interval: Number(row?.tmdb_sync_interval ?? DEFAULTS.tmdb_sync_interval)
 })
 
 async function readSettings() {
-  const [kvRes, legacyRes] = await Promise.all([
-    supabase.from('settings').select('key,value'),
-    supabase.from('settings').select('*').eq('id', 1).maybeSingle()
-  ])
-
-  let values: Partial<SettingsForm> = {}
-
-  if (!kvRes.error && Array.isArray(kvRes.data) && kvRes.data.length > 0) {
-    const map = new Map<string, any>()
-    kvRes.data.forEach((row: any) => map.set(String(row.key), row.value))
-    values = {
-      site_name: String(map.get('site_name') ?? DEFAULTS.site_name),
-      logo_url: String(map.get('logo_url') ?? DEFAULTS.logo_url),
-      seo_title: String(map.get('seo_title') ?? DEFAULTS.seo_title),
-      seo_desc: String(map.get('seo_desc') ?? DEFAULTS.seo_desc),
-      seo_keywords: String(map.get('seo_keywords') ?? DEFAULTS.seo_keywords),
-      embed_servers_json: JSON.stringify(map.get('embed_servers') ?? JSON.parse(DEFAULTS.embed_servers_json), null, 2),
-      tmdb_sync_enabled: Boolean(map.get('tmdb_sync_enabled') ?? DEFAULTS.tmdb_sync_enabled),
-      tmdb_sync_interval: Number(map.get('tmdb_sync_interval') ?? DEFAULTS.tmdb_sync_interval)
-    }
-  } else if (!legacyRes.error && legacyRes.data) {
-    values = parseLegacyRow(legacyRes.data)
-  } else {
-    values = { ...DEFAULTS }
+  try {
+    const response = await fetch(`${API_BASE}/api/settings`)
+    if (!response.ok) throw new Error('Failed to fetch settings')
+    
+    const { settings } = await response.json()
+    
+    return {
+      site_name: settings?.site_name || DEFAULTS.site_name,
+      logo_url: settings?.logo_url || DEFAULTS.logo_url,
+      seo_title: settings?.seo_title || DEFAULTS.seo_title,
+      seo_desc: settings?.seo_desc || DEFAULTS.seo_desc,
+      seo_keywords: settings?.seo_keywords || DEFAULTS.seo_keywords,
+      embed_servers_json: JSON.stringify(
+        settings?.embed_servers ? JSON.parse(settings.embed_servers) : JSON.parse(DEFAULTS.embed_servers_json),
+        null,
+        2
+      ),
+      tmdb_sync_enabled: settings?.tmdb_sync_enabled === 'true' || settings?.tmdb_sync_enabled === true || DEFAULTS.tmdb_sync_enabled,
+      tmdb_sync_interval: Number(settings?.tmdb_sync_interval || DEFAULTS.tmdb_sync_interval)
+    } as SettingsForm
+  } catch (error) {
+    console.error('Error reading settings:', error)
+    return { ...DEFAULTS } as SettingsForm
   }
-
-  return {
-    ...DEFAULTS,
-    ...values
-  } as SettingsForm
 }
 
 async function saveSettings(values: SettingsForm) {
@@ -82,35 +77,29 @@ async function saveSettings(values: SettingsForm) {
     if (!Array.isArray(parsed)) throw new Error('embed_servers must be an array')
     embedServers = parsed
   } catch {
-    throw new Error('صيغة JSON الخاصة بخوادم التضمين غير صحيحة')
+    throw new Error('❌ صيغة JSON الخاصة بخوادم التضمين غير صحيحة')
   }
 
-  const kvRows = [
-    { key: 'site_name', value: values.site_name },
-    { key: 'logo_url', value: values.logo_url },
-    { key: 'seo_title', value: values.seo_title },
-    { key: 'seo_desc', value: values.seo_desc },
-    { key: 'seo_keywords', value: values.seo_keywords },
-    { key: 'embed_servers', value: embedServers },
-    { key: 'tmdb_sync_enabled', value: values.tmdb_sync_enabled },
-    { key: 'tmdb_sync_interval', value: Number(values.tmdb_sync_interval || 24) }
-  ]
+  const settingsData = {
+    site_name: values.site_name,
+    logo_url: values.logo_url,
+    seo_title: values.seo_title,
+    seo_desc: values.seo_desc,
+    seo_keywords: values.seo_keywords,
+    embed_servers: JSON.stringify(embedServers),
+    tmdb_sync_enabled: String(values.tmdb_sync_enabled),
+    tmdb_sync_interval: String(Number(values.tmdb_sync_interval || 24))
+  }
 
-  const kvRes = await supabase.from('settings').upsert(kvRows as any, { onConflict: 'key' })
-  if (kvRes.error) {
-    const legacyPayload = {
-      id: 1,
-      site_name: values.site_name,
-      logo_url: values.logo_url || null,
-      seo_title: values.seo_title || null,
-      seo_desc: values.seo_desc || null,
-      seo_keywords: values.seo_keywords || null,
-      embed_servers: embedServers,
-      tmdb_sync_enabled: values.tmdb_sync_enabled,
-      tmdb_sync_interval: Number(values.tmdb_sync_interval || 24)
-    }
-    const legacyRes = await supabase.from('settings').upsert(legacyPayload as any, { onConflict: 'id' })
-    if (legacyRes.error) throw legacyRes.error
+  const response = await fetch(`${API_BASE}/api/settings/bulk`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ settings: settingsData })
+  })
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Failed to save settings' }))
+    throw new Error(error.error || 'Failed to save settings')
   }
 }
 
@@ -124,8 +113,8 @@ const AdminSettingsPage = () => {
 
   const save = useMutation({
     mutationFn: saveSettings,
-    onSuccess: () => toast.success('تم حفظ الإعدادات'),
-    onError: (e: any) => toast.error(e?.message || 'فشل الحفظ')
+    onSuccess: () => toast.success('✅ تم حفظ الإعدادات'),
+    onError: (e: any) => toast.error(e?.message || '❌ فشل الحفظ')
   })
 
   return (

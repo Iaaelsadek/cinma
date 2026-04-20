@@ -81,7 +81,7 @@ export class APIValidationAuditor {
         },
         duration: Date.now() - startTime,
       };
-    } catch (error) {
+    } catch (error: any) {
       auditLogger.error('APIValidationAuditor', 'Audit failed', { error });
       throw error;
     }
@@ -155,7 +155,7 @@ export class APIValidationAuditor {
             });
           }
         }
-      } catch (error) {
+      } catch (error: any) {
         auditLogger.warn('APIValidationAuditor', `Failed to scan file: ${file}`, { error });
       }
     }
@@ -206,7 +206,7 @@ export class APIValidationAuditor {
         }
       }
 
-    } catch (error) {
+    } catch (error: any) {
       auditLogger.warn('APIValidationAuditor', 'Failed to scan dependencies', { error });
     }
 

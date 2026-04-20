@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, startTransition } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
-import { toast } from 'sonner'
+import { toast } from '../../lib/toast-manager'
 import { errorLogger } from '../../services/errorLogging'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
@@ -25,7 +25,7 @@ async function getProfiles(search: string) {
     const { data, error } = await q
     if (error) throw error
     return data as ProfileRow[]
-  } catch (err) {
+  } catch (err: any) {
     errorLogger.logError({
       message: 'Direct profiles list failed, trying proxy',
       severity: 'medium',
@@ -69,36 +69,14 @@ const AdminUsersPage = () => {
   }, [user, profile, refreshProfile])
 
   useEffect(() => {
-    if (!(user && !profile)) {
-      setProfileWaitExceeded(false)
-      return
+    if (user && !profile) {
+      const timer = setTimeout(() => setProfileWaitExceeded(true), 6000)
+      return () => {
+        clearTimeout(timer)
+        setProfileWaitExceeded(false)
+      }
     }
-    const timer = setTimeout(() => setProfileWaitExceeded(true), 6000)
-    return () => clearTimeout(timer)
   }, [user, profile])
-
-  if (authLoading || (user && !profile && !profileWaitExceeded)) {
-    return <div className="p-8 text-center text-zinc-500">جاري التحقق من الصلاحيات...</div>
-  }
-  if (user && !profile && profileWaitExceeded) {
-    return (
-      <div className="p-8 text-center text-zinc-400 space-y-3">
-        <div>تعذر تحميل صلاحيات الحساب حالياً</div>
-        <button
-          onClick={() => refreshProfile().catch(() => {})}
-          className="rounded-md border border-zinc-700 px-3 py-2 text-xs hover:bg-zinc-800"
-        >
-          إعادة المحاولة
-        </button>
-      </div>
-    )
-  }
-  if (!user) {
-    return <Navigate to="/login" replace />
-  }
-  if (profile?.role !== 'admin') {
-    return <Navigate to="/admin/dashboard" replace />
-  }
 
   const updateRole = useMutation({
     mutationFn: async (args: { id: string; role: 'user' | 'admin' | 'supervisor' }) => {
@@ -126,6 +104,7 @@ const AdminUsersPage = () => {
     },
     onError: (e: any) => toast.error(e?.message || 'فشل التحديث')
   })
+  
   const toggleBan = useMutation({
     mutationFn: async (args: { id: string; banned: boolean }) => {
       const { error } = await supabase.from('profiles').update({ banned: args.banned }).eq('id', args.id)
@@ -193,11 +172,11 @@ const AdminUsersPage = () => {
                   <select
                     value={p.role || 'user'}
                     onChange={(e) => updateRole.mutate({ id: p.id, role: e.target.value as 'user' | 'admin' | 'supervisor' })}
-                    className="rounded-md border border-zinc-700 bg-zinc-900 p-1 h-7 text-xs"
+                    className="rounded-md border border-zinc-700 bg-[#1C1B1F] p-1 h-7 text-xs text-white hover:bg-[#0F0F14] transition-colors"
                   >
-                    <option value="user">User</option>
-                    <option value="admin">Admin</option>
-                    <option value="supervisor">Supervisor</option>
+                    <option value="user" className="bg-[#1C1B1F] text-white">User</option>
+                    <option value="admin" className="bg-[#1C1B1F] text-white">Admin</option>
+                    <option value="supervisor" className="bg-[#1C1B1F] text-white">Supervisor</option>
                   </select>
                 </td>
                 <td className="px-3 py-1.5">{p.banned ? 'نعم' : 'لا'}</td>

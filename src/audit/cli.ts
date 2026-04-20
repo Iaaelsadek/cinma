@@ -44,7 +44,7 @@ async function main() {
   orchestrator.registerComponent('AnalyticsAuditor', new AnalyticsAuditor());
 
   try {
-    let report: any;
+    let report: unknown;
     
     switch (command) {
       case 'full':
@@ -54,11 +54,12 @@ async function main() {
       case 'code':
         report = await orchestrator.runComponent('CodeCleaner');
         break;
-      case 'fix':
+      case 'fix': {
         const codeCleaner = new CodeCleaner(defaultAuditConfig.excludePaths);
-        const unusedResult = await codeCleaner.removeUnusedCode();
-        const consoleResult = await codeCleaner.removeConsoleLogs();
+        await codeCleaner.removeUnusedCode();
+        await codeCleaner.removeConsoleLogs();
         break;
+      }
       case 'security':
         report = await orchestrator.runComponent('SecurityScanner');
         break;
@@ -101,9 +102,10 @@ async function main() {
       case 'analytics':
         report = await orchestrator.runComponent('AnalyticsAuditor');
         break;
-      case 'report':
-        const status = orchestrator.getStatus();
+      case 'report': {
+        orchestrator.getStatus();
         break;
+      }
       case 'status':
         break;
       default:
@@ -111,7 +113,7 @@ async function main() {
     }
 
     auditLogger.info('CLI', 'Audit completed successfully');
-  } catch (error) {
+  } catch (error: any) {
     auditLogger.error('CLI', 'Audit failed', { error });
     process.exit(1);
   }

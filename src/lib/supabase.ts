@@ -1,3 +1,22 @@
+/**
+ * 🔐 Supabase Client - Auth & User Data ONLY
+ * 
+ * ⚠️ CRITICAL RULES:
+ * 1. Supabase is ONLY for authentication and user-related data
+ * 2. ALL content queries (movies, tv_series, episodes, etc.) use CockroachDB via API
+ * 3. Use src/services/contentQueries.ts for content operations
+ * 4. Use src/services/contentAPI.ts for series/seasons/episodes operations
+ * 
+ * Allowed Supabase tables:
+ * - profiles, follows, watchlist, continue_watching, history
+ * - activity_feed, activity_likes, activity_comments, activity_reactions
+ * - challenges, user_challenges, achievements, user_achievements
+ * - playlists, playlist_items, notifications, user_rankings
+ * 
+ * FORBIDDEN Supabase tables (use CockroachDB API instead):
+ * - movies, tv_series, seasons, episodes, anime, games, software, actors
+ */
+
 import { createClient } from '@supabase/supabase-js'
 import { CONFIG } from './constants'
 import { errorLogger } from '../services/errorLogging'
@@ -29,12 +48,33 @@ function isUuid(value: string) {
   return uuidPattern.test(value)
 }
 
+/**
+ * Validate external_id input
+ * @throws Error if external_id is invalid
+ */
+function validateExternalId(external_id: string | undefined | null, fieldName = 'external_id'): void {
+  if (!external_id || typeof external_id !== 'string' || !external_id.trim()) {
+    throw new Error(`${fieldName} is required and must be a non-empty string`)
+  }
+}
+
+/**
+ * Validate content_type input
+ * @throws Error if content_type is invalid
+ */
+function validateContentType(content_type: string | undefined | null): void {
+  const validTypes = ['movie', 'tv', 'game', 'software', 'actor']
+  if (!content_type || !validTypes.includes(content_type)) {
+    throw new Error(`content_type must be one of: ${validTypes.join(', ')}`)
+  }
+}
+
 async function fetchWithTimeout(resource: RequestInfo | URL, options: FetchOptions = {}) {
   // Increased default timeout to 60s to ensure data loads even on slow connections
-  const { timeout = 60000, ...fetchOptions } = options; 
+  const { timeout = 60000, ...fetchOptions } = options;
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeout);
-  
+
   try {
     const response = await fetch(resource, {
       ...fetchOptions,
@@ -70,49 +110,6 @@ export interface Profile {
   reviews_written?: number;
 }
 
-export interface WatchParty {
-  id: string;
-  room_name: string;
-  description?: string;
-  creator_id: string;
-  content_id: number | string;
-  content_type: 'movie' | 'tv' | string;
-  is_playing: boolean;
-  current_time: number;
-  created_at: string;
-  last_updated?: string;
-}
-
-export interface PartyChatMessage {
-  id: string;
-  party_id: string;
-  user_id: string;
-  username: string;
-  avatar_url: string | null;
-  text: string;
-  created_at: string;
-}
-
-export async function sendPartyMessage(partyId: string, userId: string, username: string, avatarUrl: string | null, text: string) {
-  const { data, error } = await supabase
-    .from('watch_party_messages')
-    .insert([{ party_id: partyId, user_id: userId, username, avatar_url: avatarUrl, text }])
-  
-  if (error) throw error
-  return data
-}
-
-export async function getPartyMessages(partyId: string) {
-  const { data, error } = await supabase
-    .from('watch_party_messages')
-    .select('*')
-    .eq('party_id', partyId)
-    .order('created_at', { ascending: true })
-  
-  if (error) throw error
-  return data as PartyChatMessage[]
-}
-
 export interface Challenge {
   id: string;
   title: string;
@@ -142,7 +139,7 @@ export async function getUserChallenges(userId: string) {
     .from('user_challenges')
     .select('*, challenge:challenges(*)')
     .eq('user_id', userId)
-  
+
   if (error) throw error
   return data as UserChallenge[]
 }
@@ -152,7 +149,7 @@ export async function getAvailableChallenges() {
     .from('challenges')
     .select('*')
     .eq('is_active', true)
-  
+
   if (error) throw error
   return data as Challenge[]
 }
@@ -173,7 +170,7 @@ export async function getLeaderboard(limit = 100) {
     .select('*')
     .order('total_xp', { ascending: false })
     .limit(limit)
-  
+
   if (error) throw error
   return data as LeaderboardEntry[]
 }
@@ -184,7 +181,7 @@ export async function getProfileByUsername(username: string) {
     .select('*')
     .eq('username', username)
     .maybeSingle()
-  
+
   if (error) throw error
   return data as Profile | null
 }
@@ -199,7 +196,7 @@ export async function getProfile(userId: string) {
     .select('*')
     .eq('id', userId)
     .maybeSingle()
-  
+
   if (data && !error) {
     return data as Profile | null
   }
@@ -210,7 +207,7 @@ export async function getProfile(userId: string) {
       // Use relative path by default to leverage Vite proxy in dev, or API_BASE if set
       const apiBase = CONFIG.API_BASE || ''
       const url = apiBase ? `${apiBase}/api/profile/${encodeURIComponent(userId)}` : `/api/profile/${encodeURIComponent(userId)}`
-      
+
       // Get current session token for authentication
       const { data: { session } } = await supabase.auth.getSession()
       const token = session?.access_token
@@ -229,7 +226,7 @@ export async function getProfile(userId: string) {
           return proxyData as Profile | null
         }
       }
-    } catch (e) {
+    } catch (e: any) {
       // Only log proxy errors if we also had a direct error, to avoid noise on simple "not found"
       if (error) {
         errorLogger.logError({
@@ -240,14 +237,14 @@ export async function getProfile(userId: string) {
         })
       }
     }
-    
+
     // If direct fetch had an error and proxy failed, throw original error
     if (error) throw error
-    
+
     // If direct fetch was null (silent RLS or not found) and proxy failed/null, return null
     return null
   }
-  
+
   return null
 }
 
@@ -260,7 +257,7 @@ export async function ensureProfile(userId: string, email?: string | null) {
     .insert({ id: userId, username, role: 'user', is_public: true })
     .select('*')
     .single()
-    
+
   if (error) {
     // If profile already exists (race condition or trigger), try fetching it again
     if (error.code === '23505') {
@@ -287,7 +284,7 @@ export async function followUser(followerId: string, followingId: string) {
     .from('follows')
     .insert({ follower_id: followerId, following_id: followingId })
   if (error) throw error
-  
+
   // Add activity
   await addActivity({
     user_id: followerId,
@@ -352,9 +349,13 @@ export type Activity = {
   id: string
   user_id: string
   type: 'watch' | 'review' | 'achievement' | 'follow' | 'playlist_created'
-  content_id: string
+  content_id: string // Deprecated: Use metadata.external_id instead
   content_type: string
-  metadata?: any
+  metadata?: {
+    external_id?: string // TMDB ID for content-related activities
+    external_source?: string // Default: 'tmdb'
+    [key: string]: any
+  }
   created_at: string
   user?: Profile
   likes_count?: number
@@ -373,6 +374,15 @@ export async function getActivityFeed(userId: string, limit = 20, offset = 0) {
 }
 
 export async function addActivity(activity: Omit<Activity, 'id' | 'created_at'>) {
+  // For content-related activities ('watch', 'review'), ensure external_id is in metadata
+  if ((activity.type === 'watch' || activity.type === 'review') && activity.content_id) {
+    activity.metadata = {
+      ...activity.metadata,
+      external_id: activity.content_id,
+      external_source: activity.metadata?.external_source || 'tmdb'
+    }
+  }
+
   const { error } = await supabase
     .from('activity_feed')
     .insert(activity)
@@ -547,7 +557,7 @@ export async function uploadAvatar(file: File, userId: string) {
   if (upErr) throw upErr
   const { data: pub } = supabase.storage.from('avatars').getPublicUrl(path)
   const publicUrl = pub.publicUrl
-  
+
   const { error: updErr } = await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', userId)
   if (updErr) {
     errorLogger.logError({
@@ -571,49 +581,112 @@ export async function uploadAvatar(file: File, userId: string) {
   return publicUrl
 }
 
-export async function isInWatchlist(userId: string, contentId: number, contentType: 'movie' | 'tv') {
+export async function isInWatchlist(userId: string, externalId: string, contentType: 'movie' | 'tv') {
+  // Validate external_id
+  if (!externalId || externalId.trim() === '') {
+    throw new Error('external_id is required and cannot be empty')
+  }
+
+  // Convert to integer for database query
+  const externalIdInt = parseInt(externalId, 10)
+  if (isNaN(externalIdInt)) {
+    throw new Error('external_id must be a valid number')
+  }
+
   const { data, error } = await supabase
     .from('watchlist')
     .select('id')
     .eq('user_id', userId)
-    .eq('content_id', contentId)
+    .eq('external_id', externalIdInt)
     .eq('content_type', contentType)
     .maybeSingle()
   if (error && error.code !== 'PGRST116') throw error
   return !!data
 }
 
-export async function addToWatchlist(userId: string, contentId: number, contentType: 'movie' | 'tv') {
-  const { error } = await supabase.from('watchlist').insert({ user_id: userId, content_id: contentId, content_type: contentType })
-  if (error && !String(error.message || '').includes('duplicate')) throw error
+export async function addToWatchlist(userId: string, externalId: string, contentType: 'movie' | 'tv') {
+  // Validate inputs
+  validateExternalId(externalId, 'externalId')
+  validateContentType(contentType)
+
+  // Convert to integer
+  const externalIdInt = parseInt(externalId, 10)
+  if (isNaN(externalIdInt)) {
+    throw new Error('external_id must be a valid number')
+  }
+
+  try {
+    const { error } = await supabase.from('watchlist').insert({
+      user_id: userId,
+      external_id: externalIdInt,
+      external_source: 'tmdb',
+      content_type: contentType
+    })
+
+    // Handle duplicate entry errors gracefully (23505 = unique constraint violation)
+    if (error) {
+      if (error.code === '23505' || String(error.message || '').includes('duplicate')) {
+        // Silently ignore - item already in watchlist
+        return
+      }
+      logger.error('Failed to add to watchlist', { userId, externalId, contentType, error: error.message })
+      throw error
+    }
+  } catch (err: any) {
+    logger.error('Error in addToWatchlist', { userId, externalId, contentType, error: err })
+    throw err
+  }
 }
 
-export async function removeFromWatchlist(userId: string, contentId: number, contentType: 'movie' | 'tv') {
-  const { error } = await supabase
-    .from('watchlist')
-    .delete()
-    .eq('user_id', userId)
-    .eq('content_id', contentId)
-    .eq('content_type', contentType)
-  if (error) throw error
+export async function removeFromWatchlist(userId: string, externalId: string, contentType: 'movie' | 'tv') {
+  // Validate inputs
+  validateExternalId(externalId, 'externalId')
+  validateContentType(contentType)
+
+  // Convert to integer
+  const externalIdInt = parseInt(externalId, 10)
+  if (isNaN(externalIdInt)) {
+    throw new Error('external_id must be a valid number')
+  }
+
+  try {
+    const { error } = await supabase
+      .from('watchlist')
+      .delete()
+      .eq('user_id', userId)
+      .eq('external_id', externalIdInt)
+      .eq('content_type', contentType)
+    if (error) {
+      logger.error('Failed to remove from watchlist', { userId, externalId, contentType, error: error.message })
+      throw error
+    }
+  } catch (err: any) {
+    logger.error('Error in removeFromWatchlist', { userId, externalId, contentType, error: err })
+    throw err
+  }
 }
 
 export async function getWatchlist(userId: string) {
   const { data, error } = await supabase
     .from('watchlist')
-    .select('content_id, content_type, created_at')
+    .select('external_id, external_source, content_type, created_at')
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
   if (error) throw error
-  return data as Array<{ content_id: number; content_type: 'movie' | 'tv'; created_at: string }>
+  return data as Array<{ external_id: string; external_source: string; content_type: 'movie' | 'tv'; created_at: string }>
 }
 
-export async function getProgress(userId: string, contentId: number, contentType: 'movie' | 'tv') {
+export async function getProgress(userId: string, externalId: string, contentType: 'movie' | 'tv') {
+  // Validate external_id
+  if (!externalId || externalId.trim() === '') {
+    throw new Error('external_id is required and cannot be empty')
+  }
+
   const { data, error } = await supabase
     .from('continue_watching')
     .select('id, progress_seconds, duration_seconds, season_number, episode_number')
     .eq('user_id', userId)
-    .eq('content_id', contentId)
+    .eq('external_id', externalId)
     .eq('content_type', contentType)
     .maybeSingle()
   if (error && error.code !== 'PGRST116') throw error
@@ -622,16 +695,22 @@ export async function getProgress(userId: string, contentId: number, contentType
 
 export async function upsertProgress(args: {
   userId: string
-  contentId: number
+  externalId: string
   contentType: 'movie' | 'tv'
   season?: number | null
   episode?: number | null
   progressSeconds: number
   durationSeconds?: number
 }) {
+  // Validate external_id
+  if (!args.externalId || args.externalId.trim() === '') {
+    throw new Error('external_id is required and cannot be empty')
+  }
+
   const payload = {
     user_id: args.userId,
-    content_id: args.contentId,
+    external_id: args.externalId,
+    external_source: 'tmdb',
     content_type: args.contentType,
     season_number: args.season ?? null,
     episode_number: args.episode ?? null,
@@ -639,19 +718,20 @@ export async function upsertProgress(args: {
     duration_seconds: args.durationSeconds ?? 0,
     updated_at: new Date().toISOString()
   }
-  const { error } = await supabase.from('continue_watching').upsert(payload, { onConflict: 'user_id,content_id,content_type' })
+  const { error } = await supabase.from('continue_watching').upsert(payload, { onConflict: 'user_id,external_id,content_type' })
   if (error) throw error
 }
 
 export async function getContinueWatching(userId: string) {
   const { data, error } = await supabase
     .from('continue_watching')
-    .select('content_id, content_type, season_number, episode_number, progress_seconds, duration_seconds, updated_at')
+    .select('external_id, external_source, content_type, season_number, episode_number, progress_seconds, duration_seconds, updated_at')
     .eq('user_id', userId)
     .order('updated_at', { ascending: false })
   if (error) throw error
   return data as Array<{
-    content_id: number
+    external_id: string
+    external_source: string
     content_type: 'movie' | 'tv'
     season_number: number | null
     episode_number: number | null
@@ -663,15 +743,21 @@ export async function getContinueWatching(userId: string) {
 
 export async function addHistory(args: {
   userId: string
-  contentId: number
+  externalId: string
   contentType: 'movie' | 'tv'
   season?: number | null
   episode?: number | null
   watchedAt?: string
 }) {
+  // Validate external_id
+  if (!args.externalId || args.externalId.trim() === '') {
+    throw new Error('external_id is required and cannot be empty')
+  }
+
   const payload = {
     user_id: args.userId,
-    content_id: args.contentId,
+    external_id: args.externalId,
+    external_source: 'tmdb',
     content_type: args.contentType,
     season_number: args.season ?? null,
     episode_number: args.episode ?? null,
@@ -684,54 +770,18 @@ export async function addHistory(args: {
 export async function getHistory(userId: string) {
   const { data, error } = await supabase
     .from('history')
-    .select('content_id, content_type, season_number, episode_number, watched_at')
+    .select('external_id, external_source, content_type, season_number, episode_number, watched_at')
     .eq('user_id', userId)
     .order('watched_at', { ascending: false })
   if (error) throw error
-  return data as Array<{ content_id: number; content_type: 'movie' | 'tv'; season_number: number | null; episode_number: number | null; watched_at: string }>
-}
-
-export async function getSeriesById(id: number) {
-  const { data, error } = await supabase.from('tv_series').select('*').eq('id', id).maybeSingle()
-  if (error && error.code !== 'PGRST116') throw error
-  return data as any | null
-}
-
-export async function upsertSeries(row: any) {
-  const { error } = await supabase.from('tv_series').upsert(row, { onConflict: 'id' })
-  if (error) throw error
-}
-
-export async function getSeasons(seriesId: number) {
-  const { data, error } = await supabase.from('seasons').select('*').eq('series_id', seriesId).order('season_number', { ascending: true })
-  if (error) throw error
-  return data as any[]
-}
-
-export async function upsertSeason(row: any) {
-  const { error } = await supabase.from('seasons').upsert(row)
-  if (error) throw error
-}
-
-export async function deleteSeason(seasonId: number) {
-  const { error } = await supabase.from('seasons').delete().eq('id', seasonId)
-  if (error) throw error
-}
-
-export async function getEpisodes(seasonId: number) {
-  const { data, error } = await supabase.from('episodes').select('*').eq('season_id', seasonId).order('episode_number', { ascending: true })
-  if (error) throw error
-  return data as any[]
-}
-
-export async function upsertEpisode(row: any) {
-  const { error } = await supabase.from('episodes').upsert(row)
-  if (error) throw error
-}
-
-export async function deleteEpisode(episodeId: number) {
-  const { error } = await supabase.from('episodes').delete().eq('id', episodeId)
-  if (error) throw error
+  return data as Array<{
+    external_id: string
+    external_source: string
+    content_type: 'movie' | 'tv'
+    season_number: number | null
+    episode_number: number | null
+    watched_at: string
+  }>
 }
 
 export type CommentRow = {
@@ -743,12 +793,6 @@ export type CommentRow = {
   title?: string
   rating?: number
   created_at: string
-}
-
-export interface WatchPartyParticipant {
-  party_id: string
-  user_id: string
-  joined_at: string
 }
 
 export interface Achievement {
@@ -766,50 +810,6 @@ export interface UserAchievement {
   achievement_id: string
   earned_at: string
   achievement?: Achievement
-}
-
-export async function createWatchParty(party: Omit<WatchParty, 'id' | 'created_at' | 'last_updated'>) {
-  const { data, error } = await supabase
-    .from('watch_parties')
-    .insert(party)
-    .select()
-    .single()
-  if (error) throw error
-  return data as WatchParty
-}
-
-export async function getWatchParty(partyId: string) {
-  const { data, error } = await supabase
-    .from('watch_parties')
-    .select('*')
-    .eq('id', partyId)
-    .maybeSingle()
-  if (error) throw error
-  return data as WatchParty | null
-}
-
-export async function updateWatchParty(partyId: string, updates: Partial<WatchParty>) {
-  const { error } = await supabase
-    .from('watch_parties')
-    .update({ ...updates, last_updated: new Date().toISOString() })
-    .eq('id', partyId)
-  if (error) throw error
-}
-
-export async function joinWatchParty(partyId: string, userId: string) {
-  const { error } = await supabase
-    .from('watch_party_participants')
-    .upsert({ party_id: partyId, user_id: userId })
-  if (error) throw error
-}
-
-export async function leaveWatchParty(party_id: string, user_id: string) {
-  const { error } = await supabase
-    .from('watch_party_participants')
-    .delete()
-    .eq('party_id', party_id)
-    .eq('user_id', user_id)
-  if (error) throw error
 }
 
 // Achievements Functions
@@ -836,7 +836,7 @@ export async function grantAchievement(userId: string, achievementId: string) {
   const { error } = await supabase
     .from('user_achievements')
     .insert({ user_id: userId, achievement_id: achievementId })
-  
+
   if (error) throw error
 
   // Add activity
@@ -922,10 +922,20 @@ export async function createPlaylist(args: {
   return data as Playlist;
 }
 
-export async function addPlaylistItem(playlistId: string, contentId: number, contentType: 'movie' | 'tv') {
+export async function addPlaylistItem(playlistId: string, externalId: string, contentType: 'movie' | 'tv', externalSource: string = 'tmdb') {
+  // Validate external_id
+  if (!externalId || externalId.trim() === '') {
+    throw new Error('external_id cannot be null or empty');
+  }
+
   const { error } = await supabase
     .from('playlist_items')
-    .upsert({ playlist_id: playlistId, content_id: contentId, content_type: contentType });
+    .upsert({
+      playlist_id: playlistId,
+      external_id: externalId,
+      content_type: contentType,
+      external_source: externalSource
+    });
   if (error) throw error;
 }
 
@@ -998,50 +1008,6 @@ export async function createNotification(args: {
   return data as Notification
 }
 
-export async function getParticipants(partyId: string) {
-  const { data, error } = await supabase
-    .from('watch_party_participants')
-    .select('user_id, joined_at, profiles:user_id(username, avatar_url)')
-    .eq('party_id', partyId)
-
-  if (!error && data) {
-    return data.map(p => ({
-      user_id: p.user_id,
-      joined_at: p.joined_at,
-      username: (p.profiles as any)?.username || `User ${p.user_id.slice(0, 4)}`,
-      avatar_url: (p.profiles as any)?.avatar_url || null
-    }))
-  }
-
-  const { data: rawParticipants, error: rawError } = await supabase
-    .from('watch_party_participants')
-    .select('user_id, joined_at')
-    .eq('party_id', partyId)
-
-  if (rawError) throw rawError
-
-  const participants = rawParticipants || []
-  if (participants.length === 0) return []
-
-  // Batch fetch profiles to avoid N+1
-  const userIds = [...new Set(participants.map((p) => p.user_id))]
-  const { data: profiles } = await supabase
-    .from('profiles')
-    .select('id, username, avatar_url')
-    .in('id', userIds)
-  const profileMap = new Map((profiles || []).map((p) => [p.id, p]))
-
-  return participants.map((p) => {
-    const profile = profileMap.get(p.user_id)
-    return {
-      user_id: p.user_id,
-      joined_at: p.joined_at,
-      username: profile?.username || `User ${p.user_id.slice(0, 4)}`,
-      avatar_url: profile?.avatar_url || null
-    }
-  })
-}
-
 export async function getComments(contentId: number | string, contentType: string) {
   const { data, error } = await supabase
     .from('comments')
@@ -1069,7 +1035,7 @@ export async function addComment(args: {
     title: args.title,
     rating: args.rating
   }).select().single()
-  
+
   if (error) throw error
 
   // Add activity
@@ -1094,10 +1060,10 @@ export async function getAverageRating(contentId: number | string, contentType: 
     .eq('content_id', contentId)
     .eq('content_type', contentType)
     .not('rating', 'is', null)
-  
+
   if (error) throw error
   if (!data || data.length === 0) return 0
-  
+
   const sum = data.reduce((acc, curr) => acc + (curr.rating || 0), 0)
   return parseFloat((sum / data.length).toFixed(1))
 }
@@ -1129,19 +1095,19 @@ export async function incrementClicks(table: 'movies' | 'games' | 'software', id
 // ------------------------------------------------------------------
 
 export type UserPreferenceData = {
-  history: Array<{ content_id: number; content_type: 'movie' | 'tv' }>
-  watchlist: Array<{ content_id: number; content_type: 'movie' | 'tv' }>
+  history: Array<{ external_id: string; content_type: 'movie' | 'tv' }>
+  watchlist: Array<{ external_id: string; content_type: 'movie' | 'tv' }>
 }
 
 export async function getUserPreferences(userId: string): Promise<UserPreferenceData> {
   // Fetch history (limit to last 50 items to keep it relevant)
   const { data: history, error: historyError } = await supabase
     .from('history')
-    .select('content_id, content_type')
+    .select('external_id, content_type')
     .eq('user_id', userId)
     .order('watched_at', { ascending: false })
     .limit(50)
-  
+
   if (historyError) {
     errorLogger.logError({
       message: 'Failed to fetch user history for recommendations',
@@ -1154,9 +1120,9 @@ export async function getUserPreferences(userId: string): Promise<UserPreference
   // Fetch watchlist
   const { data: watchlist, error: watchlistError } = await supabase
     .from('watchlist')
-    .select('content_id, content_type')
+    .select('external_id, content_type')
     .eq('user_id', userId)
-  
+
   if (watchlistError) {
     errorLogger.logError({
       message: 'Failed to fetch user watchlist for recommendations',
@@ -1166,9 +1132,13 @@ export async function getUserPreferences(userId: string): Promise<UserPreference
     })
   }
 
+  // Filter out entries with null external_id (for safety during migration)
+  const filteredHistory = (history || []).filter(item => item.external_id != null)
+  const filteredWatchlist = (watchlist || []).filter(item => item.external_id != null)
+
   return {
-    history: (history || []) as any[],
-    watchlist: (watchlist || []) as any[]
+    history: filteredHistory as any[],
+    watchlist: filteredWatchlist as any[]
   }
 }
 
@@ -1274,21 +1244,43 @@ export async function getPublicUserLists(userId: string) {
   return data
 }
 
-export async function addItemToList(listId: string, contentId: number, contentType: 'movie' | 'tv') {
+export async function addItemToList(listId: string, externalId: string, contentType: 'movie' | 'tv', externalSource: string = 'tmdb') {
+  // Validate external_id
+  if (!externalId || externalId.trim() === '') {
+    throw new Error('external_id cannot be null or empty');
+  }
+
   const { error } = await supabase
     .from('user_list_items')
-    .insert({ list_id: listId, content_id: contentId, content_type: contentType })
+    .insert({
+      list_id: listId,
+      external_id: externalId,
+      content_type: contentType,
+      external_source: externalSource
+    })
   if (error) throw error
 }
 
-export async function removeItemFromList(listId: string, contentId: number, contentType: 'movie' | 'tv') {
-  const { error } = await supabase
-    .from('user_list_items')
-    .delete()
-    .eq('list_id', listId)
-    .eq('content_id', contentId)
-    .eq('content_type', contentType)
-  if (error) throw error
+export async function removeItemFromList(listId: string, externalId: string, contentType: 'movie' | 'tv') {
+  // Validate inputs
+  validateExternalId(externalId, 'externalId')
+  validateContentType(contentType)
+
+  try {
+    const { error } = await supabase
+      .from('user_list_items')
+      .delete()
+      .eq('list_id', listId)
+      .eq('external_id', externalId)
+      .eq('content_type', contentType)
+    if (error) {
+      logger.error('Failed to remove item from list', { listId, externalId, contentType, error: error.message })
+      throw error
+    }
+  } catch (err: any) {
+    logger.error('Error in removeItemFromList', { listId, externalId, contentType, error: err })
+    throw err
+  }
 }
 
 export async function getListItems(listId: string) {
@@ -1306,4 +1298,647 @@ export async function deleteUserList(listId: string) {
     .delete()
     .eq('id', listId)
   if (error) throw error
+}
+
+
+// ============================================================================
+// RATINGS AND REVIEWS SYSTEM
+// ============================================================================
+
+/**
+ * Rating and Review Types
+ */
+export type Rating = {
+  id: string
+  user_id: string
+  external_id: string
+  external_source: string
+  content_type: 'movie' | 'tv' | 'game' | 'software'
+  rating_value: number
+  created_at: string
+  updated_at: string
+}
+
+export type Review = {
+  id: string
+  user_id: string
+  external_id: string
+  external_source: string
+  content_type: 'movie' | 'tv' | 'game' | 'software'
+  title: string | null
+  review_text: string
+  rating: number | null
+  language: 'ar' | 'en'
+  contains_spoilers: boolean
+  is_hidden: boolean
+  is_verified: boolean
+  edit_count: number
+  created_at: string
+  updated_at: string
+  user?: Profile
+  helpful_count?: number
+  is_liked?: boolean
+  view_count?: number
+  helpful_percentage?: number
+}
+
+export type ReviewDraft = {
+  id: string
+  user_id: string
+  external_id: string
+  external_source: string
+  content_type: 'movie' | 'tv' | 'game' | 'software'
+  title: string | null
+  review_text: string | null
+  rating: number | null
+  language: 'ar' | 'en' | null
+  contains_spoilers: boolean
+  updated_at: string
+}
+
+/**
+ * Rating Functions
+ */
+
+export async function submitRating(
+  userId: string,
+  externalId: string,
+  contentType: 'movie' | 'tv' | 'game' | 'software',
+  ratingValue: number
+): Promise<void> {
+  validateExternalId(externalId, 'externalId')
+  validateContentType(contentType)
+
+  if (!Number.isInteger(ratingValue) || ratingValue < 1 || ratingValue > 10) {
+    throw new Error('Rating must be an integer between 1 and 10')
+  }
+
+  const { error } = await supabase
+    .from('ratings')
+    .upsert({
+      user_id: userId,
+      external_id: externalId,
+      external_source: 'tmdb',
+      content_type: contentType,
+      rating_value: ratingValue,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'user_id,external_id,content_type' })
+
+  if (error) {
+    logger.error('Failed to submit rating', { userId, externalId, contentType, ratingValue, error: error.message })
+    throw error
+  }
+}
+
+export async function getUserRating(
+  userId: string,
+  externalId: string,
+  contentType: 'movie' | 'tv' | 'game' | 'software'
+): Promise<{ rating_value: number; created_at: string } | null> {
+  validateExternalId(externalId, 'externalId')
+  validateContentType(contentType)
+
+  const { data, error } = await supabase
+    .from('ratings')
+    .select('rating_value, created_at')
+    .eq('user_id', userId)
+    .eq('external_id', externalId)
+    .eq('content_type', contentType)
+    .maybeSingle()
+
+  if (error) {
+    logger.error('Failed to get user rating', { userId, externalId, contentType, error: error.message })
+    throw error
+  }
+
+  return data
+}
+
+export async function deleteRating(
+  userId: string,
+  externalId: string,
+  contentType: 'movie' | 'tv' | 'game' | 'software'
+): Promise<void> {
+  validateExternalId(externalId, 'externalId')
+  validateContentType(contentType)
+
+  const { error } = await supabase
+    .from('ratings')
+    .delete()
+    .eq('user_id', userId)
+    .eq('external_id', externalId)
+    .eq('content_type', contentType)
+
+  if (error) {
+    logger.error('Failed to delete rating', { userId, externalId, contentType, error: error.message })
+    throw error
+  }
+}
+
+/**
+ * Review Functions
+ */
+
+export async function submitReview(args: {
+  userId: string
+  externalId: string
+  contentType: 'movie' | 'tv' | 'game' | 'software'
+  reviewText: string
+  title?: string
+  rating?: number
+  language: 'ar' | 'en'
+  containsSpoilers?: boolean
+}): Promise<{ id: string }> {
+  validateExternalId(args.externalId, 'externalId')
+  validateContentType(args.contentType)
+
+  if (!args.reviewText || args.reviewText.length < 10 || args.reviewText.length > 5000) {
+    throw new Error('Review text must be between 10 and 5000 characters')
+  }
+
+  if (args.title && args.title.length > 200) {
+    throw new Error('Title must not exceed 200 characters')
+  }
+
+  if (args.rating !== undefined && args.rating !== null) {
+    if (!Number.isInteger(args.rating) || args.rating < 1 || args.rating > 10) {
+      throw new Error('Rating must be an integer between 1 and 10')
+    }
+  }
+
+  if (!['ar', 'en'].includes(args.language)) {
+    throw new Error('Language must be "ar" or "en"')
+  }
+
+  const { data, error } = await supabase
+    .from('reviews')
+    .insert({
+      user_id: args.userId,
+      external_id: args.externalId,
+      external_source: 'tmdb',
+      content_type: args.contentType,
+      title: args.title || null,
+      review_text: args.reviewText,
+      rating: args.rating || null,
+      language: args.language,
+      contains_spoilers: args.containsSpoilers || false
+    })
+    .select('id')
+    .single()
+
+  if (error) {
+    logger.error('Failed to submit review', { ...args, error: error.message })
+    throw error
+  }
+
+  return data
+}
+
+export async function updateReview(
+  reviewId: string,
+  userId: string,
+  updates: {
+    reviewText?: string
+    title?: string
+    rating?: number
+    containsSpoilers?: boolean
+  }
+): Promise<void> {
+  const updateData: any = {
+    updated_at: new Date().toISOString()
+  }
+
+  if (updates.reviewText !== undefined) {
+    if (updates.reviewText.length < 10 || updates.reviewText.length > 5000) {
+      throw new Error('Review text must be between 10 and 5000 characters')
+    }
+    updateData.review_text = updates.reviewText
+  }
+
+  if (updates.title !== undefined) {
+    if (updates.title && updates.title.length > 200) {
+      throw new Error('Title must not exceed 200 characters')
+    }
+    updateData.title = updates.title || null
+  }
+
+  if (updates.rating !== undefined && updates.rating !== null) {
+    if (!Number.isInteger(updates.rating) || updates.rating < 1 || updates.rating > 10) {
+      throw new Error('Rating must be an integer between 1 and 10')
+    }
+    updateData.rating = updates.rating
+  }
+
+  if (updates.containsSpoilers !== undefined) {
+    updateData.contains_spoilers = updates.containsSpoilers
+  }
+
+  const { error } = await supabase
+    .from('reviews')
+    .update(updateData)
+    .eq('id', reviewId)
+    .eq('user_id', userId)
+
+  if (error) {
+    logger.error('Failed to update review', { reviewId, userId, error: error.message })
+    throw error
+  }
+}
+
+export async function deleteReview(
+  reviewId: string,
+  userId: string
+): Promise<void> {
+  const { error } = await supabase
+    .from('reviews')
+    .delete()
+    .eq('id', reviewId)
+    .eq('user_id', userId)
+
+  if (error) {
+    logger.error('Failed to delete review', { reviewId, userId, error: error.message })
+    throw error
+  }
+}
+
+export async function getReviews(
+  externalId: string,
+  contentType: 'movie' | 'tv' | 'game' | 'software',
+  options?: {
+    sort?: 'most_helpful' | 'newest' | 'highest_rating' | 'lowest_rating'
+    language?: 'ar' | 'en' | 'all'
+    ratingFilter?: 'all' | 'positive' | 'mixed' | 'negative'
+    limit?: number
+    offset?: number
+  }
+): Promise<Array<Review>> {
+  validateExternalId(externalId, 'externalId')
+  validateContentType(contentType)
+
+  const limit = Math.min(options?.limit || 20, 100)
+  const offset = options?.offset || 0
+
+  let query = supabase
+    .from('reviews')
+    .select('*, user:profiles(id, username, avatar_url, role)')
+    .eq('external_id', externalId)
+    .eq('content_type', contentType)
+    .eq('is_hidden', false)
+
+  if (options?.language && options.language !== 'all') {
+    query = query.eq('language', options.language)
+  }
+
+  if (options?.ratingFilter === 'positive') {
+    query = query.gte('rating', 7)
+  } else if (options?.ratingFilter === 'mixed') {
+    query = query.gte('rating', 4).lte('rating', 6)
+  } else if (options?.ratingFilter === 'negative') {
+    query = query.lte('rating', 3)
+  }
+
+  if (options?.sort === 'newest') {
+    query = query.order('created_at', { ascending: false })
+  } else if (options?.sort === 'highest_rating') {
+    query = query.order('rating', { ascending: false, nullsFirst: false })
+  } else if (options?.sort === 'lowest_rating') {
+    query = query.order('rating', { ascending: true, nullsFirst: false })
+  }
+
+  query = query.range(offset, offset + limit - 1)
+
+  const { data, error } = await query
+
+  if (error) {
+    logger.error('Failed to get reviews', { externalId, contentType, error: error.message })
+    throw error
+  }
+
+  return data as Review[]
+}
+
+export async function getUserReview(
+  userId: string,
+  externalId: string,
+  contentType: 'movie' | 'tv' | 'game' | 'software'
+): Promise<Review | null> {
+  validateExternalId(externalId, 'externalId')
+  validateContentType(contentType)
+
+  const { data, error } = await supabase
+    .from('reviews')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('external_id', externalId)
+    .eq('content_type', contentType)
+    .maybeSingle()
+
+  if (error) {
+    logger.error('Failed to get user review', { userId, externalId, contentType, error: error.message })
+    throw error
+  }
+
+  return data
+}
+
+export async function searchReviews(
+  query: string,
+  options?: {
+    limit?: number
+    offset?: number
+  }
+): Promise<Array<Review>> {
+  const limit = Math.min(options?.limit || 20, 100)
+  const offset = options?.offset || 0
+
+  const { data, error } = await supabase
+    .from('reviews')
+    .select('*, user:profiles(id, username, avatar_url, role)')
+    .textSearch('review_text', query, { type: 'websearch' })
+    .eq('is_hidden', false)
+    .order('created_at', { ascending: false })
+    .range(offset, offset + limit - 1)
+
+  if (error) {
+    logger.error('Failed to search reviews', { query, error: error.message })
+    throw error
+  }
+
+  return data as Review[]
+}
+
+/**
+ * Review Like Functions
+ */
+
+export async function likeReview(
+  reviewId: string,
+  userId: string
+): Promise<{ liked: boolean; likeCount: number }> {
+  // Check if already liked
+  const { data: existing } = await supabase
+    .from('review_likes')
+    .select('id')
+    .eq('review_id', reviewId)
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  let liked = false
+
+  if (existing) {
+    // Unlike
+    const { error } = await supabase
+      .from('review_likes')
+      .delete()
+      .eq('id', existing.id)
+
+    if (error) throw error
+    liked = false
+  } else {
+    // Like
+    const { error } = await supabase
+      .from('review_likes')
+      .insert({ review_id: reviewId, user_id: userId })
+
+    if (error) throw error
+    liked = true
+  }
+
+  // Get updated count
+  const { count } = await supabase
+    .from('review_likes')
+    .select('*', { count: 'exact', head: true })
+    .eq('review_id', reviewId)
+
+  return { liked, likeCount: count || 0 }
+}
+
+export async function getReviewLikeStatus(
+  reviewId: string,
+  userId: string
+): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('review_likes')
+    .select('id')
+    .eq('review_id', reviewId)
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  if (error) throw error
+  return !!data
+}
+
+export async function getReviewLikeCount(
+  reviewId: string
+): Promise<number> {
+  const { count, error } = await supabase
+    .from('review_likes')
+    .select('*', { count: 'exact', head: true })
+    .eq('review_id', reviewId)
+
+  if (error) throw error
+  return count || 0
+}
+
+/**
+ * Review Report Functions
+ */
+
+export async function reportReview(
+  reviewId: string,
+  reporterUserId: string,
+  reason: string
+): Promise<void> {
+  if (!reason || reason.length < 10 || reason.length > 500) {
+    throw new Error('Reason must be between 10 and 500 characters')
+  }
+
+  const { error } = await supabase
+    .from('review_reports')
+    .insert({
+      review_id: reviewId,
+      reporter_user_id: reporterUserId,
+      reason,
+      status: 'pending'
+    })
+
+  if (error) {
+    logger.error('Failed to report review', { reviewId, reporterUserId, error: error.message })
+    throw error
+  }
+}
+
+/**
+ * Review Draft Functions
+ */
+
+export async function saveReviewDraft(args: {
+  userId: string
+  externalId: string
+  contentType: 'movie' | 'tv' | 'game' | 'software'
+  title?: string
+  reviewText?: string
+  rating?: number
+  language?: 'ar' | 'en'
+  containsSpoilers?: boolean
+}): Promise<void> {
+  validateExternalId(args.externalId, 'externalId')
+  validateContentType(args.contentType)
+
+  const { error } = await supabase
+    .from('review_drafts')
+    .upsert({
+      user_id: args.userId,
+      external_id: args.externalId,
+      external_source: 'tmdb',
+      content_type: args.contentType,
+      title: args.title || null,
+      review_text: args.reviewText || null,
+      rating: args.rating || null,
+      language: args.language || null,
+      contains_spoilers: args.containsSpoilers || false,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'user_id,external_id,content_type' })
+
+  if (error) {
+    logger.error('Failed to save review draft', { ...args, error: error.message })
+    throw error
+  }
+}
+
+export async function getReviewDraft(
+  userId: string,
+  externalId: string,
+  contentType: 'movie' | 'tv' | 'game' | 'software'
+): Promise<ReviewDraft | null> {
+  validateExternalId(externalId, 'externalId')
+  validateContentType(contentType)
+
+  const { data, error } = await supabase
+    .from('review_drafts')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('external_id', externalId)
+    .eq('content_type', contentType)
+    .maybeSingle()
+
+  if (error) {
+    logger.error('Failed to get review draft', { userId, externalId, contentType, error: error.message })
+    throw error
+  }
+
+  return data
+}
+
+export async function deleteReviewDraft(
+  userId: string,
+  externalId: string,
+  contentType: 'movie' | 'tv' | 'game' | 'software'
+): Promise<void> {
+  validateExternalId(externalId, 'externalId')
+  validateContentType(contentType)
+
+  const { error } = await supabase
+    .from('review_drafts')
+    .delete()
+    .eq('user_id', userId)
+    .eq('external_id', externalId)
+    .eq('content_type', contentType)
+
+  if (error) {
+    logger.error('Failed to delete review draft', { userId, externalId, contentType, error: error.message })
+    throw error
+  }
+}
+
+/**
+ * Review View Tracking
+ */
+
+export async function trackReviewView(
+  reviewId: string,
+  userId: string | null
+): Promise<void> {
+  const { error } = await supabase
+    .from('review_views')
+    .insert({
+      review_id: reviewId,
+      user_id: userId
+    })
+
+  if (error) {
+    logger.error('Failed to track review view', { reviewId, userId, error: error.message })
+    // Don't throw - view tracking is non-critical
+  }
+}
+
+export async function getReviewViewCount(
+  reviewId: string
+): Promise<number> {
+  const { count, error } = await supabase
+    .from('review_views')
+    .select('*', { count: 'exact', head: true })
+    .eq('review_id', reviewId)
+
+  if (error) {
+    logger.error('Failed to get review view count', { reviewId, error: error.message })
+    return 0
+  }
+
+  return count || 0
+}
+
+/**
+ * User Review Statistics
+ */
+
+export async function getUserReviewStats(
+  userId: string
+): Promise<{
+  totalReviews: number
+  totalHelpfulVotes: number
+  averageRating: number
+}> {
+  // Get total reviews
+  const { count: totalReviews } = await supabase
+    .from('reviews')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .eq('is_hidden', false)
+
+  // Get user's review IDs
+  const { data: userReviews } = await supabase
+    .from('reviews')
+    .select('id, rating')
+    .eq('user_id', userId)
+    .eq('is_hidden', false)
+
+  const reviewIds = userReviews?.map(r => r.id) || []
+
+  // Get total helpful votes
+  let totalHelpfulVotes = 0
+  if (reviewIds.length > 0) {
+    const { count } = await supabase
+      .from('review_likes')
+      .select('*', { count: 'exact', head: true })
+      .in('review_id', reviewIds)
+
+    totalHelpfulVotes = count || 0
+  }
+
+  // Calculate average rating
+  let averageRating = 0
+  if (userReviews && userReviews.length > 0) {
+    const ratingsWithValues = userReviews.filter(r => r.rating !== null)
+    if (ratingsWithValues.length > 0) {
+      const sum = ratingsWithValues.reduce((acc, r) => acc + (r.rating || 0), 0)
+      averageRating = Math.round((sum / ratingsWithValues.length) * 10) / 10
+    }
+  }
+
+  return {
+    totalReviews: totalReviews || 0,
+    totalHelpfulVotes,
+    averageRating
+  }
 }

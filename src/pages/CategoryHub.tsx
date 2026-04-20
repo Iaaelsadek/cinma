@@ -4,10 +4,11 @@ import { SeoHead } from '../components/common/SeoHead'
 import { motion } from 'framer-motion'
 import { Breadcrumbs } from '../components/common/Breadcrumbs'
 import { MovieCard } from '../components/features/media/MovieCard'
-import { tmdb, fetchGenres } from '../lib/tmdb'
+import { fetchGenresFromAPI } from '../lib/dataHelpers'
 import { errorLogger } from '../services/errorLogging'
 import { ChevronDown, Filter, Star, Clock, TrendingUp, SearchX } from 'lucide-react'
 import { SectionHeader } from '../components/common/SectionHeader'
+import axios from 'axios'
 
 // Mappings
 const CATEGORY_MAP: Record<string, any> = {
@@ -58,7 +59,7 @@ export const CategoryHub = ({ type: propsType = 'movie', category: propsCategory
 
   // Fetch Genres on mount
   useEffect(() => {
-    fetchGenres(type).then(setGenresList)
+    fetchGenresFromAPI(type).then(setGenresList)
   }, [type])
 
   // Build params based on URL and filters
@@ -96,8 +97,8 @@ export const CategoryHub = ({ type: propsType = 'movie', category: propsCategory
     // Apply Genre Filter (from URL genre param OR category when category looks like a genre)
     const resolveGenreId = (slug: string) => {
       if (!genresList.length) return null
-      return genresList.find(g => 
-        g.name.toLowerCase() === slug.toLowerCase() || 
+      return genresList.find(g =>
+        g.name.toLowerCase() === slug.toLowerCase() ||
         g.id.toString() === slug
       )
     }
@@ -133,12 +134,24 @@ export const CategoryHub = ({ type: propsType = 'movie', category: propsCategory
 
     const fetchFeatured = async () => {
       try {
-        const params = buildParams(1, 'vote_average.desc')
-        params['vote_count.gte'] = 300
-        const endpoint = `/discover/${type}`
-        const { data } = await tmdb.get(endpoint, { params })
+        // CRITICAL: Use CockroachDB API instead of TMDB discover
+        const endpoint = type === 'movie' ? '/api/movies' : '/api/tv'
+        const params: any = {
+          sort: 'vote_average',
+          ratingFrom: 8,
+          limit: 5
+        }
+
+        // Apply category filters
+        if (category && CATEGORY_MAP[category]) {
+          const catParams = CATEGORY_MAP[category]
+          if (catParams.with_original_language) params.language = catParams.with_original_language
+          if (catParams.with_genres) params.genres = catParams.with_genres
+        }
+
+        const { data } = await axios.get(endpoint, { params })
         setFeaturedContent((data.results || []).slice(0, 5).map((item: any) => ({ ...item, media_type: type })))
-      } catch (err) {
+      } catch (err: any) {
         errorLogger.logError({
           message: 'Error fetching featured content',
           severity: 'low',
@@ -157,16 +170,47 @@ export const CategoryHub = ({ type: propsType = 'movie', category: propsCategory
 
     setLoading(true)
     const fetchContent = async () => {
-      let params: Record<string, any> = {}
       try {
-        let sort = 'primary_release_date.desc'
-        if (type === 'tv') sort = 'first_air_date.desc'
-        if (activeTab === 'top_rated') sort = 'vote_average.desc'
-        if (activeTab === 'trending') sort = 'popularity.desc'
+        // CRITICAL: Use CockroachDB API instead of TMDB discover
+        const endpoint = type === 'movie' ? '/api/movies' : '/api/tv'
+        const params: any = {
+          page: 1,
+          limit: 100
+        }
 
-        params = buildParams(1, sort)
-        const endpoint = `/discover/${type}`
-        const { data } = await tmdb.get(endpoint, { params })
+        // Apply sorting based on activeTab
+        if (activeTab === 'top_rated') {
+          params.sort = 'vote_average'
+          params.ratingFrom = 7
+        } else if (activeTab === 'trending' || activeTab === 'popular') {
+          params.sort = 'popularity'
+        } else {
+          params.sort = type === 'movie' ? 'release_date' : 'first_air_date'
+        }
+
+        // Apply category filters
+        if (category && CATEGORY_MAP[category]) {
+          const catParams = CATEGORY_MAP[category]
+          if (catParams.with_original_language) params.language = catParams.with_original_language
+          if (catParams.with_genres) params.genres = catParams.with_genres
+        }
+
+        // Apply year filter
+        if (year) params.year = year
+
+        // Apply genre filter
+        if (genre) {
+          const g = genresList.find(x =>
+            x.name.toLowerCase() === genre.toLowerCase() ||
+            x.id.toString() === genre
+          )
+          if (g) params.genres = g.id
+        }
+
+        // Apply rating filter
+        if (rating) params.ratingFrom = Number(rating)
+
+        const { data } = await axios.get(endpoint, { params })
 
         setContent((data.results || []).map((item: any) => ({
           ...item,
@@ -174,12 +218,12 @@ export const CategoryHub = ({ type: propsType = 'movie', category: propsCategory
         })))
         setTotalPages(data.total_pages ?? 1)
         setPage(1)
-      } catch (err) {
+      } catch (err: any) {
         errorLogger.logError({
           message: 'Error fetching content',
           severity: 'medium',
           category: 'network',
-          context: { error: err, type, params }
+          context: { error: err, type }
         });
         setContent([])
       } finally {
@@ -188,24 +232,56 @@ export const CategoryHub = ({ type: propsType = 'movie', category: propsCategory
     }
 
     fetchContent()
-  }, [category, year, genre, type, activeTab, genresList, needsGenresForQuery])
+  }, [category, year, genre, type, activeTab, genresList, needsGenresForQuery, rating])
 
   // Load More
   const loadMore = async () => {
     const nextPage = page + 1
     try {
-      let sort = 'primary_release_date.desc'
-      if (type === 'tv') sort = 'first_air_date.desc'
-      if (activeTab === 'top_rated') sort = 'vote_average.desc'
-      if (activeTab === 'trending') sort = 'popularity.desc'
+      // CRITICAL: Use CockroachDB API instead of TMDB discover
+      const endpoint = type === 'movie' ? '/api/movies' : '/api/tv'
+      const params: any = {
+        page: nextPage,
+        limit: 100
+      }
 
-      const params = buildParams(nextPage, sort)
-      const endpoint = `/discover/${type}`
-      const { data } = await tmdb.get(endpoint, { params })
-      
-      setContent(prev => [...prev, ...data.results.map((item: any) => ({ ...item, media_type: type }))])
+      // Apply sorting based on activeTab
+      if (activeTab === 'top_rated') {
+        params.sort = 'vote_average'
+        params.ratingFrom = 7
+      } else if (activeTab === 'trending' || activeTab === 'popular') {
+        params.sort = 'popularity'
+      } else {
+        params.sort = type === 'movie' ? 'release_date' : 'first_air_date'
+      }
+
+      // Apply category filters
+      if (category && CATEGORY_MAP[category]) {
+        const catParams = CATEGORY_MAP[category]
+        if (catParams.with_original_language) params.language = catParams.with_original_language
+        if (catParams.with_genres) params.genres = catParams.with_genres
+      }
+
+      // Apply year filter
+      if (year) params.year = year
+
+      // Apply genre filter
+      if (genre) {
+        const g = genresList.find(x =>
+          x.name.toLowerCase() === genre.toLowerCase() ||
+          x.id.toString() === genre
+        )
+        if (g) params.genres = g.id
+      }
+
+      // Apply rating filter
+      if (rating) params.ratingFrom = Number(rating)
+
+      const { data } = await axios.get(endpoint, { params })
+
+      setContent(data.results.map((item: any) => ({ ...item, media_type: type })))
       setPage(nextPage)
-    } catch (err) {
+    } catch (err: any) {
       errorLogger.logError({
         message: 'Error loading more content',
         severity: 'low',
@@ -250,126 +326,121 @@ export const CategoryHub = ({ type: propsType = 'movie', category: propsCategory
 
   return (
     <div className="min-h-screen pt-16 max-w-[2400px] mx-auto px-4 md:px-12 w-full pb-8">
-              <SeoHead
-                title={`${hubTitle} | سينما أونلاين`}
-                description={hubDesc}
-              />
+      <SeoHead
+        title={`${hubTitle} | سينما أونلاين`}
+        description={hubDesc}
+      />
 
-              <Breadcrumbs />
+      <Breadcrumbs />
 
-              {/* Header Section */}
-              <div className="mb-6 relative">
-                <h1 className="text-2xl md:text-4xl font-black mb-2 text-transparent bg-clip-text bg-gradient-to-r from-white to-zinc-500 font-cairo">
-                  {type === 'movie' ? 'أفلام' : 'مسلسلات'}
-                  {category && <span className="text-primary"> : {categoryTitle}</span>}
-                </h1>
-                
-                {/* Sub-Category Hub (The Forum Logic) */}
-                <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                  
-                  {/* Year Filter Block */}
-                  <div className="glass-panel p-3 rounded-xl border border-white/5 bg-black/20 backdrop-blur-md">
-                    <div className="flex items-center gap-2 mb-2 text-primary font-bold">
-                      <Filter size={16} />
-                      <h3>السنة</h3>
-                    </div>
-                    <div className="flex flex-wrap gap-1 max-h-[80px] overflow-y-auto custom-scrollbar">
-                      {YEARS.map(y => (
-                        <button
-                          key={y}
-                          onClick={() => handleYearChange(y)}
-                          className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${
-                            Number(year) === y 
-                              ? 'bg-primary text-white shadow-lg scale-105' 
-                              : 'bg-white/5 text-zinc-400 hover:bg-white/10'
-                          }`}
-                        >
-                          {y}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+      {/* Header Section */}
+      <div className="mb-6 relative">
+        <h1 className="text-2xl md:text-4xl font-black mb-2 text-transparent bg-clip-text bg-gradient-to-r from-white to-zinc-500 font-cairo">
+          {type === 'movie' ? 'أفلام' : 'مسلسلات'}
+          {category && <span className="text-primary"> : {categoryTitle}</span>}
+        </h1>
 
-                  {/* Genre Filter Block */}
-                  <div className="glass-panel p-3 rounded-xl border border-white/5 bg-black/20 backdrop-blur-md">
-                    <div className="flex items-center gap-2 mb-2 text-secondary font-bold">
-                      <ChevronDown size={16} />
-                      <h3>التصنيف</h3>
-                    </div>
-                    <div className="flex flex-wrap gap-1 max-h-[80px] overflow-y-auto custom-scrollbar">
-                      {genresList.map(g => (
-                        <button
-                          key={g.id}
-                          onClick={() => handleGenreChange(g.name)}
-                          className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${
-                            genre?.toLowerCase() === g.name.toLowerCase()
-                              ? 'bg-secondary text-white shadow-lg'
-                              : 'bg-white/5 text-zinc-400 hover:bg-white/10'
-                          }`}
-                        >
-                          {g.name}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
+        {/* Sub-Category Hub (The Forum Logic) */}
+        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
 
-              {/* Featured Section (Silo Content Deepening) */}
-              {!year && !genre && featuredContent.length > 0 && (
-                <section className="mb-4">
-                  <SectionHeader 
-                    title={`الأفضل في ${categoryTitle}`} 
-                    icon={<Star className="fill-current" />} 
-                    color="gold"
-                  />
-                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
-                    {featuredContent.map((item, i) => (
-                      <MovieCard key={`featured-${item.id}`} movie={item} index={i} />
-                    ))}
-                  </div>
-                </section>
-              )}
-
-              {/* Tabs */}
-              <div className="flex items-center gap-4 mb-3 border-b border-white/10 pb-1 overflow-x-auto">
+          {/* Year Filter Block */}
+          <div className="glass-panel p-3 rounded-xl border border-white/5 bg-black/20 backdrop-blur-md">
+            <div className="flex items-center gap-2 mb-2 text-primary font-bold">
+              <Filter size={16} />
+              <h3>السنة</h3>
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {YEARS.map(y => (
                 <button
-                  onClick={() => setActiveTab('latest')}
-                  className={`text-sm font-bold pb-2 -mb-2 border-b-2 transition-colors whitespace-nowrap flex items-center gap-2 ${
-                    activeTab === 'latest' ? 'border-primary text-white' : 'border-transparent text-zinc-500 hover:text-zinc-300'
-                  }`}
+                  key={y}
+                  onClick={() => handleYearChange(y)}
+                  className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${Number(year) === y
+                    ? 'bg-primary text-white shadow-lg scale-105'
+                    : 'bg-white/5 text-zinc-400 hover:bg-white/10'
+                    }`}
                 >
-                  <Clock size={14} />
-                  أضيف حديثاً
+                  {y}
                 </button>
-                <button
-                  onClick={() => setActiveTab('top_rated')}
-                  className={`text-sm font-bold pb-2 -mb-2 border-b-2 transition-colors whitespace-nowrap flex items-center gap-2 ${
-                    activeTab === 'top_rated' ? 'border-primary text-white' : 'border-transparent text-zinc-500 hover:text-zinc-300'
-                  }`}
-                >
-                  <Star size={14} />
-                  الأعلى تقييماً
-                </button>
-                <button
-                  onClick={() => setActiveTab('trending')}
-                  className={`text-sm font-bold pb-2 -mb-2 border-b-2 transition-colors whitespace-nowrap flex items-center gap-2 ${
-                    activeTab === 'trending' ? 'border-primary text-white' : 'border-transparent text-zinc-500 hover:text-zinc-300'
-                  }`}
-                >
-                  <TrendingUp size={14} />
-                  الأكثر شهرة
-                </button>
-              </div>
+              ))}
+            </div>
+          </div>
 
-              {/* Grid */}
-              {loading ? (
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
-                  {Array.from({ length: 10 }).map((_, i) => (
-                    <div key={i} className="aspect-[2/3] bg-white/5 rounded-xl animate-pulse" />
-                  ))}
-                </div>
-              ) : content.length === 0 ? (
+          {/* Genre Filter Block */}
+          <div className="glass-panel p-3 rounded-xl border border-white/5 bg-black/20 backdrop-blur-md">
+            <div className="flex items-center gap-2 mb-2 text-secondary font-bold">
+              <ChevronDown size={16} />
+              <h3>التصنيف</h3>
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {genresList.map(g => (
+                <button
+                  key={g.id}
+                  onClick={() => handleGenreChange(g.name)}
+                  className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${genre?.toLowerCase() === g.name.toLowerCase()
+                    ? 'bg-secondary text-white shadow-lg'
+                    : 'bg-white/5 text-zinc-400 hover:bg-white/10'
+                    }`}
+                >
+                  {g.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Featured Section (Silo Content Deepening) */}
+      {!year && !genre && featuredContent.length > 0 && (
+        <section className="mb-4">
+          <SectionHeader
+            title={`الأفضل في ${categoryTitle}`}
+            icon={<Star className="fill-current" />}
+            color="gold"
+          />
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
+            {featuredContent.map((item, i) => (
+              <MovieCard key={`featured-${item.id}`} movie={item} index={i} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Tabs */}
+      <div className="flex items-center gap-4 mb-3 border-b border-white/10 pb-1 overflow-x-auto">
+        <button
+          onClick={() => setActiveTab('latest')}
+          className={`text-sm font-bold pb-2 -mb-2 border-b-2 transition-colors whitespace-nowrap flex items-center gap-2 ${activeTab === 'latest' ? 'border-primary text-white' : 'border-transparent text-zinc-500 hover:text-zinc-300'
+            }`}
+        >
+          <Clock size={14} />
+          أضيف حديثاً
+        </button>
+        <button
+          onClick={() => setActiveTab('top_rated')}
+          className={`text-sm font-bold pb-2 -mb-2 border-b-2 transition-colors whitespace-nowrap flex items-center gap-2 ${activeTab === 'top_rated' ? 'border-primary text-white' : 'border-transparent text-zinc-500 hover:text-zinc-300'
+            }`}
+        >
+          <Star size={14} />
+          الأعلى تقييماً
+        </button>
+        <button
+          onClick={() => setActiveTab('trending')}
+          className={`text-sm font-bold pb-2 -mb-2 border-b-2 transition-colors whitespace-nowrap flex items-center gap-2 ${activeTab === 'trending' ? 'border-primary text-white' : 'border-transparent text-zinc-500 hover:text-zinc-300'
+            }`}
+        >
+          <TrendingUp size={14} />
+          الأكثر شهرة
+        </button>
+      </div>
+
+      {/* Grid */}
+      {loading ? (
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
+          {Array.from({ length: 10 }).map((_, i) => (
+            <div key={i} className="aspect-[2/3] bg-white/5 rounded-xl animate-pulse" />
+          ))}
+        </div>
+      ) : content.length === 0 ? (
         /* Empty State */
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -392,7 +463,7 @@ export const CategoryHub = ({ type: propsType = 'movie', category: propsCategory
         </motion.div>
       ) : (
         <>
-          <motion.div 
+          <motion.div
             layout
             className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6"
           >
@@ -400,15 +471,22 @@ export const CategoryHub = ({ type: propsType = 'movie', category: propsCategory
               <MovieCard key={item.id} movie={item} index={i} />
             ))}
           </motion.div>
-          
-          {/* Load More */}
-          {page < totalPages && (
-            <div className="mt-6 flex justify-center">
-              <button
-                onClick={loadMore}
-                className="px-6 py-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-white font-bold transition-all text-sm"
-              >
-                تحميل المزيد
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 mt-10 pb-8 flex-wrap">
+              <button onClick={() => { setPage(p => p - 1); window.scrollTo({ top: 0, behavior: 'smooth' }) }} disabled={page <= 1} className="px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm disabled:opacity-30 hover:bg-white/10 transition">
+                السابق
+              </button>
+              {(() => {
+                const start = Math.max(1, Math.min(page - 4, totalPages - 9))
+                const end = Math.min(totalPages, start + 9)
+                return Array.from({ length: end - start + 1 }, (_, i) => start + i).map(p => (
+                  <button key={p} onClick={() => { setPage(p); window.scrollTo({ top: 0, behavior: 'smooth' }) }} className={`w-9 h-9 rounded-lg text-sm font-bold transition ${p === page ? 'bg-primary text-black' : 'bg-white/5 border border-white/10 text-white hover:bg-white/10'}`}>{p}</button>
+                ))
+              })()}
+              <button onClick={() => { setPage(p => p + 1); window.scrollTo({ top: 0, behavior: 'smooth' }) }} disabled={page >= totalPages} className="px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm disabled:opacity-30 hover:bg-white/10 transition">
+                التالي
               </button>
             </div>
           )}

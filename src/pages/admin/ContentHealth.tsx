@@ -5,7 +5,7 @@ import {
   Trash2, ExternalLink, RefreshCw, Filter, Film, Tv,
   ChevronRight, AlertTriangle
 } from 'lucide-react'
-import { toast } from 'sonner'
+import { toast } from '../../lib/toast-manager'
 import { Link } from 'react-router-dom'
 import { logger } from '../../lib/logger'
 
@@ -31,20 +31,20 @@ export const ContentHealth = () => {
   const fetchData = async () => {
     setLoading(true)
     try {
-      // 1. Get all broken reports
-      const { data: reports, error: reportError } = await supabase
-        .from('link_checks')
-        .select('content_id, content_type, source_name, status_code, season_number, episode_number')
+      // 1. Get all broken reports from CockroachDB API instead of Supabase
+      const API_BASE = import.meta.env.VITE_API_BASE || import.meta.env.VITE_API_URL || ''
+      const linkChecksResponse = await fetch(`${API_BASE}/api/link-checks`)
+      if (!linkChecksResponse.ok) throw new Error('Failed to fetch link checks')
       
-      if (reportError) throw reportError
-
+      const reports = await linkChecksResponse.json()
+      
       // 2. Process reports into content units
       const movieUnits = new Map<number, Map<string, number>>() // tmdb_id -> Map<source_name, status_code>
       const seriesEpisodeUnits = new Map<number, Map<string, Map<string, number>>>() // series_id -> Map<season-episode, Map<source_name, status_code>>
       const seriesIds = new Set<number>()
       const movieIds = new Set<number>()
 
-      reports.forEach(r => {
+      reports.forEach((r: any) => {
         if (r.content_type === 'tv') {
           seriesIds.add(Number(r.content_id))
           const seriesId = Number(r.content_id)
@@ -71,15 +71,24 @@ export const ContentHealth = () => {
       })
 
       // 3. Get basic info for these IDs (titles, posters) and episode counts for series
-      const [moviesRes, seriesRes, episodesRes] = await Promise.all([
-        supabase.from('movies').select('id, title, poster_path').in('id', Array.from(movieIds)),
-        supabase.from('tv_series').select('id, name, poster_path').in('id', Array.from(seriesIds)),
-        supabase.from('episodes').select('series_id').in('series_id', Array.from(seriesIds))
-      ])
+      const movieIdsArray = Array.from(movieIds)
+      const seriesIdsArray = Array.from(seriesIds)
+      
+      const contentHealthResponse = await fetch(`/api/admin/content-health?movieIds=${movieIdsArray.join(',')}&seriesIds=${seriesIdsArray.join(',')}`)
+      
+      if (!contentHealthResponse.ok) {
+        throw new Error('Failed to fetch content health data')
+      }
+      
+      const { movies: moviesData, series: seriesData, episodes: episodesData } = await contentHealthResponse.json()
+      
+      const moviesRes = { data: moviesData }
+      const seriesRes = { data: seriesData }
+      const episodesRes = { data: episodesData }
 
       // Map series_id to episode count
       const episodeCounts = new Map<number, number>()
-      episodesRes.data?.forEach(e => {
+      episodesRes.data?.forEach((e: any) => {
         episodeCounts.set(e.series_id, (episodeCounts.get(e.series_id) || 0) + 1)
       })
 
@@ -99,7 +108,7 @@ export const ContentHealth = () => {
       }
 
       // Process Movies
-      moviesRes.data?.forEach(m => {
+      moviesRes.data?.forEach((m: any) => {
         const sources = movieUnits.get(m.id)
         if (sources && sources.size > 0) {
           const { isDead, broken } = getStatus(sources)
@@ -117,7 +126,7 @@ export const ContentHealth = () => {
       })
 
       // Process Series
-      seriesRes.data?.forEach(s => {
+      seriesRes.data?.forEach((s: any) => {
         const episodes = seriesEpisodeUnits.get(s.id)
         if (episodes && episodes.size > 0) {
           let totalBrokenCount = 0
@@ -146,7 +155,7 @@ export const ContentHealth = () => {
       })
 
       setContent(processed.sort((a, b) => b.broken_count - a.broken_count))
-    } catch (err) {
+    } catch (err: any) {
       logger.error(err)
       toast.error('فشل تحميل بيانات صحة المحتوى')
     } finally {
@@ -162,8 +171,14 @@ export const ContentHealth = () => {
 
   const deleteReports = async (tmdbId: number, type: 'movie' | 'tv') => {
     if (!confirm('هل أنت متأكد من مسح جميع بلاغات هذا العمل؟')) return
-    const { error } = await supabase.from('link_checks').delete().eq('content_id', tmdbId).eq('content_type', type)
-    if (!error) {
+    
+    // Delete from CockroachDB API instead of Supabase
+    const API_BASE = import.meta.env.VITE_API_BASE || import.meta.env.VITE_API_URL || ''
+    const deleteResponse = await fetch(`${API_BASE}/api/link-checks?content_id=${tmdbId}&content_type=${type}`, {
+      method: 'DELETE'
+    })
+    
+    if (deleteResponse.ok) {
       setContent(prev => prev.filter(c => !(c.tmdb_id === tmdbId && c.type === type)))
       setSelectedKeys(prev => prev.filter(key => key !== `${type}-${tmdbId}`))
       toast.success('تم مسح البلاغات وتنشيط العمل')
@@ -205,12 +220,17 @@ export const ContentHealth = () => {
 
     if (bulkAction === 'clear_reports') {
       if (!confirm(`هل تريد مسح بلاغات ${selectedItems.length} عمل؟`)) return
+      
+      // Delete from CockroachDB API instead of Supabase
+      const API_BASE = import.meta.env.VITE_API_BASE || import.meta.env.VITE_API_URL || ''
       const results = await Promise.all(
         selectedItems.map(item =>
-          supabase.from('link_checks').delete().eq('content_id', item.tmdb_id).eq('content_type', item.type)
+          fetch(`${API_BASE}/api/link-checks?content_id=${item.tmdb_id}&content_type=${item.type}`, {
+            method: 'DELETE'
+          })
         )
       )
-      const hasError = results.some(r => Boolean(r.error))
+      const hasError = results.some(r => !r.ok)
       if (hasError) {
         toast.error('حدث خطأ أثناء المسح الجماعي')
         return
@@ -358,11 +378,11 @@ export const ContentHealth = () => {
           <select
             value={bulkAction}
             onChange={(e) => setBulkAction(e.target.value as 'clear_reports' | 'open_admin' | 'open_watch')}
-            className="bg-zinc-800/70 border border-zinc-700 rounded-lg px-3 py-2 text-xs text-zinc-200"
+            className="bg-[#1C1B1F] border border-zinc-700 rounded-lg px-3 py-2 text-xs text-zinc-200 hover:bg-[#0F0F14] transition-colors"
           >
-            <option value="clear_reports">مسح البلاغات للمحدد</option>
-            <option value="open_admin">فتح الإدارة للمحدد</option>
-            <option value="open_watch">فتح المشاهدة للمحدد</option>
+            <option value="clear_reports" className="bg-[#1C1B1F] text-white">مسح البلاغات للمحدد</option>
+            <option value="open_admin" className="bg-[#1C1B1F] text-white">فتح الإدارة للمحدد</option>
+            <option value="open_watch" className="bg-[#1C1B1F] text-white">فتح المشاهدة للمحدد</option>
           </select>
           <button
             onClick={executeBulkAction}

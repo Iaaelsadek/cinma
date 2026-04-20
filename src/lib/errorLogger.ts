@@ -1,4 +1,6 @@
 // ✅ Centralized Error Logging System
+import { logger } from './logger'
+
 interface ErrorLog {
   message: string
   severity: 'low' | 'medium' | 'high' | 'critical'
@@ -33,13 +35,11 @@ class ErrorLogger {
         critical: '🔴',
       }[error.severity]
 
-      console.group(`${emoji} [${error.category.toUpperCase()}] ${error.message}`)
-      console.log('Severity:', error.severity)
-      console.log('Timestamp:', log.timestamp)
-      if (error.context) {
-        console.log('Context:', error.context)
-      }
-      console.groupEnd()
+      logger.error(`${emoji} [${error.category.toUpperCase()}] ${error.message}`, {
+        severity: error.severity,
+        timestamp: log.timestamp,
+        context: error.context
+      })
     }
 
     // Send to monitoring service in production
@@ -56,7 +56,7 @@ class ErrorLogger {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(log),
       })
-    } catch (e) {
+    } catch (e: any) {
       // Silent fail - don't break app if logging fails
       console.error('Failed to send error log:', e)
     }

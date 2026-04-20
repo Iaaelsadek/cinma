@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react'
-import {motion} from 'framer-motion'
+import { motion } from 'framer-motion'
 import { Sparkles, Plus, Loader2, ListMusic, Trash2, Share2, Globe, Lock } from 'lucide-react'
 import { useAuth } from '../../../hooks/useAuth'
 import { generateAiPlaylist } from '../../../lib/gemini'
 import { createPlaylist, addPlaylistItem, getUserPlaylists, Playlist, PlaylistItem } from '../../../lib/supabase'
 import { tmdb } from '../../../lib/tmdb'
-import { toast } from 'sonner'
+import { toast } from '../../../lib/toast-manager'
 import { clsx } from 'clsx'
 import { logger } from '../../../lib/logger'
 
@@ -22,8 +22,8 @@ export const PlaylistManager = () => {
     try {
       const data = await getUserPlaylists(user.id)
       setPlaylists(data)
-    } catch (err) {
-      logger.error('Failed to fetch playlists:', err)
+    } catch (err: any) {
+      // Silently fail
     } finally {
       setLoading(false)
     }
@@ -60,7 +60,7 @@ export const PlaylistManager = () => {
           const res = await tmdb.get('/search/multi', { params: { query: title, include_adult: false } })
           const match = res.data.results?.[0]
           if (match && (match.media_type === 'movie' || match.media_type === 'tv')) {
-            await addPlaylistItem(newPlaylist.id, match.id, match.media_type)
+            await addPlaylistItem(newPlaylist.id, match.id.toString(), match.media_type)
             return { id: match.id, content_id: match.id, content_type: match.media_type }
           }
           return null
@@ -71,7 +71,7 @@ export const PlaylistManager = () => {
       toast.success(`تم إنشاء قائمة "${result.title}" بنجاح ✨`)
       fetchPlaylists()
       setTheme('')
-    } catch (err) {
+    } catch (err: any) {
       toast.error('فشل إنشاء القائمة الذكية')
     } finally {
       setGenerating(false)
@@ -91,7 +91,7 @@ export const PlaylistManager = () => {
 
         <div className="flex items-center gap-2">
           <div className="relative group">
-            <input 
+            <input
               value={theme}
               onChange={(e) => setTheme(e.target.value)}
               placeholder="مثلاً: مغامرات الفضاء، أفلام غامضة..."
@@ -112,7 +112,7 @@ export const PlaylistManager = () => {
 
       {loading ? (
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
-          {[1,2,3,4,5,6].map(i => (
+          {[1, 2, 3, 4, 5, 6].map(i => (
             <div key={i} className="h-32 rounded-2xl bg-white/5 animate-pulse" />
           ))}
         </div>

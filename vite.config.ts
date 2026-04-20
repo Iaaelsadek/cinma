@@ -5,6 +5,15 @@ import sitemap from 'vite-plugin-sitemap'
 
 export default defineConfig({
   assetsInclude: ['**/*.glsl'],
+  define: {
+    // Polyfill Buffer for browser
+    'global': 'globalThis',
+  },
+  resolve: {
+    alias: {
+      buffer: 'buffer/',
+    },
+  },
   plugins: [
     react(),
     VitePWA({
@@ -83,7 +92,24 @@ export default defineConfig({
     strictPort: false,
     proxy: {
       '/api': {
-        target: 'http://localhost:3001',
+        target: 'http://127.0.0.1:3001',
+        changeOrigin: true,
+        secure: false,
+        ws: true,
+        configure: (proxy, _options) => {
+          proxy.on('error', (err, _req, _res) => {
+            console.log('proxy error', err);
+          });
+          proxy.on('proxyReq', (proxyReq, req, _res) => {
+            console.log('Sending Request to the Target:', req.method, req.url);
+          });
+          proxy.on('proxyRes', (proxyRes, req, _res) => {
+            console.log('Received Response from the Target:', proxyRes.statusCode, req.url);
+          });
+        },
+      },
+      '/health': {
+        target: 'http://127.0.0.1:3001',
         changeOrigin: true,
         secure: false
       }
@@ -99,30 +125,44 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (id.includes('node_modules')) {
-            if (id.match(/[\\/]node_modules[\\/](react|react-dom|react-router|react-router-dom|scheduler|@remix-run)[\\/]/)) {
+            // Core React libraries (including router to avoid circular deps)
+            if (id.match(/[\\/]node_modules[\\/](react|react-dom|scheduler|react-router|react-router-dom|@remix-run)[\\/]/)) {
               return 'vendor-react';
             }
+            
+            // Animation and UI libraries
             if (id.includes('framer-motion')) {
-              return 'vendor-framer';
+              return 'vendor-ui';
             }
+            
             if (id.includes('swiper')) {
-              return 'vendor-swiper';
+              return 'vendor-ui';
             }
+            
             if (id.includes('lucide-react')) {
-              return 'vendor-icons';
+              return 'vendor-ui';
             }
+            
+            // Media
             if (id.includes('react-player')) {
-              return 'vendor-player';
+              return 'vendor-media';
             }
+            
             if (id.includes('recharts')) {
-              return 'vendor-charts';
+              return 'vendor-media';
             }
-            if (id.includes('@supabase') || id.includes('axios')) {
+            
+            // API and networking
+            if (id.includes('@supabase') || id.includes('axios') || id.includes('ky')) {
               return 'vendor-api';
             }
-            if (id.includes('@tanstack') || id.includes('zod') || id.includes('zustand')) {
-              return 'vendor-utils';
+            
+            // State and data management
+            if (id.includes('@tanstack') || id.includes('zustand') || id.includes('zod')) {
+              return 'vendor-data';
             }
+            
+            // All other dependencies
             return 'vendor';
           }
         }

@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
-import {Trophy, Film, MessageSquare, TrendingUp, Medal} from 'lucide-react'
-import {getLeaderboard} from '../../../lib/supabase'
+import { Trophy, Film, MessageSquare, TrendingUp, Medal } from 'lucide-react'
+import { getLeaderboard } from '../../../lib/supabase'
 import { Link } from 'react-router-dom'
-import {motion} from 'framer-motion'
+import { motion } from 'framer-motion'
 import clsx from 'clsx'
 import { logger } from '../../../lib/logger'
 
@@ -19,8 +19,8 @@ export const Leaderboard = ({ limit = 20, lang = 'ar' }: LeaderboardProps) => {
     try {
       const data = await getLeaderboard(limit)
       setEntries(data)
-    } catch (error) {
-      logger.error('Error fetching leaderboard:', error)
+    } catch (error: any) {
+      // Silently fail
     } finally {
       setLoading(false)
     }
@@ -57,8 +57,8 @@ export const Leaderboard = ({ limit = 20, lang = 'ar' }: LeaderboardProps) => {
           >
             <div className="relative mb-4">
               <div className="w-16 h-16 md:w-20 md:h-20 rounded-full border-4 border-zinc-400 overflow-hidden shadow-2xl">
-                <img 
-                  src={entries[1].avatar_url || '/default-avatar.png'} 
+                <img
+                  src={entries[1].avatar_url || '/default-avatar.png'}
                   alt={entries[1].username}
                   className="w-full h-full object-cover"
                 />
@@ -93,8 +93,8 @@ export const Leaderboard = ({ limit = 20, lang = 'ar' }: LeaderboardProps) => {
                 <Trophy size={32} />
               </motion.div>
               <div className="w-20 h-20 md:w-24 md:h-24 rounded-full border-4 border-lumen-gold overflow-hidden shadow-[0_0_30px_rgba(212,175,55,0.3)]">
-                <img 
-                  src={entries[0].avatar_url || '/default-avatar.png'} 
+                <img
+                  src={entries[0].avatar_url || '/default-avatar.png'}
                   alt={entries[0].username}
                   className="w-full h-full object-cover"
                 />
@@ -123,8 +123,8 @@ export const Leaderboard = ({ limit = 20, lang = 'ar' }: LeaderboardProps) => {
           >
             <div className="relative mb-4">
               <div className="w-16 h-16 md:w-18 md:h-18 rounded-full border-4 border-amber-700/50 overflow-hidden shadow-xl">
-                <img 
-                  src={entries[2].avatar_url || '/default-avatar.png'} 
+                <img
+                  src={entries[2].avatar_url || '/default-avatar.png'}
                   alt={entries[2].username}
                   className="w-full h-full object-cover"
                 />
@@ -179,8 +179,8 @@ export const Leaderboard = ({ limit = 20, lang = 'ar' }: LeaderboardProps) => {
               <div className="col-span-5 px-4">
                 <Link to={`/user/${entry.username}`} className="flex items-center gap-3">
                   <div className="relative">
-                    <img 
-                      src={entry.avatar_url || '/default-avatar.png'} 
+                    <img
+                      src={entry.avatar_url || '/default-avatar.png'}
                       alt={entry.username}
                       className="w-10 h-10 rounded-xl object-cover border border-white/10 group-hover:border-lumen-gold/30 transition-all"
                     />

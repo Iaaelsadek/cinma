@@ -66,10 +66,24 @@ export const CategoryPage = () => {
   const kidsMovies = useQuery({
     queryKey: ['kids-movies'],
     queryFn: async () => {
-      const { data } = await tmdb.get('/discover/movie', {
-        params: { with_genres: 16, sort_by: 'popularity.desc', 'vote_count.gte': 100 }
-      })
-      return data.results.map((item: any) => ({ ...item, media_type: 'movie' }))
+      try {
+        const response = await fetch('/api/movies?sortBy=popularity&limit=20')
+        if (response.ok) {
+          const result = await response.json()
+          // Filter for animation genre (16)
+          return result.data
+            .filter((item: any) => item.genres && item.genres.some((g: any) => g.id === 16 || g.name === 'Animation'))
+            .map((item: any) => ({ 
+              ...item, 
+              media_type: 'movie',
+              poster_path: item.poster_url || item.poster_path,
+              backdrop_path: item.backdrop_url || item.backdrop_path
+            }))
+        }
+      } catch (error: any) {
+        console.error('Failed to fetch kids movies from CockroachDB:', error)
+      }
+      return []
     },
     enabled: isKids
   })
@@ -77,10 +91,25 @@ export const CategoryPage = () => {
   const kidsTv = useQuery({
     queryKey: ['kids-tv'],
     queryFn: async () => {
-      const { data } = await tmdb.get('/discover/tv', {
-        params: { with_genres: 10762, sort_by: 'popularity.desc', 'vote_count.gte': 50 }
-      })
-      return data.results.map((item: any) => ({ ...item, media_type: 'tv' }))
+      try {
+        const response = await fetch('/api/tv?sortBy=popularity&limit=20')
+        if (response.ok) {
+          const result = await response.json()
+          // Filter for kids genre (10762)
+          return result.data
+            .filter((item: any) => item.genres && item.genres.some((g: any) => g.id === 10762 || g.name === 'Kids'))
+            .map((item: any) => ({ 
+              ...item, 
+              media_type: 'tv',
+              title: item.name,
+              poster_path: item.poster_url || item.poster_path,
+              backdrop_path: item.backdrop_url || item.backdrop_path
+            }))
+        }
+      } catch (error: any) {
+        console.error('Failed to fetch kids TV from CockroachDB:', error)
+      }
+      return []
     },
     enabled: isKids
   })
@@ -88,32 +117,20 @@ export const CategoryPage = () => {
   const spacetoonQuery = useQuery({
     queryKey: ['kids-spacetoon'],
     queryFn: async () => {
-       // 1. Try Supabase
-       const { data } = await supabase
-        .from('videos')
-        .select('*')
-        .or('category.ilike.%spacetoon%,title.ilike.%spacetoon%,tags.cs.{"spacetoon"}')
-        .limit(20)
-       
-       if (data && data.length > 0) return data as any[]
-
-       // 2. Fallback to TMDB
-       const promises = SPACETOON_IDS.map(id => 
-         tmdb.get(`/tv/${id}`).then(res => ({ ...res.data, media_type: 'tv' })).catch(() => null)
-       )
-       const results = await Promise.all(promises)
-       return results.filter(Boolean) as any[]
+       // DISABLED: TMDB API calls removed
+       // Spacetoon content should be fetched from CockroachDB
+       // For now, return empty array until proper implementation
+       return []
     },
-    enabled: isKids
+    enabled: false // Disable until proper CockroachDB implementation
   })
 
   const disneyQuery = useQuery({
     queryKey: ['kids-disney'],
     queryFn: async () => {
-      const { data } = await tmdb.get('/discover/movie', {
-        params: { with_companies: 2, sort_by: 'popularity.desc' } // 2 is Disney
-      })
-      return data.results.map((item: any) => ({ ...item, media_type: 'movie' }))
+      const res = await fetch('/api/movies?keywords=disney&sort=popularity&limit=20')
+      const movies = await res.json()
+      return movies.map((item: any) => ({ ...item, media_type: 'movie' }))
     },
     enabled: isKids
   })
@@ -121,10 +138,9 @@ export const CategoryPage = () => {
   const pixarQuery = useQuery({
     queryKey: ['kids-pixar'],
     queryFn: async () => {
-      const { data } = await tmdb.get('/discover/movie', {
-        params: { with_companies: 3, sort_by: 'popularity.desc' } // 3 is Pixar
-      })
-      return data.results.map((item: any) => ({ ...item, media_type: 'movie' }))
+      const res = await fetch('/api/movies?keywords=pixar&sort=popularity&limit=20')
+      const movies = await res.json()
+      return movies.map((item: any) => ({ ...item, media_type: 'movie' }))
     },
     enabled: isKids
   })
@@ -278,13 +294,13 @@ export const CategoryPage = () => {
               <MovieCard 
                 key={r.id} 
                 movie={{
-                  id: r.id,
+                  id: Number(r.id),
                   title: r.name || undefined,
                   poster_path: r.image,
                   media_type: 'quran',
                   category: r.rewaya || r.category || '',
                   vote_average: 0
-                } as Movie} 
+                } as any} 
                 index={idx} 
               />
             ))}
@@ -300,13 +316,13 @@ export const CategoryPage = () => {
               <MovieCard 
                 key={a.id} 
                 movie={{
-                  id: a.id,
+                  id: Number(a.id),
                   title: a.title || undefined,
                   poster_path: a.image_url,
                   media_type: 'anime',
                   category: a.category || '',
                   vote_average: 0
-                } as Movie} 
+                } as any} 
                 index={idx} 
               />
             ))}

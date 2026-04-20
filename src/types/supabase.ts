@@ -10,29 +10,29 @@ export type Database = {
   public: {
     Tables: {
       [key: string]: {
-        Row: { [key: string]: any }
-        Insert: { [key: string]: any }
-        Update: { [key: string]: any }
-        Relationships: any[]
+        Row: Record<string, unknown>
+        Insert: Record<string, unknown>
+        Update: Record<string, unknown>
+        Relationships: unknown[]
       }
     }
     Views: {
       [key: string]: {
-        Row: { [key: string]: any }
-        Relationships: any[]
+        Row: Record<string, unknown>
+        Relationships: unknown[]
       }
     }
     Functions: {
       [key: string]: {
-        Args: any
-        Returns: any
+        Args: Record<string, unknown>
+        Returns: unknown
       }
     }
     Enums: {
-      [key: string]: any
+      [key: string]: string | number
     }
     CompositeTypes: {
-      [key: string]: any
+      [key: string]: unknown
     }
   }
 }

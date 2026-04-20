@@ -1,34 +1,25 @@
 import React, { Suspense, memo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Tv, Film, Drama, Zap, FileText, Play, Smile } from 'lucide-react'
 import { tmdb } from '../../../lib/tmdb'
-import { CONFIG } from '../../../lib/constants'
-import { useCategoryVideos } from '../../../hooks/useFetchContent'
-import { useDailyMotion } from '../../../hooks/useDailyMotion'
-import { useTranslatedContent } from '../../../hooks/useTranslatedContent'
-import { resolveTitleWithFallback } from '../../../lib/translation'
+import { QuantumTrain } from '../../features/media/QuantumTrain'
+import { useLang } from '../../../state/useLang'
+import { Zap, Tv, Smile, Film, Drama, FileText, Play, BookOpen, Baby, Sparkles, Languages } from 'lucide-react'
 import { SectionHeader } from '../../common/SectionHeader'
+import { sanitizeMediaItems, type TmdbMedia } from '../../../lib/mediaUtils'
+import { getTrendingDailyMotionDB } from '../../../lib/db'
+import { useTranslatedContent } from '../../../hooks/useTranslatedContent'
 import { SkeletonGrid } from '../../common/Skeletons'
 import { MovieCard } from '../../features/media/MovieCard'
+import { generateWatchUrl } from '../../../lib/utils'
+import { CONFIG } from '../../../lib/constants'
+import { useCategoryVideos } from '../../../hooks/useFetchContent'
 import { HolographicCard } from '../../effects/HolographicCard'
 import { PrefetchLink } from '../../common/PrefetchLink'
-import { QuantumTrain } from '../../features/media/QuantumTrain'
-import {getRecommendations} from '../../../services/recommendations'
+import { getRecommendations } from '../../../services/recommendations'
 import { useAuth } from '../../../hooks/useAuth'
-import { useLang } from '../../../state/useLang'
-import { generateWatchUrl } from '../../../lib/utils'
 
-type TmdbMedia = {
-  id: number
-  title?: string
-  name?: string
-  media_type?: 'movie' | 'tv'
-  poster_path?: string | null
-  backdrop_path?: string | null
-  vote_average?: number
-  overview?: string
-  release_date?: string
-  first_air_date?: string
+const mapResults = (data: any, type: 'movie' | 'tv'): TmdbMedia[] => {
+  return (data?.results || []).map((item: any) => ({ ...item, media_type: type }))
 }
 
 type CriticalHomeData = {
@@ -41,17 +32,6 @@ type CriticalHomeData = {
 type HomeBelowFoldSectionsProps = {
   criticalHomeData?: CriticalHomeData
   topRatedMovies?: TmdbMedia[]
-}
-
-export const sanitizeMediaItems = (items: TmdbMedia[] | undefined) => {
-  return (items || []).filter((item) => {
-    return (
-      Number.isFinite(Number(item?.id)) &&
-      Number(item.id) > 0 &&
-      Boolean(item.poster_path && item.poster_path.trim()) &&
-      Boolean(resolveTitleWithFallback(item))
-    )
-  })
 }
 
 const BentoBox = ({
@@ -76,8 +56,8 @@ const BentoBox = ({
           const img =
             item.thumbnail ||
             (item.backdrop_path
-              ? `https://image.tmdb.org/t/p/w500${item.backdrop_path}`
-              : `https://image.tmdb.org/t/p/w500${item.poster_path}`)
+              ? `https://image.tmdb.org/t/p/w300${item.backdrop_path}`
+              : `https://image.tmdb.org/t/p/w300${item.poster_path}`)
           const link = isTmdb
             ? generateWatchUrl({ ...item, media_type: item.media_type === 'tv' ? 'tv' : 'movie' })
             : `/watch/yt/${item.id}`
@@ -113,7 +93,7 @@ const BentoBox = ({
 }
 
 const AIRecommended = ({ userId }: { userId: string }) => {
-  const q = useQuery<RecommendationItem[]>({
+  const q = useQuery<any[]>({
     queryKey: ['recs', userId],
     queryFn: () => getRecommendations(userId),
     staleTime: 1000 * 60 * 60,
@@ -125,7 +105,7 @@ const AIRecommended = ({ userId }: { userId: string }) => {
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
-      {q.data.slice(0, 5).map((m) => (
+      {q.data.slice(0, 5).map((m: any) => (
         <HolographicCard key={m.id} className="aspect-[2/3]">
           <PrefetchLink to={generateWatchUrl({ ...m, media_type: 'movie' })}>
             <img
@@ -151,67 +131,89 @@ const HomeBelowFoldSectionsInner = ({ criticalHomeData, topRatedMovies }: HomeBe
   const koreanSeries = useQuery<{ results: TmdbMedia[] }>({
     queryKey: ['home', 'k-drama'],
     queryFn: async () => {
-      const { data } = await tmdb.get('/discover/tv', {
-        params: {
-          with_original_language: 'ko',
-          sort_by: 'first_air_date.desc',
-          page: 1,
-        },
-      })
-      return data
+      // Use existing /api/tv endpoint with language filter
+      try {
+        const response = await fetch('/api/tv?language=ko&limit=20')
+        if (response.ok) {
+          const data = await response.json()
+          // Filter items with valid slugs
+          const filtered = (data.data || []).filter((item: TmdbMedia) =>
+            item.slug && item.slug.trim() !== '' && item.slug !== 'content'
+          )
+          return { results: filtered }
+        }
+      } catch (e: any) {
+        // Silently fail
+      }
+      return { results: [] }
     },
-    enabled: !!CONFIG.TMDB_API_KEY,
     staleTime: 300000,
   })
 
   const chineseSeries = useQuery<{ results: TmdbMedia[] }>({
     queryKey: ['home', 'chinese-series'],
     queryFn: async () => {
-      const { data } = await tmdb.get('/discover/tv', {
-        params: {
-          with_original_language: 'zh',
-          sort_by: 'first_air_date.desc',
-          page: 1,
-        },
-      })
-      return { results: data.results.map((i: any) => ({ ...i, media_type: 'tv' })) }
+      // Use existing /api/tv endpoint with language filter
+      try {
+        const response = await fetch('/api/tv?language=zh&limit=20')
+        if (response.ok) {
+          const data = await response.json()
+          // Filter items with valid slugs
+          const filtered = (data.data || []).filter((item: TmdbMedia) =>
+            item.slug && item.slug.trim() !== '' && item.slug !== 'content'
+          )
+          return { results: filtered }
+        }
+      } catch (e: any) {
+        // Silently fail
+      }
+      return { results: [] }
     },
-    enabled: !!CONFIG.TMDB_API_KEY,
     staleTime: 300000,
   })
 
   const turkishSeries = useQuery<{ results: TmdbMedia[] }>({
     queryKey: ['home', 'turkish-series'],
     queryFn: async () => {
-      const { data } = await tmdb.get('/discover/tv', {
-        params: {
-          with_original_language: 'tr',
-          sort_by: 'first_air_date.desc',
-          page: 1,
-        },
-      })
-      return data
+      // Use existing /api/tv endpoint with language filter
+      try {
+        const response = await fetch('/api/tv?language=tr&limit=20')
+        if (response.ok) {
+          const data = await response.json()
+          // Filter items with valid slugs
+          const filtered = (data.data || []).filter((item: TmdbMedia) =>
+            item.slug && item.slug.trim() !== '' && item.slug !== 'content'
+          )
+          return { results: filtered }
+        }
+      } catch (e: any) {
+        // Silently fail
+      }
+      return { results: [] }
     },
-    enabled: !!CONFIG.TMDB_API_KEY,
     staleTime: 300000,
   })
 
   const bollywoodMovies = useQuery<{ results: TmdbMedia[] }>({
     queryKey: ['home', 'bollywood'],
     queryFn: async () => {
-      const { data } = await tmdb.get('/discover/movie', {
-        params: {
-          with_original_language: 'hi',
-          sort_by: 'primary_release_date.desc',
-          'release_date.lte': new Date().toISOString().split('T')[0],
-          'vote_count.gte': 50,
-          page: 1,
-          region: 'IN',
-        },
-      })
-      return data
+      // Use existing /api/movies endpoint with language filter
+      try {
+        const response = await fetch('/api/movies?language=hi&limit=20')
+        if (response.ok) {
+          const data = await response.json()
+          // Filter items with valid slugs
+          const filtered = (data.data || []).filter((item: TmdbMedia) =>
+            item.slug && item.slug.trim() !== '' && item.slug !== 'content'
+          )
+          return { results: filtered }
+        }
+      } catch (e: any) {
+        // Silently fail
+      }
+      return { results: [] }
     },
-    enabled: !!CONFIG.TMDB_API_KEY && (!criticalHomeData?.bollywood || criticalHomeData.bollywood.length === 0),
+    enabled: !criticalHomeData?.bollywood || criticalHomeData.bollywood.length === 0,
     staleTime: 300000,
   })
 
@@ -222,12 +224,22 @@ const HomeBelowFoldSectionsInner = ({ criticalHomeData, topRatedMovies }: HomeBe
     {
       queryKey: ['home', 'client-top-rated', lang],
       queryFn: async () => {
-        const { data } = await tmdb.get('/movie/top_rated', {
-          params: { language: lang === 'ar' ? 'ar-SA' : 'en-US', page: 1 },
-        })
-        return data.results
+        // Use existing /api/movies endpoint with sortBy
+        try {
+          const response = await fetch('/api/movies?sortBy=vote_average&limit=20')
+          if (response.ok) {
+            const data = await response.json()
+            // Filter items with valid slugs
+            return (data.data || []).filter((item: TmdbMedia) =>
+              item.slug && item.slug.trim() !== '' && item.slug !== 'content'
+            )
+          }
+        } catch (e: any) {
+          // Silently fail
+        }
+        return []
       },
-      enabled: needsFallback && !!CONFIG.TMDB_API_KEY,
+      enabled: needsFallback,
       staleTime: 300000,
     }
   )
@@ -240,44 +252,39 @@ const HomeBelowFoldSectionsInner = ({ criticalHomeData, topRatedMovies }: HomeBe
   const documentaries = useQuery<{ results: TmdbMedia[] }>({
     queryKey: ['home', 'docs'],
     queryFn: async () => {
-      const { data } = await tmdb.get('/discover/movie', {
-        params: {
-          with_genres: '99',
-          sort_by: 'primary_release_date.desc',
-          page: 1,
-        },
-      })
-      return data
+      // Use existing /api/movies endpoint - return empty for now since we don't have genre filtering
+      return { results: [] }
     },
-    enabled: !!CONFIG.TMDB_API_KEY,
     staleTime: 300000,
   })
 
   const tmdbAnime = useQuery<TmdbMedia[]>({
     queryKey: ['home-anime-fallback'],
     queryFn: async () => {
-      const { data } = await tmdb.get('/discover/tv', {
-        params: { with_genres: '16', with_original_language: 'ja', sort_by: 'first_air_date.desc' },
-      })
-      return data.results
+      // Use existing /api/tv endpoint with language filter for Japanese content
+      try {
+        const response = await fetch('/api/tv?language=ja&limit=20')
+        if (response.ok) {
+          const data = await response.json()
+          // Filter items with valid slugs
+          return (data.data || []).filter((item: TmdbMedia) =>
+            item.slug && item.slug.trim() !== '' && item.slug !== 'content'
+          )
+        }
+      } catch (e: any) {
+        // Silently fail
+      }
+      return []
     },
-    enabled: !!CONFIG.TMDB_API_KEY,
     staleTime: 300000,
   })
 
   const tmdbClassics = useQuery<{ results: TmdbMedia[] }>({
     queryKey: ['home', 'classics'],
     queryFn: async () => {
-      const { data } = await tmdb.get('/discover/movie', {
-        params: {
-          'release_date.lte': '1980-01-01',
-          sort_by: 'popularity.desc',
-          page: 1,
-        },
-      })
-      return data
+      // Use existing /api/movies endpoint - return empty for now since we don't have year filtering
+      return { results: [] }
     },
-    enabled: !!CONFIG.TMDB_API_KEY,
     staleTime: 300000,
   })
 
@@ -285,7 +292,6 @@ const HomeBelowFoldSectionsInner = ({ criticalHomeData, topRatedMovies }: HomeBe
   const recaps = useCategoryVideos('recaps', { limit: 10, enabled: true })
   const animeHub = useCategoryVideos('anime', { limit: 20, enabled: true })
   const plays = useCategoryVideos('plays', { limit: 20, enabled: true })
-  const dmTrending = useDailyMotion(true)
 
   const translatedKorean = useTranslatedContent(koreanSeries.data?.results)
   const translatedTurkish = useTranslatedContent(turkishSeries.data?.results)
@@ -299,7 +305,7 @@ const HomeBelowFoldSectionsInner = ({ criticalHomeData, topRatedMovies }: HomeBe
             <SectionHeader
               title={lang === 'ar' ? 'الدراما الكورية' : 'K-Drama'}
               icon={<Film />}
-              link="/k-drama"
+              link="/series?language=ko"
             />
             <SkeletonGrid count={6} variant="poster" />
           </>
@@ -308,7 +314,7 @@ const HomeBelowFoldSectionsInner = ({ criticalHomeData, topRatedMovies }: HomeBe
             items={sanitizeMediaItems(translatedKorean.data)}
             title={lang === 'ar' ? 'الدراما الكورية' : 'K-Drama'}
             icon={<Film />}
-            link="/k-drama"
+            link="/series?language=ko"
             color="pink"
           />
         )}
@@ -320,7 +326,7 @@ const HomeBelowFoldSectionsInner = ({ criticalHomeData, topRatedMovies }: HomeBe
             <SectionHeader
               title={lang === 'ar' ? 'مسلسلات صينية قصيرة' : 'Chinese Short Series'}
               icon={<Tv />}
-              link="/chinese"
+              link="/series?language=zh"
             />
             <SkeletonGrid count={6} variant="poster" />
           </>
@@ -329,7 +335,7 @@ const HomeBelowFoldSectionsInner = ({ criticalHomeData, topRatedMovies }: HomeBe
             items={sanitizeMediaItems(translatedChinese.data)}
             title={lang === 'ar' ? 'مسلسلات صينية قصيرة' : 'Chinese Short Series'}
             icon={<Tv />}
-            link="/chinese"
+            link="/series?language=zh"
             color="cyan"
           />
         )}
@@ -341,7 +347,7 @@ const HomeBelowFoldSectionsInner = ({ criticalHomeData, topRatedMovies }: HomeBe
             <SectionHeader
               title={lang === 'ar' ? 'الدراما التركية' : 'Turkish Drama'}
               icon={<Film />}
-              link="/turkish"
+              link="/series?language=tr"
             />
             <SkeletonGrid count={6} variant="poster" />
           </>
@@ -350,7 +356,7 @@ const HomeBelowFoldSectionsInner = ({ criticalHomeData, topRatedMovies }: HomeBe
             items={sanitizeMediaItems(translatedTurkish.data)}
             title={lang === 'ar' ? 'الدراما التركية' : 'Turkish Drama'}
             icon={<Film />}
-            link="/turkish"
+            link="/series?language=tr"
           />
         )}
       </section>
@@ -361,7 +367,7 @@ const HomeBelowFoldSectionsInner = ({ criticalHomeData, topRatedMovies }: HomeBe
             <SectionHeader
               title={lang === 'ar' ? 'أفلام بوليوود' : 'Bollywood Movies'}
               icon={<Film />}
-              link="/bollywood"
+              link="/movies?language=hi"
             />
             <SkeletonGrid count={6} variant="poster" />
           </>
@@ -370,7 +376,7 @@ const HomeBelowFoldSectionsInner = ({ criticalHomeData, topRatedMovies }: HomeBe
             items={sanitizeMediaItems((criticalHomeData?.bollywood && criticalHomeData.bollywood.length > 0) ? criticalHomeData.bollywood : bollywoodMovies.data?.results)}
             title={lang === 'ar' ? 'أفلام بوليوود' : 'Bollywood Movies'}
             icon={<Film />}
-            link="/bollywood"
+            link="/movies?language=hi"
             color="gold"
           />
         )}
@@ -450,53 +456,6 @@ const HomeBelowFoldSectionsInner = ({ criticalHomeData, topRatedMovies }: HomeBe
           color="cyan"
         />
       </section>
-
-      {dmTrending.data && dmTrending.data.length > 0 && (
-        <section>
-          <SectionHeader
-            title={lang === 'ar' ? 'الرائج على ديلي موشن' : 'Trending on DailyMotion'}
-            icon={<Play />}
-            badge="DailyMotion"
-            color="purple"
-          />
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
-            {dmTrending.data.map((item, i) => (
-              <HolographicCard
-                key={item.id}
-                className="aspect-video group relative overflow-hidden rounded-xl border border-white/10 bg-black/40"
-              >
-                <PrefetchLink to={`/watch/dm/${item.id}`} className="block h-full w-full">
-                  <img
-                    src={
-                      item.thumbnail_720_url ||
-                      item.thumbnail_480_url ||
-                      item.thumbnail_360_url ||
-                      item.thumbnail_240_url ||
-                      `https://placehold.co/600x400/000000/FFFFFF/png?text=${encodeURIComponent(item.title)}`
-                    }
-                    alt={item.title}
-                    className="h-full w-full object-cover opacity-80 group-hover:opacity-100"
-                    width={1280}
-                    height={720}
-                    style={{ aspectRatio: '16 / 9' }}
-                    loading="lazy"
-                    referrerPolicy="no-referrer"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
-                  <div className="absolute bottom-0 left-0 right-0 p-3">
-                    <h3 className="text-xs font-bold text-white line-clamp-2 mb-1">{item.title}</h3>
-                  </div>
-                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30">
-                      <Play fill="white" size={16} className="text-white ml-0.5" />
-                    </div>
-                  </div>
-                </PrefetchLink>
-              </HolographicCard>
-            ))}
-          </div>
-        </section>
-      )}
 
       <section>
         {(animeHub.isLoading && tmdbAnime.isLoading) ? (

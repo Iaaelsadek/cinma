@@ -1,7 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useCallback, startTransition } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { supabase } from '../../../lib/supabase'
-import { toast } from 'sonner'
+import { toast } from '../../../lib/toast-manager'
 import {ChevronRight, Tv, Plus, Layers, Trash2, Pencil, Save, X, Film} from 'lucide-react'
 
 type SeriesRecord = {
@@ -58,7 +57,7 @@ type EpisodeFormState = {
   video_url: string
 }
 
-const toText = (value: unknown) => {
+const toText = (value: any) => {
   if (typeof value === 'string') return value.trim()
   if (value === null || value === undefined) return ''
   return String(value).trim()
@@ -123,106 +122,121 @@ const SeriesManage = () => {
     [seasons, selectedSeasonId]
   )
 
-  const loadSeries = async () => {
+  const loadSeries = useCallback(async () => {
     if (!Number.isFinite(tvId) || tvId <= 0) return
     setLoading(true)
-    const [{ data: seriesRow, error: seriesError }, { data: seasonsRows, error: seasonsError }] = await Promise.all([
-      supabase.from('tv_series').select('id,name,overview,first_air_date,poster_path,backdrop_path,trailer_url,is_active').eq('id', tvId).maybeSingle(),
-      supabase.from('seasons').select('id,series_id,season_number,name,overview,air_date,poster_path').eq('series_id', tvId)
-    ])
+    
+    try {
+      const response = await fetch(`/api/admin/series/${tvId}`)
+      
+      if (!response.ok) {
+        toast.error('فشل تحميل بيانات المسلسل')
+        setLoading(false)
+        return
+      }
+      
+      const { series: seriesRow, seasons: seasonsRows } = await response.json()
+      
+      if (!seriesRow) {
+        setSeries(null)
+        setLoading(false)
+        return
+      }
 
-    if (seriesError) {
+      const parsedSeries: SeriesRecord = {
+        id: Number(seriesRow.id),
+        name: toText(seriesRow.name),
+        overview: toText(seriesRow.overview),
+        first_air_date: seriesRow.first_air_date || null,
+        poster_path: seriesRow.poster_path || null,
+        backdrop_path: seriesRow.backdrop_path || null,
+        trailer_url: seriesRow.trailer_url || null,
+        is_active: seriesRow.is_active ?? true
+      }
+      setSeries(parsedSeries)
+      setSeriesForm({
+        name: parsedSeries.name,
+        overview: parsedSeries.overview,
+        first_air_date: parsedSeries.first_air_date || '',
+        poster_path: parsedSeries.poster_path || '',
+        backdrop_path: parsedSeries.backdrop_path || '',
+        trailer_url: parsedSeries.trailer_url || '',
+        status: parsedSeries.is_active === false ? 'inactive' : 'active'
+      })
+
+      const normalizedSeasons = (seasonsRows || [])
+        .map((row: Record<string, unknown>) => ({
+          id: Number(row.id),
+          series_id: Number(row.series_id),
+          season_number: Number(row.season_number || 0),
+          name: toText(row.name),
+          overview: row.overview || null,
+          air_date: row.air_date || null,
+          poster_path: row.poster_path || null
+        }))
+        .sort((a: any, b: any) => (a.season_number - b.season_number) || localeSafeCompare(a.name, b.name))
+
+      setSeasons(normalizedSeasons)
+      const newSelected = normalizedSeasons.find((s: any) => s.id === selectedSeasonId)?.id || normalizedSeasons[0]?.id || null
+      setSelectedSeasonId(newSelected)
+    } catch (error: any) {
       toast.error('فشل تحميل بيانات المسلسل')
-      setLoading(false)
-      return
     }
-    if (!seriesRow) {
-      setSeries(null)
-      setLoading(false)
-      return
-    }
-
-    const parsedSeries: SeriesRecord = {
-      id: Number(seriesRow.id),
-      name: toText(seriesRow.name),
-      overview: toText(seriesRow.overview),
-      first_air_date: seriesRow.first_air_date || null,
-      poster_path: seriesRow.poster_path || null,
-      backdrop_path: seriesRow.backdrop_path || null,
-      trailer_url: seriesRow.trailer_url || null,
-      is_active: seriesRow.is_active ?? true
-    }
-    setSeries(parsedSeries)
-    setSeriesForm({
-      name: parsedSeries.name,
-      overview: parsedSeries.overview,
-      first_air_date: parsedSeries.first_air_date || '',
-      poster_path: parsedSeries.poster_path || '',
-      backdrop_path: parsedSeries.backdrop_path || '',
-      trailer_url: parsedSeries.trailer_url || '',
-      status: parsedSeries.is_active === false ? 'inactive' : 'active'
-    })
-
-    const normalizedSeasons = (seasonsRows || [])
-      .map((row) => ({
-        id: Number(row.id),
-        series_id: Number(row.series_id),
-        season_number: Number(row.season_number || 0),
-        name: toText(row.name),
-        overview: row.overview || null,
-        air_date: row.air_date || null,
-        poster_path: row.poster_path || null
-      }))
-      .sort((a, b) => (a.season_number - b.season_number) || localeSafeCompare(a.name, b.name))
-
-    if (seasonsError) {
-      toast.error('فشل تحميل المواسم')
-    }
-    setSeasons(normalizedSeasons)
-    const newSelected = normalizedSeasons.find((s) => s.id === selectedSeasonId)?.id || normalizedSeasons[0]?.id || null
-    setSelectedSeasonId(newSelected)
+    
     setLoading(false)
-  }
+  }, [tvId, selectedSeasonId])
 
-  const loadEpisodes = async (seasonId: number | null) => {
+  const loadEpisodes = useCallback(async (seasonId: number | null) => {
     if (!seasonId) {
       setEpisodes([])
       return
     }
-    const { data, error } = await supabase
-      .from('episodes')
-      .select('id,season_id,episode_number,name,overview,air_date,still_path,embed_links,duration,video_url')
-      .eq('season_id', seasonId)
+    
+    try {
+      const response = await fetch(`/api/db/tv/seasons/${seasonId}/episodes`)
+      
+      if (!response.ok) {
+        toast.error('فشل تحميل الحلقات')
+        return
+      }
+      
+      const data = await response.json()
 
-    if (error) {
+      const normalized = (data || [])
+        .map((row: Record<string, unknown>) => ({
+          id: Number(row.id),
+          season_id: Number(row.season_id),
+          episode_number: Number(row.episode_number || 0),
+          name: toText(row.name),
+          overview: row.overview || null,
+          air_date: row.air_date || null,
+          still_path: row.still_path || null,
+          embed_links: (row.embed_links as Record<string, string> | null) || null,
+          duration: typeof row.duration === 'number' ? Number(row.duration) : null,
+          video_url: typeof row.video_url === 'string' ? String(row.video_url) : null
+        }))
+        .sort((a: any, b: any) => (a.episode_number - b.episode_number) || localeSafeCompare(a.name, b.name))
+      setEpisodes(normalized)
+    } catch (error: any) {
       toast.error('فشل تحميل الحلقات')
-      return
     }
-
-    const normalized = (data || [])
-      .map((row) => ({
-        id: Number(row.id),
-        season_id: Number(row.season_id),
-        episode_number: Number(row.episode_number || 0),
-        name: toText(row.name),
-        overview: row.overview || null,
-        air_date: row.air_date || null,
-        still_path: row.still_path || null,
-        embed_links: (row.embed_links as Record<string, string> | null) || null,
-        duration: typeof (row as any).duration === 'number' ? Number((row as any).duration) : null,
-        video_url: typeof (row as any).video_url === 'string' ? String((row as any).video_url) : null
-      }))
-      .sort((a, b) => (a.episode_number - b.episode_number) || localeSafeCompare(a.name, b.name))
-    setEpisodes(normalized)
-  }
+  }, [])
 
   useEffect(() => {
-    loadSeries()
-  }, [tvId])
+    let mounted = true;
+    startTransition(() => {
+      loadSeries().catch(() => {});
+    });
+    return () => { mounted = false; };
+  }, [loadSeries])
 
   useEffect(() => {
-    loadEpisodes(selectedSeasonId)
-  }, [selectedSeasonId])
+    let mounted = true;
+    startTransition(() => {
+      loadEpisodes(selectedSeasonId).catch(() => {});
+    });
+    return () => { mounted = false; };
+  }, [loadEpisodes, selectedSeasonId])
 
   const openNewSeasonEditor = () => {
     const nextNumber = seasons.length > 0 ? Math.max(...seasons.map((s) => s.season_number || 0)) + 1 : 1
@@ -249,35 +263,56 @@ const SeriesManage = () => {
       return
     }
     setSavingSeries(true)
-    const payload = {
-      name: toText(seriesForm.name),
-      overview: toText(seriesForm.overview),
-      first_air_date: seriesForm.first_air_date || null,
-      poster_path: toText(seriesForm.poster_path) || null,
-      backdrop_path: toText(seriesForm.backdrop_path) || null,
-      trailer_url: toText(seriesForm.trailer_url) || null,
-      is_active: seriesForm.status === 'active'
-    }
-    const { error } = await supabase.from('tv_series').update(payload).eq('id', series.id)
-    setSavingSeries(false)
-    if (error) {
+    
+    try {
+      const response = await fetch(`/api/admin/series/${series.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: toText(seriesForm.name),
+          overview: toText(seriesForm.overview),
+          first_air_date: seriesForm.first_air_date || null,
+          poster_path: toText(seriesForm.poster_path) || null,
+          backdrop_path: toText(seriesForm.backdrop_path) || null,
+          trailer_url: toText(seriesForm.trailer_url) || null,
+          is_active: seriesForm.status === 'active'
+        })
+      })
+      
+      if (!response.ok) {
+        toast.error('فشل حفظ بيانات المسلسل')
+        setSavingSeries(false)
+        return
+      }
+      
+      toast.success('تم تحديث بيانات المسلسل')
+      await loadSeries()
+    } catch (error: any) {
       toast.error('فشل حفظ بيانات المسلسل')
-      return
     }
-    toast.success('تم تحديث بيانات المسلسل')
-    await loadSeries()
+    
+    setSavingSeries(false)
   }
 
   const deleteSeries = async () => {
     if (!series) return
     if (!confirm('هل أنت متأكد من حذف المسلسل بالكامل بجميع المواسم والحلقات؟')) return
-    const { error } = await supabase.from('tv_series').delete().eq('id', series.id)
-    if (error) {
+    
+    try {
+      const response = await fetch(`/api/admin/series/${series.id}`, {
+        method: 'DELETE'
+      })
+      
+      if (!response.ok) {
+        toast.error('فشل حذف المسلسل')
+        return
+      }
+      
+      toast.success('تم حذف المسلسل')
+      navigate('/admin/series')
+    } catch (error: any) {
       toast.error('فشل حذف المسلسل')
-      return
     }
-    toast.success('تم حذف المسلسل')
-    navigate('/admin/series')
   }
 
   const saveSeason = async () => {
@@ -286,6 +321,7 @@ const SeriesManage = () => {
       toast.error('رقم الموسم غير صالح')
       return
     }
+    
     const payload = {
       series_id: series.id,
       season_number: Number(seasonForm.season_number),
@@ -294,39 +330,66 @@ const SeriesManage = () => {
       air_date: seasonForm.air_date || null,
       poster_path: toText(seasonForm.poster_path) || null
     }
+    
     setSavingSeason(true)
-    if (seasonForm.id) {
-      const { error } = await supabase.from('seasons').update(payload).eq('id', seasonForm.id)
-      if (error) {
-        setSavingSeason(false)
-        toast.error('فشل تحديث الموسم')
-        return
+    
+    try {
+      if (seasonForm.id) {
+        const response = await fetch(`/api/admin/seasons/${seasonForm.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        })
+        
+        if (!response.ok) {
+          setSavingSeason(false)
+          toast.error('فشل تحديث الموسم')
+          return
+        }
+        toast.success('تم تحديث الموسم')
+      } else {
+        const response = await fetch('/api/admin/seasons', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        })
+        
+        if (!response.ok) {
+          setSavingSeason(false)
+          toast.error('فشل إضافة الموسم')
+          return
+        }
+        toast.success('تمت إضافة الموسم')
       }
-      toast.success('تم تحديث الموسم')
-    } else {
-      const { error } = await supabase.from('seasons').insert(payload)
-      if (error) {
-        setSavingSeason(false)
-        toast.error('فشل إضافة الموسم')
-        return
-      }
-      toast.success('تمت إضافة الموسم')
+      
+      setSavingSeason(false)
+      setSeasonEditorOpen(false)
+      setSeasonForm(initialSeasonForm)
+      await loadSeries()
+    } catch (error: any) {
+      setSavingSeason(false)
+      toast.error('فشل حفظ الموسم')
     }
-    setSavingSeason(false)
-    setSeasonEditorOpen(false)
-    setSeasonForm(initialSeasonForm)
-    await loadSeries()
   }
 
   const removeSeason = async (season: SeasonRecord) => {
     if (!confirm(`هل أنت متأكد من حذف ${season.name || `Season ${season.season_number}`}؟`)) return
-    const { error } = await supabase.from('seasons').delete().eq('id', season.id)
-    if (error) {
+    
+    try {
+      const response = await fetch(`/api/admin/seasons/${season.id}`, {
+        method: 'DELETE'
+      })
+      
+      if (!response.ok) {
+        toast.error('فشل حذف الموسم')
+        return
+      }
+      
+      toast.success('تم حذف الموسم')
+      await loadSeries()
+    } catch (error: any) {
       toast.error('فشل حذف الموسم')
-      return
     }
-    toast.success('تم حذف الموسم')
-    await loadSeries()
   }
 
   const openNewEpisodeEditor = () => {
@@ -354,36 +417,17 @@ const SeriesManage = () => {
     setEpisodeEditorOpen(true)
   }
 
-  const persistEpisodePayload = async (mode: 'insert' | 'update', payload: any, episodeId?: number) => {
-    const withOptionalColumns = {
-      ...payload,
-      duration: Number(episodeForm.duration || 0),
-      video_url: toText(episodeForm.video_url) || null
-    }
-    if (mode === 'insert') {
-      const insertRes = await supabase.from('episodes').insert(withOptionalColumns)
-      if (!insertRes.error) return insertRes
-      if (!/column .* does not exist|schema cache/i.test(String(insertRes.error.message || ''))) return insertRes
-      const { duration, video_url, ...fallbackPayload } = withOptionalColumns
-      return supabase.from('episodes').insert(fallbackPayload)
-    }
-
-    const updateRes = await supabase.from('episodes').update(withOptionalColumns).eq('id', episodeId)
-    if (!updateRes.error) return updateRes
-    if (!/column .* does not exist|schema cache/i.test(String(updateRes.error.message || ''))) return updateRes
-    const { duration, video_url, ...fallbackPayload } = withOptionalColumns
-    return supabase.from('episodes').update(fallbackPayload).eq('id', episodeId)
-  }
-
   const saveEpisode = async () => {
     if (!selectedSeason) return
     if (!Number.isFinite(episodeForm.episode_number) || episodeForm.episode_number <= 0) {
       toast.error('رقم الحلقة غير صالح')
       return
     }
+    
     const directUrl = toText(episodeForm.video_url)
     const embedLinks: Record<string, string> = {}
     if (directUrl) embedLinks.direct = directUrl
+    
     const payload = {
       season_id: selectedSeason.id,
       episode_number: Number(episodeForm.episode_number),
@@ -391,41 +435,70 @@ const SeriesManage = () => {
       overview: toText(episodeForm.overview) || null,
       air_date: episodeForm.air_date || null,
       still_path: toText(episodeForm.still_path) || null,
-      embed_links: Object.keys(embedLinks).length > 0 ? embedLinks : {}
+      embed_links: Object.keys(embedLinks).length > 0 ? embedLinks : {},
+      duration: Number(episodeForm.duration || 0),
+      video_url: directUrl || null
     }
+    
     setSavingEpisode(true)
-    if (episodeForm.id) {
-      const res = await persistEpisodePayload('update', payload, episodeForm.id)
-      if (res.error) {
-        setSavingEpisode(false)
-        toast.error('فشل تحديث الحلقة')
-        return
+    
+    try {
+      if (episodeForm.id) {
+        const response = await fetch(`/api/admin/episodes/${episodeForm.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        })
+        
+        if (!response.ok) {
+          setSavingEpisode(false)
+          toast.error('فشل تحديث الحلقة')
+          return
+        }
+        toast.success('تم تحديث الحلقة')
+      } else {
+        const response = await fetch('/api/admin/episodes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        })
+        
+        if (!response.ok) {
+          setSavingEpisode(false)
+          toast.error('فشل إضافة الحلقة')
+          return
+        }
+        toast.success('تمت إضافة الحلقة')
       }
-      toast.success('تم تحديث الحلقة')
-    } else {
-      const res = await persistEpisodePayload('insert', payload)
-      if (res.error) {
-        setSavingEpisode(false)
-        toast.error('فشل إضافة الحلقة')
-        return
-      }
-      toast.success('تمت إضافة الحلقة')
+      
+      setSavingEpisode(false)
+      setEpisodeEditorOpen(false)
+      setEpisodeForm(initialEpisodeForm)
+      await loadEpisodes(selectedSeason.id)
+    } catch (error: any) {
+      setSavingEpisode(false)
+      toast.error('فشل حفظ الحلقة')
     }
-    setSavingEpisode(false)
-    setEpisodeEditorOpen(false)
-    setEpisodeForm(initialEpisodeForm)
-    await loadEpisodes(selectedSeason.id)
   }
 
   const removeEpisode = async (episode: EpisodeRecord) => {
     if (!confirm(`هل أنت متأكد من حذف ${episode.name || `Episode ${episode.episode_number}`}؟`)) return
-    const { error } = await supabase.from('episodes').delete().eq('id', episode.id)
-    if (error) {
+    
+    try {
+      const response = await fetch(`/api/admin/episodes/${episode.id}`, {
+        method: 'DELETE'
+      })
+      
+      if (!response.ok) {
+        toast.error('فشل حذف الحلقة')
+        return
+      }
+      
+      toast.success('تم حذف الحلقة')
+      await loadEpisodes(selectedSeasonId)
+    } catch (error: any) {
       toast.error('فشل حذف الحلقة')
-      return
     }
-    toast.success('تم حذف الحلقة')
-    await loadEpisodes(selectedSeasonId)
   }
 
   if (loading) {
@@ -502,10 +575,10 @@ const SeriesManage = () => {
             <select
               value={seriesForm.status}
               onChange={(e) => setSeriesForm((prev) => ({ ...prev, status: e.target.value }))}
-              className="bg-black/20 border border-zinc-700 rounded-lg px-3 py-2 text-sm focus:border-primary outline-none"
+              className="bg-[#1C1B1F] border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:border-primary outline-none hover:bg-[#0F0F14] transition-colors"
             >
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
+              <option value="active" className="bg-[#1C1B1F] text-white">Active</option>
+              <option value="inactive" className="bg-[#1C1B1F] text-white">Inactive</option>
             </select>
             <button
               onClick={saveSeries}

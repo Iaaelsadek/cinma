@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { ReciterImage } from './ReciterImage'
+import { Mic } from 'lucide-react'
 import { useLang } from '../../../state/useLang'
 import type { QuranReciter } from './ReciterList'
 
@@ -20,9 +20,9 @@ export const ReciterHeader = ({ reciter }: { reciter: QuranReciter }) => {
       <div className="absolute -right-20 -top-20 w-64 h-64 bg-amber-600/5 rounded-full blur-3xl" />
       
       <div className="relative z-10 flex items-center gap-6">
-        {/* Reciter Image (if available) or Initial */}
+        {/* Reciter Icon */}
         <div className="w-20 h-20 rounded-full border-2 border-amber-500/30 overflow-hidden bg-[#151515] flex items-center justify-center shrink-0 shadow-lg shadow-amber-900/10">
-          <span className="text-2xl font-bold text-amber-500 font-amiri">{reciter.letter}</span>
+          <Mic size={28} className="text-amber-500/50" />
         </div>
         
         <div>

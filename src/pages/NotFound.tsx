@@ -22,28 +22,33 @@ export const NotFound = () => {
 
       setLoadingSuggestions(true)
       try {
+        // Get the last segment (likely the slug)
         const lastSegment = segments[segments.length - 1]
-        const keywords = lastSegment.replace(/[-_]/g, ' ')
+        
+        // Clean up slug: remove IDs, convert to searchable text
+        const keywords = lastSegment
+          .replace(/-\d+$/, '') // Remove trailing ID (e.g., "spider-man-12345" -> "spider-man")
+          .replace(/[-_]/g, ' ') // Convert hyphens/underscores to spaces
         
         // Search across tables for similar content
         const res = await fetchDB('/api/db/query', {
           method: 'POST',
           body: JSON.stringify({
             query: `
-              (SELECT id, title as name, slug, 'movie' as type FROM movies WHERE title ILIKE $1 OR slug ILIKE $1 LIMIT 2)
+              (SELECT id, title as name, slug, 'movie' as type, poster_path FROM movies WHERE title ILIKE $1 OR slug ILIKE $1 LIMIT 3)
               UNION ALL
-              (SELECT id, name, slug, 'tv' as type FROM tv_series WHERE name ILIKE $1 OR slug ILIKE $1 LIMIT 2)
+              (SELECT id, name, slug, 'tv' as type, poster_path FROM tv_series WHERE name ILIKE $1 OR slug ILIKE $1 LIMIT 3)
               UNION ALL
-              (SELECT id, title as name, slug, 'game' as type FROM games WHERE title ILIKE $1 OR slug ILIKE $1 LIMIT 1)
+              (SELECT id, title as name, slug, 'game' as type, NULL as poster_path FROM games WHERE title ILIKE $1 OR slug ILIKE $1 LIMIT 2)
             `,
             params: [`%${keywords}%`]
           })
         })
 
         if (res?.rows) {
-          setSuggestions(res.rows)
+          setSuggestions(res.rows.slice(0, 5)) // Limit to 5 suggestions
         }
-      } catch (err) {
+      } catch (err: any) {
         errorLogger.logError({
           message: 'Failed to fetch 404 suggestions',
           severity: 'low',
@@ -62,16 +67,20 @@ export const NotFound = () => {
     if (reported) return
     try {
       const url = window.location.href
-      const { data } = await supabase.from('error_reports').select('url, count').eq('url', url).maybeSingle()
       
-      if (data) {
-        await supabase.from('error_reports').update({ count: (data.count || 1) + 1 }).eq('url', url)
-      } else {
-        await supabase.from('error_reports').insert({ url, count: 1 })
+      // Use CockroachDB API for error_reports (not Supabase)
+      const response = await fetch('/api/db/error-reports', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url })
+      })
+      
+      if (!response.ok) {
+        throw new Error('Failed to report error')
       }
       
       setReported(true)
-    } catch (err) {
+    } catch (err: any) {
       errorLogger.logError({
         message: 'Failed to report 404',
         severity: 'low',

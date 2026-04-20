@@ -1,34 +1,32 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { useMutation, useQuery } from '@tanstack/react-query';
-import { tmdb, getUsTvRating, getRatingColorFromCert } from '../../lib/tmdb';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { getRatingColorFromCert } from '../../lib/tmdb';
+import { extractUsTvRating } from '../../lib/dataHelpers';
 import {
   addToWatchlist,
   isInWatchlist,
   removeFromWatchlist,
+  getProfile,
+} from '../../lib/supabase';
+import {
+  getSeriesById,
   upsertEpisode,
   upsertSeason,
   upsertSeries,
-  addComment,
-  deleteComment,
-  getComments,
-  getProfile,
-} from '../../lib/supabase';
+  getSeasons,
+  getEpisodes
+} from '../../services/contentAPI';
 import { getTVByIdDB, getSeasonsDB, getEpisodesDB } from '../../lib/db';
 import { translateTitleToArabic } from '../../lib/gemini';
 import { useAuth } from '../../hooks/useAuth';
-import { toast } from 'sonner';
-import { useForm } from 'react-hook-form';
-import { ReviewVotes } from '../../components/features/social/ReviewVotes';
+import { toast } from '../../lib/toast-manager';
 import { AddToListModal } from '../../components/features/social/AddToListModal';
 import { Helmet } from 'react-helmet-async';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Star, List, MessageSquare, Play, Trash2 } from 'lucide-react';
+import { Star, List, Play } from 'lucide-react';
 import { clsx } from 'clsx';
 import { ShareButton } from '../../components/common/ShareButton';
-import { resolveSlug } from '../../lib/slugResolver';
-import { logger } from '../../lib/logger';
-import { getSeriesById } from '../../lib/supabase';
 import { AiInsights } from '../../components/features/media/AiInsights';
 import { SectionHeader } from '../../components/common/SectionHeader';
 import { useLang } from '../../state/useLang';
@@ -37,6 +35,12 @@ import { getEmbedUrlByIndex } from '../../services/embedService';
 import { SeoHead } from '../../components/common/SeoHead';
 import { useDualTitles } from '../../hooks/useDualTitles';
 import { NotFound } from '../NotFound';
+import { RatingInput, AggregateRating, ReviewForm, ReviewList } from '../../components/features/reviews';
+import type { ReviewFormData } from '../../components/features/reviews';
+import { EditReviewModal } from '../../components/features/reviews/EditReviewModal';
+import { ReportReviewDialog } from '../../components/features/reviews/ReportReviewDialog';
+import { translateGenres } from '../../lib/genreTranslations';
+import type { Review } from '../../components/features/reviews/EditReviewModal';
 
 interface SeriesDetailsProps {
   slug?: string;
@@ -58,73 +62,27 @@ const SeriesDetails = ({ slug: propSlug }: SeriesDetailsProps = {}) => {
     queryKey: ['series', slug],
     queryFn: async () => {
       if (!slug) return null;
+
+      // Fetch from backend API only
       const local = await getTVByIdDB(slug);
       if (local) return local;
 
-      // Fallback to seriesId if it was already resolved or if slug is a number
-      const idToUse = seriesId || (/^\d+$/.test(slug) ? parseInt(slug) : null);
-      if (!idToUse) return null;
-
-      const { data } = await tmdb.get(`/tv/${idToUse}`);
-      const rating = await getUsTvRating(idToUse);
-      const arabicName = await translateTitleToArabic(data.name);
-      await upsertSeries({
-        id: idToUse,
-        name: data.name || '',
-        arabic_name: arabicName,
-        overview: data.overview || '',
-        ai_summary: null,
-        rating_color: getRatingColorFromCert(rating),
-        genres: data.genres || null,
-        first_air_date: data.first_air_date || null,
-        poster_path: data.poster_path || null,
-        backdrop_path: data.backdrop_path || null,
-      });
-      const remoteSeasons: Array<any> = data.seasons || [];
-
-      for (const s of remoteSeasons) {
-        if ((s.season_number ?? 0) >= 0) {
-          await upsertSeason({
-            series_id: seriesId,
-            season_number: s.season_number ?? 0,
-            name: s.name || '',
-            overview: s.overview || '',
-            poster_path: s.poster_path || null,
-            air_date: s.air_date || null,
-          });
-        }
-      }
-
-      let after: any = null;
-      if (seriesId !== null && typeof seriesId === 'number') {
-        after = await getSeriesById(seriesId);
-      }
-      return after;
+      // If not found, return null (no TMDB fallback)
+      return null;
     },
-    enabled: Number.isFinite(seriesId),
+    enabled: !!slug,
     retry: false,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
-  const remote = useQuery({
-    queryKey: ['series-remote', seriesId],
-    queryFn: async () => {
-      if (!seriesId) return null;
-      const { data } = await tmdb.get(`/tv/${seriesId}`, {
-        params: { append_to_response: 'aggregate_credits,videos' },
-      });
-      return data;
-    },
-    enabled: Number.isFinite(seriesId),
-    retry: false,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
+  // REMOVED: Direct TMDB fetch - all data should come from backend
+  const remote = { data: series.data };
 
   // Handle query errors
   useEffect(() => {
-    if (series.isError || remote.isError) {
+    if (series.isError) {
       setFetchError(true);
     }
-  }, [series.isError, remote.isError]);
+  }, [series.isError]);
 
   // SEO Schema
   const schemaData = useMemo(() => {
@@ -181,24 +139,10 @@ const SeriesDetails = ({ slug: propSlug }: SeriesDetailsProps = {}) => {
     queryKey: ['episodes', seriesId, seasonId, seasonNumber],
     queryFn: async () => {
       if (!seasonId || seasonNumber == null || !seriesId) return [];
+
+      // Fetch from backend only
       const rows = await getEpisodesDB(seasonId);
-      if (rows.length > 0) return rows;
-      const { data } = await tmdb.get(`/tv/${seriesId}/season/${seasonNumber}`);
-      const eps = (data.episodes || []) as Array<any>;
-
-      for (const e of eps) {
-        await upsertEpisode({
-          season_id: seasonId,
-          episode_number: e.episode_number ?? 0,
-          name: e.name || '',
-          overview: e.overview || '',
-          still_path: e.still_path || null,
-          air_date: e.air_date || null,
-        });
-      }
-
-      const after = await getEpisodesDB(seasonId);
-      return after;
+      return rows;
     },
     enabled: !!seasonId && seasonNumber != null && !!seriesId,
   });
@@ -207,7 +151,7 @@ const SeriesDetails = ({ slug: propSlug }: SeriesDetailsProps = {}) => {
     let cancelled = false;
     (async () => {
       if (!user || tvId == null) return;
-      const inside = await isInWatchlist(user.id, tvId!, 'tv');
+      const inside = await isInWatchlist(user.id, tvId.toString(), 'tv');
       if (!cancelled) setHeart(inside);
     })();
     return () => {
@@ -219,9 +163,9 @@ const SeriesDetails = ({ slug: propSlug }: SeriesDetailsProps = {}) => {
     mutationFn: async () => {
       if (!user) throw new Error('auth');
       if (heart) {
-        await removeFromWatchlist(user.id, tvId!, 'tv');
+        await removeFromWatchlist(user.id, tvId!.toString(), 'tv');
       } else {
-        await addToWatchlist(user.id, tvId!, 'tv');
+        await addToWatchlist(user.id, tvId!.toString(), 'tv');
       }
     },
     onSuccess: () => {
@@ -239,21 +183,22 @@ const SeriesDetails = ({ slug: propSlug }: SeriesDetailsProps = {}) => {
     },
   });
 
-  const poster = series.data?.poster_path
-    ? `https://image.tmdb.org/t/p/w500${series.data.poster_path}`
-    : '';
-  const backdrop = series.data?.backdrop_path
+  // Use poster_url/backdrop_url from backend
+  const poster = (series.data as any)?.poster_url || (series.data?.poster_path
+    ? `https://image.tmdb.org/t/p/w300${series.data.poster_path}`
+    : '');
+  const backdrop = (series.data as any)?.backdrop_url || (series.data?.backdrop_path
     ? `https://image.tmdb.org/t/p/w1280${series.data.backdrop_path}`
-    : '';
-  const title = dualTitles.main || series.data?.name || `مسلسل`;
+    : '');
+  const title = series.data?.original_name || (series.data as any)?.original_title || dualTitles.main || series.data?.name || `مسلسل`;
   const arabicTitle = dualTitles.sub;
-  const overview = series.data?.overview || 'لا يوجد وصف متاح';
+  const overview = data.overview_ar || series.data?.overview || 'لا يوجد وصف متاح';
   const year = (
     series.data?.first_air_date ? new Date(series.data.first_air_date).getFullYear() : ''
   ) as any;
   const episodeMin =
-    Array.isArray(remote.data?.episode_run_time) && remote.data.episode_run_time.length
-      ? remote.data.episode_run_time[0]
+    Array.isArray((remote.data as any)?.episode_run_time) && (remote.data as any).episode_run_time.length
+      ? (remote.data as any).episode_run_time[0]
       : null;
   const runtime = episodeMin != null ? `${Math.floor(episodeMin / 60)}h ${episodeMin % 60}m` : '';
   const vote =
@@ -261,9 +206,9 @@ const SeriesDetails = ({ slug: propSlug }: SeriesDetailsProps = {}) => {
       ? Math.round(remote.data.vote_average * 10) / 10
       : null;
   const genres: Array<{ id: number; name: string }> = remote.data?.genres || [];
-  const cast: Array<any> = (remote.data?.aggregate_credits?.cast || []).slice(0, 12);
+  const cast: Array<any> = ((remote.data as any)?.aggregate_credits?.cast || []).slice(0, 12);
   const trailerKey: string | null = (() => {
-    const vids: Array<any> = remote.data?.videos?.results || [];
+    const vids: Array<any> = (remote.data as any)?.videos?.results || [];
     const yt = vids.find((v) => v.site === 'YouTube' && /trailer/i.test(v.type));
     return yt?.key || null;
   })();
@@ -286,57 +231,13 @@ const SeriesDetails = ({ slug: propSlug }: SeriesDetailsProps = {}) => {
     return getEmbedUrlByIndex('tv', tvId, { season: s, episode: e, serverIndex });
   }, [tvId, seasonNumber, playingEpisode, serverIndex]);
 
-  const [userRating, setUserRating] = useState<number>(0);
-  const [avgRating, setAvgRating] = useState<number>(0);
-
-  const comments = useQuery({
-    queryKey: ['comments', 'tv', tvId ?? -1],
-    queryFn: () => (tvId != null ? getComments(tvId, 'tv') : Promise.resolve([])),
-    enabled: tvId !== null && Number.isFinite(tvId),
-  });
-
-  useEffect(() => {
-    if (comments.data) {
-      const rated = comments.data.filter((c) => c.rating);
-      if (rated.length > 0) {
-        const sum = rated.reduce((acc, curr) => acc + (curr.rating || 0), 0);
-        setAvgRating(parseFloat((sum / rated.length).toFixed(1)));
-      }
-    }
-  }, [comments.data]);
-
-  const { register, handleSubmit, reset } = useForm<{ text: string; title: string }>();
-  const [isAddingComment, setIsAddingComment] = useState(false);
-  const onAddComment = async (v: { text: string; title: string }) => {
-    if (!user || !tvId) {
-      toast.error(t('يجب تسجيل الدخول لإضافة مراجعة', 'Login required to add review'), {
-        id: 'auth-required',
-      });
-      return;
-    }
-    if (isAddingComment) return;
-    setIsAddingComment(true);
-    try {
-      await addComment({
-        userId: user.id,
-        contentId: tvId,
-        contentType: 'tv',
-        text: v.text,
-        title: v.title,
-        rating: userRating > 0 ? userRating : undefined,
-      });
-      reset({ text: '', title: '' });
-      setUserRating(0);
-      comments.refetch();
-      toast.success(t('تم إضافة المراجعة بنجاح', 'Review added successfully'), {
-        id: 'review-added',
-      });
-    } catch (e: any) {
-      toast.error(e?.message || 'فشل الإضافة', { id: 'review-error' });
-    } finally {
-      setIsAddingComment(false);
-    }
-  };
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [userRating, setUserRating] = useState<number | null>(null);
+  const queryClient = useQueryClient();
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingReview, setEditingReview] = useState<Review | null>(null);
+  const [showReportDialog, setShowReportDialog] = useState(false);
+  const [reportingReviewId, setReportingReviewId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -353,18 +254,121 @@ const SeriesDetails = ({ slug: propSlug }: SeriesDetailsProps = {}) => {
     };
   }, [user]);
 
+  // Fetch user's existing rating on page load
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!user || !tvId) {
+        setUserRating(null);
+        return;
+      }
+
+      try {
+        const apiBase = import.meta.env.VITE_API_BASE || '';
+        const response = await fetch(
+          `${apiBase}/api/ratings/user?external_id=${tvId}&content_type=tv`,
+          {
+            headers: {
+              'Authorization': `Bearer ${user.id}`
+            }
+          }
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          if (!cancelled && data?.rating_value) {
+            setUserRating(data.rating_value);
+          }
+        }
+      } catch (error: any) {
+        console.error('Error fetching user rating:', error);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user, tvId]);
+
   const { lang } = useLang();
   const t = (ar: string, en: string) => (lang === 'ar' ? ar : en);
+
+  // Review Handlers
+  const handleRatingChange = async (newRating: number) => {
+    if (!user || !tvId) {
+      toast.error(lang === 'ar' ? 'يجب تسجيل الدخول' : 'Please login first')
+      return
+    }
+
+    try {
+      const apiBase = import.meta.env.VITE_API_BASE || ''
+      const response = await fetch(`${apiBase}/api/ratings`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.id}`
+        },
+        body: JSON.stringify({
+          external_id: tvId.toString(),
+          content_type: 'tv',
+          rating_value: newRating
+        })
+      })
+
+      if (!response.ok) throw new Error('Failed to submit rating')
+
+      setUserRating(newRating)
+      toast.success(lang === 'ar' ? 'تم حفظ التقييم' : 'Rating saved')
+    } catch (error: any) {
+      console.error('Error submitting rating:', error)
+      toast.error(lang === 'ar' ? 'فشل في حفظ التقييم' : 'Failed to save rating')
+    }
+  }
+
+  const handleReviewSubmit = async (reviewData: ReviewFormData) => {
+    if (!user || !tvId) {
+      throw new Error('Authentication required')
+    }
+
+    try {
+      const apiBase = import.meta.env.VITE_API_BASE || ''
+      const response = await fetch(`${apiBase}/api/reviews`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.id}`
+        },
+        body: JSON.stringify({
+          external_id: tvId.toString(),
+          content_type: 'tv',
+          ...reviewData
+        })
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to submit review')
+      }
+
+      setShowReviewForm(false)
+      toast.success(lang === 'ar' ? 'تم نشر المراجعة' : 'Review published')
+
+      // Refresh reviews list
+      queryClient.invalidateQueries({ queryKey: ['reviews', tvId] })
+    } catch (error: any) {
+      throw new Error(error.message || 'Failed to submit review')
+    }
+  }
+
   const jsonLdSeries = useMemo(() => {
     const agg: any =
       vote != null
         ? {
-            '@type': 'AggregateRating',
-            ratingValue: vote,
-            ratingCount: typeof remote.data?.vote_count === 'number' ? remote.data.vote_count : 100,
-            bestRating: '10',
-            worstRating: '1',
-          }
+          '@type': 'AggregateRating',
+          ratingValue: vote,
+          ratingCount: typeof remote.data?.vote_count === 'number' ? remote.data.vote_count : 100,
+          bestRating: '10',
+          worstRating: '1',
+        }
         : undefined;
     return {
       '@context': 'https://schema.org',
@@ -482,7 +486,7 @@ const SeriesDetails = ({ slug: propSlug }: SeriesDetailsProps = {}) => {
                     to={`/series/genre/${g.id}`}
                     className='rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] text-zinc-300 hover:bg-white/10'
                   >
-                    {g.name}
+                    {translateGenres([g], lang)[0]}
                   </Link>
                 ))}
               </div>
@@ -682,189 +686,152 @@ const SeriesDetails = ({ slug: propSlug }: SeriesDetailsProps = {}) => {
         </div>
       </section>
 
-      <section className='mt-12 space-y-6'>
-        <div className='flex items-center justify-between'>
-          <div className='flex items-center gap-3'>
-            <div className='p-2 rounded-xl bg-primary/10 border border-primary/20'>
-              <MessageSquare className='w-5 h-5 text-primary' />
-            </div>
-            <div>
-              <h3 className='text-xl font-black text-white'>
-                {t('المراجعات والتقييمات', 'Reviews & Ratings')}
-              </h3>
-              <p className='text-xs text-zinc-500'>
-                {t('شارك رأيك مع المجتمع', 'Share your thoughts with the community')}
-              </p>
-            </div>
-          </div>
-          {avgRating > 0 && (
-            <div className='flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-2 rounded-2xl'>
-              <Star className='w-4 h-4 text-yellow-500 fill-current' />
-              <span className='text-lg font-black text-white'>{avgRating}</span>
-              <span className='text-[10px] text-zinc-500 uppercase tracking-widest'>Avg Score</span>
-            </div>
-          )}
-        </div>
+      {/* Ratings & Reviews Section */}
+      {tvId && (
+        <div className="mt-16 space-y-8">
+          {/* Rating Section */}
+          <div className="bg-zinc-900/50 rounded-xl p-6 border border-zinc-800">
+            <h2 className="text-2xl font-bold text-white mb-4">
+              {lang === 'ar' ? 'التقييمات والمراجعات' : 'Ratings & Reviews'}
+            </h2>
 
-        {user ? (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className='rounded-2xl border border-white/10 bg-white/[0.02] p-6 backdrop-blur-sm'
-          >
-            <form onSubmit={handleSubmit(onAddComment)} className='space-y-4'>
-              <div className='flex flex-col md:flex-row gap-6'>
-                <div className='flex-1 space-y-4'>
-                  <input
-                    {...register('title')}
-                    placeholder={t('عنوان المراجعة (اختياري)', 'Review Title (Optional)')}
-                    className='w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm focus:border-primary/50 focus:ring-1 focus:ring-primary/50 outline-none transition-all'
-                  />
-
-                  <div className='space-y-2'>
-                    <label className='text-xs font-bold text-zinc-500 uppercase tracking-widest px-1'>
-                      {t('تقييمك', 'Your Rating')}
-                    </label>
-                    <div className='flex gap-1.5'>
-                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
-                        <button
-                          key={num}
-                          type='button'
-                          onClick={() => setUserRating(num)}
-                          className={clsx(
-                            'w-8 h-8 rounded-lg flex items-center justify-center text-xs font-black transition-all border',
-                            userRating >= num
-                              ? 'bg-yellow-500 border-yellow-500 text-black shadow-lg shadow-yellow-500/20 scale-110'
-                              : 'bg-white/5 border-white/10 text-zinc-500 hover:bg-white/10'
-                          )}
-                        >
-                          {num}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className='space-y-2'>
-                <textarea
-                  {...register('text', { required: true })}
-                  placeholder={t(
-                    'ما رأيك في هذا العمل؟ (بدون حرق للأحداث)',
-                    'What did you think of this? (No spoilers)'
-                  )}
-                  className='w-full rounded-xl border border-white/10 bg-black/40 p-4 text-sm focus:border-primary/50 focus:ring-1 focus:ring-primary/50 outline-none transition-all'
-                  rows={4}
+            <div className="flex flex-col md:flex-row gap-6 items-start">
+              {/* Aggregate Rating */}
+              <div className="flex-shrink-0">
+                <AggregateRating
+                  externalId={tvId.toString()}
+                  contentType="tv"
+                  size="lg"
+                  showCount
                 />
               </div>
 
-              <div className='flex justify-end'>
-                <button
-                  type='submit'
-                  className='rounded-xl bg-primary px-8 py-3 text-sm font-bold text-white shadow-lg shadow-primary/20 hover:brightness-110 active:scale-95 transition-all'
-                >
-                  {t('نشر المراجعة', 'Post Review')}
-                </button>
-              </div>
-            </form>
-          </motion.div>
-        ) : (
-          <div className='rounded-2xl border border-dashed border-white/10 p-8 text-center mb-8'>
-            <p className='text-zinc-400 text-sm mb-4'>
-              {t('سجل الدخول لتتمكن من إضافة تقييم ومراجعة', 'Sign in to add a rating and review')}
-            </p>
-            <Link to='/auth' className='text-primary font-bold hover:underline'>
-              {t('تسجيل الدخول', 'Sign In')}
-            </Link>
-          </div>
-        )}
-
-        <div className='grid gap-4'>
-          {(comments.data || []).map((c, idx) => (
-            <motion.div
-              key={c.id}
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: idx * 0.05 }}
-              className='group relative rounded-2xl border border-white/5 bg-white/[0.02] p-5 hover:bg-white/[0.04] transition-all'
-            >
-              <div className='flex justify-between items-start gap-4 mb-3'>
-                <div className='flex items-center gap-3'>
-                  <div className='w-10 h-10 rounded-full bg-primary/20 border border-primary/20 flex items-center justify-center text-primary font-bold'>
-                    {c.user_id.slice(0, 1).toUpperCase()}
-                  </div>
-                  <div>
-                    <div className='flex items-center gap-2'>
-                      <span className='text-sm font-bold text-white'>
-                        User #{c.user_id.slice(0, 4)}
-                      </span>
-                      {c.rating && (
-                        <div className='flex items-center gap-1 bg-yellow-500/10 px-2 py-0.5 rounded text-[10px] font-bold text-yellow-500 border border-yellow-500/20'>
-                          <Star className='w-2.5 h-2.5 fill-current' />
-                          {c.rating}/10
-                        </div>
-                      )}
-                    </div>
-                    <div className='text-[10px] text-zinc-500'>
-                      {new Date(c.created_at).toLocaleDateString(
-                        lang === 'ar' ? 'ar-EG' : 'en-US',
-                        { year: 'numeric', month: 'long', day: 'numeric' }
-                      )}
-                    </div>
-                  </div>
+              {/* User Rating */}
+              {user && (
+                <div className="flex-1">
+                  <label className="block text-sm font-bold text-white mb-2">
+                    {lang === 'ar' ? 'تقييمك' : 'Your Rating'}
+                  </label>
+                  <RatingInput
+                    value={userRating}
+                    onChange={handleRatingChange}
+                    size="lg"
+                    showValue
+                  />
                 </div>
+              )}
 
-                {(user?.id === c.user_id || isAdmin) && (
-                  <button
-                    onClick={async () => {
-                      if (
-                        confirm(
-                          t(
-                            'هل أنت متأكد من حذف هذه المراجعة؟',
-                            'Are you sure you want to delete this review?'
-                          )
-                        )
-                      ) {
-                        await deleteComment(c.id);
-                        comments.refetch();
-                      }
-                    }}
-                    className='opacity-0 group-hover:opacity-100 p-2 text-zinc-500 hover:text-red-500 transition-all'
-                  >
-                    <Trash2 className='w-4 h-4' />
-                  </button>
-                )}
-              </div>
+              {/* Write Review Button */}
+              {user && !showReviewForm && (
+                <button
+                  onClick={() => setShowReviewForm(true)}
+                  className="px-6 py-3 bg-lumen-gold text-black font-bold rounded-lg hover:bg-lumen-gold/90 transition-all"
+                >
+                  {lang === 'ar' ? 'اكتب مراجعة' : 'Write Review'}
+                </button>
+              )}
+            </div>
+          </div>
 
-              {c.title && <h4 className='text-sm font-bold text-white mb-1'>{c.title}</h4>}
-              <p className='text-sm text-zinc-400 leading-relaxed'>{c.text}</p>
-
-              <ReviewVotes commentId={c.id} userId={user?.id || ''} lang={lang} />
-            </motion.div>
-          ))}
-
-          {comments.isLoading && (
-            <div className='flex flex-col items-center justify-center py-12 gap-3'>
-              <div className='w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin' />
-              <div className='text-xs text-zinc-500 animate-pulse uppercase tracking-widest'>
-                {t('جاري تحميل المراجعات...', 'Loading reviews...')}
-              </div>
+          {/* Review Form */}
+          {showReviewForm && user && (
+            <div className="bg-zinc-900/50 rounded-xl p-6 border border-zinc-800">
+              <h3 className="text-xl font-bold text-white mb-4">
+                {lang === 'ar' ? 'اكتب مراجعتك' : 'Write Your Review'}
+              </h3>
+              <ReviewForm
+                externalId={tvId.toString()}
+                contentType="tv"
+                onSubmit={handleReviewSubmit}
+                onCancel={() => setShowReviewForm(false)}
+              />
             </div>
           )}
 
-          {!comments.isLoading && (comments.data || []).length === 0 && (
-            <div className='py-12 text-center border border-dashed border-white/5 rounded-2xl'>
-              <MessageSquare className='w-8 h-8 text-zinc-700 mx-auto mb-3' />
-              <p className='text-sm text-zinc-500'>
-                {t(
-                  'لا توجد مراجعات بعد. كن أول من يشارك رأيه!',
-                  'No reviews yet. Be the first to share your thoughts!'
-                )}
-              </p>
-            </div>
-          )}
+          {/* Reviews List */}
+          <div className="bg-zinc-900/50 rounded-xl p-6 border border-zinc-800">
+            <ReviewList
+              externalId={tvId.toString()}
+              contentType="tv"
+              currentUserId={user?.id}
+              onEditReview={(review) => {
+                setEditingReview(review as Review)
+                setShowEditModal(true)
+              }}
+              onDeleteReview={async (reviewId) => {
+                if (!user) return
+                try {
+                  const apiBase = import.meta.env.VITE_API_BASE || ''
+                  const response = await fetch(`${apiBase}/api/reviews/${reviewId}`, {
+                    method: 'DELETE',
+                    headers: {
+                      'Authorization': `Bearer ${user.id}`
+                    }
+                  })
+                  if (!response.ok) throw new Error('Failed to delete review')
+                  toast.success(lang === 'ar' ? 'تم حذف المراجعة' : 'Review deleted')
+                  queryClient.invalidateQueries({ queryKey: ['reviews', tvId] })
+                } catch (error: any) {
+                  toast.error(lang === 'ar' ? 'فشل في حذف المراجعة' : 'Failed to delete review')
+                }
+              }}
+              onLikeReview={async (reviewId) => {
+                if (!user) {
+                  toast.error(lang === 'ar' ? 'يجب تسجيل الدخول' : 'Please login first')
+                  return
+                }
+                try {
+                  const apiBase = import.meta.env.VITE_API_BASE || ''
+                  const response = await fetch(`${apiBase}/api/reviews/${reviewId}/like`, {
+                    method: 'POST',
+                    headers: {
+                      'Authorization': `Bearer ${user.id}`
+                    }
+                  })
+                  if (!response.ok) throw new Error('Failed to like review')
+                  queryClient.invalidateQueries({ queryKey: ['reviews', tvId] })
+                } catch (error: any) {
+                  toast.error(lang === 'ar' ? 'فشل في تسجيل الإعجاب' : 'Failed to like review')
+                }
+              }}
+              onReportReview={(reviewId) => {
+                if (!user) {
+                  toast.error(lang === 'ar' ? 'يجب تسجيل الدخول' : 'Please login first')
+                  return
+                }
+                setReportingReviewId(reviewId)
+                setShowReportDialog(true)
+              }}
+            />
+          </div>
         </div>
-      </section>
+      )}
+
+      {/* Edit Review Modal */}
+      <EditReviewModal
+        review={editingReview}
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false)
+          setEditingReview(null)
+        }}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['reviews', tvId] })
+        }}
+      />
+
+      {/* Report Review Dialog */}
+      <ReportReviewDialog
+        reviewId={reportingReviewId}
+        isOpen={showReportDialog}
+        onClose={() => {
+          setShowReportDialog(false)
+          setReportingReviewId(null)
+        }}
+        onSuccess={() => {
+          // Optional: refresh reviews or show confirmation
+        }}
+      />
 
       {showListModal && user && tvId && (
         <AnimatePresence>

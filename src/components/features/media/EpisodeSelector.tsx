@@ -1,11 +1,11 @@
-import {ChevronDown, ListVideo, Layers} from 'lucide-react'
+import { ChevronDown, ListVideo, Layers } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import clsx from 'clsx'
 
 type Props = {
-  season: number
-  episode: number
+  season: number | undefined
+  episode: number | undefined
   setSeason: (s: number) => void
   setEpisode: (e: number) => void
   seasonsCount?: number
@@ -14,22 +14,31 @@ type Props = {
   availableEpisodes?: Record<string, boolean>
 }
 
-export const EpisodeSelector = ({ 
-  season, 
-  episode, 
-  setSeason, 
-  setEpisode, 
-  seasonsCount = 1, 
+export const EpisodeSelector = ({
+  season,
+  episode,
+  setSeason,
+  setEpisode,
+  seasonsCount = 1,
   episodesCount = 1,
   lang = 'ar',
   availableEpisodes = {}
 }: Props) => {
   const [seasonOpen, setSeasonOpen] = useState(false)
   const [visibleEpisodes, setVisibleEpisodes] = useState(48)
-  const t = (ar: string, en: string) => (lang === 'ar' ? ar : en)
-  useEffect(() => {
+  const [lastSeason, setLastSeason] = useState(season)
+
+  // Guard: If season or episode is undefined, don't render
+  if (season === undefined || episode === undefined) {
+    return null
+  }
+
+  if (season !== lastSeason) {
     setVisibleEpisodes(48)
-  }, [season])
+    setLastSeason(season)
+  }
+
+  const t = (ar: string, en: string) => (lang === 'ar' ? ar : en)
   const filteredEpisodes = Array.from({ length: episodesCount })
     .map((_, i) => i + 1)
     .filter(epNum => {
@@ -72,8 +81,8 @@ export const EpisodeSelector = ({
             onClick={() => setSeasonOpen(!seasonOpen)}
             className={clsx(
               "w-full flex items-center justify-between rounded-2xl border px-4 py-3 text-sm font-black transition-all duration-300",
-              seasonOpen 
-                ? "bg-primary border-primary text-black shadow-lg shadow-primary/20" 
+              seasonOpen
+                ? "bg-primary border-primary text-black shadow-lg shadow-primary/20"
                 : "bg-white/[0.02] border-white/5 text-zinc-400 hover:bg-white/[0.05] hover:border-white/20 hover:text-white"
             )}
           >
@@ -83,14 +92,14 @@ export const EpisodeSelector = ({
             </div>
             <ChevronDown size={16} className={clsx("transition-transform duration-300", seasonOpen && "rotate-180")} />
           </button>
-          
+
           <AnimatePresence>
             {seasonOpen && (
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: 10, scale: 0.95 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                className="absolute top-full left-0 right-0 mt-2 bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl z-50 max-h-64 overflow-y-auto scrollbar-none"
+                className="absolute top-full left-0 right-0 mt-2 bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl z-50 scrollbar-none"
               >
                 <div className="p-2 grid grid-cols-1 gap-1">
                   {Array.from({ length: seasonsCount }).map((_, i) => {
@@ -106,8 +115,8 @@ export const EpisodeSelector = ({
                         }}
                         className={clsx(
                           "w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-bold transition-all",
-                          isSelected 
-                            ? "bg-primary/20 text-primary" 
+                          isSelected
+                            ? "bg-primary/20 text-primary"
                             : "text-zinc-400 hover:bg-white/5 hover:text-white"
                         )}
                       >
@@ -124,52 +133,52 @@ export const EpisodeSelector = ({
       )}
 
       {/* Episodes Grid - Modern Mini Style */}
-      <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-2 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
+      <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-2 pr-1">
         {renderedEpisodes.map((epNum) => {
-            const isActive = epNum === episode
-            
-            return (
-              <motion.button
-                key={epNum}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setEpisode(epNum)}
-                className={clsx(
-                  "group relative flex items-center justify-center rounded-lg border transition-all duration-300 h-9 w-full",
-                  isActive 
-                    ? "bg-primary border-primary text-black z-10" 
-                    : "bg-white/[0.02] border-white/[0.03] text-zinc-500 hover:bg-white/[0.08] hover:border-white/10 hover:text-white"
-                )}
-                animate={isActive ? {
-                  boxShadow: [
-                    "0 0 0px rgba(0, 255, 204, 0)",
-                    "0 0 20px rgba(0, 255, 204, 0.6)",
-                    "0 0 0px rgba(0, 255, 204, 0)"
-                  ]
-                } : {}}
-                transition={isActive ? {
-                  duration: 2,
-                  repeat: Infinity,
-                  ease: "easeInOut"
-                } : {}}
-              >
-                {/* Inner Content Container */}
-                <div className="relative z-10 flex items-center justify-center gap-1">
-                  <span className="text-[10px] font-bold opacity-70 uppercase tracking-tighter">EP</span>
-                  <span className="text-sm md:text-base font-black tracking-tight">{epNum}</span>
-                </div>
+          const isActive = epNum === episode
 
-                {isActive && (
-                  <motion.div
-                    layoutId="active-episode"
-                    className="absolute -inset-0.5 rounded-md border-2 border-primary pointer-events-none"
-                    initial={false}
-                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-                  />
-                )}
-              </motion.button>
-            )
-          })}
+          return (
+            <motion.button
+              key={epNum}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setEpisode(epNum)}
+              className={clsx(
+                "group relative flex items-center justify-center rounded-lg border transition-all duration-300 h-9 w-full",
+                isActive
+                  ? "bg-primary border-primary text-black z-10"
+                  : "bg-white/[0.02] border-white/[0.03] text-zinc-500 hover:bg-white/[0.08] hover:border-white/10 hover:text-white"
+              )}
+              animate={isActive ? {
+                boxShadow: [
+                  "0 0 0px rgba(0, 255, 204, 0)",
+                  "0 0 20px rgba(0, 255, 204, 0.6)",
+                  "0 0 0px rgba(0, 255, 204, 0)"
+                ]
+              } : {}}
+              transition={isActive ? {
+                duration: 2,
+                repeat: Infinity,
+                ease: "easeInOut"
+              } : {}}
+            >
+              {/* Inner Content Container */}
+              <div className="relative z-10 flex items-center justify-center gap-1">
+                <span className="text-[10px] font-bold opacity-70 uppercase tracking-tighter">EP</span>
+                <span className="text-sm md:text-base font-black tracking-tight">{epNum}</span>
+              </div>
+
+              {isActive && (
+                <motion.div
+                  layoutId="active-episode"
+                  className="absolute -inset-0.5 rounded-md border-2 border-primary pointer-events-none"
+                  initial={false}
+                  transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                />
+              )}
+            </motion.button>
+          )
+        })}
       </div>
       {filteredEpisodes.length > renderedEpisodes.length && (
         <button

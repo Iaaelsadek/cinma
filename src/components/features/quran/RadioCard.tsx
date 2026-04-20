@@ -7,8 +7,8 @@ export const RadioCard = () => {
   
   return (
     <motion.button 
-      whileHover={{ scale: 1.05, boxShadow: "0 0 40px rgba(245,158,11,0.4)" }}
-      whileTap={{ scale: 0.95 }}
+      whileHover={{ scale: 1.02, boxShadow: "0 0 30px rgba(245,158,11,0.3)" }}
+      whileTap={{ scale: 0.98 }}
       onClick={() => {
         const width = 420
         const height = Math.max(320, Math.round((window.screen?.height || 700) * 0.5))
@@ -33,22 +33,21 @@ export const RadioCard = () => {
 
         window.location.href = '/quran/radio'
       }}
-      className="group relative flex items-center gap-3 md:gap-4 px-4 py-2 md:px-7 md:py-3.5 rounded-2xl md:rounded-[2rem] bg-gradient-to-br from-amber-900/40 to-yellow-900/40 border border-amber-500/40 text-amber-100 transition-all duration-500 shadow-[0_0_25px_rgba(245,158,11,0.2)] overflow-hidden"
+      className="group relative flex items-center gap-3 px-4 py-[22px] rounded-2xl bg-gradient-to-br from-cyan-900/40 to-sky-900/40 border border-cyan-500/40 text-cyan-100 transition-all duration-300 shadow-[0_0_20px_rgba(6,182,212,0.15)] overflow-hidden"
     >
       {/* Shimmering Effect */}
-      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-amber-400/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-400/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
       
-      <div className="w-8 h-8 md:w-11 md:h-11 rounded-full bg-amber-500/20 flex items-center justify-center border border-amber-500/40 group-hover:bg-amber-500/30 group-hover:border-amber-300 transition-all duration-300">
-        <Radio size={16} className="animate-pulse text-amber-400 md:hidden" />
-        <Radio size={22} className="animate-pulse text-amber-400 hidden md:block" />
+      <div className="w-9 h-9 rounded-full bg-cyan-500/20 flex items-center justify-center border border-cyan-500/40 group-hover:bg-cyan-500/30 group-hover:border-cyan-300 transition-all duration-300 shrink-0">
+        <Radio size={18} className="animate-pulse text-cyan-400" />
       </div>
-      <div className="flex flex-col items-start relative z-10">
-        <span className="text-base md:text-xl font-bold font-amiri leading-none mb-0.5 md:mb-1 text-white group-hover:text-amber-300 transition-colors">
+      <div className="flex flex-col items-start relative z-10 flex-1 min-w-0">
+        <span className="text-sm font-bold font-amiri leading-tight text-white group-hover:text-cyan-300 transition-colors truncate w-full">
           {lang === 'ar' ? 'إذاعة القرآن الكريم' : 'Quran Radio'}
         </span>
-        <span className="text-[8px] md:text-[11px] text-amber-400/80 font-normal flex items-center gap-2">
-          <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-amber-500 animate-ping" />
-          {lang === 'ar' ? 'بث مباشر على مدار الساعة' : 'Live 24/7 Spiritual Broadcast'}
+        <span className="text-[9px] text-cyan-400/80 font-normal flex items-center gap-1.5 mt-0.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 animate-ping" />
+          {lang === 'ar' ? 'بث مباشر 24/7' : 'Live 24/7'}
         </span>
       </div>
     </motion.button>

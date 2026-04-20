@@ -1,163 +1,222 @@
-import { GENRES } from './genres'
+import { clsx, type ClassValue } from 'clsx'
+import { twMerge } from 'tailwind-merge'
 
-export const slugify = (text: string) => {
-  if (!text) return ''
-  return text
-    .toString()
-    .toLowerCase()
-    .trim()
-    .replace(/[\s_]+/g, '-') // Replace spaces and underscores with -
-    // Allow English, Arabic, and CJK (Chinese, Japanese, Korean) characters
-    .replace(/[^\w-\u0621-\u064A\u0660-\u0669\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uff00-\uff9f\u4e00-\u9faf\u3400-\u4dbf]/g, '') 
-    .replace(/--+/g, '-')   // Replace multiple - with single -
-    .replace(/^-+|-+$/g, '')  // Trim - from ends
-}
-
-export const getGenreSlug = (genreId: number) => {
-  const genre = GENRES[genreId]?.en || 'General'
-  return slugify(genre)
-}
-
-export const generateContentUrl = (item: { id: number | string, slug?: string | null, media_type?: string, type?: string, title?: string | null, name?: string | null }) => {
-  const type = item.media_type || item.type || 'movie'
-  let identifier = item.slug
-  
-  // CRITICAL: Ignore legacy slugs that look like "content-12345" or just numbers
-  if (identifier && (/^content-\d+$/.test(identifier) || /^\d+$/.test(identifier))) {
-    identifier = undefined
-  }
-  
-  if (!identifier) {
-    // CRITICAL: User demands PURE SLUGS ONLY. If slug is missing, generate it on the fly from title
-    const title = item.title || item.name || 'content'
-    identifier = slugify(title)
-    
-    // If slugify fails or returns empty, use a generic slug (never raw ID)
-    if (!identifier) identifier = 'content'
-  }
-  
-  switch (type) {
-    case 'movie': return `/movie/${identifier}`
-    case 'tv':
-    case 'series':
-    case 'anime': return `/series/${identifier}`
-    case 'actor':
-    case 'person': return `/actor/${identifier}`
-    case 'game': return `/game/${identifier}`
-    case 'software': return `/software/${identifier}`
-    default: return `/${type}/${identifier}`
-  }
-}
-
-export const generateWatchUrl = (item: { id: number | string, slug?: string | null, media_type?: string, type?: string, name?: string | null, title?: string | null }, season?: number, episode?: number) => {
-  const type = item.media_type || item.type || (item.name && !item.title ? 'tv' : 'movie')
-  let identifier = item.slug
-  
-  // CRITICAL: Ignore legacy slugs that look like "content-12345" or just numbers
-  if (identifier && (/^content-\d+$/.test(identifier) || /^\d+$/.test(identifier))) {
-    identifier = undefined
-  }
-  
-  if (!identifier) {
-    const title = item.title || item.name || 'content'
-    identifier = slugify(title)
-    if (!identifier) identifier = 'content'
-  }
-
-  const isSeries = type === 'tv' || type === 'series' || type === 'anime'
-  
-  if (isSeries) {
-    const s = season || 1
-    const e = episode || 1
-    return `/watch/tv/${identifier}/s${s}/ep${e}`
-  }
-  
-  return `/watch/movie/${identifier}`
-}
-
-export const generateWatchPath = (item: any) => {
-  return generateWatchUrl(item, 1, 1)
-}
-
-export const parseWatchPath = (slug: string) => {
-  // Extract ID from the end of the slug (e.g., "primate-12345" -> 12345)
-  const parts = slug.split('-')
-  const id = parts[parts.length - 1]
-  return /^\d+$/.test(id) ? parseInt(id) : null
-}
-
-export const isCJK = (text: string) => {
-  if (!text) return false
-  // Range covers Chinese, Japanese, Korean characters
-  return /[\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uff00-\uff9f\u4e00-\u9faf\u3400-\u4dbf]/.test(text)
+/**
+ * دمج class names مع Tailwind CSS
+ * Merge class names with Tailwind CSS
+ */
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
 }
 
 /**
- * Normalizes text for better search matching
- * - Converts to lowercase
- * - Normalizes Arabic characters (alef, teh marbuta, etc.)
- * - Removes extra spaces
+ * تنسيق الأرقام الكبيرة (1000 → 1K)
+ * Format large numbers (1000 → 1K)
  */
-export const normalizeSearchText = (text: string): string => {
-  if (!text) return ''
-  
-  return text
-    .toLowerCase()
-    .trim()
-    // Normalize Arabic Alef
-    .replace(/[أإآا]/g, 'ا')
-    // Normalize Arabic Teh Marbuta
-    .replace(/[ةه]/g, 'ه')
-    // Normalize Arabic Yeh
-    .replace(/[ىيئ]/g, 'ي')
-    // Normalize Arabic Waw
-    .replace(/[ؤو]/g, 'و')
-    // Remove Arabic Diacritics (Tashkeel)
-    .replace(/[\u064B-\u065F]/g, '')
-    // Replace multiple spaces with single space
-    .replace(/\s+/g, ' ')
+export function formatNumber(num: number): string {
+  if (num >= 1000000) {
+    return (num / 1000000).toFixed(1) + 'M'
+  }
+  if (num >= 1000) {
+    return (num / 1000).toFixed(1) + 'K'
+  }
+  return num.toString()
 }
 
 /**
- * Maps English keyboard characters to their Arabic equivalents
- * (for when a user searches for Arabic text while their keyboard is set to English)
+ * تأخير التنفيذ (للـ debouncing)
+ * Delay execution (for debouncing)
  */
-export const mapEnglishToArabicKeyboard = (text: string): string => {
-  const map: Record<string, string> = {
-    'q': 'ض', 'w': 'ص', 'e': 'ث', 'r': 'ق', 't': 'ف', 'y': 'غ', 'u': 'ع', 'i': 'ه', 'o': 'خ', 'p': 'ح', '[': 'ج', ']': 'د',
-    'a': 'ش', 's': 'س', 'd': 'ي', 'f': 'ب', 'g': 'ل', 'h': 'ا', 'j': 'ت', 'k': 'ن', 'l': 'م', ';': 'ك', "'": 'ط',
-    'z': 'ئ', 'x': 'ء', 'c': 'ؤ', 'v': 'ر', 'b': 'لا', 'n': 'ى', 'm': 'ة', ',': 'و', '.': 'ز', '/': 'ظ'
+export function debounce<T extends (...args: any[]) => any>(
+  func: T,
+  wait: number
+): (...args: Parameters<T>) => void {
+  let timeout: ReturnType<typeof setTimeout> | null = null
+
+  return function executedFunction(...args: Parameters<T>) {
+    const later = () => {
+      timeout = null
+      func(...args)
+    }
+
+    if (timeout) {
+      clearTimeout(timeout)
+    }
+    timeout = setTimeout(later, wait)
   }
-  
-  return text.toLowerCase().split('').map(char => map[char] || char).join('')
 }
 
 /**
- * Advanced search matching that handles:
- * 1. Case-insensitive matching
- * 2. Arabic normalization (alef, teh marbuta, etc.)
- * 3. English-to-Arabic keyboard mapping
- * 4. Partial word matching
+ * Throttle function execution
  */
-export const advancedSearchMatch = (target: string, query: string): boolean => {
-  if (!query) return true
-  if (!target) return false
+export function throttle<T extends (...args: any[]) => any>(
+  func: T,
+  limit: number
+): (...args: Parameters<T>) => void {
+  let inThrottle: boolean = false
 
-  const normalizedTarget = normalizeSearchText(target)
-  const normalizedQuery = normalizeSearchText(query)
-  const keyboardMappedQuery = normalizeSearchText(mapEnglishToArabicKeyboard(query))
+  return function executedFunction(...args: Parameters<T>) {
+    if (!inThrottle) {
+      func(...args)
+      inThrottle = true
+      setTimeout(() => {
+        inThrottle = false
+      }, limit)
+    }
+  }
+}
 
-  // Direct match in normalized text
-  if (normalizedTarget.includes(normalizedQuery)) return true
-  
-  // Keyboard mapping match (e.g. searching 'sfhd]v' for 'سينما')
-  if (normalizedTarget.includes(keyboardMappedQuery)) return true
+/**
+ * Sleep function for async operations
+ */
+export function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
 
-  // Word-by-word matching (fuzzy-ish)
-  const queryWords = normalizedQuery.split(' ').filter(w => w.length > 1)
-  if (queryWords.length > 0) {
-    return queryWords.every(word => normalizedTarget.includes(word))
+/**
+ * Check if code is running in browser
+ */
+export function isBrowser(): boolean {
+  return typeof window !== 'undefined'
+}
+
+/**
+ * Get value from localStorage safely
+ */
+export function getLocalStorage<T>(key: string, defaultValue: T): T {
+  if (!isBrowser()) return defaultValue
+
+  try {
+    const item = window.localStorage.getItem(key)
+    return item ? JSON.parse(item) : defaultValue
+  } catch (error: any) {
+    console.error(`Error reading localStorage key "${key}":`, error)
+    return defaultValue
+  }
+}
+
+/**
+ * Set value in localStorage safely
+ */
+export function setLocalStorage<T>(key: string, value: T): void {
+  if (!isBrowser()) return
+
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value))
+  } catch (error: any) {
+    console.error(`Error setting localStorage key "${key}":`, error)
+  }
+}
+
+/**
+ * Remove value from localStorage safely
+ */
+export function removeLocalStorage(key: string): void {
+  if (!isBrowser()) return
+
+  try {
+    window.localStorage.removeItem(key)
+  } catch (error: any) {
+    console.error(`Error removing localStorage key "${key}":`, error)
+  }
+}
+
+
+/**
+ * Generate watch URL for content
+ */
+export function generateWatchUrl(
+  item: { id?: number | string; slug?: string | null; media_type?: string; type?: string; season?: number; episode?: number } | string,
+  season?: number,
+  episode?: number
+): string {
+  // Handle string input (just slug)
+  if (typeof item === 'string') {
+    return `/watch/movie/${item}`
   }
 
-  return false
+  const slug = item.slug || ''
+  const contentType = (item.media_type || item.type || 'movie')
+
+  // Software goes to /software/:slug
+  if (contentType === 'software') {
+    return `/software/${slug}`
+  }
+
+  if (contentType === 'movie') {
+    return `/watch/movie/${slug}`
+  }
+
+  const s = season ?? item.season
+  const e = episode ?? item.episode
+
+  if (s !== undefined && e !== undefined) {
+    return `/watch/tv/${slug}/s${s}/ep${e}`
+  }
+
+  return `/watch/tv/${slug}`
+}
+
+/**
+ * Generate content URL (detail page)
+ */
+export function generateContentUrl(
+  item: { slug?: string | null; media_type?: string; type?: string } | string
+): string {
+  // Handle string input
+  if (typeof item === 'string') {
+    return `/movie/${item}`
+  }
+
+  const slug = item.slug || ''
+  const contentType = (item.media_type || item.type || 'movie')
+
+  // Map content types to correct URLs
+  if (contentType === 'software') {
+    return `/software/${slug}`
+  }
+
+  if (contentType === 'actor' || contentType === 'person') {
+    return `/actor/${slug}`
+  }
+
+  if (contentType === 'tv' || contentType === 'series') {
+    return `/tv/${slug}`
+  }
+
+  return `/movie/${slug}`
+}
+
+/**
+ * Map English keyboard to Arabic keyboard
+ */
+export function mapEnglishToArabicKeyboard(text: string): string {
+  const mapping: Record<string, string> = {
+    'q': 'ض', 'w': 'ص', 'e': 'ث', 'r': 'ق', 't': 'ف', 'y': 'غ', 'u': 'ع', 'i': 'ه', 'o': 'خ', 'p': 'ح',
+    'a': 'ش', 's': 'س', 'd': 'ي', 'f': 'ب', 'g': 'ل', 'h': 'ا', 'j': 'ت', 'k': 'ن', 'l': 'م',
+    'z': 'ئ', 'x': 'ء', 'c': 'ؤ', 'v': 'ر', 'b': 'لا', 'n': 'ى', 'm': 'ة'
+  }
+
+  return text.split('').map(char => mapping[char.toLowerCase()] || char).join('')
+}
+
+/**
+ * Advanced search match for Arabic text
+ */
+export function advancedSearchMatch(text: string, query: string): boolean {
+  if (!text || !query) return false
+
+  const normalizedText = text.toLowerCase().trim()
+  const normalizedQuery = query.toLowerCase().trim()
+
+  // Direct match
+  if (normalizedText.includes(normalizedQuery)) return true
+
+  // Try English to Arabic keyboard mapping
+  const arabicQuery = mapEnglishToArabicKeyboard(normalizedQuery)
+  if (normalizedText.includes(arabicQuery)) return true
+
+  // Try word-by-word match
+  const queryWords = normalizedQuery.split(/\s+/)
+  return queryWords.every(word => normalizedText.includes(word))
 }

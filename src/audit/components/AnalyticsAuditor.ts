@@ -49,7 +49,7 @@ export class AnalyticsAuditor {
         metrics,
         duration: Date.now() - startTime,
       };
-    } catch (error) {
+    } catch (error: any) {
       auditLogger.error('AnalyticsAuditor', 'Audit failed', { error });
       throw error;
     }
@@ -198,7 +198,7 @@ export class AnalyticsAuditor {
         metrics.issues.push('GDPR compliance not verified');
       }
 
-    } catch (error) {
+    } catch (error: any) {
       auditLogger.warn('AnalyticsAuditor', 'Analytics verification failed', { error });
       metrics.issues.push('Failed to verify analytics implementation');
     }

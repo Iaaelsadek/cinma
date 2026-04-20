@@ -1,4 +1,3 @@
-import { supabase } from './supabase'
 import { logger } from './logger'
 
 /**
@@ -30,7 +29,7 @@ export const generateArabicSummary = async (
 
     if (!summary) return originalOverview || 'لا يوجد وصف متاح'
     return summary
-  } catch (err) {
+  } catch (err: any) {
     logger.warn('[Gemini] backend summary failed:', err)
     return originalOverview || 'لا يوجد وصف متاح'
   }
@@ -96,17 +95,16 @@ export const translateTitleToArabic = async (title: string): Promise<string> => 
   const cached = localStorage.getItem(cacheKey)
   if (cached) return cached
 
-  // 4) Supabase translations table
+  // 4) CockroachDB translations table via API
   try {
-    const { data } = await supabase
-      .from('translations')
-      .select('arabic_title')
-      .eq('original_title', title)
-      .maybeSingle()
-
-    if (data && data.arabic_title) {
-      localStorage.setItem(cacheKey, data.arabic_title)
-      return data.arabic_title
+    const response = await fetch(`/api/translations/general/${encodeURIComponent(title)}`)
+    
+    if (response.ok) {
+      const data = await response.json()
+      if (data && data.arabic_title) {
+        localStorage.setItem(cacheKey, data.arabic_title)
+        return data.arabic_title
+      }
     }
   } catch {
     // تجاهل أخطاء الشبكة / الجدول
@@ -136,11 +134,15 @@ export const translateTitleToArabic = async (title: string): Promise<string> => 
             finalTranslation = translated
             localStorage.setItem(cacheKey, finalTranslation)
 
-            // حفظ في Supabase (أفضلية لكن غير حرجة)
-            supabase.from('translations').upsert({
-              original_title: title,
-              arabic_title: finalTranslation
-            }).then(() => {})
+            // حفظ في CockroachDB API (أفضلية لكن غير حرجة)
+            fetch('/api/translations/general', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                original_title: title,
+                arabic_title: finalTranslation
+              })
+            }).catch(() => {})
           }
         }
       }

@@ -18,17 +18,13 @@ const STORAGE_KEY = 'cinma_pwa_install_dismissed'
 
 export const PwaProvider = ({ children }: { children: ReactNode }) => {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
-  const [isInstalled, setIsInstalled] = useState(false)
+  const [isInstalled, setIsInstalled] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return window.matchMedia('(display-mode: standalone)').matches
+      || (window.navigator as any).standalone === true
+  })
 
   useEffect(() => {
-    // Check if installed (standalone mode)
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches
-      || (window.navigator as any).standalone === true
-    
-    if (isStandalone) {
-      setIsInstalled(true)
-    }
-
     // Listen for install prompt
     const handler = (e: Event) => {
       e.preventDefault()

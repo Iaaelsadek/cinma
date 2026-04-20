@@ -78,7 +78,7 @@ export class ContentDeliveryAuditor {
         },
         duration: Date.now() - startTime,
       };
-    } catch (error) {
+    } catch (error: any) {
       auditLogger.error('ContentDeliveryAuditor', 'Audit failed', { error });
       throw error;
     }
@@ -141,7 +141,7 @@ export class ContentDeliveryAuditor {
       // Simulate average load time (in production, this would be measured via Performance API)
       metrics.averageLoadTime = 150; // ms
 
-    } catch (error) {
+    } catch (error: any) {
       auditLogger.warn('ContentDeliveryAuditor', 'Image optimization check failed', { error });
       metrics.issues.push('Failed to verify image optimization');
     }
@@ -185,7 +185,7 @@ export class ContentDeliveryAuditor {
         metrics.issues.push(`Video buffering rate ${(metrics.bufferingRate * 100).toFixed(0)}% exceeds 10% threshold`);
       }
 
-    } catch (error) {
+    } catch (error: any) {
       auditLogger.warn('ContentDeliveryAuditor', 'Video delivery check failed', { error });
       metrics.issues.push('Failed to verify video delivery');
     }
@@ -246,7 +246,7 @@ export class ContentDeliveryAuditor {
         metrics.issues.push(`CDN cache hit rate ${metrics.cacheHitRate}% below 80% threshold`);
       }
 
-    } catch (error) {
+    } catch (error: any) {
       auditLogger.warn('ContentDeliveryAuditor', 'CDN configuration check failed', { error });
       metrics.issues.push('Failed to verify CDN configuration');
     }
@@ -303,7 +303,7 @@ export class ContentDeliveryAuditor {
         metrics.issues.push('Build configuration not found');
       }
 
-    } catch (error) {
+    } catch (error: any) {
       auditLogger.warn('ContentDeliveryAuditor', 'Resource optimization check failed', { error });
       metrics.issues.push('Failed to verify resource optimization');
     }

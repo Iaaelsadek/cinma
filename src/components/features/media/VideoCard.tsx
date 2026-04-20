@@ -7,6 +7,7 @@ import { useAuth } from '../../../hooks/useAuth';
 import { addToWatchlist, isInWatchlist, removeFromWatchlist } from '../../../lib/supabase';
 import { tmdb } from '../../../lib/tmdb';
 import { logger } from '../../../lib/logger';
+import { AggregateRating } from '../reviews/AggregateRating';
 
 import { useDualTitles } from '../../../hooks/useDualTitles';
 import { getTranslation, resolveTitleWithFallback } from '../../../lib/translation';
@@ -16,6 +17,7 @@ const LazyReactPlayer = lazy(() => import('react-player/youtube'));
 export type VideoItem = {
   id: string | number;
   title: string;
+  slug?: string | null;
   thumbnail?: string | null;
   url?: string;
   views?: number | null;
@@ -23,6 +25,10 @@ export type VideoItem = {
   category?: string | null;
   quality?: string | null;
   year?: number | null;
+  // Aggregate rating data (optional, passed from parent)
+  aggregate_rating?: number | null;
+  rating_count?: number;
+  review_count?: number;
 };
 
 import { generateWatchUrl } from '../../../lib/utils';
@@ -103,13 +109,24 @@ export const VideoCard = memo(
     };
 
     const duration = video.duration ? formatDuration(video.duration) : '';
-    const contentId = Number(video.id);
-    const canToggle = Number.isFinite(contentId);
+    const externalId = String(video.id);
+    const canToggle = Boolean(externalId && externalId.trim());
     const contentType = video.category === 'series' ? 'tv' : 'movie';
     const hasVisual = Boolean(imageSrc);
     const hasValidTitle = Boolean(
       displayTitle && displayTitle !== 'Untitled' && displayTitle !== 'بدون عنوان'
     );
+
+    // Check if this is a special category that doesn't require slugs
+    const isSpecialCategory = 
+      video.category === 'summary' ||
+      video.category === 'video' ||
+      video.category === 'plays';
+
+    // For non-special categories (movies, series), validate slug to prevent crashes
+    if (!isSpecialCategory && (!video.slug || video.slug.trim() === '' || video.slug === 'content')) {
+      return null;
+    }
 
     const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -153,13 +170,13 @@ export const VideoCard = memo(
           if (mounted) setInList(false);
           return;
         }
-        const inside = await isInWatchlist(user.id, contentId, contentType);
+        const inside = await isInWatchlist(user.id, externalId, contentType);
         if (mounted) setInList(inside);
       })();
       return () => {
         mounted = false;
       };
-    }, [user, contentId, contentType, canToggle]);
+    }, [user, externalId, contentType, canToggle]);
 
     const toggleList = async (e: React.MouseEvent<HTMLButtonElement>) => {
       e.preventDefault();
@@ -170,15 +187,15 @@ export const VideoCard = memo(
       }
       setBusy(true);
       try {
-        const current = await isInWatchlist(user.id, contentId, contentType);
+        const current = await isInWatchlist(user.id, externalId, contentType);
         if (current) {
-          await removeFromWatchlist(user.id, contentId, contentType);
+          await removeFromWatchlist(user.id, externalId, contentType);
           setInList(false);
         } else {
-          await addToWatchlist(user.id, contentId, contentType);
+          await addToWatchlist(user.id, externalId, contentType);
           setInList(true);
         }
-      } catch (error) {
+      } catch (error: any) {
         logger.error('Watchlist toggle error:', error);
       } finally {
         setBusy(false);
@@ -205,7 +222,7 @@ export const VideoCard = memo(
             return;
           }
           const type = video.category === 'series' || video.category === 'tv' ? 'tv' : 'movie';
-          const url = generateWatchUrl({ id: video.id, type });
+          const url = generateWatchUrl({ id: video.id, slug: video.slug, type });
           navigate(url);
         }}
       >
@@ -299,6 +316,32 @@ export const VideoCard = memo(
 
           <div className='flex items-center justify-between text-xs text-zinc-500'>
             <div className='flex items-center gap-2'>
+              {/* Aggregate Rating */}
+              {video.aggregate_rating !== undefined && video.aggregate_rating !== null && (
+                <AggregateRating
+                  externalId={String(video.id)}
+                  contentType={contentType}
+                  size="sm"
+                  showCount={false}
+                  initialData={{
+                    average_rating: video.aggregate_rating,
+                    rating_count: video.rating_count || 0
+                  }}
+                />
+              )}
+              
+              {/* Review Count */}
+              {video.review_count !== undefined && video.review_count > 0 && (
+                <>
+                  {video.aggregate_rating !== undefined && video.aggregate_rating !== null && (
+                    <span className='w-1 h-1 rounded-full bg-zinc-700' />
+                  )}
+                  <span className='text-zinc-400 text-[10px]'>
+                    {video.review_count} review{video.review_count === 1 ? '' : 's'}
+                  </span>
+                </>
+              )}
+              
               {video.year && <span>{video.year}</span>}
               {video.views && (
                 <>

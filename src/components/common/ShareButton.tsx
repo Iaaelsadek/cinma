@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
 import { Share2 } from 'lucide-react'
-import { toast } from 'sonner'
+import { toast } from '../../lib/toast-manager'
 import { clsx } from 'clsx'
 import { ShareModal } from './ShareModal'
 
@@ -40,7 +40,7 @@ export const ShareButton = ({ title, url, text, className = '', size = 'md', cur
           url: shareUrl
         })
         toast.success('تم المشاركة بنجاح')
-      } catch (err) {
+      } catch (err: any) {
         if ((err as Error).name !== 'AbortError') {
           setIsModalOpen(true)
         }

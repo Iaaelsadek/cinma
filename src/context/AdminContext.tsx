@@ -8,7 +8,7 @@ import {
   useMemo,
   useRef,
 } from 'react';
-import { toast } from 'sonner';
+import { toast } from '../lib/toast-manager';
 import { supabase } from '../lib/supabase';
 import { fetchDB } from '../lib/db';
 import { errorLogger } from '../services/errorLogging';
@@ -145,7 +145,7 @@ interface AdminContextType {
     data: Partial<AdminEpisode>
   ) => Promise<void>;
 
-  refreshStats: () => void;
+  triggerRefreshStats: () => void;
 }
 
 const AdminContext = createContext<AdminContextType | undefined>(undefined);
@@ -236,7 +236,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
         }
 
         // Movies from CockroachDB
-        const moviesRes = await fetchDB('/query', {
+        const moviesRes = await fetchDB('/api/db/query', {
           method: 'POST',
           body: JSON.stringify({ query: 'SELECT * FROM movies ORDER BY created_at DESC' }),
         });
@@ -260,7 +260,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
         setMovies(mappedMovies);
 
         // Series and Seasons from CockroachDB (using JOIN to avoid N+1)
-        const seriesRes = await fetchDB('/query', {
+        const seriesRes = await fetchDB('/api/db/query', {
           method: 'POST',
           body: JSON.stringify({
             query: `
@@ -357,7 +357,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
           const dateKeys = buildLastDaysRange(30);
           const trafficMap = new Map<string, number>();
           dateKeys.forEach((k) => trafficMap.set(k, 0));
-          moviesData.forEach((m) => {
+          moviesData.forEach((m: any) => {
             const key = toDateKey(m.created_at);
             if (key && trafficMap.has(key)) {
               trafficMap.set(
@@ -367,7 +367,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
               );
             }
           });
-          seriesData.forEach((s) => {
+          seriesData.forEach((s: any) => {
             const key = toDateKey(s.created_at);
             if (key && trafficMap.has(key)) {
               trafficMap.set(
@@ -396,13 +396,13 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
           }));
 
           const genreMap = new Map<string, number>();
-          moviesData.forEach((m) => {
+          moviesData.forEach((m: any) => {
             const genres = parseGenres((m as any).genres);
             if (genres.length === 0 && m.category) genres.push(String(m.category));
             if (genres.length === 0) genres.push('Unknown');
             genres.forEach((g) => genreMap.set(g, (genreMap.get(g) || 0) + 1));
           });
-          seriesData.forEach((s) => {
+          seriesData.forEach((s: any) => {
             const genres = parseGenres((s as any).genres);
             if (genres.length === 0) genres.push('Unknown');
             genres.forEach((g) => genreMap.set(g, (genreMap.get(g) || 0) + 1));
@@ -413,7 +413,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
             .slice(0, 8);
 
           const topWatched = [
-            ...moviesData.map((m) => ({
+            ...moviesData.map((m: any) => ({
               id: Number(m.id),
               title: String(m.title || `Movie #${m.id}`),
               content_type: 'movie' as const,
@@ -422,7 +422,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
               ),
               vote_average: Number(m.vote_average || 0),
             })),
-            ...seriesData.map((s) => ({
+            ...seriesData.map((s: any) => ({
               id: Number(s.id),
               title: String((s as any).name || (s as any).title || `Series #${s.id}`),
               content_type: 'tv' as const,
@@ -437,17 +437,17 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
 
           const previousPeriodViews =
             moviesData
-              .filter((m) => inPreviousWindow(m.created_at))
+              .filter((m: any) => inPreviousWindow(m.created_at))
               .reduce(
-                (acc, m) =>
+                (acc: number, m: any) =>
                   acc +
                   Number((m as any).views ?? (m as any).view_count ?? (m as any).watch_count ?? 0),
                 0
               ) +
             seriesData
-              .filter((s) => inPreviousWindow(s.created_at))
+              .filter((s: any) => inPreviousWindow(s.created_at))
               .reduce(
-                (acc, s) =>
+                (acc: number, s: any) =>
                   acc +
                   Number((s as any).views ?? (s as any).view_count ?? (s as any).watch_count ?? 0),
                 0
@@ -480,7 +480,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
           category: 'database',
           context: { error },
         });
-        toast.error('Failed to load admin data');
+        toast.error('Failed to load admin data', { id: 'admin-data-error' });
       } finally {
         setLoading(false);
       }
@@ -492,29 +492,37 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     fetchData();
   }, [fetchData]);
 
+  // Lightweight trigger to refresh stats safely
+  const triggerRefreshStats = useCallback(() => {
+    setStatsCache(null);
+    fetchData(true);
+  }, [fetchData]);
+
   const addMovie = useCallback(async (movieData: Omit<AdminMovie, 'id' | 'views'>) => {
     try {
-      const { data, error } = await supabase
-        .from('movies')
-        .insert({
-          title: movieData.title,
-          overview: movieData.overview, // Changed from description
-          poster_path: movieData.poster_path, // Changed from poster_url
-          backdrop_path: movieData.backdrop_path, // Changed from banner_url
-          release_date: movieData.release_date,
-          vote_average: movieData.vote_average, // Changed from rating
-          category: movieData.category,
-          genres: Array.isArray(movieData.genres) ? movieData.genres : [],
-          trailer_url: movieData.trailer_url || null,
-          video_url: movieData.video_url || null,
-          is_active: movieData.status !== 'inactive',
-          views: 0,
+      // Use CockroachDB API for content (NOT Supabase)
+      const result = await fetchDB('/api/db/query', {
+        method: 'POST',
+        body: JSON.stringify({
+          query: `INSERT INTO movies (title, overview, poster_path, backdrop_path, release_date, vote_average, category, genres, trailer_url, video_url, views) 
+                  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 0) 
+                  RETURNING *`,
+          params: [
+            movieData.title,
+            movieData.overview,
+            movieData.poster_path,
+            movieData.backdrop_path,
+            movieData.release_date,
+            movieData.vote_average,
+            movieData.category,
+            JSON.stringify(movieData.genres || []),
+            movieData.trailer_url || null,
+            movieData.video_url || null
+          ]
         })
-        .select()
-        .single();
+      });
 
-      if (error) throw error;
-
+      const data = result.rows[0];
       const newMovie: AdminMovie = {
         id: data.id,
         title: data.title,
@@ -523,12 +531,12 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
         backdrop_path: data.backdrop_path,
         release_date: data.release_date,
         vote_average: data.vote_average,
-        views: data.views,
+        views: data.views || 0,
         category: data.category || '',
-        genres: parseGenres((data as any).genres),
-        trailer_url: (data as any).trailer_url || null,
-        video_url: (data as any).video_url || null,
-        status: (data as any).is_active === false ? 'inactive' : 'active',
+        genres: parseGenres(data.genres),
+        trailer_url: data.trailer_url || null,
+        video_url: data.video_url || null,
+        status: data.is_active === false ? 'inactive' : 'active',
       };
 
       setMovies((prev) => [newMovie, ...prev]);
@@ -544,8 +552,8 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
         ...prev,
       ]);
 
-      toast.success(`Movie "${movieData.title}" added to Supabase`);
-      refreshStats();
+      toast.success(`Movie "${movieData.title}" added to CockroachDB`, { id: 'add-movie-success' });
+      triggerRefreshStats();
     } catch (error: any) {
       errorLogger.logError({
         message: 'Error adding movie',
@@ -553,25 +561,25 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
         category: 'user_action',
         context: { error, movieData },
       });
-      toast.error('Failed to add movie: ' + error.message);
+      toast.error('Failed to add movie: ' + error.message, { id: 'add-movie-error' });
     }
   }, []);
 
   const deleteMovie = useCallback(
     async (id: number) => {
       try {
-        await fetchDB('/query', {
+        await fetchDB('/api/db/query', {
           method: 'POST',
           body: JSON.stringify({ query: 'DELETE FROM movies WHERE id = $1', params: [id] }),
         });
         setMovies((prev) => prev.filter((m) => m.id !== id));
         toast.success('Movie deleted successfully');
-        refreshStats();
-      } catch (err: any) {
+        triggerRefreshStats();
+      } catch {
         toast.error('Failed to delete movie');
       }
     },
-    [refreshStats]
+    [triggerRefreshStats]
   );
 
   const updateMovie = useCallback(async (id: number, updates: Partial<AdminMovie>) => {
@@ -582,7 +590,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
       const setClause = keys.map((k, i) => `${k} = $${i + 2}`).join(', ');
       const params = [id, ...keys.map((k) => (updates as any)[k])];
 
-      await fetchDB('/query', {
+      await fetchDB('/api/db/query', {
         method: 'POST',
         body: JSON.stringify({
           query: `UPDATE movies SET ${setClause}, updated_at = NOW() WHERE id = $1`,
@@ -592,30 +600,32 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
 
       setMovies((prev) => prev.map((m) => (m.id === id ? { ...m, ...updates } : m)));
       toast.success('Movie updated successfully');
-    } catch (err: any) {
-      toast.error('Failed to update movie');
-    }
+    } catch {
+        toast.error('Failed to update movie');
+      }
   }, []);
 
   const addSeries = useCallback(async (seriesData: Omit<AdminSeries, 'id' | 'views'>) => {
     try {
-      const { data, error } = await supabase
-        .from('tv_series') // Changed to tv_series
-        .insert({
-          name: seriesData.name, // Changed from title
-          overview: seriesData.overview, // Changed from description
-          poster_path: seriesData.poster_path, // Changed from poster_url
-          backdrop_path: seriesData.backdrop_path, // Changed from banner_url
-          first_air_date: seriesData.first_air_date,
-          vote_average: seriesData.vote_average, // Changed from rating
-          // seasons_count: 0, // Might be computed or not present in insert if default
-          views: 0,
+      // Use CockroachDB API for content (NOT Supabase)
+      const result = await fetchDB('/api/db/query', {
+        method: 'POST',
+        body: JSON.stringify({
+          query: `INSERT INTO tv_series (name, overview, poster_path, backdrop_path, first_air_date, vote_average, views) 
+                  VALUES ($1, $2, $3, $4, $5, $6, 0) 
+                  RETURNING *`,
+          params: [
+            seriesData.name,
+            seriesData.overview,
+            seriesData.poster_path,
+            seriesData.backdrop_path,
+            seriesData.first_air_date,
+            seriesData.vote_average
+          ]
         })
-        .select()
-        .single();
+      });
 
-      if (error) throw error;
-
+      const data = result.rows[0];
       const newSeries: AdminSeries = {
         id: data.id,
         name: data.name,
@@ -624,32 +634,32 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
         backdrop_path: data.backdrop_path,
         first_air_date: data.first_air_date,
         vote_average: data.vote_average,
-        views: data.views,
+        views: data.views || 0,
         seasons_count: 0,
         seasons: [],
       };
       setSeries((prev) => [newSeries, ...prev]);
-      toast.success(`Series "${seriesData.name}" added`);
+      toast.success(`Series "${seriesData.name}" added to CockroachDB`, { id: 'add-series-success' });
     } catch (error: any) {
-      toast.error(error.message);
+      toast.error(error.message, { id: 'add-series-error' });
     }
   }, []);
 
   const deleteSeries = useCallback(
     async (id: number) => {
       try {
-        await fetchDB('/query', {
+        await fetchDB('/api/db/query', {
           method: 'POST',
           body: JSON.stringify({ query: 'DELETE FROM tv_series WHERE id = $1', params: [id] }),
         });
         setSeries((prev) => prev.filter((s) => s.id !== id));
         toast.success('Series deleted successfully');
-        refreshStats();
-      } catch (err: any) {
+        triggerRefreshStats();
+      } catch {
         toast.error('Failed to delete series');
       }
     },
-    [refreshStats]
+    [triggerRefreshStats]
   );
 
   const getSeriesById = useCallback(
@@ -661,22 +671,26 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
 
   const addSeason = useCallback(async (seriesId: number, seasonData: Omit<AdminSeason, 'id'>) => {
     try {
-      const payload = {
-        series_id: seriesId,
-        season_number: seasonData.season_number,
-        name: seasonData.name || `Season ${seasonData.season_number}`,
-        overview: seasonData.overview || '',
-        air_date: seasonData.air_date || null,
-        poster_path: seasonData.poster_path || null,
-        episode_count: Number(seasonData.episode_count || 0),
-      };
-      const { data, error } = await supabase
-        .from('seasons')
-        .insert(payload as any)
-        .select()
-        .single();
-      if (error) throw error;
+      // Use CockroachDB API for content (NOT Supabase)
+      const result = await fetchDB('/api/db/query', {
+        method: 'POST',
+        body: JSON.stringify({
+          query: `INSERT INTO seasons (series_id, season_number, name, overview, air_date, poster_path, episode_count) 
+                  VALUES ($1, $2, $3, $4, $5, $6, $7) 
+                  RETURNING *`,
+          params: [
+            seriesId,
+            seasonData.season_number,
+            seasonData.name || `Season ${seasonData.season_number}`,
+            seasonData.overview || '',
+            seasonData.air_date || null,
+            seasonData.poster_path || null,
+            Number(seasonData.episode_count || 0)
+          ]
+        })
+      });
 
+      const data = result.rows[0];
       const newSeason: AdminSeason = {
         id: data.id,
         series_id: data.series_id,
@@ -697,17 +711,19 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
           return { ...s, seasons: nextSeasons, seasons_count: nextSeasons.length };
         })
       );
-      toast.success('Season added');
+      toast.success('Season added to CockroachDB', { id: 'add-season-success' });
     } catch (error: any) {
-      toast.error(error?.message || 'Failed to add season');
+      toast.error(error?.message || 'Failed to add season', { id: 'add-season-error' });
     }
   }, []);
 
   const deleteSeason = useCallback(async (seriesId: number, seasonId: number) => {
     try {
-      const { error } = await supabase.from('seasons').delete().eq('id', seasonId);
+      const response = await fetch(`/api/admin/seasons/${seasonId}`, {
+        method: 'DELETE'
+      })
 
-      if (error) throw error;
+      if (!response.ok) throw new Error('Failed to delete season')
 
       setSeries((prev) =>
         prev.map((s) => {
@@ -730,40 +746,30 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
   const addEpisode = useCallback(
     async (seriesId: number, seasonId: number, episodeData: Omit<AdminEpisode, 'id'>) => {
       try {
-        const basePayload: any = {
-          season_id: seasonId,
-          episode_number: Number(episodeData.episode_number || 1),
-          name: episodeData.name || `Episode ${episodeData.episode_number}`,
-          overview: episodeData.overview || '',
-          still_path: episodeData.still_path || null,
-          air_date: episodeData.air_date || null,
-          vote_average: Number(episodeData.vote_average || 0),
-          runtime: Number(episodeData.runtime || 0),
-          video_url: episodeData.video_url || null,
-          intro_start: episodeData.intro_start ?? null,
-          intro_end: episodeData.intro_end ?? null,
-          subtitles_url: episodeData.subtitles_url ?? null,
-          download_urls: episodeData.download_urls ?? null,
-        };
+        const response = await fetch('/api/admin/episodes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            season_id: seasonId,
+            episode_number: Number(episodeData.episode_number || 1),
+            name: episodeData.name || `Episode ${episodeData.episode_number}`,
+            overview: episodeData.overview || '',
+            still_path: episodeData.still_path || null,
+            air_date: episodeData.air_date || null,
+            vote_average: Number(episodeData.vote_average || 0),
+            runtime: Number(episodeData.runtime || 0),
+            video_url: episodeData.video_url || null,
+            intro_start: episodeData.intro_start ?? null,
+            intro_end: episodeData.intro_end ?? null,
+            subtitles_url: episodeData.subtitles_url ?? null,
+            download_urls: episodeData.download_urls ?? null,
+          })
+        })
 
-        let insertRes = await supabase.from('episodes').insert(basePayload).select().single();
-        if (
-          insertRes.error &&
-          /column .* does not exist|schema cache/i.test(String(insertRes.error.message || ''))
-        ) {
-          const {
-            video_url,
-            intro_start,
-            intro_end,
-            subtitles_url,
-            download_urls,
-            ...fallbackPayload
-          } = basePayload;
-          insertRes = await supabase.from('episodes').insert(fallbackPayload).select().single();
-        }
-        if (insertRes.error) throw insertRes.error;
+        if (!response.ok) throw new Error('Failed to add episode')
+        
+        const row = await response.json()
 
-        const row: any = insertRes.data || {};
         const newEpisode: AdminEpisode = {
           id: row.id,
           season_id: row.season_id,
@@ -805,8 +811,12 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
   const deleteEpisode = useCallback(
     async (seriesId: number, seasonId: number, episodeId: number) => {
       try {
-        const { error } = await supabase.from('episodes').delete().eq('id', episodeId);
-        if (error) throw error;
+        const response = await fetch(`/api/admin/episodes/${episodeId}`, {
+          method: 'DELETE'
+        })
+        
+        if (!response.ok) throw new Error('Failed to delete episode')
+        
         setSeries((prev) =>
           prev.map((s) => {
             if (s.id !== seriesId) return s;
@@ -829,47 +839,58 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
   const updateEpisode = useCallback(
     async (seriesId: number, seasonId: number, episodeId: number, data: Partial<AdminEpisode>) => {
       try {
-        const payload: any = {};
-        if (data.episode_number !== undefined) payload.episode_number = data.episode_number;
-        if (data.name !== undefined) payload.name = data.name;
-        if (data.overview !== undefined) payload.overview = data.overview;
-        if (data.still_path !== undefined) payload.still_path = data.still_path;
-        if (data.air_date !== undefined) payload.air_date = data.air_date;
-        if (data.vote_average !== undefined) payload.vote_average = data.vote_average;
-        if (data.runtime !== undefined) payload.runtime = data.runtime;
-        if (data.video_url !== undefined) payload.video_url = data.video_url;
-        if (data.intro_start !== undefined) payload.intro_start = data.intro_start;
-        if (data.intro_end !== undefined) payload.intro_end = data.intro_end;
-        if (data.subtitles_url !== undefined) payload.subtitles_url = data.subtitles_url;
-        if (data.download_urls !== undefined) payload.download_urls = data.download_urls;
+        // Build dynamic UPDATE query for CockroachDB
+        const updates: string[] = [];
+        const params: any[] = [episodeId];
+        let paramIndex = 2;
 
-        let updateRes = await supabase
-          .from('episodes')
-          .update(payload)
-          .eq('id', episodeId)
-          .select()
-          .single();
-        if (
-          updateRes.error &&
-          /column .* does not exist|schema cache/i.test(String(updateRes.error.message || ''))
-        ) {
-          const {
-            video_url,
-            intro_start,
-            intro_end,
-            subtitles_url,
-            download_urls,
-            ...fallbackPayload
-          } = payload;
-          updateRes = await supabase
-            .from('episodes')
-            .update(fallbackPayload)
-            .eq('id', episodeId)
-            .select()
-            .single();
+        if (data.episode_number !== undefined) {
+          updates.push(`episode_number = $${paramIndex++}`);
+          params.push(data.episode_number);
         }
-        if (updateRes.error) throw updateRes.error;
-        const updated: any = updateRes.data || {};
+        if (data.name !== undefined) {
+          updates.push(`name = $${paramIndex++}`);
+          params.push(data.name);
+        }
+        if (data.overview !== undefined) {
+          updates.push(`overview = $${paramIndex++}`);
+          params.push(data.overview);
+        }
+        if (data.still_path !== undefined) {
+          updates.push(`still_path = $${paramIndex++}`);
+          params.push(data.still_path);
+        }
+        if (data.air_date !== undefined) {
+          updates.push(`air_date = $${paramIndex++}`);
+          params.push(data.air_date);
+        }
+        if (data.vote_average !== undefined) {
+          updates.push(`vote_average = $${paramIndex++}`);
+          params.push(data.vote_average);
+        }
+        if (data.runtime !== undefined) {
+          updates.push(`runtime = $${paramIndex++}`);
+          params.push(data.runtime);
+        }
+        if (data.video_url !== undefined) {
+          updates.push(`video_url = $${paramIndex++}`);
+          params.push(data.video_url);
+        }
+
+        if (updates.length === 0) {
+          toast.error('No fields to update', { id: 'update-episode-error' });
+          return;
+        }
+
+        const result = await fetchDB('/api/db/query', {
+          method: 'POST',
+          body: JSON.stringify({
+            query: `UPDATE episodes SET ${updates.join(', ')}, updated_at = NOW() WHERE id = $1 RETURNING *`,
+            params
+          })
+        });
+
+        const updated = result.rows[0] || {};
 
         setSeries((prev) =>
           prev.map((s) => {
@@ -899,18 +920,19 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
             return { ...s, seasons: nextSeasons };
           })
         );
-        toast.success('Episode updated');
+        toast.success('Episode updated in CockroachDB', { id: 'update-episode-success' });
       } catch (error: any) {
-        toast.error(error?.message || 'Failed to update episode');
+        toast.error(error?.message || 'Failed to update episode', { id: 'update-episode-error' });
       }
     },
     []
   );
 
-  const refreshStats = useCallback(() => {
-    setStatsCache(null);
-    fetchData(true);
-  }, [fetchData]);
+  // Deprecated: replaced by inline trigger to avoid TDZ issues
+  // const refreshStats = useCallback(() => {
+  //   setStatsCache(null);
+  //   fetchData(true);
+  // }, [fetchData]);
 
   const value = useMemo(
     () => ({
@@ -931,7 +953,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
       addEpisode,
       deleteEpisode,
       updateEpisode,
-      refreshStats,
+      triggerRefreshStats,
     }),
     [
       movies,
@@ -951,7 +973,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
       addEpisode,
       deleteEpisode,
       updateEpisode,
-      refreshStats,
+      triggerRefreshStats,
     ]
   );
 
@@ -965,3 +987,4 @@ export const useAdmin = () => {
   }
   return context;
 };
+

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { tmdb } from '../../lib/tmdb';
 import { CheckCircle, Loader2, Search, Film, Tv, Trash2, AlertCircle } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from '../../lib/toast-manager';
 import { requestsAPI } from '../../lib/api';
 
 interface Request {
@@ -58,7 +58,7 @@ const ProcessRequests = () => {
         setSelectedMediaType((prev) => ({ ...prev, ...types }));
         setSelectedTmdbId((prev) => ({ ...prev, ...tmdbIds }));
       }
-    } catch (error) {
+    } catch (error: any) {
       setMessage({ type: 'error', text: 'فشل تحميل الطلبات' });
     } finally {
       setLoading(false);
@@ -73,7 +73,7 @@ const ProcessRequests = () => {
       await requestsAPI.delete(id);
       setRequests((prev) => prev.filter((req) => req.id !== id));
       setMessage({ type: 'success', text: 'تم حذف الطلب بنجاح' });
-    } catch (error) {
+    } catch (error: any) {
       setMessage({ type: 'error', text: 'فشل حذف الطلب' });
     }
   };
@@ -85,7 +85,7 @@ const ProcessRequests = () => {
       // Update local state without refetching everything
       setRequests((prev) => prev.map((req) => (req.id === id ? { ...req, ...updates } : req)));
       toast.success('تم تحديث الطلب');
-    } catch (error) {
+    } catch (error: any) {
       toast.error('فشل تحديث الطلب');
     }
   };
@@ -104,7 +104,7 @@ const ProcessRequests = () => {
         ...prev,
         [requestId]: response.data.results.slice(0, 5),
       }));
-    } catch (error) {
+    } catch (error: any) {
       setMessage({ type: 'error', text: 'فشل البحث في TMDB' });
     }
   };
@@ -305,11 +305,11 @@ const ProcessRequests = () => {
                             if (!request.tmdb_id)
                               setSelectedTmdbId((prev) => ({ ...prev, [request.id]: 0 }));
                           }}
-                          className='bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-500'
+                          className='bg-[#1C1B1F] border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 hover:bg-[#0F0F14] transition-colors'
                         >
-                          <option value=''>اختر النوع...</option>
-                          <option value='movie'>🎬 فيلم</option>
-                          <option value='tv'>📺 مسلسل</option>
+                          <option value='' className="bg-[#1C1B1F] text-white">اختر النوع...</option>
+                          <option value='movie' className="bg-[#1C1B1F] text-white">🎬 فيلم</option>
+                          <option value='tv' className="bg-[#1C1B1F] text-white">📺 مسلسل</option>
                         </select>
 
                         <div className='flex-1 relative min-w-[200px]'>

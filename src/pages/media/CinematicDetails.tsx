@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useMemo } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate, useParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -38,7 +38,7 @@ type CinematicData = {
 const defaultMovieId = 550
 const defaultTvId = 1399
 
-const buildImage = (path?: string | null, size: string = 'w500') => (path ? `https://image.tmdb.org/t/p/${size}${path}` : '')
+const buildImage = (path?: string | null, size: string = 'w300') => (path ? `https://image.tmdb.org/t/p/${size}${path}` : '')
 
 const formatCount = (value: number) => {
   if (!Number.isFinite(value)) return '0'
@@ -52,40 +52,21 @@ const CinematicDetails = () => {
   const { id, type: routeType } = useParams()
   const navigate = useNavigate()
   const t = (ar: string, en: string) => (lang === 'ar' ? ar : en)
-  const initialType: 'movie' | 'tv' = routeType === 'tv' ? 'tv' : 'movie'
-  const initialId = Number(id) || (initialType === 'movie' ? defaultMovieId : defaultTvId)
-  const [type, setType] = useState<'movie' | 'tv'>(initialType)
-  const [contentId, setContentId] = useState(initialId)
+  const nextType: 'movie' | 'tv' = routeType === 'tv' ? 'tv' : 'movie'
+  const nextId = Number(id) || (nextType === 'movie' ? defaultMovieId : defaultTvId)
+  
+  const [type, setType] = useState<'movie' | 'tv'>(nextType)
+  const [contentId, setContentId] = useState(nextId)
   const [season, setSeason] = useState(1)
   const [hoverPlay, setHoverPlay] = useState(false)
   const glowRef = useRef<HTMLDivElement>(null)
 
+  // Sync state when URL params change
   useEffect(() => {
-    const nextType: 'movie' | 'tv' = routeType === 'tv' ? 'tv' : 'movie'
-    const nextId = Number(id) || (nextType === 'movie' ? defaultMovieId : defaultTvId)
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setType(nextType)
     setContentId(nextId)
-  }, [routeType, id])
-
-  const detailsQuery = useQuery({
-    queryKey: ['cinematic', type, contentId, lang],
-    queryFn: async () => {
-      const base = type === 'movie' ? `/movie/${contentId}` : `/tv/${contentId}`
-      const [details, credits, videos, similar] = await Promise.all([
-        tmdb.get(base),
-        tmdb.get(`${base}/credits`),
-        tmdb.get(`${base}/videos`),
-        tmdb.get(`${base}/similar`)
-      ])
-      return { details: details.data, credits: credits.data, videos: videos.data, similar: similar.data }
-    }
-  })
-
-  useEffect(() => {
-    const seasons = detailsQuery.data?.details?.seasons || []
-    const first = seasons.find((s: any) => s.season_number > 0)?.season_number ?? seasons[0]?.season_number ?? 1
-    if (type === 'tv') setSeason(first)
-  }, [type, detailsQuery.data?.details?.seasons])
+  }, [nextType, nextId])
 
   const seasonQuery = useQuery({
     queryKey: ['cinematic-season', contentId, season, lang],
@@ -93,8 +74,59 @@ const CinematicDetails = () => {
       const { data } = await tmdb.get(`/tv/${contentId}/season/${season}`)
       return data
     },
-    enabled: type === 'tv' && !!detailsQuery.data
+    enabled: type === 'tv' && !!contentId
   })
+
+  const detailsQuery = useQuery({
+    queryKey: ['cinematic', type, contentId, lang],
+    queryFn: async () => {
+      const base = type === 'movie' ? `/movie/${contentId}` : `/tv/${contentId}`
+      
+      // Fetch details, credits, and videos from TMDB
+      const [details, credits, videos] = await Promise.all([
+        tmdb.get(base),
+        tmdb.get(`${base}/credits`),
+        tmdb.get(`${base}/videos`)
+      ])
+      
+      // Fetch similar content from CockroachDB API instead of TMDB
+      let similar = { results: [] }
+      try {
+        const endpoint = type === 'movie' 
+          ? `/api/db/movies/${contentId}/similar?limit=10`
+          : `/api/db/tv/${contentId}/similar?limit=10`
+        const response = await fetch(endpoint)
+        if (response.ok) {
+          const data = await response.json()
+          similar = { results: data }
+        } else {
+          // Fallback: get trending content from CockroachDB
+          const fallbackEndpoint = type === 'movie' 
+            ? '/api/db/movies/trending?limit=10'
+            : '/api/db/tv/trending?limit=10'
+          const fallbackResponse = await fetch(fallbackEndpoint)
+          if (fallbackResponse.ok) {
+            const fallbackData = await fallbackResponse.json()
+            similar = { results: fallbackData.filter((item: { id: number }) => item.id !== contentId) }
+          }
+        }
+      } catch (error: any) {
+        console.warn('Failed to fetch similar content from CockroachDB:', error)
+      }
+      
+      return { details: details.data, credits: credits.data, videos: videos.data, similar }
+    }
+  })
+
+  const firstSeason = useMemo(() => {
+    const seasons = detailsQuery.data?.details?.seasons || []
+    return seasons.find((s: any) => s.season_number > 0)?.season_number ?? seasons[0]?.season_number ?? 1
+  }, [detailsQuery.data?.details?.seasons])
+
+  if (type === 'tv' && season !== firstSeason && !seasonQuery.isFetching) {
+    // Only set if we haven't manually changed it
+    // Wait for the next user interaction
+  }
 
   const details = detailsQuery.data?.details
   const credits = detailsQuery.data?.credits
@@ -111,7 +143,7 @@ const CinematicDetails = () => {
     ? details?.runtime ? `${details.runtime}m` : '—'
     : details?.episode_run_time?.[0] ? `${details.episode_run_time[0]}m` : '—'
   const synopsis = details?.overview || t('لا يوجد وصف متاح حالياً.', 'No synopsis available yet.')
-  const poster = buildImage(details?.poster_path, 'w500')
+  const poster = buildImage(details?.poster_path, 'w300')
   const backdrop = buildImage(details?.backdrop_path, 'w1280')
   const director = type === 'movie'
     ? credits?.crew?.find((c: any) => c.job === 'Director')?.name
@@ -127,12 +159,15 @@ const CinematicDetails = () => {
   }))
   const trailerCandidate = (videos?.results || []).find((v: any) => v.site === 'YouTube' && (v.type === 'Trailer' || v.type === 'Teaser'))
   const trailer = trailerCandidate ? `https://www.youtube.com/watch?v=${trailerCandidate.key}` : ''
-  const similarItems: Similar[] = (similar?.results || []).slice(0, 6).map((s: any) => ({
-    id: s.id,
-    title: s.title || s.name,
-    thumb: s.poster_path ? buildImage(s.poster_path, 'w154') : undefined,
-    rating: s.vote_average
-  }))
+  const similarItems: Similar[] = (similar?.results || [])
+    .filter((s: any) => s.slug && s.slug.trim() !== '' && s.slug !== 'content')
+    .slice(0, 6)
+    .map((s: any) => ({
+      id: s.id,
+      title: s.title || s.name,
+      thumb: s.poster_path ? buildImage(s.poster_path, 'w154') : undefined,
+      rating: s.vote_average
+    }))
 
   const seasonButtons = (details?.seasons || []).filter((s: any) => s.season_number > 0)
   const episodeRows: Episode[] = (seasonQuery.data?.episodes || []).map((e: any) => ({
@@ -185,24 +220,8 @@ const CinematicDetails = () => {
     }
   }, [data?.poster])
 
-  if (detailsQuery.isLoading || !data) {
-    return (
-      <div className="min-h-[100svh] bg-[#050505] px-4 py-16 text-white">
-        <div className="max-w-[2400px] mx-auto px-4 md:px-12 w-full rounded-2xl border border-white/10 bg-white/5 p-8 text-center text-sm text-zinc-400">
-          {t('جارٍ تحميل التفاصيل السينمائية...', 'Loading cinematic details...')}
-        </div>
-      </div>
-    )
-  }
-
-  const badges: Badge[] = [
-    { label: data.quality, tone: 'gold' },
-    { label: `IMDb ${data.imdb.toFixed(1)}`, tone: 'yellow' },
-    { label: data.audio, tone: 'slate' },
-    { label: data.age, tone: 'red' }
-  ]
-  const metaDescription = data.synopsis.slice(0, 160)
-  const jsonLdCinematic = useMemo(() => {
+  const schemaData = useMemo(() => {
+    if (!data) return undefined
     return {
       '@context': 'https://schema.org',
       '@type': type === 'movie' ? 'Movie' : 'TVSeries',
@@ -227,6 +246,24 @@ const CinematicDetails = () => {
     }
   }, [data, type])
 
+  if (detailsQuery.isLoading || !data) {
+    return (
+      <div className="min-h-[100svh] bg-[#050505] px-4 py-16 text-white">
+        <div className="max-w-[2400px] mx-auto px-4 md:px-12 w-full rounded-2xl border border-white/10 bg-white/5 p-8 text-center text-sm text-zinc-400">
+          {t('جارٍ تحميل التفاصيل السينمائية...', 'Loading cinematic details...')}
+        </div>
+      </div>
+    )
+  }
+
+  const badges: Badge[] = [
+    { label: data.quality, tone: 'gold' },
+    { label: `IMDb ${data.imdb.toFixed(1)}`, tone: 'yellow' },
+    { label: data.audio, tone: 'slate' },
+    { label: data.age, tone: 'red' }
+  ]
+  const metaDescription = data.synopsis.slice(0, 160)
+
   return (
     <div className="relative min-h-[100svh]">
       <SeoHead
@@ -234,7 +271,7 @@ const CinematicDetails = () => {
         description={metaDescription}
         image={data.backdrop || data.poster || undefined}
         type={type === 'movie' ? 'video.movie' : 'video.tv_show'}
-        schema={jsonLdCinematic}
+        schema={schemaData}
       />
       <AnimatePresence>
         <motion.div
@@ -420,7 +457,7 @@ const CinematicDetails = () => {
                   ) : data.trailer ? (
                     <div className="w-full h-full relative">
                       {data.backdrop && (
-                        <img src={data.backdrop} alt="" className="w-full h-full object-cover opacity-50" />
+                        <img src={data.backdrop} alt="" className="w-full h-full object-cover opacity-50" loading="lazy" />
                       )}
                       <div className="absolute inset-0 flex items-center justify-center">
                         <Play className="w-12 h-12 text-white opacity-20" />

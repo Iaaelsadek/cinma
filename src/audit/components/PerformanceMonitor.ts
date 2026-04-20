@@ -82,7 +82,7 @@ export class PerformanceMonitor {
         },
         duration: Date.now() - startTime,
       };
-    } catch (error) {
+    } catch (error: any) {
       auditLogger.error('PerformanceMonitor', 'Monitoring failed', { error });
       throw error;
     }
@@ -100,7 +100,7 @@ export class PerformanceMonitor {
         seo: 0,
         bestPractices: 0,
       };
-    } catch (error) {
+    } catch (error: any) {
       auditLogger.warn('PerformanceMonitor', 'Lighthouse failed', { error });
       return {
         performance: 0,
@@ -190,7 +190,7 @@ export class PerformanceMonitor {
         (report.ariaLabels.correct ? 0 : 10);
 
       report.score = Math.max(0, 100 - totalIssues);
-    } catch (error) {
+    } catch (error: any) {
       auditLogger.warn('PerformanceMonitor', 'Accessibility check failed', { error });
     }
 
@@ -233,7 +233,7 @@ export class PerformanceMonitor {
         (report.structuredData.present ? 0 : 10);
 
       report.score = Math.max(0, 100 - totalIssues);
-    } catch (error) {
+    } catch (error: any) {
       auditLogger.warn('PerformanceMonitor', 'SEO check failed', { error });
     }
 

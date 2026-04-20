@@ -146,7 +146,7 @@ export class IntegrationTestAuditor {
         metrics,
         duration: Date.now() - startTime
       };
-    } catch (error) {
+    } catch (error: any) {
       auditLogger.error('IntegrationTestAuditor', 'Integration testing audit failed', { error });
       issues.push({
         severity: 'critical',
@@ -197,7 +197,7 @@ export class IntegrationTestAuditor {
         // Test UI rendering (Requirement 23.9)
         result.uiRendering = await this.testUIRendering(browser.name);
         
-      } catch (error) {
+      } catch (error: any) {
         result.errors.push(error instanceof Error ? error.message : String(error));
       }
 
@@ -335,7 +335,7 @@ export class IntegrationTestAuditor {
         duration: Date.now() - startTime,
         steps
       };
-    } catch (error) {
+    } catch (error: any) {
       steps.push({
         step: 'User journey',
         passed: false,
@@ -384,7 +384,7 @@ export class IntegrationTestAuditor {
         duration: Date.now() - startTime,
         steps
       };
-    } catch (error) {
+    } catch (error: any) {
       steps.push({
         step: 'Authentication',
         passed: false,
@@ -433,7 +433,7 @@ export class IntegrationTestAuditor {
         duration: Date.now() - startTime,
         steps
       };
-    } catch (error) {
+    } catch (error: any) {
       steps.push({
         step: 'Watchlist sync',
         passed: false,
@@ -476,7 +476,7 @@ export class IntegrationTestAuditor {
         duration: Date.now() - startTime,
         steps
       };
-    } catch (error) {
+    } catch (error: any) {
       steps.push({
         step: 'Ad Neutralizer',
         passed: false,
@@ -519,7 +519,7 @@ export class IntegrationTestAuditor {
         duration: Date.now() - startTime,
         steps
       };
-    } catch (error) {
+    } catch (error: any) {
       steps.push({
         step: 'Error recovery',
         passed: false,
@@ -586,7 +586,7 @@ export class IntegrationTestAuditor {
       // Test logout on one platform logs out on other (Requirement 17.14)
       auditLogger.info('IntegrationTestAuditor', 'Testing logout sync');
       
-    } catch (error) {
+    } catch (error: any) {
       errors.push(error instanceof Error ? error.message : String(error));
     }
 
@@ -616,7 +616,7 @@ export class IntegrationTestAuditor {
       // Test real-time sync for watchlist (Requirement 17.18)
       auditLogger.info('IntegrationTestAuditor', 'Testing real-time watchlist sync');
       
-    } catch (error) {
+    } catch (error: any) {
       errors.push(error instanceof Error ? error.message : String(error));
     }
 
@@ -646,7 +646,7 @@ export class IntegrationTestAuditor {
       // Test real-time sync for watch progress (Requirement 17.19)
       auditLogger.info('IntegrationTestAuditor', 'Testing real-time progress sync');
       
-    } catch (error) {
+    } catch (error: any) {
       errors.push(error instanceof Error ? error.message : String(error));
     }
 
@@ -673,7 +673,7 @@ export class IntegrationTestAuditor {
       websiteToApp = true;
       appToWebsite = true;
       
-    } catch (error) {
+    } catch (error: any) {
       errors.push(error instanceof Error ? error.message : String(error));
     }
 

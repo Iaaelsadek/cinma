@@ -6,12 +6,12 @@ import { vi } from 'vitest';
 // stub heavy child components to avoid bringing in swiper/react via QuantumTrain
 vi.mock('../components/features/media/QuantumTrain', () => ({
   __esModule: true,
-  QuantumTrain: ({ items }: any) => <div data-testid="quantum-train">{items?.length}</div>
+  QuantumTrain: ({ items }: { items?: unknown[] }) => <div data-testid="quantum-train">{items?.length}</div>
 }));
 
 vi.mock('../components/features/media/MovieCard', () => ({
   __esModule: true,
-  MovieCard: ({ movie }: any) => <div data-testid="movie-card">{movie?.id}</div>
+  MovieCard: ({ movie }: { movie?: { id?: number } }) => <div data-testid="movie-card">{movie?.id}</div>
 }));
 
 // prevent hooks from doing real network requests
@@ -21,9 +21,7 @@ vi.mock('../hooks/useFetchContent', () => ({
   useCachedHomepage: () => ({ data: null })
 }));
 
-vi.mock('../hooks/useDailyMotion', () => ({
-  useDailyMotion: () => ({ data: [] })
-}));
+// DailyMotion hook removed - no longer needed
 
 vi.mock('../hooks/useTranslatedContent', () => ({
   useTranslatedContent: (items: any) => ({ data: items || [] })
@@ -51,7 +49,7 @@ vi.mock('../lib/tmdb', () => ({
   }
 }));
 
-const { tmdb } = await import('../lib/tmdb') as { tmdb: { get: any } };
+const { tmdb } = await import('../lib/tmdb') as { tmdb: { get: ReturnType<typeof vi.fn> } };
 
 describe('HomeBelowFoldSections component', () => {
   let queryClient: QueryClient;
@@ -70,7 +68,7 @@ describe('HomeBelowFoldSections component', () => {
         <MemoryRouter>
           <HomeBelowFoldSections
             criticalHomeData={{ popularAr: [], arabicSeries: [], kids: [] }}
-            topRatedMovies={fakeMovies as any}
+            topRatedMovies={fakeMovies as unknown[]}
           />
         </MemoryRouter>
       </QueryClientProvider>
@@ -85,7 +83,7 @@ describe('HomeBelowFoldSections component', () => {
     const fakeMovies = [
       { id: 2, poster_path: '/p2.jpg', title: 'Two', media_type: 'movie' }
     ];
-    (tmdb.get as any).mockResolvedValue({ data: { results: fakeMovies } });
+    (tmdb.get as ReturnType<typeof vi.fn>).mockResolvedValue({ data: { results: fakeMovies } });
 
     const { container } = render(
       <QueryClientProvider client={queryClient}>
@@ -107,14 +105,14 @@ describe('HomeBelowFoldSections component', () => {
     const fakeMovies = [
       { id: 3, poster_path: '/p3.jpg', title: 'Three', media_type: 'movie' }
     ];
-    (tmdb.get as any).mockResolvedValue({ data: { results: fakeMovies } });
+    (tmdb.get as ReturnType<typeof vi.fn>).mockResolvedValue({ data: { results: fakeMovies } });
 
     const { container } = render(
       <QueryClientProvider client={queryClient}>
         <MemoryRouter>
           <HomeBelowFoldSections
             criticalHomeData={{ popularAr: [], arabicSeries: [], kids: [] }}
-            topRatedMovies={[] as any}
+            topRatedMovies={[] as unknown[]}
           />
         </MemoryRouter>
       </QueryClientProvider>

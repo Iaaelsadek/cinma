@@ -1,4 +1,4 @@
-import { Filter, BookOpen, Grid, List } from 'lucide-react'
+import { Grid, List } from 'lucide-react'
 import { GlassInput } from '../../common/GlassInput'
 import { GlassButton } from '../../common/GlassButton'
 import { useLang } from '../../../state/useLang'
@@ -25,9 +25,9 @@ export const FilterBar = ({
   const { lang } = useLang()
 
   return (
-    <div className="shrink-0 mb-6 space-y-4">
+    <div className="shrink-0 mb-6">
       <div className="flex flex-wrap items-center gap-4">
-        <div className="relative flex-1 min-w-[280px]">
+        <div className="relative flex-1 min-w-[200px] max-w-[300px]">
           <GlassInput
             placeholder={lang === 'ar' ? 'بحث عن سورة (اسم، رقم، إنجليزية)...' : 'Search Surah (Name, Number, English)...'}
             value={surahSearch}
@@ -80,17 +80,6 @@ export const FilterBar = ({
             <List size={16} />
           </GlassButton>
         </div>
-      </div>
-      
-      <div className="flex items-center justify-between text-xs text-amber-700/60 font-amiri px-1">
-        <span className="flex items-center gap-2">
-          <Filter size={12} />
-          {filteredCount} {lang === 'ar' ? 'سورة مباركة' : 'Blessed Surahs'}
-        </span>
-        <span className="flex items-center gap-2">
-          <BookOpen size={12} />
-          {lang === 'ar' ? '١١٤ سورة في المصحف الشريف' : '114 Surahs in the Holy Quran'}
-        </span>
       </div>
     </div>
   )

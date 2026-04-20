@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { Plus, List, Check, Lock, Globe } from 'lucide-react'
 import { getUserLists, createUserList, addItemToList, removeItemFromList, getListItems } from '../../../lib/supabase'
-import {motion} from 'framer-motion'
-import { toast } from 'sonner'
+import { motion } from 'framer-motion'
+import { toast } from '../../../lib/toast-manager'
 import { clsx } from 'clsx'
 import { logger } from '../../../lib/logger'
 
@@ -26,18 +26,19 @@ export const AddToListModal = ({ userId, contentId, contentType, onClose, lang =
     try {
       const userLists = await getUserLists(userId)
       setLists(userLists)
-      
+
       // Check which lists already have this item
       const listsWithItem: string[] = []
+      const contentIdStr = contentId.toString()
       for (const list of userLists) {
         const items = await getListItems(list.id)
-        if (items.some((i: any) => i.content_id === contentId && i.content_type === contentType)) {
+        if (items.some((i: any) => i.external_id === contentIdStr && i.content_type === contentType)) {
           listsWithItem.push(list.id)
         }
       }
       setItemInLists(listsWithItem)
-    } catch (error) {
-      logger.error('Error fetching lists:', error)
+    } catch (error: any) {
+      // Silently fail
     } finally {
       setLoading(false)
     }
@@ -51,15 +52,15 @@ export const AddToListModal = ({ userId, contentId, contentType, onClose, lang =
     const isInList = itemInLists.includes(listId)
     try {
       if (isInList) {
-        await removeItemFromList(listId, contentId, contentType)
+        await removeItemFromList(listId, contentId.toString(), contentType)
         setItemInLists(prev => prev.filter(id => id !== listId))
         toast.success(lang === 'ar' ? 'تمت الإزالة من القائمة' : 'Removed from list')
       } else {
-        await addItemToList(listId, contentId, contentType)
+        await addItemToList(listId, contentId.toString(), contentType)
         setItemInLists(prev => [...prev, listId])
         toast.success(lang === 'ar' ? 'تمت الإضافة إلى القائمة' : 'Added to list')
       }
-    } catch (error) {
+    } catch (error: any) {
       toast.error(lang === 'ar' ? 'فشل التعديل' : 'Failed to update')
     }
   }
@@ -73,7 +74,7 @@ export const AddToListModal = ({ userId, contentId, contentType, onClose, lang =
       setNewListTitle('')
       setCreating(false)
       toast.success(lang === 'ar' ? 'تم إنشاء القائمة' : 'List created')
-    } catch (error) {
+    } catch (error: any) {
       toast.error(lang === 'ar' ? 'فشل إنشاء القائمة' : 'Failed to create list')
     }
   }
@@ -105,7 +106,7 @@ export const AddToListModal = ({ userId, contentId, contentType, onClose, lang =
           </button>
         </div>
 
-        <div className="max-h-[300px] overflow-y-auto p-2 space-y-1">
+        <div className="max-h-[300px] p-2 space-y-1">
           {loading ? (
             <div className="p-8 text-center">
               <div className="w-6 h-6 border-2 border-lumen-gold border-t-transparent rounded-full animate-spin mx-auto" />

@@ -75,7 +75,7 @@ export class RateLimitingAuditor {
         },
         duration: Date.now() - startTime,
       };
-    } catch (error) {
+    } catch (error: any) {
       auditLogger.error('RateLimitingAuditor', 'Audit failed', { error });
       throw error;
     }
@@ -161,11 +161,11 @@ export class RateLimitingAuditor {
               report.endpointsWithoutRateLimiting.push(file);
             }
           }
-        } catch (error) {
+        } catch (error: any) {
           auditLogger.warn('RateLimitingAuditor', `Failed to scan file: ${file}`, { error });
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       auditLogger.error('RateLimitingAuditor', 'Rate limiter verification failed', { error });
     }
 
@@ -217,11 +217,11 @@ export class RateLimitingAuditor {
               }
             }
           }
-        } catch (error) {
+        } catch (error: any) {
           auditLogger.warn('RateLimitingAuditor', `Failed to scan file: ${file}`, { error });
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       auditLogger.error('RateLimitingAuditor', 'Circuit breaker verification failed', { error });
     }
 
@@ -326,7 +326,7 @@ export class RateLimitingAuditor {
           // Ignore
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       auditLogger.error('RateLimitingAuditor', 'Cache strategy verification failed', { error });
     }
 

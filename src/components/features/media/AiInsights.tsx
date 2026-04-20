@@ -27,7 +27,7 @@ export const AiInsights = ({ title, type, overview, className }: AiInsightsProps
       } else {
         setError(true)
       }
-    } catch (err) {
+    } catch (err: any) {
       setError(true)
     } finally {
       setLoading(false)

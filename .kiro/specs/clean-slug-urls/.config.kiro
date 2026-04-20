@@ -1,0 +1,7 @@
+{
+  "specType": "feature",
+  "workflowType": "requirements-first",
+  "featureName": "clean-slug-urls",
+  "createdAt": "2026-04-01T00:00:00.000Z",
+  "status": "ready"
+}

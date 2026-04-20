@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
-import {List, Trash2, Globe, Lock, ExternalLink, Share2} from 'lucide-react'
+import { List, Trash2, Globe, Lock, ExternalLink, Share2 } from 'lucide-react'
 import { getUserLists, deleteUserList } from '../../../lib/supabase'
 import { Link } from 'react-router-dom'
-import {motion} from 'framer-motion'
-import { toast } from 'sonner'
+import { motion } from 'framer-motion'
+import { toast } from '../../../lib/toast-manager'
 import { logger } from '../../../lib/logger'
 
 interface UserListsTabProps {
@@ -19,8 +19,8 @@ export const UserListsTab = ({ userId, lang = 'ar' }: UserListsTabProps) => {
     try {
       const data = await getUserLists(userId)
       setLists(data)
-    } catch (error) {
-      logger.error('Error fetching lists:', error)
+    } catch (error: any) {
+      // Silently fail
     } finally {
       setLoading(false)
     }
@@ -36,7 +36,7 @@ export const UserListsTab = ({ userId, lang = 'ar' }: UserListsTabProps) => {
       await deleteUserList(id)
       setLists(prev => prev.filter(l => l.id !== id))
       toast.success(lang === 'ar' ? 'تم حذف القائمة' : 'List deleted')
-    } catch (error) {
+    } catch (error: any) {
       toast.error(lang === 'ar' ? 'فشل الحذف' : 'Delete failed')
     }
   }

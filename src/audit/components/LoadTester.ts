@@ -121,7 +121,7 @@ export class LoadTester {
         metrics,
         duration: Date.now() - startTime
       };
-    } catch (error) {
+    } catch (error: any) {
       auditLogger.error('LoadTester', 'Load testing audit failed', { error });
       issues.push({
         severity: 'high',
@@ -174,7 +174,7 @@ export class LoadTester {
       auditLogger.info('LoadTester', `Load test completed: ${result.metrics.requestsTotal} requests, ${result.metrics.errorRate}% errors`);
 
       return result;
-    } catch (error) {
+    } catch (error: any) {
       auditLogger.error('LoadTester', 'Load test failed', { error });
       throw error;
     }
@@ -219,7 +219,7 @@ export class LoadTester {
           };
           break;
         }
-      } catch (error) {
+      } catch (error: any) {
         breakingPoint = {
           users,
           reason: `System failure: ${error instanceof Error ? error.message : String(error)}`

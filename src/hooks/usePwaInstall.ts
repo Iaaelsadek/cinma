@@ -9,18 +9,14 @@ const STORAGE_KEY = 'cinma_pwa_install_dismissed'
 
 export const usePwaInstall = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
-  const [isInstalled, setIsInstalled] = useState(false)
-  const [isDismissed, setIsDismissed] = useState(false)
+  const [isInstalled, setIsInstalled] = useState(() => {
+    return window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true
+  })
+  const [isDismissed, setIsDismissed] = useState(() => {
+    return sessionStorage.getItem(STORAGE_KEY) === '1'
+  })
 
   useEffect(() => {
-    // Check if dismissed
-    const dismissed = sessionStorage.getItem(STORAGE_KEY)
-    if (dismissed === '1') setIsDismissed(true)
-
-    // Check if installed (standalone mode)
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches
-      || (window.navigator as any).standalone === true
-    if (isStandalone) setIsInstalled(true)
 
     // Listen for install prompt
     const handler = (e: Event) => {

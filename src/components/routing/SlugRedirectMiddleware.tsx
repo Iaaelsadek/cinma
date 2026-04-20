@@ -84,7 +84,7 @@ export const SlugRedirectMiddleware: React.FC<SlugRedirectMiddlewareProps> = ({
         
         // Perform 301 redirect (replace in history)
         navigate(newUrl, { replace: true })
-      } catch (error) {
+      } catch (error: any) {
         // On error, serve content without redirect
       }
     }

@@ -120,7 +120,7 @@ export class I18nUXAuditor {
         },
         duration: Date.now() - startTime,
       };
-    } catch (error) {
+    } catch (error: any) {
       auditLogger.error('I18nUXAuditor', 'Audit failed', { error });
       throw error;
     }
@@ -230,7 +230,7 @@ export class I18nUXAuditor {
             });
           }
         }
-      } catch (error) {
+      } catch (error: any) {
         auditLogger.warn('I18nUXAuditor', `Failed to scan file: ${file}`, { error });
       }
     }
@@ -247,7 +247,7 @@ export class I18nUXAuditor {
           languageSwitcherLocation = file;
           break;
         }
-      } catch (error) {
+      } catch (error: any) {
         // Continue checking other files
       }
     }
@@ -431,7 +431,7 @@ export class I18nUXAuditor {
             }
           }
         }
-      } catch (error) {
+      } catch (error: any) {
         auditLogger.warn('I18nUXAuditor', `Failed to scan file: ${file}`, { error });
       }
     }

@@ -36,7 +36,7 @@ export class AuditOrchestrator {
       try {
         const report = await this.runComponent(name);
         componentReports.push(report);
-      } catch (error) {
+      } catch (error: any) {
         auditLogger.error('AuditOrchestrator', `Component ${name} failed`, { error });
         componentReports.push({
           component: name,

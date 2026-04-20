@@ -4,15 +4,29 @@ import { useParams, Link } from 'react-router-dom'
 import { Download, Star, ArrowLeft, Cpu } from 'lucide-react'
 import { motion } from 'framer-motion'
 import {getSoftwareByIdDB} from '../../lib/db'
-import { resolveSlug } from '../../lib/slugResolver'
-import { logger } from '../../lib/logger'
 import { useLang } from '../../state/useLang'
+import { useAuth } from '../../hooks/useAuth'
+import { useQueryClient } from '@tanstack/react-query'
+import { toast } from '../../lib/toast-manager'
+import { RatingInput, AggregateRating, ReviewForm, ReviewList } from '../../components/features/reviews'
+import type { ReviewFormData } from '../../components/features/reviews'
+import { EditReviewModal } from '../../components/features/reviews/EditReviewModal'
+import { ReportReviewDialog } from '../../components/features/reviews/ReportReviewDialog'
+import type { Review } from '../../components/features/reviews/EditReviewModal'
 
 export const SoftwareDetails = () => {
   const { slug } = useParams()
   const { lang } = useLang()
-  const [row, setRow] = useState<Software | null>(null)
+  const { user } = useAuth()
+  const queryClient = useQueryClient()
+  const [row, setRow] = useState<any | null>(null)
   const [loading, setLoading] = useState(true)
+  const [showReviewForm, setShowReviewForm] = useState(false)
+  const [userRating, setUserRating] = useState<number | null>(null)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [editingReview, setEditingReview] = useState<Review | null>(null)
+  const [showReportDialog, setShowReportDialog] = useState(false)
+  const [reportingReviewId, setReportingReviewId] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -58,6 +72,76 @@ export const SoftwareDetails = () => {
   const backdrop = row?.backdrop_url || row?.poster_url || ''
   const downloadUrl = row?.download_url || '#'
   const size = row?.size || 'N/A'
+
+  // Get external_id for ratings/reviews bridge
+  const externalId = row?.external_id || row?.id?.toString() || null
+
+  // Review Handlers
+  const handleRatingChange = async (newRating: number) => {
+    if (!user || !externalId) {
+      toast.error(lang === 'ar' ? 'يجب تسجيل الدخول' : 'Please login first')
+      return
+    }
+
+    try {
+      const apiBase = import.meta.env.VITE_API_BASE || ''
+      const response = await fetch(`${apiBase}/api/ratings`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.id}`
+        },
+        body: JSON.stringify({
+          external_id: externalId,
+          content_type: 'software',
+          rating_value: newRating
+        })
+      })
+
+      if (!response.ok) throw new Error('Failed to submit rating')
+
+      setUserRating(newRating)
+      toast.success(lang === 'ar' ? 'تم حفظ التقييم' : 'Rating saved')
+    } catch (error: any) {
+      console.error('Error submitting rating:', error)
+      toast.error(lang === 'ar' ? 'فشل في حفظ التقييم' : 'Failed to save rating')
+    }
+  }
+
+  const handleReviewSubmit = async (reviewData: ReviewFormData) => {
+    if (!user || !externalId) {
+      throw new Error('Authentication required')
+    }
+
+    try {
+      const apiBase = import.meta.env.VITE_API_BASE || ''
+      const response = await fetch(`${apiBase}/api/reviews`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.id}`
+        },
+        body: JSON.stringify({
+          external_id: externalId,
+          content_type: 'software',
+          ...reviewData
+        })
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to submit review')
+      }
+
+      setShowReviewForm(false)
+      toast.success(lang === 'ar' ? 'تم نشر المراجعة' : 'Review published')
+      
+      // Refresh reviews list
+      queryClient.invalidateQueries({ queryKey: ['reviews', externalId] })
+    } catch (error: any) {
+      throw new Error(error.message || 'Failed to submit review')
+    }
+  }
 
   return (
     <div className="min-h-screen bg-[#050505] pb-12 text-zinc-100 font-cairo">
@@ -167,9 +251,156 @@ export const SoftwareDetails = () => {
                </div>
 
             </motion.div>
+
+            {/* Ratings & Reviews Section */}
+            {externalId && (
+              <div className="mt-16 space-y-8">
+                {/* Rating Section */}
+                <div className="bg-zinc-900/50 rounded-xl p-6 border border-zinc-800">
+                  <h2 className="text-2xl font-bold text-white mb-4">
+                    {lang === 'ar' ? 'التقييمات والمراجعات' : 'Ratings & Reviews'}
+                  </h2>
+                  
+                  <div className="flex flex-col md:flex-row gap-6 items-start">
+                    {/* Aggregate Rating */}
+                    <div className="flex-shrink-0">
+                      <AggregateRating
+                        externalId={externalId}
+                        contentType="software"
+                        size="lg"
+                        showCount
+                      />
+                    </div>
+
+                    {/* User Rating */}
+                    {user && (
+                      <div className="flex-1">
+                        <label className="block text-sm font-bold text-white mb-2">
+                          {lang === 'ar' ? 'تقييمك' : 'Your Rating'}
+                        </label>
+                        <RatingInput
+                          value={userRating}
+                          onChange={handleRatingChange}
+                          size="lg"
+                          showValue
+                        />
+                      </div>
+                    )}
+
+                    {/* Write Review Button */}
+                    {user && !showReviewForm && (
+                      <button
+                        onClick={() => setShowReviewForm(true)}
+                        className="px-6 py-3 bg-sky-600 text-white font-bold rounded-lg hover:bg-sky-500 transition-all"
+                      >
+                        {lang === 'ar' ? 'اكتب مراجعة' : 'Write Review'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Review Form */}
+                {showReviewForm && user && (
+                  <div className="bg-zinc-900/50 rounded-xl p-6 border border-zinc-800">
+                    <h3 className="text-xl font-bold text-white mb-4">
+                      {lang === 'ar' ? 'اكتب مراجعتك' : 'Write Your Review'}
+                    </h3>
+                    <ReviewForm
+                      externalId={externalId}
+                      contentType="software"
+                      onSubmit={handleReviewSubmit}
+                      onCancel={() => setShowReviewForm(false)}
+                    />
+                  </div>
+                )}
+
+                {/* Reviews List */}
+                <div className="bg-zinc-900/50 rounded-xl p-6 border border-zinc-800">
+                  <ReviewList
+                    externalId={externalId}
+                    contentType="software"
+                    currentUserId={user?.id}
+                    onEditReview={(review) => {
+                      setEditingReview(review as Review)
+                      setShowEditModal(true)
+                    }}
+                    onDeleteReview={async (reviewId) => {
+                      if (!user) return
+                      try {
+                        const apiBase = import.meta.env.VITE_API_BASE || ''
+                        const response = await fetch(`${apiBase}/api/reviews/${reviewId}`, {
+                          method: 'DELETE',
+                          headers: {
+                            'Authorization': `Bearer ${user.id}`
+                          }
+                        })
+                        if (!response.ok) throw new Error('Failed to delete review')
+                        toast.success(lang === 'ar' ? 'تم حذف المراجعة' : 'Review deleted')
+                        queryClient.invalidateQueries({ queryKey: ['reviews', externalId] })
+                      } catch (error: any) {
+                        toast.error(lang === 'ar' ? 'فشل في حذف المراجعة' : 'Failed to delete review')
+                      }
+                    }}
+                    onLikeReview={async (reviewId) => {
+                      if (!user) {
+                        toast.error(lang === 'ar' ? 'يجب تسجيل الدخول' : 'Please login first')
+                        return
+                      }
+                      try {
+                        const apiBase = import.meta.env.VITE_API_BASE || ''
+                        const response = await fetch(`${apiBase}/api/reviews/${reviewId}/like`, {
+                          method: 'POST',
+                          headers: {
+                            'Authorization': `Bearer ${user.id}`
+                          }
+                        })
+                        if (!response.ok) throw new Error('Failed to like review')
+                        queryClient.invalidateQueries({ queryKey: ['reviews', externalId] })
+                      } catch (error: any) {
+                        toast.error(lang === 'ar' ? 'فشل في تسجيل الإعجاب' : 'Failed to like review')
+                      }
+                    }}
+                    onReportReview={(reviewId) => {
+                      if (!user) {
+                        toast.error(lang === 'ar' ? 'يجب تسجيل الدخول' : 'Please login first')
+                        return
+                      }
+                      setReportingReviewId(reviewId)
+                      setShowReportDialog(true)
+                    }}
+                  />
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
+
+      {/* Edit Review Modal */}
+      <EditReviewModal
+        review={editingReview}
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false)
+          setEditingReview(null)
+        }}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['reviews', externalId] })
+        }}
+      />
+
+      {/* Report Review Dialog */}
+      <ReportReviewDialog
+        reviewId={reportingReviewId}
+        isOpen={showReportDialog}
+        onClose={() => {
+          setShowReportDialog(false)
+          setReportingReviewId(null)
+        }}
+        onSuccess={() => {
+          // Optional: refresh reviews or show confirmation
+        }}
+      />
     </div>
   )
 }

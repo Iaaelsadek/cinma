@@ -1,18 +1,17 @@
-import {memo, useState, useEffect, useRef, lazy, Suspense} from 'react'
-import type { DragEvent, MouseEvent } from 'react'
+import { memo, useState, useEffect, useRef, lazy, Suspense } from 'react'
+import type { DragEvent } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Play, Star, Plus, Check } from 'lucide-react'
+import { Play, Star } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { PrefetchLink } from '../../common/PrefetchLink'
-import { useAuth } from '../../../hooks/useAuth'
-import { addToWatchlist, isInWatchlist, removeFromWatchlist } from '../../../lib/supabase'
 import { getGenreName } from '../../../lib/genres'
 import { generateWatchUrl, generateContentUrl } from '../../../lib/utils'
 import { useLang } from '../../../state/useLang'
 import { useDualTitles } from '../../../hooks/useDualTitles'
 import { TmdbImage } from '../../common/TmdbImage'
 import { getTranslation, resolveOverviewWithFallback, resolveTitleWithFallback } from '../../../lib/translation'
-import { tmdb } from '../../../lib/tmdb'
+import { AggregateRating } from '../reviews/AggregateRating'
+import axios from 'axios'
 
 const LazyReactPlayer = lazy(() => import('react-player/youtube'))
 
@@ -31,36 +30,42 @@ export type Movie = {
   genre_ids?: number[]
   original_language?: string
   category?: string
+  // Aggregate rating data (optional, passed from parent)
+  aggregate_rating?: number | null
+  rating_count?: number
+  review_count?: number
 }
 
-export const MovieCard = memo(({ movie, index = 0 }: { movie: Movie; index?: number }) => {
+export const MovieCard = memo(({ movie, index = 0, isVisible }: { movie: Movie; index?: number; isVisible?: boolean }) => {
   const [translatedData, setTranslatedData] = useState<any>(null)
   const [translationRequested, setTranslationRequested] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
   const [trailerKey, setTrailerKey] = useState<string | null>(null)
-  const [listBusy, setListBusy] = useState(false)
-  const [inList, setInList] = useState(false)
-  const { user } = useAuth()
   const { lang } = useLang()
-  
+
   // Merge translated data into movie object for useDualTitles
-  const effectiveMovie = { ...movie, ...translatedData }
+  // CRITICAL: Filter out undefined values to prevent overwriting database values
+  const cleanTranslatedData = translatedData
+    ? Object.fromEntries(Object.entries(translatedData).filter(([_, v]) => v !== undefined))
+    : {}
+  const effectiveMovie = { ...movie, ...cleanTranslatedData }
   const titles = useDualTitles(effectiveMovie)
   const resolvedTitle = resolveTitleWithFallback(effectiveMovie)
-  const resolvedOverview = resolveOverviewWithFallback(effectiveMovie)
-  
+  const resolvedOverview = resolveOverviewWithFallback(effectiveMovie, lang)
+
   const navigate = useNavigate()
-  const title = resolvedTitle || effectiveMovie.title || effectiveMovie.name || 'Untitled'
-  
+  // Use titles.main for display (respects language preference)
+  const title = titles.main || resolvedTitle || effectiveMovie.title || effectiveMovie.name || 'Untitled'
+
   const date = movie.release_date || movie.first_air_date || ''
   const year = date ? new Date(date).getFullYear() : ''
-  
+
   const isTv = movie.media_type === 'tv' || (!!movie.name && !movie.title)
   const isGame = movie.media_type === 'game'
   const isSoftware = movie.media_type === 'software'
   const isAnime = movie.media_type === 'anime'
   const isQuran = movie.media_type === 'quran'
-  
+
   const getMediaType = () => {
     if (isGame) return 'game'
     if (isSoftware) return 'software'
@@ -69,16 +74,26 @@ export const MovieCard = memo(({ movie, index = 0 }: { movie: Movie; index?: num
     if (isTv) return 'tv'
     return 'movie'
   }
-  
+
   const mediaType = getMediaType()
+
+  // Skip items without slug to prevent crashes
+  if (!movie.slug || movie.slug.trim() === '' || movie.slug === 'content') {
+    return null
+  }
+
   const contentUrl = generateContentUrl({ ...movie, media_type: mediaType })
   const watchUrl = generateWatchUrl({ ...movie, media_type: mediaType })
-  const rating = typeof movie.vote_average === 'number' && movie.vote_average > 0 ? Math.round(movie.vote_average * 10) / 10 : null
-  
-  const genre = getGenreName(movie.genre_ids?.[0], lang) || (movie as any).category
+  // Convert vote_average to number (API returns it as string from CockroachDB numeric type)
+  const voteAvg = typeof movie.vote_average === 'number' ? movie.vote_average : parseFloat(String(movie.vote_average || 0))
+  const rating = voteAvg > 0 ? Math.round(voteAvg * 10) / 10 : null
+
+  // Use primary_genre from database and translate to Arabic if needed
+  const primaryGenre = (movie as any).primary_genre
+  const genre = primaryGenre ? getGenreName(primaryGenre, 'ar') : (movie.genre_ids?.[0] ? getGenreName(String(movie.genre_ids[0]), 'ar') : null) || (movie as any).category
   const currentYear = new Date().getFullYear()
   const isCurrentYear = year === currentYear
-  
+
   // Truncate overview to max 15 words
   const getShortOverview = (text?: string) => {
     if (!text) return ''
@@ -94,31 +109,31 @@ export const MovieCard = memo(({ movie, index = 0 }: { movie: Movie; index?: num
   useEffect(() => {
     if (!['movie', 'tv'].includes(mediaType)) return
     if (translationRequested) return
+
+    // CRITICAL FIX: If movie already has title_ar from database, don't fetch translation at all
+    // This prevents overwriting correct Arabic titles from CockroachDB with TMDB translations
+    const dbHasArabicTitle = Boolean((movie as any).title_ar || (movie as any).name_ar)
+    if (dbHasArabicTitle && resolvedOverview) return
+
     if (resolvedTitle && resolvedOverview) return
 
     setTranslationRequested(true)
     getTranslation(movie).then((res) => {
-      if (res) setTranslatedData(res)
+      if (res) {
+        // CRITICAL: Only use translation data if movie doesn't already have Arabic title from database
+        if (dbHasArabicTitle) {
+          // Keep database Arabic title, only use translation for overview if needed
+          const cleanedTranslation: any = {}
+          if (res.overview_ar && !movie.overview) cleanedTranslation.overview_ar = res.overview_ar
+          if (res.overview_en && !movie.overview) cleanedTranslation.overview_en = res.overview_en
+          // Explicitly DO NOT include title_ar or name_ar from translation
+          setTranslatedData(Object.keys(cleanedTranslation).length > 0 ? cleanedTranslation : null)
+        } else {
+          setTranslatedData(res)
+        }
+      }
     })
   }, [movie.id, mediaType, resolvedTitle, resolvedOverview, translationRequested])
-  
-  useEffect(() => {
-    if (!user) {
-      setInList(false)
-      return
-    }
-    let mounted = true
-    const checkStatus = async () => {
-      try {
-        const current = await isInWatchlist(user.id, movie.id, mediaType as any)
-        if (mounted) setInList(current)
-      } catch (e) {
-        // Silent fail
-      }
-    }
-    checkStatus()
-    return () => { mounted = false }
-  }, [user, movie.id, mediaType])
 
   const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -129,8 +144,16 @@ export const MovieCard = memo(({ movie, index = 0 }: { movie: Movie; index?: num
       if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current)
       hoverTimeoutRef.current = setTimeout(async () => {
         try {
-          const { data } = await tmdb.get(`/${mediaType}/${movie.id}/videos`)
-          const trailer = data.results?.find(
+          // CRITICAL: Videos are stored in CockroachDB, not TMDB
+          // Fetch from our API endpoint which reads from database
+          // Use slug instead of UUID for API calls
+          const slug = movie.slug || String(movie.id)
+          const endpoint = mediaType === 'tv' ? `/api/tv/${slug}` : `/api/movies/${slug}`
+          const { data } = await axios.get(endpoint)
+
+          // Parse videos from database (stored as JSON string)
+          const videos = data.videos ? JSON.parse(data.videos) : []
+          const trailer = videos.find(
             (v: any) => v.site === 'YouTube' && (v.type === 'Trailer' || v.type === 'Teaser')
           )
           if (mounted && trailer?.key) {
@@ -144,8 +167,8 @@ export const MovieCard = memo(({ movie, index = 0 }: { movie: Movie; index?: num
       clearTimeout(hoverTimeoutRef.current)
       hoverTimeoutRef.current = null
     }
-    
-    return () => { 
+
+    return () => {
       mounted = false
       if (hoverTimeoutRef.current) {
         clearTimeout(hoverTimeoutRef.current)
@@ -157,34 +180,6 @@ export const MovieCard = memo(({ movie, index = 0 }: { movie: Movie; index?: num
   useEffect(() => {
     setThumbSrc(((movie as any).thumbnail || '').trim())
   }, [(movie as any).thumbnail])
-
-  const toggleList = async (e: MouseEvent<HTMLButtonElement>) => {
-    e.preventDefault()
-    e.stopPropagation()
-    if (!user || listBusy) {
-      if (!user) navigate('/login')
-      return
-    }
-    setListBusy(true)
-    try {
-      const current = await isInWatchlist(user.id, movie.id, mediaType as any)
-      if (current) {
-        await removeFromWatchlist(user.id, movie.id, mediaType as any)
-        setInList(false)
-      } else {
-        await addToWatchlist(user.id, movie.id, mediaType as any)
-        setInList(true)
-      }
-    } finally {
-      setListBusy(false)
-    }
-  }
-
-  const onWatch = (e: MouseEvent<HTMLButtonElement>) => {
-    e.preventDefault()
-    e.stopPropagation()
-    navigate(watchUrl)
-  }
 
   const getMediaLabel = () => {
     const isAr = lang === 'ar'
@@ -207,12 +202,12 @@ export const MovieCard = memo(({ movie, index = 0 }: { movie: Movie; index?: num
       className="relative z-0 group/card"
     >
       <PrefetchLink
-        to={contentUrl}
+        to={watchUrl}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         draggable={false}
         onDragStart={(e: DragEvent<HTMLAnchorElement>) => e.preventDefault()}
-        className="block relative h-full w-full lumen-focus-ring rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-lumen-gold focus-visible:outline-offset-2 select-none"
+        className="block relative h-full w-full lumen-focus-ring rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-lumen-gold focus-visible:outline-offset-2 touch-pan-y"
       >
         <div className="lumen-card h-full flex flex-col transition-transform duration-300 ease-lumen hover:scale-[1.03] focus-within:scale-[1.02]">
           {/* Poster */}
@@ -261,11 +256,11 @@ export const MovieCard = memo(({ movie, index = 0 }: { movie: Movie; index?: num
                       loop
                       config={{
                         youtube: {
-                          playerVars: { 
-                            autoplay: 1, 
-                            controls: 0, 
-                            showinfo: 0, 
-                            modestbranding: 1, 
+                          playerVars: {
+                            autoplay: 1,
+                            controls: 0,
+                            showinfo: 0,
+                            modestbranding: 1,
                             rel: 0,
                             iv_load_policy: 3
                           }
@@ -282,38 +277,6 @@ export const MovieCard = memo(({ movie, index = 0 }: { movie: Movie; index?: num
             <div className="lumen-grain rounded-2xl" aria-hidden />
 
             {/* Rating - Moved to bottom */}
-
-            {/* Hover overlay — actions */}
-            <div
-              className={`absolute inset-0 z-20 flex flex-col justify-center items-center p-4 transition-all duration-300 ease-lumen ${isHovered ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-            >
-              <div className="flex items-center gap-3 transform translate-y-3 group-hover/card:translate-y-0 transition-transform duration-300 ease-lumen">
-                <motion.button
-                  type="button"
-                  onClick={onWatch}
-                  aria-label="play"
-                  className="rounded-full bg-lumen-gold text-lumen-void h-12 w-12 flex items-center justify-center hover:brightness-110 shadow-lumen-glow transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lumen-cream"
-                  whileHover={{ scale: 1.08 }}
-                  whileTap={{ scale: 0.96 }}
-                >
-                  <Play size={24} fill="currentColor" className="ml-0.5" />
-                </motion.button>
-                <motion.button
-                  type="button"
-                  onClick={toggleList}
-                  disabled={listBusy}
-                  aria-label="add to list"
-                  className="rounded-full bg-lumen-surface/90 border border-lumen-muted backdrop-blur-md h-10 w-10 flex items-center justify-center text-lumen-cream hover:border-lumen-gold/50 hover:bg-lumen-gold/10 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lumen-gold"
-                  whileHover={{ scale: 1.08 }}
-                  whileTap={{ scale: 0.96 }}
-                >
-                  {inList ? <Check size={16} className="text-lumen-gold" /> : <Plus size={16} />}
-                </motion.button>
-              </div>
-              <p className="absolute bottom-3 left-3 right-3 text-[10px] text-lumen-silver line-clamp-2 leading-relaxed text-center opacity-0 group-hover/card:opacity-100 transform translate-y-2 group-hover/card:translate-y-0 transition-all duration-300">
-                {shortOverview}
-              </p>
-            </div>
           </div>
 
           {/* Title & meta */}
@@ -325,35 +288,31 @@ export const MovieCard = memo(({ movie, index = 0 }: { movie: Movie; index?: num
               {titles.sub || '—'}
             </p>
             <div className="self-end mt-1 flex flex-wrap items-center gap-1 text-[9px] font-medium uppercase tracking-wider text-lumen-silver">
-               {/* Rating */}
-               {rating != null && (
-                 <span className="flex items-center gap-0.5 text-lumen-gold">
-                   <Star size={10} fill="currentColor" />
-                   {rating}
-                 </span>
-               )}
-               
-               {/* Genre */}
-               {genre && (
-                 <>
-                   <span className="w-0.5 h-0.5 rounded-full bg-lumen-silver/50" />
-                   <span className="truncate max-w-[80px]">{genre}</span>
-                 </>
-               )}
+              {/* TMDB Rating - Always show if available */}
+              {rating != null && (
+                <span className="flex items-center gap-0.5 text-lumen-gold">
+                  <Star size={10} fill="currentColor" />
+                  {rating}
+                </span>
+              )}
 
-               {/* Year */}
-               {year && (
-                 <>
-                   <span className="w-0.5 h-0.5 rounded-full bg-lumen-silver/50" />
-                   <span className={isCurrentYear ? 'text-cyan-400 animate-neon-flash font-bold drop-shadow-[0_0_5px_rgba(34,211,238,0.8)]' : ''}>
-                     {year}
-                   </span>
-                 </>
-               )}
+              {/* Genre */}
+              {genre && (
+                <>
+                  {rating != null && <span className="w-0.5 h-0.5 rounded-full bg-lumen-silver/50" />}
+                  <span className="truncate max-w-[80px]">{genre}</span>
+                </>
+              )}
 
-               {/* Type */}
-               <span className="w-0.5 h-0.5 rounded-full bg-lumen-silver/50" />
-               <span>{getMediaLabel()}</span>
+              {/* Year */}
+              {year && (
+                <>
+                  <span className="w-0.5 h-0.5 rounded-full bg-lumen-silver/50" />
+                  <span className={isCurrentYear ? 'text-cyan-400 animate-neon-flash font-bold drop-shadow-[0_0_5px_rgba(34,211,238,0.8)]' : ''}>
+                    {year}
+                  </span>
+                </>
+              )}
             </div>
           </div>
         </div>

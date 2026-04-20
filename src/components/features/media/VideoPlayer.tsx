@@ -1,28 +1,30 @@
-import { lazy, Suspense, useState, useRef, useEffect, useCallback } from 'react'
-import { 
-  AlertTriangle, 
-  SkipForward, 
-  Play, 
-  Pause, 
-  Volume2, 
-  VolumeX, 
-  Maximize, 
-  Minimize, 
-  Settings, 
-  Subtitles, 
-  RotateCcw, 
+import { lazy, Suspense, useState, useRef, useEffect, useCallback, useMemo } from 'react'
+import {
+  AlertTriangle,
+  SkipForward,
+  Play,
+  Pause,
+  Volume2,
+  VolumeX,
+  Maximize,
+  Minimize,
+  Settings,
+  Subtitles,
+  RotateCcw,
   RotateCw,
   FastForward,
   Rewind,
   Loader2,
   Check,
-  ExternalLink
+  ExternalLink,
+  PictureInPicture
 } from 'lucide-react'
 import { Button } from '../../common/Button'
 import { useLang } from '../../../state/useLang'
 import { motion, AnimatePresence } from 'framer-motion'
 import { clsx } from 'clsx'
 import { logger } from '../../../lib/logger'
+import { toast } from '../../../lib/toast-manager'
 
 const ReactPlayer = lazy(() => import('react-player'))
 
@@ -37,25 +39,37 @@ interface VideoPlayerProps {
   onPlay?: () => void
   onPause?: () => void
   onDuration?: (duration: number) => void
-  ref?: React.RefObject<any> // ReactPlayer is lazy-imported, use any for now
+  ref?: React.RefObject<any>
   playing?: boolean
   seekTo?: number
+  onPiPEnter?: () => void
+  onPiPExit?: () => void
 }
 
-export const VideoPlayer = ({ url, subtitles = [], introStart, introEnd, title, poster, onProgress, onPlay, onPause, onDuration, playing: externalPlaying, seekTo }: VideoPlayerProps) => {
+export const VideoPlayer = ({ url, subtitles = [], introStart, introEnd, title, poster, onProgress, onPlay, onPause, onDuration, playing: externalPlaying, seekTo, onPiPEnter, onPiPExit }: VideoPlayerProps) => {
+  // Check if this is YouTube and force iframe mode
+  const isYouTube = url.includes('youtube.com') || url.includes('youtu.be')
+  const forceIframe = isYouTube
+
+  // PiP Detection and State
+  const [isPiPSupported, setIsPiPSupported] = useState(false)
+  const [isPiPActive, setIsPiPActive] = useState(false)
+
   // State
-  const [playing, setPlaying] = useState(false)
+  const [playing, setPlaying] = useState(externalPlaying ?? false)
 
   // Sync with external playing state
   useEffect(() => {
     if (externalPlaying !== undefined) {
       setPlaying(externalPlaying)
     }
-  }, [externalPlaying])
+  }, [externalPlaying]) // Fixed: removed 'playing' from dependencies
 
   // Sync with external seek
+  const prevSeekTo = useRef<number | undefined>(undefined)
   useEffect(() => {
-    if (seekTo !== undefined && playerRef.current) {
+    if (seekTo !== undefined && seekTo !== prevSeekTo.current && playerRef.current) {
+      prevSeekTo.current = seekTo
       playerRef.current.seekTo(seekTo)
     }
   }, [seekTo])
@@ -69,13 +83,13 @@ export const VideoPlayer = ({ url, subtitles = [], introStart, introEnd, title, 
   const [showControls, setShowControls] = useState(true)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [error, setError] = useState(false)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(forceIframe ? false : true) // Don't show loading for iframe mode
   const [showSkip, setShowSkip] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [showSubtitlesMenu, setShowSubtitlesMenu] = useState(false)
   const [activeSubtitle, setActiveSubtitle] = useState<number>(-1) // -1 for none
-  const [fallbackToIframe, setFallbackToIframe] = useState(false)
-  
+  const [fallbackToIframe, setFallbackToIframe] = useState(forceIframe) // Force iframe for YouTube
+
   // Refs
   const playerRef = useRef<any>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -83,19 +97,85 @@ export const VideoPlayer = ({ url, subtitles = [], introStart, introEnd, title, 
 
   const CONTROLS_HIDE_DELAY_MS = 5000
   const CONTROLS_HOTZONE_PX = 140
-  
+
   const { lang } = useLang()
 
+  // PiP Support Detection
+  useEffect(() => {
+    const checkPiPSupport = () => {
+      if (!document.pictureInPictureEnabled) {
+        logger.warn('Picture-in-Picture is not supported in this browser')
+        setIsPiPSupported(false)
+        return
+      }
+      setIsPiPSupported(true)
+    }
+
+    checkPiPSupport()
+  }, [])
+
+  // Check if PiP is available for current video source
+  const isPiPAvailable = useMemo(() => {
+    if (!isPiPSupported) return false
+    if (fallbackToIframe && isYouTube) return false // YouTube iframe doesn't support our PiP
+    return true
+  }, [isPiPSupported, fallbackToIframe, isYouTube])
+
   // Handlers
+  const getVideoElement = (): HTMLVideoElement | null => {
+    if (!playerRef.current) return null
+
+    // ReactPlayer exposes internal player via getInternalPlayer()
+    const internalPlayer = playerRef.current.getInternalPlayer()
+
+    // For native videos, this returns the video element directly
+    if (internalPlayer instanceof HTMLVideoElement) {
+      return internalPlayer
+    }
+
+    // For YouTube, iframe doesn't support PiP via our API
+    return null
+  }
+
+  const handleTogglePiP = async () => {
+    try {
+      const videoElement = getVideoElement()
+
+      if (!videoElement) {
+        toast.error(lang === 'ar' ? 'فشل تفعيل PiP للفيديو' : 'Failed to activate PiP for video')
+        return
+      }
+
+      if (document.pictureInPictureElement) {
+        // Exit PiP
+        await document.exitPictureInPicture()
+      } else {
+        // Enter PiP
+        await videoElement.requestPictureInPicture()
+        toast.success(lang === 'ar' ? 'تم تفعيل PiP' : 'PiP activated', { duration: 2000 })
+      }
+    } catch (error: any) {
+      logger.error('PiP error:', error)
+
+      if (error.name === 'NotSupportedError') {
+        toast.error(lang === 'ar' ? 'المتصفح لا يدعم PiP' : 'Browser does not support PiP')
+      } else if (error.name === 'NotAllowedError') {
+        toast.error(lang === 'ar' ? 'يرجى السماح بـ PiP في إعدادات المتصفح' : 'Please allow PiP in browser settings')
+      } else {
+        toast.error(lang === 'ar' ? 'فشل تفعيل PiP' : 'Failed to activate PiP')
+      }
+    }
+  }
+
   const handlePlayPause = () => {
     const nextState = !playing
     setPlaying(nextState)
     if (nextState) onPlay?.()
     else onPause?.()
   }
-  
+
   const handleToggleMuted = () => setMuted(!muted)
-  
+
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = parseFloat(e.target.value)
     setVolume(val)
@@ -104,7 +184,7 @@ export const VideoPlayer = ({ url, subtitles = [], introStart, introEnd, title, 
 
   const handleToggleFullscreen = () => {
     if (!containerRef.current) return
-    
+
     if (!isFullscreen) {
       if (containerRef.current.requestFullscreen) {
         containerRef.current.requestFullscreen()
@@ -117,11 +197,11 @@ export const VideoPlayer = ({ url, subtitles = [], introStart, introEnd, title, 
   }
 
   const handleSeekMouseDown = () => setSeeking(true)
-  
+
   const handleSeekChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setPlayed(parseFloat(e.target.value))
   }
-  
+
   const handleSeekMouseUp = (e: React.MouseEvent<HTMLInputElement> | React.TouchEvent<HTMLInputElement>) => {
     setSeeking(false)
     const target = e.target as HTMLInputElement
@@ -134,7 +214,7 @@ export const VideoPlayer = ({ url, subtitles = [], introStart, introEnd, title, 
       setPlayed(state.played)
     }
     setLoaded(state.loaded)
-    
+
     // Intro Skip Logic
     if (introStart !== undefined && introEnd !== undefined) {
       if (state.playedSeconds >= introStart && state.playedSeconds < introEnd) {
@@ -207,7 +287,12 @@ export const VideoPlayer = ({ url, subtitles = [], introStart, introEnd, title, 
         case 'Space':
         case 'KeyK':
           e.preventDefault()
-          handlePlayPause()
+          setPlaying(p => {
+            const next = !p
+            if (next) onPlay?.()
+            else onPause?.()
+            return next
+          })
           break
         case 'KeyF':
           e.preventDefault()
@@ -215,15 +300,27 @@ export const VideoPlayer = ({ url, subtitles = [], introStart, introEnd, title, 
           break
         case 'KeyM':
           e.preventDefault()
-          handleToggleMuted()
+          setMuted(m => !m)
+          break
+        case 'KeyP':
+          e.preventDefault()
+          if (isPiPAvailable) {
+            handleTogglePiP()
+          }
           break
         case 'ArrowRight':
           e.preventDefault()
-          playerRef.current?.seekTo(playerRef.current.getCurrentTime() + 10)
+          if (playerRef.current) {
+            const currentTime = playerRef.current.getCurrentTime?.() || 0
+            playerRef.current.seekTo(currentTime + 10)
+          }
           break
         case 'ArrowLeft':
           e.preventDefault()
-          playerRef.current?.seekTo(playerRef.current.getCurrentTime() - 10)
+          if (playerRef.current) {
+            const currentTime = playerRef.current.getCurrentTime?.() || 0
+            playerRef.current.seekTo(currentTime - 10)
+          }
           break
         case 'ArrowUp':
           e.preventDefault()
@@ -238,7 +335,7 @@ export const VideoPlayer = ({ url, subtitles = [], introStart, introEnd, title, 
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [playing, muted, isFullscreen])
+  }, [isPiPAvailable])
 
   useEffect(() => {
     return () => {
@@ -253,6 +350,41 @@ export const VideoPlayer = ({ url, subtitles = [], introStart, introEnd, title, 
     }
     document.addEventListener('fullscreenchange', handleFsChange)
     return () => document.removeEventListener('fullscreenchange', handleFsChange)
+  }, [])
+
+  // PiP Event Listeners
+  useEffect(() => {
+    const videoElement = getVideoElement()
+    if (!videoElement) return
+
+    const handleEnterPiP = () => {
+      setIsPiPActive(true)
+      onPiPEnter?.()
+    }
+
+    const handleLeavePiP = () => {
+      setIsPiPActive(false)
+      onPiPExit?.()
+    }
+
+    videoElement.addEventListener('enterpictureinpicture', handleEnterPiP)
+    videoElement.addEventListener('leavepictureinpicture', handleLeavePiP)
+
+    return () => {
+      videoElement.removeEventListener('enterpictureinpicture', handleEnterPiP)
+      videoElement.removeEventListener('leavepictureinpicture', handleLeavePiP)
+    }
+  }, [onPiPEnter, onPiPExit]) // Fixed: removed playerRef.current
+
+  // Cleanup PiP on unmount
+  useEffect(() => {
+    return () => {
+      if (document.pictureInPictureElement) {
+        document.exitPictureInPicture().catch(err => {
+          logger.warn('Failed to exit PiP on unmount:', err)
+        })
+      }
+    }
   }, [])
 
   if (error) {
@@ -273,17 +405,17 @@ export const VideoPlayer = ({ url, subtitles = [], introStart, introEnd, title, 
         <AlertTriangle size={48} className="mb-4 text-red-500 opacity-50" />
         <p className="font-bold">{lang === 'ar' ? 'خطأ في التشغيل' : 'Playback Error'}</p>
         <p className="text-xs">{lang === 'ar' ? 'قد يكون المصدر غير متاح حالياً.' : 'The source might be unavailable.'}</p>
-        
+
         <div className="flex flex-wrap items-center justify-center gap-3 mt-4">
-          <Button 
-            variant="secondary" 
+          <Button
+            variant="secondary"
             onClick={() => window.location.reload()}
           >
             {lang === 'ar' ? 'إعادة المحاولة' : 'Retry'}
           </Button>
-          
+
           {isYouTube && (
-            <Button 
+            <Button
               variant="primary"
               onClick={() => window.open(watchUrl, '_blank')}
             >
@@ -296,7 +428,7 @@ export const VideoPlayer = ({ url, subtitles = [], introStart, introEnd, title, 
   }
 
   return (
-    <div 
+    <div
       ref={containerRef}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
@@ -308,7 +440,7 @@ export const VideoPlayer = ({ url, subtitles = [], introStart, introEnd, title, 
       {/* Loading Overlay */}
       <AnimatePresence>
         {loading && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -323,85 +455,75 @@ export const VideoPlayer = ({ url, subtitles = [], introStart, introEnd, title, 
         <iframe
           src={(() => {
             if (url.includes('youtube.com') || url.includes('youtu.be')) {
-               // Extract ID
-               let id = ''
-               if (url.includes('/embed/')) id = url.split('/embed/')[1].split('?')[0]
-               else if (url.includes('v=')) id = url.split('v=')[1].split('&')[0]
-               else if (url.includes('youtu.be/')) id = url.split('youtu.be/')[1].split('?')[0]
-               
-               return `https://www.youtube.com/embed/${id}?autoplay=1&origin=${window.location.origin}`
-            }
-            if (url.includes('dailymotion.com')) {
-               // Ensure it's embed format
-               if (url.includes('/video/')) {
-                  const id = url.split('/video/')[1].split('?')[0]
-                  return `https://www.dailymotion.com/embed/video/${id}?autoplay=1`
-               }
-               return url
+              // Extract ID
+              let id = ''
+              if (url.includes('/embed/')) id = url.split('/embed/')[1].split('?')[0]
+              else if (url.includes('v=')) id = url.split('v=')[1].split('&')[0]
+              else if (url.includes('youtu.be/')) id = url.split('youtu.be/')[1].split('?')[0]
+
+              return `https://www.youtube.com/embed/${id}?autoplay=1&origin=${window.location.origin}`
             }
             return url
           })()}
           className="h-full w-full"
-          allowFullScreen
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
           title={title || "Video"}
         />
       ) : (
-      <Suspense fallback={<div className="h-full w-full bg-black/80" />}>
-        <ReactPlayer
-          key={`${url}-${activeSubtitle}`}
-          ref={playerRef}
-          url={url}
-          width="100%"
-          height="100%"
-          playing={playing}
-          volume={volume}
-          muted={muted}
-          playbackRate={playbackRate}
-          onReady={() => setLoading(false)}
-          onBuffer={() => setLoading(true)}
-          onBufferEnd={() => setLoading(false)}
-          onError={(e: any) => {
-            const isYouTube = url.includes('youtube.com') || url.includes('youtu.be')
-            const isDailyMotion = url.includes('dailymotion.com') || url.includes('dai.ly')
-            
-            if ((isYouTube || isDailyMotion) && !fallbackToIframe) {
-              logger.warn(`ReactPlayer failed for ${isYouTube ? 'YouTube' : 'DailyMotion'}, falling back to raw iframe`)
-              setFallbackToIframe(true)
-              setLoading(false)
-              return
-            }
-            logger.error('Playback error:', e)
-            setError(true)
-          }}
-          onProgress={handleProgress}
-          onDuration={(d: number) => setDuration(d)}
-          onClick={() => handlePlayPause()}
-          config={{ 
-            youtube: {
-              playerVars: { 
-                origin: window.location.origin,
-                modestbranding: 1,
-                rel: 0
+        <Suspense fallback={<div className="h-full w-full bg-black/80" />}>
+          <ReactPlayer
+            key={url}
+            ref={playerRef}
+            url={url}
+            width="100%"
+            height="100%"
+            playing={playing}
+            volume={volume}
+            muted={muted}
+            playbackRate={playbackRate}
+            onReady={() => setLoading(false)}
+            onBuffer={() => setLoading(true)}
+            onBufferEnd={() => setLoading(false)}
+            onError={(e: any) => {
+              const isYouTube = url.includes('youtube.com') || url.includes('youtu.be')
+
+              if (isYouTube && !fallbackToIframe) {
+                logger.warn('ReactPlayer failed for YouTube, falling back to raw iframe')
+                setFallbackToIframe(true)
+                setLoading(false)
+                return
               }
-            },
-            file: { 
-              attributes: { 
-                crossOrigin: 'anonymous',
-                poster: poster
+              logger.error('Playback error:', e)
+              setError(true)
+            }}
+            onProgress={handleProgress}
+            onDuration={(d: number) => setDuration(d)}
+            onClick={() => handlePlayPause()}
+            config={{
+              youtube: {
+                playerVars: {
+                  origin: window.location.origin,
+                  modestbranding: 1,
+                  rel: 0
+                }
               },
-              forceHLS: url.includes('.m3u8'),
-              tracks: subtitles.map((sub, idx) => ({
-                kind: 'subtitles',
-                src: sub.src,
-                srcLang: sub.srcLang,
-                label: sub.label,
-                default: activeSubtitle === idx
-              }))
-            }
-          }}
-        />
-      </Suspense>
+              file: {
+                attributes: {
+                  crossOrigin: 'anonymous',
+                  poster: poster
+                },
+                forceHLS: url.includes('.m3u8'),
+                tracks: subtitles.map((sub, idx) => ({
+                  kind: 'subtitles',
+                  src: sub.src,
+                  srcLang: sub.srcLang,
+                  label: sub.label,
+                  default: activeSubtitle === idx
+                }))
+              }
+            }}
+          />
+        </Suspense>
       )}
 
       {/* Custom Controls Overlay */}
@@ -425,10 +547,10 @@ export const VideoPlayer = ({ url, subtitles = [], introStart, introEnd, title, 
               {/* Progress Bar */}
               <div className="relative group/progress">
                 {/* Buffering bar */}
-                <div 
+                <div
                   className="absolute top-1/2 -translate-y-1/2 left-0 h-1.5 bg-white/20 rounded-full overflow-hidden w-full"
                 >
-                  <div 
+                  <div
                     className="h-full bg-white/30 transition-all duration-300"
                     style={{ width: `${loaded * 100}%` }}
                   />
@@ -461,7 +583,7 @@ export const VideoPlayer = ({ url, subtitles = [], introStart, introEnd, title, 
                     <button onClick={handleToggleMuted} className="text-white hover:text-primary transition-colors">
                       {muted || volume === 0 ? <VolumeX size={24} /> : <Volume2 size={24} />}
                     </button>
-                    <input 
+                    <input
                       type="range"
                       min={0}
                       max={1}
@@ -478,14 +600,14 @@ export const VideoPlayer = ({ url, subtitles = [], introStart, introEnd, title, 
                 </div>
 
                 <div className="flex items-center gap-4 md:gap-6">
-                  <button 
+                  <button
                     onClick={() => setShowSettings(!showSettings)}
                     className={clsx("text-white hover:text-primary transition-colors", showSettings && "text-primary")}
                   >
                     <Settings size={22} />
                   </button>
 
-                  <button 
+                  <button
                     onClick={() => {
                       setShowSubtitlesMenu(!showSubtitlesMenu)
                       setShowSettings(false)
@@ -494,6 +616,17 @@ export const VideoPlayer = ({ url, subtitles = [], introStart, introEnd, title, 
                   >
                     <Subtitles size={22} />
                   </button>
+
+                  {isPiPAvailable && (
+                    <button
+                      onClick={handleTogglePiP}
+                      className={clsx("text-white hover:text-primary transition-colors", isPiPActive && "text-primary")}
+                      aria-label={isPiPActive ? (lang === 'ar' ? 'إيقاف صورة داخل صورة' : 'Exit Picture in Picture') : (lang === 'ar' ? 'تفعيل صورة داخل صورة' : 'Activate Picture in Picture')}
+                      title={isPiPActive ? (lang === 'ar' ? 'إيقاف صورة داخل صورة' : 'Exit Picture in Picture') : (lang === 'ar' ? 'صورة داخل صورة' : 'Picture in Picture')}
+                    >
+                      <PictureInPicture size={22} />
+                    </button>
+                  )}
 
                   <button onClick={handleToggleFullscreen} className="text-white hover:text-primary transition-colors">
                     {isFullscreen ? <Minimize size={24} /> : <Maximize size={24} />}
@@ -540,8 +673,8 @@ export const VideoPlayer = ({ url, subtitles = [], introStart, introEnd, title, 
             <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest px-3 py-2 border-b border-white/5 mb-1">
               {lang === 'ar' ? 'الإعدادات' : 'Settings'}
             </div>
-            
-            <button 
+
+            <button
               onClick={() => {
                 setPlaybackRate(prev => prev === 2 ? 0.5 : prev + 0.25)
               }}
@@ -551,7 +684,7 @@ export const VideoPlayer = ({ url, subtitles = [], introStart, introEnd, title, 
               <span className="text-primary font-bold">{playbackRate}x</span>
             </button>
 
-            <button 
+            <button
               className="w-full flex justify-between items-center px-3 py-2 rounded-xl hover:bg-white/5 text-sm text-white transition-colors"
             >
               <span>{lang === 'ar' ? 'الجودة' : 'Quality'}</span>
@@ -573,8 +706,8 @@ export const VideoPlayer = ({ url, subtitles = [], introStart, introEnd, title, 
             <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest px-3 py-2 border-b border-white/5 mb-1">
               {lang === 'ar' ? 'الترجمة' : 'Subtitles'}
             </div>
-            
-            <button 
+
+            <button
               onClick={() => {
                 setActiveSubtitle(-1)
                 setShowSubtitlesMenu(false)
@@ -589,7 +722,7 @@ export const VideoPlayer = ({ url, subtitles = [], introStart, introEnd, title, 
             </button>
 
             {subtitles.map((sub, idx) => (
-              <button 
+              <button
                 key={idx}
                 onClick={() => {
                   setActiveSubtitle(idx)

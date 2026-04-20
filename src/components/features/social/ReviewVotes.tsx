@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react'
 import { ThumbsUp, ThumbsDown } from 'lucide-react'
 import { voteReview, removeReviewVote, getReviewVotes } from '../../../lib/supabase'
 import { clsx } from 'clsx'
-import {motion} from 'framer-motion'
-import { toast } from 'sonner'
+import { motion } from 'framer-motion'
+import { toast } from '../../../lib/toast-manager'
 import { logger } from '../../../lib/logger'
 
 interface ReviewVotesProps {
@@ -20,8 +20,8 @@ export const ReviewVotes = ({ commentId, userId, lang = 'ar' }: ReviewVotesProps
     try {
       const data = await getReviewVotes(commentId)
       setVotes(data)
-    } catch (error) {
-      logger.error('Error fetching votes:', error)
+    } catch (error: any) {
+      // Silently fail
     }
   }
 
@@ -47,7 +47,7 @@ export const ReviewVotes = ({ commentId, userId, lang = 'ar' }: ReviewVotesProps
         await voteReview(commentId, userId, type)
       }
       await fetchVotes()
-    } catch (error) {
+    } catch (error: any) {
       toast.error(lang === 'ar' ? 'فشل التصويت' : 'Vote failed')
     } finally {
       setLoading(false)
@@ -61,15 +61,15 @@ export const ReviewVotes = ({ commentId, userId, lang = 'ar' }: ReviewVotesProps
       <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mr-2">
         {t('هل كانت هذه المراجعة مفيدة؟', 'Was this review helpful?')}
       </span>
-      
+
       <div className="flex items-center gap-1">
         <button
           onClick={() => handleVote('up')}
           disabled={loading}
           className={clsx(
             "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold transition-all",
-            userVote === 'up' 
-              ? "bg-emerald-500/20 text-emerald-500 border border-emerald-500/20" 
+            userVote === 'up'
+              ? "bg-emerald-500/20 text-emerald-500 border border-emerald-500/20"
               : "bg-white/5 text-zinc-400 border border-white/5 hover:bg-white/10"
           )}
         >
@@ -82,8 +82,8 @@ export const ReviewVotes = ({ commentId, userId, lang = 'ar' }: ReviewVotesProps
           disabled={loading}
           className={clsx(
             "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold transition-all",
-            userVote === 'down' 
-              ? "bg-red-500/20 text-red-500 border border-red-500/20" 
+            userVote === 'down'
+              ? "bg-red-500/20 text-red-500 border border-red-500/20"
               : "bg-white/5 text-zinc-400 border border-white/5 hover:bg-white/10"
           )}
         >

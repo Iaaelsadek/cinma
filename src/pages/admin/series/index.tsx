@@ -103,11 +103,11 @@ const AdminSeriesList = () => {
         <select
           value={genre}
           onChange={(e) => setGenre(e.target.value)}
-          className="bg-black/20 border border-zinc-700 rounded-md py-1 px-2 text-xs text-zinc-200 focus:border-primary outline-none"
+          className="bg-[#1C1B1F] border border-zinc-700 rounded-md py-1 px-2 text-xs text-zinc-200 focus:border-primary outline-none hover:bg-[#0F0F14] transition-colors"
         >
-          <option value="all">كل التصنيفات</option>
+          <option value="all" className="bg-[#1C1B1F] text-white">كل التصنيفات</option>
           {genreOptions.map((g) => (
-            <option key={g} value={g}>{g}</option>
+            <option key={g} value={g} className="bg-[#1C1B1F] text-white">{g}</option>
           ))}
         </select>
       </div>

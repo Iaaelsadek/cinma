@@ -98,7 +98,7 @@ export class ErrorHandlingAuditor {
         },
         duration: Date.now() - startTime,
       };
-    } catch (error) {
+    } catch (error: any) {
       auditLogger.error('ErrorHandlingAuditor', 'Audit failed', { error });
       throw error;
     }
@@ -201,7 +201,7 @@ export class ErrorHandlingAuditor {
             }
           }
         }
-      } catch (error) {
+      } catch (error: any) {
         auditLogger.warn('ErrorHandlingAuditor', `Failed to scan file: ${file}`, { error });
       }
     }
@@ -232,7 +232,7 @@ export class ErrorHandlingAuditor {
         if (/componentDidCatch|ErrorBoundary|error.*boundary/i.test(content)) {
           errorBoundariesFound.push(file);
         }
-      } catch (error) {
+      } catch (error: any) {
         auditLogger.warn('ErrorHandlingAuditor', `Failed to scan file: ${file}`, { error });
       }
     }
@@ -319,7 +319,7 @@ export class ErrorHandlingAuditor {
             }
           }
         }
-      } catch (error) {
+      } catch (error: any) {
         auditLogger.warn('ErrorHandlingAuditor', `Failed to scan file: ${file}`, { error });
       }
     }

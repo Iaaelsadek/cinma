@@ -1,16 +1,17 @@
 import { useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { supabase } from '../../lib/supabase'
-import { toast } from 'sonner'
+import { toast } from '../../lib/toast-manager'
 import { Plus, Search, CheckSquare, Square, Eye, EyeOff, Trash2, BarChart3 } from 'lucide-react'
+
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001'
 
 type AdRow = {
   id?: number
-  name: string | null
+  title: string | null
   type: 'popunder' | 'banner' | 'preroll' | 'midroll' | string
   position: 'top' | 'bottom' | 'sidebar' | 'player' | string
-  code: string
+  content: string
   active: boolean | null
   impressions?: number
   clicks?: number
@@ -18,15 +19,15 @@ type AdRow = {
 }
 
 async function getAds() {
-  const { data, error } = await supabase.from('ads').select('*').order('id', { ascending: false })
-  if (error) throw error
-  return (data || []) as AdRow[]
+  const response = await fetch(`${API_BASE}/api/ads`)
+  if (!response.ok) throw new Error('Failed to fetch ads')
+  return (await response.json()) as AdRow[]
 }
 
 const AdminAdsPage = () => {
   const q = useQuery({ queryKey: ['ads'], queryFn: getAds })
   const { register, handleSubmit, reset } = useForm<AdRow>({
-    defaultValues: { name: '', type: 'banner', position: 'top', code: '', active: true } as any
+    defaultValues: { title: '', type: 'banner', position: 'top', content: '', active: true } as any
   })
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<'all' | 'active' | 'inactive'>('all')
@@ -35,38 +36,48 @@ const AdminAdsPage = () => {
   const addAd = useMutation({
     mutationFn: async (values: AdRow) => {
       const payload = {
-        name: values.name || 'Untitled Ad',
+        title: values.title || 'Untitled Ad',
         type: values.type || 'banner',
         position: values.position || 'top',
-        code: values.code || '',
+        content: values.content || '',
         active: values.active !== false
       }
-      const { error } = await supabase.from('ads').insert(payload as any)
-      if (error) throw error
+      const response = await fetch(`${API_BASE}/api/ads`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      if (!response.ok) throw new Error('Failed to create ad')
     },
     onSuccess: () => {
       q.refetch()
-      reset({ name: '', type: 'banner', position: 'top', code: '', active: true } as any)
-      toast.success('تمت إضافة الإعلان')
+      reset({ title: '', type: 'banner', position: 'top', content: '', active: true } as any)
+      toast.success('✅ تمت إضافة الإعلان')
     },
-    onError: (e: any) => toast.error(e?.message || 'فشل الإضافة')
+    onError: (e: any) => toast.error(`❌ ${e?.message || 'فشل الإضافة'}`)
   })
   const updateAd = useMutation({
     mutationFn: async (values: Partial<AdRow> & { id: number }) => {
       const { id, ...rest } = values
-      const { error } = await supabase.from('ads').update(rest as any).eq('id', id)
-      if (error) throw error
+      const response = await fetch(`${API_BASE}/api/ads/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(rest)
+      })
+      if (!response.ok) throw new Error('Failed to update ad')
     },
-    onSuccess: () => { q.refetch(); toast.success('تم التحديث') },
-    onError: (e: any) => toast.error(e?.message || 'فشل التحديث')
+    onSuccess: () => { q.refetch(); toast.success('✅ تم التحديث') },
+    onError: (e: any) => toast.error(`❌ ${e?.message || 'فشل التحديث'}`)
   })
   const removeAd = useMutation({
     mutationFn: async (id: number) => {
-      const { error } = await supabase.from('ads').delete().eq('id', id)
-      if (error) throw error
+      const response = await fetch(`${API_BASE}/api/ads/${id}`, {
+        method: 'DELETE'
+      })
+      if (!response.ok) throw new Error('Failed to delete ad')
     },
-    onSuccess: () => { q.refetch(); toast.success('تم الحذف') },
-    onError: (e: any) => toast.error(e?.message || 'فشل الحذف')
+    onSuccess: () => { q.refetch(); toast.success('✅ تم الحذف') },
+    onError: (e: any) => toast.error(`❌ ${e?.message || 'فشل الحذف'}`)
   })
 
   const ads = q.data || []
@@ -75,7 +86,7 @@ const AdminAdsPage = () => {
     return ads.filter((ad) => {
       const matchesSearch =
         !qText ||
-        String(ad.name || '').toLowerCase().includes(qText) ||
+        String(ad.title || '').toLowerCase().includes(qText) ||
         String(ad.type || '').toLowerCase().includes(qText) ||
         String(ad.position || '').toLowerCase().includes(qText)
       const matchesFilter =
@@ -115,33 +126,45 @@ const AdminAdsPage = () => {
 
   const bulkSetActive = async (active: boolean) => {
     if (selected.length === 0) {
-      toast.error('حدد إعلاناً واحداً على الأقل')
+      toast.error('❌ حدد إعلاناً واحداً على الأقل')
       return
     }
-    const { error } = await supabase.from('ads').update({ active }).in('id', selected)
-    if (error) {
-      toast.error(error.message || 'فشل التحديث الجماعي')
-      return
+    try {
+      await Promise.all(
+        selected.map(id => 
+          fetch(`${API_BASE}/api/ads/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ active })
+          })
+        )
+      )
+      toast.success(active ? '✅ تم تفعيل الإعلانات المحددة' : '✅ تم إيقاف الإعلانات المحددة')
+      setSelected([])
+      q.refetch()
+    } catch (error: any) {
+      toast.error(`❌ ${error.message || 'فشل التحديث الجماعي'}`)
     }
-    toast.success(active ? 'تم تفعيل الإعلانات المحددة' : 'تم إيقاف الإعلانات المحددة')
-    setSelected([])
-    q.refetch()
   }
 
   const bulkDelete = async () => {
     if (selected.length === 0) {
-      toast.error('حدد إعلاناً واحداً على الأقل')
+      toast.error('❌ حدد إعلاناً واحداً على الأقل')
       return
     }
     if (!confirm(`سيتم حذف ${selected.length} إعلان. هل تريد المتابعة؟`)) return
-    const { error } = await supabase.from('ads').delete().in('id', selected)
-    if (error) {
-      toast.error(error.message || 'فشل الحذف الجماعي')
-      return
+    try {
+      await Promise.all(
+        selected.map(id => 
+          fetch(`${API_BASE}/api/ads/${id}`, { method: 'DELETE' })
+        )
+      )
+      toast.success('✅ تم حذف الإعلانات المحددة')
+      setSelected([])
+      q.refetch()
+    } catch (error: any) {
+      toast.error(`❌ ${error.message || 'فشل الحذف الجماعي'}`)
     }
-    toast.success('تم حذف الإعلانات المحددة')
-    setSelected([])
-    q.refetch()
   }
 
   return (
@@ -184,11 +207,11 @@ const AdminAdsPage = () => {
         <select
           value={filter}
           onChange={(e) => setFilter(e.target.value as 'all' | 'active' | 'inactive')}
-          className="rounded-md border border-zinc-700 bg-zinc-900 p-2 text-xs min-w-[130px]"
+          className="rounded-md border border-zinc-700 bg-[#1C1B1F] p-2 text-xs text-white min-w-[130px] hover:bg-[#0F0F14] transition-colors"
         >
-          <option value="all">الكل</option>
-          <option value="active">نشط</option>
-          <option value="inactive">غير نشط</option>
+          <option value="all" className="bg-[#1C1B1F] text-white">الكل</option>
+          <option value="active" className="bg-[#1C1B1F] text-white">نشط</option>
+          <option value="inactive" className="bg-[#1C1B1F] text-white">غير نشط</option>
         </select>
         <button
           onClick={() => bulkSetActive(true)}
@@ -213,24 +236,24 @@ const AdminAdsPage = () => {
       <form onSubmit={handleSubmit(v => addAd.mutate(v))} className="grid gap-2.5 rounded-lg border border-zinc-800 p-3 md:grid-cols-2 lg:grid-cols-6 bg-zinc-900/30">
         <div className="lg:col-span-2">
           <label className="mb-1 block text-[10px] text-zinc-400">الاسم</label>
-          <input {...register('name')} className="w-full rounded-md border border-zinc-700 bg-zinc-900 p-1.5 text-xs focus:border-primary outline-none" />
+          <input {...register('title')} className="w-full rounded-md border border-zinc-700 bg-zinc-900 p-1.5 text-xs focus:border-primary outline-none" />
         </div>
         <div className="lg:col-span-1">
           <label className="mb-1 block text-[10px] text-zinc-400">النوع</label>
-          <select {...register('type')} className="w-full rounded-md border border-zinc-700 bg-zinc-900 text-white p-1.5 text-xs focus:border-primary outline-none">
-            <option value="banner" className="bg-zinc-900 text-white">banner</option>
-            <option value="popunder" className="bg-zinc-900 text-white">popunder</option>
-            <option value="preroll" className="bg-zinc-900 text-white">preroll</option>
-            <option value="midroll" className="bg-zinc-900 text-white">midroll</option>
+          <select {...register('type')} className="w-full rounded-md border border-zinc-700 bg-[#1C1B1F] text-white p-1.5 text-xs focus:border-primary outline-none hover:bg-[#0F0F14] transition-colors">
+            <option value="banner" className="bg-[#1C1B1F] text-white">banner</option>
+            <option value="popunder" className="bg-[#1C1B1F] text-white">popunder</option>
+            <option value="preroll" className="bg-[#1C1B1F] text-white">preroll</option>
+            <option value="midroll" className="bg-[#1C1B1F] text-white">midroll</option>
           </select>
         </div>
         <div className="lg:col-span-1">
           <label className="mb-1 block text-[10px] text-zinc-400">الموضع</label>
-          <select {...register('position')} className="w-full rounded-md border border-zinc-700 bg-zinc-900 text-white p-1.5 text-xs focus:border-primary outline-none">
-            <option value="top" className="bg-zinc-900 text-white">top</option>
-            <option value="bottom" className="bg-zinc-900 text-white">bottom</option>
-            <option value="sidebar" className="bg-zinc-900 text-white">sidebar</option>
-            <option value="player" className="bg-zinc-900 text-white">player</option>
+          <select {...register('position')} className="w-full rounded-md border border-zinc-700 bg-[#1C1B1F] text-white p-1.5 text-xs focus:border-primary outline-none hover:bg-[#0F0F14] transition-colors">
+            <option value="top" className="bg-[#1C1B1F] text-white">top</option>
+            <option value="bottom" className="bg-[#1C1B1F] text-white">bottom</option>
+            <option value="sidebar" className="bg-[#1C1B1F] text-white">sidebar</option>
+            <option value="player" className="bg-[#1C1B1F] text-white">player</option>
           </select>
         </div>
         <div className="lg:col-span-1 flex items-center gap-2">
@@ -244,7 +267,7 @@ const AdminAdsPage = () => {
         </div>
         <div className="md:col-span-2 lg:col-span-6">
           <label className="mb-1 block text-[10px] text-zinc-400">الكود</label>
-          <textarea rows={3} {...register('code')} className="w-full rounded-md border border-zinc-700 bg-zinc-900 p-1.5 font-mono text-[10px] focus:border-primary outline-none" />
+          <textarea rows={3} {...register('content')} className="w-full rounded-md border border-zinc-700 bg-zinc-900 p-1.5 font-mono text-[10px] focus:border-primary outline-none" />
         </div>
       </form>
       <div className="space-y-2">
@@ -268,7 +291,7 @@ const AdminAdsPage = () => {
                   checked={ad.id != null ? selected.includes(ad.id) : false}
                   onChange={(e) => toggleSelect(ad.id, e.target.checked)}
                 />
-                <span>{ad.name}</span>
+                <span>{ad.title}</span>
                 <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/10">{ad.type}</span>
                 <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/10">{ad.position}</span>
                 <span className={`text-[10px] px-1.5 py-0.5 rounded ${ad.active ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
@@ -287,8 +310,8 @@ const AdminAdsPage = () => {
               </div>
             </div>
             <textarea
-              defaultValue={ad.code}
-              onBlur={(e) => ad.id && updateAd.mutate({ id: ad.id, code: e.target.value })}
+              defaultValue={ad.content}
+              onBlur={(e) => ad.id && updateAd.mutate({ id: ad.id, content: e.target.value })}
               className="mt-2 w-full rounded-md border border-zinc-700 bg-zinc-900 p-1.5 font-mono text-[10px] text-zinc-400 focus:text-zinc-200 focus:border-zinc-600 outline-none transition-colors"
               rows={2}
             />

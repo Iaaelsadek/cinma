@@ -4,27 +4,35 @@
  * 
  * @description استعلامات موحدة 100% بين الموقع والتطبيق
  * @author Online Cinema Team
- * @version 1.0.0
+ * @version 2.0.0
+ * 
+ * ⚠️ CRITICAL: This file uses CockroachDB API endpoints for ALL content queries
+ * ⚠️ Supabase is ONLY used for auth and user data (profiles, watchlist, etc.)
  */
 
-import { supabase } from '../lib/supabase';
 import type { Movie, TVSeries } from '../types/database';
+import { CONFIG } from '../lib/constants';
+
+const API_BASE = CONFIG.API_BASE || '';
 
 // ==========================================
 // Types
 // ==========================================
 export interface ContentFilters {
   genres?: string[];
+  category?: string;
   minRating?: number;
   minYear?: number;
   maxYear?: number;
   language?: string;
-  isVisible?: boolean;
-  minHealthScore?: number;
+  platform?: string;
+  minVoteCount?: number;
+  sortBy?: 'popularity' | 'vote_average' | 'release_date' | 'trending';
+  [key: string]: unknown;
 }
 
 export interface ContentSort {
-  field: 'popularity' | 'rating' | 'release_date' | 'trending_score' | 'quality_score';
+  field: 'popularity' | 'rating' | 'vote_average' | 'release_date' | 'trending_score' | 'quality_score';
   order: 'asc' | 'desc';
 }
 
@@ -33,291 +41,579 @@ export interface PaginationOptions {
   limit?: number;
 }
 
+export interface PaginatedResponse<T> {
+  data: T[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+  _cache?: {
+    hit: boolean;
+    responseTime: number;
+  };
+}
+
 // ==========================================
-// Movies Queries
+// Helper Functions
+// ==========================================
+
+/**
+ * Deduplicate content array by ID or slug
+ * Ensures no duplicate content items in the response
+ */
+function deduplicateContent<T extends { id?: number; slug?: string }>(items: T[]): T[] {
+  const seen = new Set<string>();
+  const deduplicated: T[] = [];
+
+  for (const item of items) {
+    // Use ID as primary key, fallback to slug
+    const key = item.id ? `id:${item.id}` : item.slug ? `slug:${item.slug}` : null;
+
+    if (key && !seen.has(key)) {
+      seen.add(key);
+      deduplicated.push(item);
+    }
+  }
+
+  return deduplicated;
+}
+
+async function fetchAPI(endpoint: string, options?: RequestInit) {
+  const url = API_BASE ? `${API_BASE}${endpoint}` : endpoint;
+
+  try {
+    const response = await fetch(url, options);
+
+    if (!response.ok) {
+      console.error(`API Error: ${response.statusText}`);
+      throw new Error(`API Error: ${response.statusText}`);
+    }
+
+    return response.json();
+  } catch (error: any) {
+    console.error('Fetch error:', error);
+    throw error;
+  }
+}
+
+function buildQueryString(filters: ContentFilters, pagination: PaginationOptions): string {
+  const params = new URLSearchParams();
+
+  if (pagination.page) params.append('page', pagination.page.toString());
+  if (pagination.limit) params.append('limit', pagination.limit.toString());
+
+  if (filters.genres && filters.genres.length > 0) {
+    params.append('genre', filters.genres[0]);
+  }
+  if (filters.category) params.append('category', filters.category);
+
+  // Language filtering with support for exclusion (e.g., '!ar' for non-Arabic)
+  if (filters.language) {
+    params.append('language', filters.language);
+  }
+
+  // Platform filtering for gaming and software
+  if (filters.platform) {
+    params.append('platform', filters.platform);
+  }
+
+  if (filters.minYear) params.append('yearFrom', filters.minYear.toString());
+  if (filters.maxYear) params.append('yearTo', filters.maxYear.toString());
+  if (filters.minRating) params.append('ratingFrom', filters.minRating.toString());
+  if (filters.minVoteCount) params.append('minVoteCount', filters.minVoteCount.toString());
+  if (filters.sortBy) params.append('sortBy', filters.sortBy);
+
+  // Always request DISTINCT results to prevent duplicates
+  params.append('distinct', 'true');
+
+  return params.toString();
+}
+
+// ==========================================
+// Movies Queries (CockroachDB)
 // ==========================================
 
 /**
  * جلب الأفلام مع الفلاتر والترتيب
+ * Fetch movies with filters and sorting from CockroachDB
  */
 export async function getMovies(
   filters: ContentFilters = {},
   sort: ContentSort = { field: 'popularity', order: 'desc' },
   pagination: PaginationOptions = { page: 1, limit: 20 }
-) {
-  const { page = 1, limit = 20 } = pagination;
-  const offset = (page - 1) * limit;
+): Promise<PaginatedResponse<Movie>> {
+  const queryString = buildQueryString(filters, pagination);
+  const endpoint = `/api/movies${queryString ? `?${queryString}` : ''}`;
 
-  let query = supabase
-    .from('movies')
-    .select('*', { count: 'exact' });
+  try {
+    const response = await fetchAPI(endpoint);
+    // Apply deduplication to ensure no duplicate movies
+    const deduplicated = deduplicateContent(response.data || []);
 
-  // Apply filters
-  if (filters.isVisible !== undefined) {
-    query = query.eq('is_visible', filters.isVisible);
-  } else {
-    // Default: only visible content
-    query = query.eq('is_visible', true);
+    return {
+      ...response,
+      data: deduplicated,
+      pagination: {
+        ...response.pagination,
+        total: deduplicated.length
+      }
+    } as PaginatedResponse<Movie>;
+  } catch (error: any) {
+    console.error('getMovies error:', error);
+    return {
+      data: [],
+      pagination: {
+        page: pagination.page || 1,
+        limit: pagination.limit || 20,
+        total: 0,
+        totalPages: 0
+      }
+    };
   }
-
-  if (filters.minHealthScore) {
-    query = query.gte('quality_score', filters.minHealthScore);
-  }
-
-  if (filters.genres && filters.genres.length > 0) {
-    query = query.contains('genres', filters.genres);
-  }
-
-  if (filters.minRating) {
-    query = query.gte('rating', filters.minRating);
-  }
-
-  if (filters.minYear || filters.maxYear) {
-    if (filters.minYear) {
-      query = query.gte('release_date', `${filters.minYear}-01-01`);
-    }
-    if (filters.maxYear) {
-      query = query.lte('release_date', `${filters.maxYear}-12-31`);
-    }
-  }
-
-  if (filters.language) {
-    query = query.eq('original_language', filters.language);
-  }
-
-  // Apply sorting
-  const sortField = sort.field === 'rating' ? 'vote_average' : 
-                    sort.field === 'release_date' ? 'release_date' :
-                    sort.field === 'trending_score' ? 'trending_score' :
-                    sort.field === 'quality_score' ? 'quality_score' :
-                    'popularity_score';
-  
-  query = query.order(sortField, { ascending: sort.order === 'asc' });
-
-  // Apply pagination
-  query = query.range(offset, offset + limit - 1);
-
-  const { data, error, count } = await query;
-
-  if (error) {throw error;}
-
-  return {
-    data: data as Movie[],
-    count: count || 0,
-    page,
-    limit,
-    totalPages: Math.ceil((count || 0) / limit),
-  };
 }
 
 
 /**
  * جلب المسلسلات مع الفلاتر والترتيب
+ * Fetch TV series with filters and sorting from CockroachDB
+ * 
+ * CRITICAL: Always uses DISTINCT queries to prevent duplicates
+ * CRITICAL: Supports language filtering including exclusion (e.g., '!ar')
  */
 export async function getTVSeries(
   filters: ContentFilters = {},
   sort: ContentSort = { field: 'popularity', order: 'desc' },
   pagination: PaginationOptions = { page: 1, limit: 20 }
-) {
-  const { page = 1, limit = 20 } = pagination;
-  const offset = (page - 1) * limit;
+): Promise<PaginatedResponse<TVSeries>> {
+  const queryString = buildQueryString(filters, pagination);
+  const endpoint = `/api/tv${queryString ? `?${queryString}` : ''}`;
 
-  let query = supabase
-    .from('tv_series')
-    .select('*', { count: 'exact' });
+  try {
+    const response = await fetchAPI(endpoint);
+    // Apply deduplication to ensure no duplicate series (especially for Korean content)
+    const deduplicated = deduplicateContent(response.data || []);
 
-  // Apply filters (same as movies)
-  if (filters.isVisible !== undefined) {
-    query = query.eq('is_visible', filters.isVisible);
-  } else {
-    query = query.eq('is_visible', true);
+    return {
+      ...response,
+      data: deduplicated,
+      pagination: {
+        ...response.pagination,
+        total: deduplicated.length
+      }
+    } as PaginatedResponse<TVSeries>;
+  } catch (error: any) {
+    console.error('getTVSeries error:', error);
+    return {
+      data: [],
+      pagination: {
+        page: pagination.page || 1,
+        limit: pagination.limit || 20,
+        total: 0,
+        totalPages: 0
+      }
+    };
   }
+}
 
-  if (filters.minHealthScore) {
-    query = query.gte('quality_score', filters.minHealthScore);
-  }
 
-  if (filters.genres && filters.genres.length > 0) {
-    query = query.contains('genres', filters.genres);
-  }
-
-  if (filters.minRating) {
-    query = query.gte('rating', filters.minRating);
-  }
-
-  if (filters.minYear || filters.maxYear) {
-    if (filters.minYear) {
-      query = query.gte('first_air_date', `${filters.minYear}-01-01`);
-    }
-    if (filters.maxYear) {
-      query = query.lte('first_air_date', `${filters.maxYear}-12-31`);
-    }
-  }
-
-  if (filters.language) {
-    query = query.eq('original_language', filters.language);
-  }
-
-  // Apply sorting
-  const sortField = sort.field === 'rating' ? 'vote_average' : 
-                    sort.field === 'release_date' ? 'first_air_date' :
-                    sort.field === 'trending_score' ? 'trending_score' :
-                    sort.field === 'quality_score' ? 'quality_score' :
-                    'popularity_score';
-  
-  query = query.order(sortField, { ascending: sort.order === 'asc' });
-
-  // Apply pagination
-  query = query.range(offset, offset + limit - 1);
-
-  const { data, error, count } = await query;
-
-  if (error) {throw error;}
-
-  return {
-    data: data as TVSeries[],
-    count: count || 0,
-    page,
-    limit,
-    totalPages: Math.ceil((count || 0) / limit),
+/**
+ * جلب المسرحيات العربية
+ * Fetch Arabic plays from CockroachDB
+ */
+export async function getPlays(
+  subCategory?: 'adel-imam' | 'classics' | 'gulf' | 'masrah-masr',
+  pagination: PaginationOptions = { page: 1, limit: 20 }
+): Promise<PaginatedResponse<Movie>> {
+  const filters: ContentFilters = {
+    genres: ['play'],
+    language: 'ar'
   };
+
+  // Add subcategory-specific filters
+  if (subCategory === 'classics') {
+    filters.maxYear = 1999;
+  }
+
+  return getMovies(filters, { field: 'popularity', order: 'desc' }, pagination);
 }
 
 /**
- * جلب تفاصيل فيلم
+ * جلب الملخصات
+ * Fetch summaries from CockroachDB
  */
-export async function getMovieDetails(movieId: number) {
-  const { data, error } = await supabase
-    .from('movies')
-    .select('*')
-    .eq('id', movieId)
-    .single();
+export async function getSummaries(
+  pagination: PaginationOptions = { page: 1, limit: 20 }
+): Promise<PaginatedResponse<Movie>> {
+  const filters: ContentFilters = {
+    genres: ['summary']
+  };
 
-  if (error) {throw error;}
-  return data as Movie;
+  return getMovies(filters, { field: 'release_date', order: 'desc' }, pagination);
 }
 
 /**
- * جلب تفاصيل مسلسل
+ * جلب الأفلام الكلاسيكية
+ * Fetch classic movies from CockroachDB
  */
-export async function getTVSeriesDetails(seriesId: number) {
-  const { data, error } = await supabase
-    .from('tv_series')
-    .select('*')
-    .eq('id', seriesId)
-    .single();
+export async function getClassics(
+  pagination: PaginationOptions = { page: 1, limit: 20 }
+): Promise<PaginatedResponse<Movie>> {
+  const filters: ContentFilters = {
+    maxYear: 1999,
+    minVoteCount: 50,
+    category: 'classic'
+  };
 
-  if (error) {throw error;}
-  return data as TVSeries;
+  return getMovies(filters, { field: 'vote_average', order: 'desc' }, pagination);
 }
 
 /**
- * البحث في الأفلام والمسلسلات
+ * جلب المسلسلات الكورية
+ * Fetch Korean dramas from CockroachDB
+ * CRITICAL: Uses DISTINCT to prevent duplicates
+ */
+export async function getKDramas(
+  pagination: PaginationOptions = { page: 1, limit: 20 }
+): Promise<PaginatedResponse<TVSeries>> {
+  const filters: ContentFilters = {
+    language: 'ko'
+  };
+
+  return getTVSeries(filters, { field: 'popularity', order: 'desc' }, pagination);
+}
+
+/**
+ * جلب المسلسلات التركية
+ * Fetch Turkish series from CockroachDB
+ */
+export async function getTurkishSeries(
+  pagination: PaginationOptions = { page: 1, limit: 20 }
+): Promise<PaginatedResponse<TVSeries>> {
+  const filters: ContentFilters = {
+    language: 'tr'
+  };
+
+  return getTVSeries(filters, { field: 'popularity', order: 'desc' }, pagination);
+}
+
+/**
+ * جلب المسلسلات الصينية
+ * Fetch Chinese series from CockroachDB
+ */
+export async function getChineseSeries(
+  pagination: PaginationOptions = { page: 1, limit: 20 }
+): Promise<PaginatedResponse<TVSeries>> {
+  const filters: ContentFilters = {
+    language: 'zh'
+  };
+
+  return getTVSeries(filters, { field: 'popularity', order: 'desc' }, pagination);
+}
+
+/**
+ * جلب المسلسلات العربية
+ * Fetch Arabic series from CockroachDB
+ */
+export async function getArabicSeries(
+  pagination: PaginationOptions = { page: 1, limit: 20 }
+): Promise<PaginatedResponse<TVSeries>> {
+  const filters: ContentFilters = {
+    language: 'ar'
+  };
+
+  return getTVSeries(filters, { field: 'popularity', order: 'desc' }, pagination);
+}
+
+/**
+ * جلب مسلسلات رمضان
+ * Fetch Ramadan series from CockroachDB
+ * CRITICAL: Only Arabic series (language='ar')
+ */
+export async function getRamadanSeries(
+  pagination: PaginationOptions = { page: 1, limit: 20 }
+): Promise<PaginatedResponse<TVSeries>> {
+  const filters: ContentFilters = {
+    language: 'ar',
+    genres: ['رمضان', 'دراما']
+  };
+
+  return getTVSeries(filters, { field: 'popularity', order: 'desc' }, pagination);
+}
+
+/**
+ * جلب المسلسلات الأجنبية (غير عربية)
+ * Fetch foreign (non-Arabic) series from CockroachDB
+ */
+export async function getForeignSeries(
+  pagination: PaginationOptions = { page: 1, limit: 20 }
+): Promise<PaginatedResponse<TVSeries>> {
+  const filters: ContentFilters = {
+    language: '!ar'  // Exclude Arabic
+  };
+
+  return getTVSeries(filters, { field: 'popularity', order: 'desc' }, pagination);
+}
+
+/**
+ * جلب تفاصيل فيلم من CockroachDB
+ */
+export async function getMovieDetails(slug: string): Promise<Movie | null> {
+  try {
+    const data = await fetchAPI(`/api/movies/${slug}`);
+    return data as Movie;
+  } catch (error: any) {
+    console.error('getMovieDetails error:', error);
+    return null;
+  }
+}
+
+/**
+ * جلب تفاصيل مسلسل من CockroachDB
+ */
+export async function getTVSeriesDetails(slug: string): Promise<TVSeries | null> {
+  try {
+    const data = await fetchAPI(`/api/tv/${slug}`);
+    return data as TVSeries;
+  } catch (error: any) {
+    console.error('getTVSeriesDetails error:', error);
+    return null;
+  }
+}
+
+/**
+ * البحث في الأفلام والمسلسلات من CockroachDB
  */
 export async function searchContent(
   query: string,
   contentType: 'movie' | 'tv' | 'all' = 'all',
   pagination: PaginationOptions = { page: 1, limit: 20 }
-): Promise<unknown> {
-  const { page = 1, limit = 20 } = pagination;
-  const offset = (page - 1) * limit;
+): Promise<{
+  movies?: Movie[];
+  tv?: TVSeries[];
+  total: number;
+}> {
+  try {
+    const { page = 1, limit = 20 } = pagination;
+    const response = await fetchAPI(
+      `/api/search?q=${encodeURIComponent(query)}&type=${contentType}&limit=${limit}`
+    );
 
-  if (contentType === 'all') {
-    // Search both movies and TV series
-    const [moviesResult, tvResult] = await Promise.all([
-      searchContent(query, 'movie', pagination),
-      searchContent(query, 'tv', pagination),
-    ]);
+    // Apply deduplication to search results
+    const movies = deduplicateContent(response.movies || []) as Movie[];
+    const tv = deduplicateContent(response.tv || []) as TVSeries[];
 
     return {
-      movies: moviesResult.data,
-      tvSeries: tvResult.data,
-      totalCount: moviesResult.count + tvResult.count,
+      movies,
+      tv,
+      total: movies.length + tv.length
+    };
+  } catch (error: any) {
+    console.error('searchContent error:', error);
+    return {
+      movies: [],
+      tv: [],
+      total: 0
     };
   }
-
-  const table = contentType === 'movie' ? 'movies' : 'tv_series';
-  const titleField = contentType === 'movie' ? 'title' : 'name';
-
-  const { data, error, count } = await supabase
-    .from(table)
-    .select('*', { count: 'exact' })
-    .eq('is_visible', true)
-    .or(`${titleField}.ilike.%${query}%,overview.ilike.%${query}%`)
-    .order('popularity_score', { ascending: false })
-    .range(offset, offset + limit - 1);
-
-  if (error) {throw error;}
-
-  return {
-    data: data as (Movie | TVSeries)[],
-    count: count || 0,
-    page,
-    limit,
-    totalPages: Math.ceil((count || 0) / limit),
-  };
 }
 
 /**
- * جلب المحتوى الشائع
+ * جلب المحتوى الشائع من CockroachDB
  */
 export async function getTrending(
   contentType: 'movie' | 'tv' | 'all' = 'all',
   limit: number = 20
-): Promise<any> {
-  if (contentType === 'all') {
-    const movies = await getTrending('movie', limit / 2) as { data: Movie[] };
-    const tvSeries = await getTrending('tv', limit / 2) as { data: TVSeries[] };
+): Promise<{
+  movies?: Movie[];
+  tvSeries?: TVSeries[];
+}> {
+  try {
+    if (contentType === 'all') {
+      const [moviesResponse, tvResponse] = await Promise.all([
+        getMovies({}, { field: 'popularity', order: 'desc' }, { page: 1, limit: Math.floor(limit / 2) }),
+        getTVSeries({}, { field: 'popularity', order: 'desc' }, { page: 1, limit: Math.floor(limit / 2) })
+      ]);
 
-    return {
-      movies: movies.data,
-      tvSeries: tvSeries.data,
-    };
+      // Deduplication already applied in getMovies and getTVSeries
+      return {
+        movies: moviesResponse.data,
+        tvSeries: tvResponse.data
+      };
+    }
+
+    if (contentType === 'movie') {
+      const response = await getMovies({}, { field: 'popularity', order: 'desc' }, { page: 1, limit });
+      return { movies: response.data };
+    }
+
+    const response = await getTVSeries({}, { field: 'popularity', order: 'desc' }, { page: 1, limit });
+    return { tvSeries: response.data };
+  } catch (error: any) {
+    console.error('getTrending error:', error);
+    return {};
   }
-
-  const table = contentType === 'movie' ? 'movies' : 'tv_series';
-
-  const { data, error } = await supabase
-    .from(table)
-    .select('*')
-    .eq('is_visible', true)
-    .order('trending_score', { ascending: false })
-    .limit(limit);
-
-  if (error) {throw error;}
-
-  return {
-    data: data as (Movie | TVSeries)[],
-  };
 }
 
 /**
- * جلب الأعلى تقييماً
+ * جلب الأعلى تقييماً من CockroachDB
  */
 export async function getTopRated(
   contentType: 'movie' | 'tv' = 'movie',
   limit: number = 20
-) {
-  const table = contentType === 'movie' ? 'movies' : 'tv_series';
+): Promise<{
+  data: (Movie | TVSeries)[];
+}> {
+  try {
+    if (contentType === 'movie') {
+      const response = await getMovies(
+        { minRating: 7 },
+        { field: 'vote_average', order: 'desc' },
+        { page: 1, limit }
+      );
+      return { data: response.data };
+    }
 
-  const { data, error } = await supabase
-    .from(table)
-    .select('*')
-    .eq('is_visible', true)
-    .gte('vote_count', 100) // At least 100 votes
-    .order('vote_average', { ascending: false })
-    .limit(limit);
+    const response = await getTVSeries(
+      { minRating: 7 },
+      { field: 'vote_average', order: 'desc' },
+      { page: 1, limit }
+    );
+    return { data: response.data };
+  } catch (error: any) {
+    console.error('getTopRated error:', error);
+    return { data: [] };
+  }
+}
 
-  if (error) {throw error;}
+/**
+ * جلب البرامج مع الفلاتر والترتيب
+ * Fetch software with filters and sorting from CockroachDB
+ */
+export async function getSoftware(
+  filters: ContentFilters = {},
+  sort: ContentSort = { field: 'popularity', order: 'desc' },
+  pagination: PaginationOptions = { page: 1, limit: 20 }
+): Promise<PaginatedResponse<any>> {
+  const queryString = buildQueryString(filters, pagination);
+  const endpoint = `/api/software${queryString ? `?${queryString}` : ''}`;
 
-  return {
-    data: data as (Movie | TVSeries)[],
+  try {
+    const response = await fetchAPI(endpoint);
+    // Apply deduplication to ensure no duplicate software
+    const deduplicated = deduplicateContent(response.data || []);
+
+    return {
+      ...response,
+      data: deduplicated,
+      pagination: {
+        ...response.pagination,
+        total: deduplicated.length
+      }
+    };
+  } catch (error: any) {
+    console.error('getSoftware error:', error);
+    return {
+      data: [],
+      pagination: {
+        page: pagination.page || 1,
+        limit: pagination.limit || 20,
+        total: 0,
+        totalPages: 0
+      }
+    };
+  }
+}
+
+/**
+ * جلب برامج Windows
+ * Fetch Windows software from CockroachDB
+ */
+export async function getWindowsSoftware(
+  pagination: PaginationOptions = { page: 1, limit: 20 }
+): Promise<PaginatedResponse<any>> {
+  const filters: ContentFilters = {
+    platform: 'windows'
   };
+
+  return getSoftware(filters, { field: 'popularity', order: 'desc' }, pagination);
+}
+
+/**
+ * جلب برامج Mac
+ * Fetch Mac software from CockroachDB
+ */
+export async function getMacSoftware(
+  pagination: PaginationOptions = { page: 1, limit: 20 }
+): Promise<PaginatedResponse<any>> {
+  const filters: ContentFilters = {
+    platform: 'mac'
+  };
+
+  return getSoftware(filters, { field: 'popularity', order: 'desc' }, pagination);
+}
+
+/**
+ * جلب برامج Linux
+ * Fetch Linux software from CockroachDB
+ */
+export async function getLinuxSoftware(
+  pagination: PaginationOptions = { page: 1, limit: 20 }
+): Promise<PaginatedResponse<any>> {
+  const filters: ContentFilters = {
+    platform: 'linux'
+  };
+
+  return getSoftware(filters, { field: 'popularity', order: 'desc' }, pagination);
+}
+
+/**
+ * جلب برامج Android
+ * Fetch Android software from CockroachDB
+ */
+export async function getAndroidSoftware(
+  pagination: PaginationOptions = { page: 1, limit: 20 }
+): Promise<PaginatedResponse<any>> {
+  const filters: ContentFilters = {
+    platform: 'android'
+  };
+
+  return getSoftware(filters, { field: 'popularity', order: 'desc' }, pagination);
+}
+
+/**
+ * جلب برامج iOS
+ * Fetch iOS software from CockroachDB
+ */
+export async function getIOSSoftware(
+  pagination: PaginationOptions = { page: 1, limit: 20 }
+): Promise<PaginatedResponse<any>> {
+  const filters: ContentFilters = {
+    platform: 'ios'
+  };
+
+  return getSoftware(filters, { field: 'popularity', order: 'desc' }, pagination);
 }
 
 export default {
   getMovies,
   getTVSeries,
+  getPlays,
+  getSummaries,
+  getClassics,
+  getKDramas,
+  getTurkishSeries,
+  getChineseSeries,
+  getArabicSeries,
+  getRamadanSeries,
+  getForeignSeries,
+  getSoftware,
+  getWindowsSoftware,
+  getMacSoftware,
+  getLinuxSoftware,
+  getAndroidSoftware,
+  getIOSSoftware,
   getMovieDetails,
   getTVSeriesDetails,
   searchContent,

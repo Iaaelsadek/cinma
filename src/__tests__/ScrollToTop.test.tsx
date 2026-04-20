@@ -28,7 +28,7 @@ describe('ScrollToTop component', () => {
     const scrollToMock = window.scrollTo as vi.Mock;
 
     // initial render with path1
-    useLocationMock.mockReturnValue({ pathname: '/first' } as any);
+    useLocationMock.mockReturnValue({ pathname: '/first' } as ReturnType<typeof useLocation>);
     const { rerender } = render(<ScrollToTop />);
     // In StrictMode, this might be called twice. We just care that it's called.
     expect(scrollToMock).toHaveBeenCalled();
@@ -40,7 +40,7 @@ describe('ScrollToTop component', () => {
     expect(scrollToMock).not.toHaveBeenCalled();
 
     // re-render with new pathname
-    useLocationMock.mockReturnValue({ pathname: '/second' } as any);
+    useLocationMock.mockReturnValue({ pathname: '/second' } as ReturnType<typeof useLocation>);
     rerender(<ScrollToTop />);
     expect(scrollToMock).toHaveBeenCalled();
   });

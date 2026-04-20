@@ -27,110 +27,70 @@ const ServerSwitcher = ({
   const [reporting, setReporting] = useState(false);
 
   useEffect(() => {
-    let cancelled = false;
-
-    const run = async () => {
-      setLoading(true);
-      
-      let dbLinks: Record<string, string> = {};
-      
-      if (type === 'movie') {
-        const { data } = await supabase
-          .from('movies')
-          .select('embed_links')
-          .eq('id', tmdbId)
-          .maybeSingle();
-        if (data?.embed_links) dbLinks = data.embed_links;
-      } else if (type === 'tv' && season && episode) {
-          const { data: seasonData } = await supabase
-              .from('seasons')
-              .select('id')
-              .eq('series_id', tmdbId)
-              .eq('season_number', season)
-              .maybeSingle();
-              
-          if (seasonData) {
-               const { data: epData } = await supabase
-                  .from('episodes')
-                  .select('embed_links')
-                  .eq('season_id', seasonData.id)
-                  .eq('episode_number', episode)
-                  .maybeSingle();
-               if (epData?.embed_links) dbLinks = epData.embed_links;
-          }
+    // Generate servers instantly without API calls for better performance
+    const defaultServers = [
+      {
+        name: 'vidsrc',
+        url: type === 'movie' 
+          ? `https://vidsrc.to/embed/movie/${tmdbId}`
+          : `https://vidsrc.to/embed/tv/${tmdbId}/${season}/${episode}`,
+        priority: 1,
+        responseTime: 500
+      },
+      {
+        name: '2embed',
+        url: type === 'movie'
+          ? `https://www.2embed.cc/embed/${tmdbId}`
+          : `https://www.2embed.cc/embed/tv/${tmdbId}&s=${season}&e=${episode}`,
+        priority: 2,
+        responseTime: 600
+      },
+      {
+        name: 'embed_su',
+        url: type === 'movie'
+          ? `https://embed.su/embed/movie/${tmdbId}`
+          : `https://embed.su/embed/tv/${tmdbId}/${season}/${episode}`,
+        priority: 3,
+        responseTime: 700
+      },
+      {
+        name: 'autoembed',
+        url: type === 'movie'
+          ? `https://autoembed.to/movie/tmdb/${tmdbId}`
+          : `https://autoembed.to/tv/tmdb/${tmdbId}-${season}x${episode}`,
+        priority: 4,
+        responseTime: 800
       }
+    ];
 
-      const defaultServers = ['vidsrc', '2embed', 'embed_su', 'autoembed'];
-      defaultServers.forEach(server => {
-          if (!dbLinks[server]) {
-              let url = '';
-              if (server === 'vidsrc') {
-                  url = type === 'movie' 
-                      ? `https://vidsrc.to/embed/movie/${tmdbId}`
-                      : `https://vidsrc.to/embed/tv/${tmdbId}/${season}/${episode}`;
-              } else if (server === '2embed') {
-                  url = type === 'movie'
-                      ? `https://www.2embed.cc/embed/${tmdbId}`
-                      : `https://www.2embed.cc/embed/tv/${tmdbId}&s=${season}&e=${episode}`;
-              } else if (server === 'embed_su') {
-                  url = type === 'movie'
-                      ? `https://embed.su/embed/movie/${tmdbId}`
-                      : `https://embed.su/embed/tv/${tmdbId}/${season}/${episode}`;
-              } else if (server === 'autoembed') {
-                   url = type === 'movie'
-                      ? `https://autoembed.to/movie/tmdb/${tmdbId}`
-                      : `https://autoembed.to/tv/tmdb/${tmdbId}-${season}x${episode}`;
-              }
-              if (url) dbLinks[server] = url;
-          }
-      });
-
-      const { data: sources } = await supabase
-          .from('embed_sources')
-          .select('name, priority, response_time_ms')
-          .in('name', Object.keys(dbLinks));
-
-      const serverList = Object.entries(dbLinks).map(([name, url]) => {
-          const source = sources?.find(s => s.name === name);
-          return {
-              name,
-              url: url as string,
-              priority: source?.priority || 5,
-              responseTime: source?.response_time_ms
-          };
-      }).sort((a, b) => a.priority - b.priority);
-
-      if (!cancelled) {
-        setServers(serverList);
-        setLoading(false);
-      }
-    };
-
-    void run();
-
-    return () => {
-      cancelled = true;
-    };
+    setServers(defaultServers);
+    setLoading(false);
   }, [tmdbId, type, season, episode]);
 
   const reportBroken = async () => {
     setReporting(true);
     const server = servers[currentServer];
     try {
-        await supabase.from('link_checks').insert({
+        // Report to CockroachDB via API instead of Supabase
+        const API_BASE = import.meta.env.VITE_API_BASE || import.meta.env.VITE_API_URL || ''
+        await fetch(`${API_BASE}/api/link-checks`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
             content_id: tmdbId,
             content_type: type,
             source_name: server.name,
             url: server.url,
             status_code: 0, // 0 indicates reported by user manually
             response_time_ms: 0
+          })
         });
         
         // Optimistically remove from UI to improve UX immediately
         const newServers = servers.filter((_, i) => i !== currentServer);
         setServers(newServers);
         setCurrentServer(0);
-    } catch (e) {
+    } catch (e: any) {
         errorLogger.logError({
             message: 'Failed to report broken link',
             severity: 'medium',
@@ -178,8 +138,7 @@ const ServerSwitcher = ({
             key={servers[currentServer].url}
             src={servers[currentServer].url}
             className="w-full h-full"
-            allowFullScreen
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
           />
           
           <button

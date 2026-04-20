@@ -14,6 +14,7 @@ export type RecommendationItem = {
   vote_average?: number
   release_date?: string
   first_air_date?: string
+  slug?: string | null
 }
 
 function cacheGet<T>(key: string): T | null {
@@ -28,7 +29,7 @@ function cacheGet<T>(key: string): T | null {
 function cacheSet<T>(key: string, val: T, ttlMs = 6 * 60 * 60 * 1000) {
   try {
     localStorage.setItem(key, JSON.stringify({ val, exp: Date.now() + ttlMs }))
-  } catch {}
+  } catch { }
 }
 
 async function mapWithConcurrency<T, R>(
@@ -48,117 +49,120 @@ async function mapWithConcurrency<T, R>(
   return out
 }
 
-/** Fallback: Use TMDB similar/discover when Gemini API is unavailable */
+/** Fallback: Use CockroachDB API when Gemini API is unavailable */
 async function tmdbFallback(userId: string): Promise<RecommendationItem[]> {
   const seen = new Set<string>()
   const results: RecommendationItem[] = []
 
-  // 1. From Continue Watching - fetch similar content
-  const cw = await getContinueWatching(userId)
-  const cwSimilar = await mapWithConcurrency(cw.slice(0, 3), 3, async (r) => {
-    try {
-      const path = r.content_type === 'movie' ? `/movie/${r.content_id}/similar` : `/tv/${r.content_id}/similar`
-      const { data } = await tmdb.get(path, { params: { page: 1 } })
-      return ((data.results || []) as RecommendationItem[]).map((m) => ({ ...m, media_type: r.content_type }))
-    } catch {
-      return []
-    }
-  })
-  for (const arr of cwSimilar) {
-    for (const m of arr) {
-      const key = `${m.media_type}-${m.id}`
-      if (!seen.has(key) && m.poster_path) {
-        seen.add(key)
-        results.push(m)
-      }
-    }
-  }
-
-  // 2. From History - fetch similar
+  // 1. Get genres from history using CockroachDB API
   const hist = await getHistory(userId)
-  const histSimilar = await mapWithConcurrency(hist.slice(0, 3), 3, async (h) => {
-    try {
-      const path = h.content_type === 'movie' ? `/movie/${h.content_id}/similar` : `/tv/${h.content_id}/similar`
-      const { data } = await tmdb.get(path, { params: { page: 1 } })
-      return ((data.results || []) as RecommendationItem[]).map((m) => ({ ...m, media_type: h.content_type }))
-    } catch {
-      return []
-    }
-  })
-  for (const arr of histSimilar) {
-    for (const m of arr) {
-      const key = `${m.media_type}-${m.id}`
-      if (!seen.has(key) && m.poster_path) {
-        seen.add(key)
-        results.push(m)
-      }
-    }
-  }
-
-  // 3. Summarize genres from history
   const counts: Record<string, number> = {}
+
   const histDetails = await mapWithConcurrency(hist.slice(0, 8), 4, async (h) => {
     try {
-      const path = h.content_type === 'movie' ? `/movie/${h.content_id}` : `/tv/${h.content_id}`
-      const { data } = await tmdb.get(path)
-      return data.genres || []
+      const endpoint = h.content_type === 'movie' ? `/api/movies/${h.external_id}` : `/api/tv/${h.external_id}`
+      const res = await fetch(endpoint)
+      if (res.ok) {
+        const data = await res.json()
+        return data.genres ? (typeof data.genres === 'string' ? JSON.parse(data.genres) : data.genres) : []
+      }
+      return []
     } catch {
       return []
     }
   })
+
   for (const genres of histDetails) {
     for (const g of genres) {
-      counts[g.name] = (counts[g.name] || 0) + 1
+      const genreName = typeof g === 'string' ? g : g.name
+      counts[genreName] = (counts[genreName] || 0) + 1
     }
   }
   const topGenres = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([k]) => k)
 
-  // 4. Discover by top genres
-  if (topGenres.length > 0) {
-    try {
-      const genreIds: number[] = []
-      const { data: movieGenres } = await tmdb.get('/genre/movie/list')
-      const { data: tvGenres } = await tmdb.get('/genre/tv/list')
-      const allGenres = [...(movieGenres.genres || []), ...(tvGenres.genres || [])]
-      for (const g of topGenres) {
-        const found = allGenres.find((x: { name: string; id: number }) => x.name.toLowerCase() === g.toLowerCase())
-        if (found) genreIds.push(found.id)
+  // 2. Fetch trending content from CockroachDB with genre filtering
+  try {
+    const [moviesRes, tvRes] = await Promise.all([
+      fetch('/api/trending?type=movie&limit=30'),
+      fetch('/api/trending?type=tv&limit=30')
+    ])
+
+    if (moviesRes.ok) {
+      const movies = await moviesRes.json()
+      for (const m of movies) {
+        const key = `movie-${m.id}`
+        if (!seen.has(key) && m.poster_path && m.slug) {
+          seen.add(key)
+          results.push({
+            ...m,
+            media_type: 'movie' as const,
+            title: m.title,
+            name: m.title
+          })
+        }
       }
-      if (genreIds.length > 0) {
-        const [{ data: movieData }, { data: tvData }] = await Promise.all([
-          tmdb.get('/discover/movie', { params: { with_genres: genreIds.slice(0, 2).join(','), sort_by: 'popularity.desc', page: 1 } }),
-          tmdb.get('/discover/tv', { params: { with_genres: genreIds.slice(0, 2).join(','), sort_by: 'popularity.desc', page: 1 } })
-        ])
-        const combined = [
-          ...(movieData.results || []).map((m: any) => ({ ...m, media_type: 'movie' as const })),
-          ...(tvData.results || []).map((t: any) => ({ ...t, media_type: 'tv' as const }))
-        ]
-        for (const m of combined) {
-          const key = `${m.media_type}-${m.id}`
-          if (!seen.has(key) && m.poster_path) {
+    }
+
+    if (tvRes.ok) {
+      const tvShows = await tvRes.json()
+      for (const t of tvShows) {
+        const key = `tv-${t.id}`
+        if (!seen.has(key) && t.poster_path && t.slug) {
+          seen.add(key)
+          results.push({
+            ...t,
+            media_type: 'tv' as const,
+            title: t.name,
+            name: t.name
+          })
+        }
+      }
+    }
+  } catch (err: any) {
+    logger.error('Error fetching from CockroachDB', err)
+  }
+
+  // 3. If still not enough, get random content
+  if (results.length < 10) {
+    try {
+      const [randomMovies, randomTV] = await Promise.all([
+        fetch('/api/movies?sort=random&limit=10&min_rating=6.0'),
+        fetch('/api/tv?sort=random&limit=10&min_rating=6.0')
+      ])
+
+      if (randomMovies.ok) {
+        const movies = await randomMovies.json()
+        for (const m of movies) {
+          const key = `movie-${m.id}`
+          if (!seen.has(key) && m.poster_path && m.slug) {
             seen.add(key)
-            results.push(m)
+            results.push({
+              ...m,
+              media_type: 'movie' as const,
+              title: m.title,
+              name: m.title
+            })
           }
         }
       }
-    } catch (err) {
-      logger.error('Error in discover by top genres', err)
-    }
-  }
 
-  // 5. Fallback: trending if nothing
-  if (results.length < 5) {
-    try {
-      const { data } = await tmdb.get('/trending/all/week', { params: { page: 1 } })
-      for (const m of (data.results || [])) {
-        const key = `${m.media_type || 'movie'}-${m.id}`
-        if (!seen.has(key) && m.poster_path) {
-          seen.add(key)
-          results.push({ ...m, media_type: m.media_type || 'movie' })
+      if (randomTV.ok) {
+        const tvShows = await randomTV.json()
+        for (const t of tvShows) {
+          const key = `tv-${t.id}`
+          if (!seen.has(key) && t.poster_path && t.slug) {
+            seen.add(key)
+            results.push({
+              ...t,
+              media_type: 'tv' as const,
+              title: t.name,
+              name: t.name
+            })
+          }
         }
       }
-    } catch (err) {
-      logger.error('Error in trending fallback', err)
+    } catch (err: any) {
+      logger.error('Error fetching random content', err)
     }
   }
 
@@ -169,20 +173,31 @@ async function summarizeGenres(userId: string): Promise<string[]> {
   const last = await getHistory(userId)
   const items = last.slice(0, 10)
   const counts: Record<string, number> = {}
+
   const details = await mapWithConcurrency(items, 4, async (it) => {
     try {
-      const path = it.content_type === 'movie' ? `/movie/${it.content_id}` : `/tv/${it.content_id}`
-      const { data } = await tmdb.get(path)
-      return data.genres || []
+      // Use CockroachDB API instead of TMDB
+      const endpoint = it.content_type === 'movie' ? `/api/movies/${it.external_id}` : `/api/tv/${it.external_id}`
+      const res = await fetch(endpoint)
+      if (!res.ok) return []
+
+      const data = await res.json()
+      // Parse genres if it's a JSON string
+      const genres = data.genres ? (typeof data.genres === 'string' ? JSON.parse(data.genres) : data.genres) : []
+      return genres
     } catch {
       return []
     }
   })
+
   for (const genres of details) {
     for (const g of genres) {
-      counts[g.name] = (counts[g.name] || 0) + 1
+      // Handle both string and object formats
+      const genreName = typeof g === 'string' ? g : g.name
+      counts[genreName] = (counts[genreName] || 0) + 1
     }
   }
+
   return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([k]) => k)
 }
 
@@ -192,8 +207,12 @@ async function generateTitles(genres: string[], userId: string): Promise<string[
     const lastItems = await getHistory(userId)
     const context = await mapWithConcurrency(lastItems.slice(0, 5), 3, async (h) => {
       try {
-        const path = h.content_type === 'movie' ? `/movie/${h.content_id}` : `/tv/${h.content_id}`
-        const { data } = await tmdb.get(path)
+        // Use CockroachDB API instead of TMDB
+        const endpoint = h.content_type === 'movie' ? `/api/movies/${h.external_id}` : `/api/tv/${h.external_id}`
+        const res = await fetch(endpoint)
+        if (!res.ok) return null
+
+        const data = await res.json()
         return `${h.content_type === 'movie' ? 'Movie' : 'TV'}: ${data.title || data.name}`
       } catch {
         return null
@@ -211,18 +230,18 @@ async function generateTitles(genres: string[], userId: string): Promise<string[
       2. Ensure they fit the genres and history provided.
       3. Return ONLY the titles, one per line. No numbers, no extra text.
       `;
-      
+
     const text = await callGeminiWithFallback(prompt, "recommendations");
-    
+
     if (!text) throw new Error('gemini_error');
-    
+
     const lines = text.split('\n')
       .map((l: string) => l.replace(/^\d+\.\s*/, '').trim())
       .filter(Boolean);
-      
+
     return lines.slice(0, 8);
-  } catch (err) {
-    logger.warn('[Recommendations] Gemini failed, falling back to TMDB genres', err)
+  } catch (err: any) {
+    logger.warn('[Recommendations] Gemini failed, falling back to CockroachDB genres', err)
     return [];
   }
 }
@@ -230,18 +249,31 @@ async function generateTitles(genres: string[], userId: string): Promise<string[
 async function searchTitles(titles: string[]): Promise<RecommendationItem[]> {
   const rows = await mapWithConcurrency(titles, 4, async (t) => {
     try {
-      const [m, tv] = await Promise.all([
-        tmdb.get('/search/movie', { params: { query: t, include_adult: false } }).then(r => r.data.results || []),
-        tmdb.get('/search/tv', { params: { query: t, include_adult: false } }).then(r => r.data.results || [])
-      ])
-      const top = [...m, ...tv].sort((a: { popularity?: number }, b: { popularity?: number }) => (b.popularity || 0) - (a.popularity || 0))[0]
-      if (!top) return null
-      return { ...top, media_type: top.title ? 'movie' : 'tv' } as RecommendationItem
+      // Use CockroachDB search API instead of TMDB
+      const res = await fetch(`/api/search?q=${encodeURIComponent(t)}&limit=5`)
+      if (!res.ok) return null
+
+      const results = await res.json()
+      if (!results || results.length === 0) return null
+
+      // Get the top result by popularity
+      const top = results.sort((a: { popularity?: number }, b: { popularity?: number }) =>
+        (b.popularity || 0) - (a.popularity || 0)
+      )[0]
+
+      if (!top || !top.slug) return null
+
+      return {
+        ...top,
+        title: top.name || top.title,
+        name: top.name || top.title,
+        media_type: top.media_type || (top.title ? 'movie' : 'tv')
+      } as RecommendationItem
     } catch {
       return null
     }
   })
-  return rows.filter(Boolean) as RecommendationItem[]
+  return rows.filter((r): r is RecommendationItem => r !== null)
 }
 
 export async function getRecommendations(userId: string): Promise<RecommendationItem[]> {
@@ -260,7 +292,7 @@ export async function getRecommendations(userId: string): Promise<Recommendation
       }
     }
   }
-  
+
   // Fallback if AI fails or no history
   const fallback = await tmdbFallback(userId)
   if (fallback.length > 0) {
@@ -268,15 +300,40 @@ export async function getRecommendations(userId: string): Promise<Recommendation
     return fallback
   }
 
-  // Ultimate fallback: trending
+  // Ultimate fallback: CockroachDB trending
   try {
-    const { data } = await tmdb.get('/trending/all/week', { params: { page: 1 } })
-    const items = (data.results || []).slice(0, 10).map((m: RecommendationItem) => ({
-      ...m,
-      media_type: (m.media_type || (m.title ? 'movie' : 'tv')) as 'movie' | 'tv'
-    }))
-    cacheSet(key, items)
-    return items
+    const [moviesRes, tvRes] = await Promise.all([
+      fetch('/api/trending?type=movie&limit=10'),
+      fetch('/api/trending?type=tv&limit=10')
+    ])
+
+    const items: RecommendationItem[] = []
+
+    if (moviesRes.ok) {
+      const movies = await moviesRes.json()
+      items.push(...movies.map((m: any) => ({
+        ...m,
+        media_type: 'movie' as const,
+        title: m.title,
+        name: m.title
+      })))
+    }
+
+    if (tvRes.ok) {
+      const tvShows = await tvRes.json()
+      items.push(...tvShows.map((t: any) => ({
+        ...t,
+        media_type: 'tv' as const,
+        title: t.name,
+        name: t.name
+      })))
+    }
+
+    // Filter items with valid slugs
+    const validItems = items.filter(item => item.slug && item.slug.trim() !== '' && item.slug !== 'content')
+
+    cacheSet(key, validItems.slice(0, 10))
+    return validItems.slice(0, 10)
   } catch {
     return []
   }

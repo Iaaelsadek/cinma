@@ -45,7 +45,7 @@ export class DocumentationManager {
         metrics,
         duration: Date.now() - startTime
       };
-    } catch (error) {
+    } catch (error: any) {
       auditLogger.error('DocumentationManager', 'Documentation audit failed', { error });
       return {
         component: 'DocumentationManager',
@@ -111,7 +111,7 @@ export class DocumentationManager {
           });
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       issues.push({
         severity: 'high',
         category: 'documentation',
@@ -160,7 +160,7 @@ export class DocumentationManager {
           autoFixable: false
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       issues.push({
         severity: 'high',
         category: 'documentation',
@@ -195,7 +195,7 @@ export class DocumentationManager {
           });
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       issues.push({
         severity: 'high',
         category: 'documentation',
@@ -279,7 +279,7 @@ export class DocumentationManager {
           }
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       // Specs directory doesn't exist - not critical
     }
 
@@ -303,7 +303,7 @@ export class DocumentationManager {
           files.push(fullPath);
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       auditLogger.error('DocumentationManager', `Failed to read directory: ${dir}`, { error });
     }
     
@@ -340,7 +340,7 @@ export class DocumentationManager {
         await fs.writeFile(indexPath, indexContent);
         updated.push('INDEX.md');
       }
-    } catch (error) {
+    } catch (error: any) {
       errors.push(`Failed to update INDEX.md: ${error instanceof Error ? error.message : String(error)}`);
     }
 

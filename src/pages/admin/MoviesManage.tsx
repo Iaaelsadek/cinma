@@ -1,8 +1,11 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useSearchParams } from 'react-router-dom'
 import { useAdmin } from '../../context/AdminContext'
 import { Film, Plus, Search, Edit, Trash2, Eye, X, Save } from 'lucide-react'
+import { Breadcrumbs } from '../../components/admin/Breadcrumbs'
+import { AdminLoadingState } from '../../components/admin/LoadingState'
+import { BulkActions } from '../../components/admin/BulkActions'
 
 type MovieFormState = {
   title: string
@@ -30,7 +33,7 @@ const emptyForm: MovieFormState = {
   status: 'active'
 }
 
-const parseGenres = (value: unknown) => {
+const parseGenres = (value: any) => {
   if (Array.isArray(value)) return value.map((v) => String(v).trim()).filter(Boolean)
   if (typeof value === 'string') {
     const trimmed = value.trim()
@@ -38,7 +41,7 @@ const parseGenres = (value: unknown) => {
     try {
       const parsed = JSON.parse(trimmed)
       if (Array.isArray(parsed)) return parsed.map((v) => String(v).trim()).filter(Boolean)
-    } catch {}
+    } catch { }
     return trimmed.split(',').map((v) => v.trim()).filter(Boolean)
   }
   return []
@@ -52,6 +55,8 @@ export const MoviesManage = () => {
   const [editingId, setEditingId] = useState<number | null>(null)
   const [form, setForm] = useState<MovieFormState>(emptyForm)
   const [saving, setSaving] = useState(false)
+  const [selectedMovies, setSelectedMovies] = useState<number[]>([])
+  const [bulkAction, setBulkAction] = useState('activate')
 
   const filteredMovies = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -72,25 +77,7 @@ export const MoviesManage = () => {
     setIsModalOpen(true)
   }
 
-  useEffect(() => {
-    const idParam = Number(searchParams.get('id') || '')
-    if (!Number.isFinite(idParam) || idParam <= 0) return
-    if (loading) return
-    const found = movies.find((m) => Number(m.id) === idParam)
-    if (!found) return
-    openEdit(found as any)
-    setSearchParams((prev) => {
-      const next = new URLSearchParams(prev)
-      next.delete('id')
-      return next
-    }, { replace: true })
-  }, [searchParams, setSearchParams, loading, movies])
-
-  if (loading) {
-    return <div className="p-8 text-center text-zinc-500">Loading movies...</div>
-  }
-
-  const openEdit = (movie: any) => {
+  const openEdit = useCallback((movie: any) => {
     const genres = parseGenres(movie.genres)
     setEditingId(Number(movie.id))
     setForm({
@@ -106,6 +93,28 @@ export const MoviesManage = () => {
       status: movie.status === 'inactive' ? 'inactive' : 'active'
     })
     setIsModalOpen(true)
+  }, [])
+
+  useEffect(() => {
+    const idParam = Number(searchParams.get('id') || '')
+    if (!Number.isFinite(idParam) || idParam <= 0) return
+    if (loading || isModalOpen) return // Don't trigger if modal is already open
+    const found = movies.find((m) => Number(m.id) === idParam)
+    if (!found) return
+
+    // Use a microtask to avoid synchronous state update warning
+    Promise.resolve().then(() => {
+      openEdit(found as any)
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev)
+        next.delete('id')
+        return next
+      }, { replace: true })
+    })
+  }, [searchParams, setSearchParams, loading, movies, openEdit, isModalOpen])
+
+  if (loading) {
+    return <AdminLoadingState type="spinner" message="Loading movies..." />
   }
 
   const handleSave = async () => {
@@ -151,6 +160,9 @@ export const MoviesManage = () => {
 
   return (
     <div className="space-y-4 p-2">
+      {/* Breadcrumbs */}
+      <Breadcrumbs items={[{ label: 'Movies Management' }]} />
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold flex items-center gap-2">
@@ -170,9 +182,9 @@ export const MoviesManage = () => {
       <div className="flex items-center gap-2 bg-zinc-900/50 p-2 rounded-lg border border-zinc-800">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-500" size={14} />
-          <input 
-            type="text" 
-            placeholder="بحث عن فيلم..." 
+          <input
+            type="text"
+            placeholder="بحث عن فيلم..."
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="w-full bg-black/20 border border-zinc-700 rounded-md py-1 pr-8 pl-2 text-xs focus:border-primary outline-none text-right"
@@ -202,9 +214,9 @@ export const MoviesManage = () => {
                 <td className="px-3 py-2">
                   <div className="flex items-center gap-2">
                     {movie.poster_path && (
-                      <img 
-                        src={movie.poster_path.startsWith('http') ? movie.poster_path : `https://image.tmdb.org/t/p/w92${movie.poster_path}`} 
-                        alt={movie.title} 
+                      <img
+                        src={movie.poster_path.startsWith('http') ? movie.poster_path : `https://image.tmdb.org/t/p/w92${movie.poster_path}`}
+                        alt={movie.title}
                         className="w-6 h-9 object-cover rounded shadow-sm"
                         loading="lazy"
                         decoding="async"
@@ -248,11 +260,11 @@ export const MoviesManage = () => {
                     >
                       <Edit size={14} />
                     </button>
-                    <button 
+                    <button
                       onClick={() => {
-                        if(confirm('هل أنت متأكد من حذف هذا الفيلم؟')) deleteMovie(movie.id)
+                        if (confirm('هل أنت متأكد من حذف هذا الفيلم؟')) deleteMovie(movie.id)
                       }}
-                      className="p-1 hover:bg-red-500/20 hover:text-red-400 rounded transition-colors" 
+                      className="p-1 hover:bg-red-500/20 hover:text-red-400 rounded transition-colors"
                       title="حذف"
                     >
                       <Trash2 size={14} />
@@ -299,10 +311,10 @@ export const MoviesManage = () => {
                   <select
                     value={form.status}
                     onChange={(e) => setForm((prev) => ({ ...prev, status: e.target.value as 'active' | 'inactive' }))}
-                    className="w-full rounded-lg border border-zinc-800 bg-black/50 px-3 py-2 text-sm text-white outline-none focus:border-primary transition-colors"
+                    className="w-full rounded-lg border border-zinc-800 bg-[#1C1B1F] px-3 py-2 text-sm text-white outline-none focus:border-primary transition-colors hover:bg-[#0F0F14]"
                   >
-                    <option value="active">active</option>
-                    <option value="inactive">inactive</option>
+                    <option value="active" className="bg-[#1C1B1F] text-white">active</option>
+                    <option value="inactive" className="bg-[#1C1B1F] text-white">inactive</option>
                   </select>
                 </div>
               </div>

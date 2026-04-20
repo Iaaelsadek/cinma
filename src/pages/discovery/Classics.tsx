@@ -1,114 +1,135 @@
 import { useQuery } from '@tanstack/react-query'
-import { tmdb } from '../../lib/tmdb'
 import { QuantumHero } from '../../components/features/hero/QuantumHero'
 import { QuantumTrain } from '../../components/features/media/QuantumTrain'
 import { useLang } from '../../state/useLang'
-import { Helmet } from 'react-helmet-async'
-import { useCategoryVideos } from '../../hooks/useFetchContent'
-
-const fetchClassics = async (yearLimit: number, sort: string = 'popularity.desc') => {
-  const { data } = await tmdb.get('/discover/movie', {
-    params: {
-      'primary_release_date.lte': `${yearLimit}-12-31`,
-      sort_by: sort,
-      'vote_count.gte': 100
-    }
-  })
-  return data.results.map((item: any) => ({ ...item, media_type: 'movie' }))
-}
-
-const fetchByGenre = async (genreId: number) => {
-    const { data } = await tmdb.get('/discover/movie', {
-      params: {
-        with_genres: genreId,
-        'primary_release_date.lte': '1990-12-31',
-        sort_by: 'popularity.desc'
-      }
-    })
-    return data.results.map((item: any) => ({ ...item, media_type: 'movie' }))
-  }
+import { SeoHead } from '../../components/common/SeoHead'
+import { SkeletonHero, SkeletonGrid } from '../../components/common/Skeletons'
+import { ErrorMessage } from '../../components/common/ErrorMessage'
+import { getClassics } from '../../services/contentQueries'
 
 export const ClassicsPage = () => {
   const { lang } = useLang()
 
-  // YouTube/Archive Content
-  const { data: ytClassics } = useCategoryVideos('classic', { limit: 20 })
-  const ytClassicsMapped = (ytClassics || []).map(item => ({
-    id: item.id,
-    title: item.title,
-    overview: item.description,
-    backdrop_path: item.thumbnail,
-    poster_path: item.thumbnail,
-    release_date: item.created_at,
-    vote_average: 9.0,
-    media_type: 'video'
-  }))
+  // CRITICAL: Fetch classics from CockroachDB using contentQueries service
+  const { data: classicsResponse, isLoading, error, refetch } = useQuery({
+    queryKey: ['classics'],
+    queryFn: async () => {
+      return await getClassics({ page: 1, limit: 100 })
+    },
+    staleTime: 1000 * 60 * 10 // 10 minutes
+  })
 
-  const goldenAge = useQuery({ queryKey: ['classics-golden'], queryFn: async () => {
-    return await fetchClassics(1970)
-  } })
-  const eighties = useQuery({ queryKey: ['classics-80s'], queryFn: async () => {
-    return await fetchClassics(1989)
-  } })
-  const nineties = useQuery({ queryKey: ['classics-90s'], queryFn: async () => {
-    return await fetchClassics(1999)
-  } })
+  // SEO metadata
+  const seoTitle = lang === 'ar' 
+    ? 'كلاسيكيات السينما - أفلام خالدة | سينما أونلاين'
+    : 'Cinema Classics - Timeless Movies | Cinema Online'
   
-  const classicAction = useQuery({ queryKey: ['classics-action'], queryFn: async () => {
-    return await fetchByGenre(28)
-  } })
-  const classicRomance = useQuery({ queryKey: ['classics-romance'], queryFn: async () => {
-    return await fetchByGenre(10749)
-  } })
+  const seoDescription = lang === 'ar'
+    ? 'اكتشف أفضل الأفلام الكلاسيكية من العصر الذهبي للسينما. أفلام الثمانينات والتسعينات وما قبل 1970.'
+    : 'Discover the best classic movies from the golden age of cinema. Films from the 80s, 90s, and pre-1970.'
 
-  const heroItems = ytClassicsMapped.length > 0 ? ytClassicsMapped.slice(0, 10) : (goldenAge.data?.slice(0, 10) || [])
+  // Loading state with skeleton loaders
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-black text-white pb-4 max-w-[2400px] mx-auto px-4 md:px-12 w-full">
+        <SeoHead title={seoTitle} description={seoDescription} />
+        <SkeletonHero />
+        <div className="space-y-2 pt-4">
+          <SkeletonGrid count={18} variant="poster" />
+        </div>
+      </div>
+    )
+  }
+
+  // Error state with ErrorMessage
+  if (error) {
+    return (
+      <div className="min-h-screen bg-black text-white">
+        <SeoHead title={seoTitle} description={seoDescription} noIndex />
+        <ErrorMessage
+          type="network"
+          title={lang === 'ar' ? 'خطأ في تحميل الأفلام الكلاسيكية' : 'Error Loading Classic Movies'}
+          message={lang === 'ar' 
+            ? 'تعذر الاتصال بالخادم. يرجى المحاولة مرة أخرى.'
+            : 'Failed to connect to the server. Please try again.'}
+          error={error}
+          onRetry={() => refetch()}
+          showHomeButton
+          showBackButton
+        />
+      </div>
+    )
+  }
+
+  const classics = classicsResponse?.data || []
+
+  // Split by decade for better organization
+  const goldenAge = classics.filter(movie => {
+    const year = movie.release_date ? new Date(movie.release_date).getFullYear() : 0
+    return year < 1970
+  }).slice(0, 20)
+
+  const eighties = classics.filter(movie => {
+    const year = movie.release_date ? new Date(movie.release_date).getFullYear() : 0
+    return year >= 1980 && year < 1990
+  }).slice(0, 20)
+
+  const nineties = classics.filter(movie => {
+    const year = movie.release_date ? new Date(movie.release_date).getFullYear() : 0
+    return year >= 1990 && year < 2000
+  }).slice(0, 20)
+
+  const heroItems = classics.slice(0, 10)
 
   return (
     <div className="min-h-screen bg-black text-white pb-4 max-w-[2400px] mx-auto px-4 md:px-12 w-full">
-      <Helmet>
-        <title>{lang === 'ar' ? 'كلاسيكيات - سينما أونلاين' : 'Classics - Cinema Online'}</title>
-      </Helmet>
+      <SeoHead 
+        title={seoTitle}
+        description={seoDescription}
+        type="website"
+        image="https://cinma.online/og-classics.jpg"
+      />
 
       <QuantumHero items={heroItems} />
 
       <div className="space-y-2 pt-4 relative z-10">
-        {ytClassicsMapped.length > 0 && (
-          <QuantumTrain 
-            items={ytClassicsMapped} 
-            title={lang === 'ar' ? 'أفلام كلاسيكية (يوتيوب)' : 'Classic Movies (YouTube)'} 
-            type="video"
-          />
+        {classics.length === 0 ? (
+          <div className="text-center text-zinc-500 py-12">
+            {lang === 'ar' ? 'لا توجد أفلام كلاسيكية متاحة' : 'No classic movies available'}
+          </div>
+        ) : (
+          <>
+            <QuantumTrain 
+              items={classics.slice(0, 20)} 
+              title={lang === 'ar' ? 'أفضل الكلاسيكيات' : 'Top Classics'} 
+              link="/search?types=movie&yto=1999"
+            />
+
+            {goldenAge.length > 0 && (
+              <QuantumTrain 
+                items={goldenAge} 
+                title={lang === 'ar' ? 'العصر الذهبي (قبل 1970)' : 'Golden Age (Pre-1970)'} 
+                link="/search?types=movie&yto=1970"
+              />
+            )}
+            
+            {eighties.length > 0 && (
+              <QuantumTrain 
+                items={eighties} 
+                title={lang === 'ar' ? 'كلاسيكيات الثمانينات' : '80s Classics'} 
+                link="/search?types=movie&yfrom=1980&yto=1989"
+              />
+            )}
+
+            {nineties.length > 0 && (
+              <QuantumTrain 
+                items={nineties} 
+                title={lang === 'ar' ? 'نوستالجيا التسعينات' : '90s Nostalgia'} 
+                link="/search?types=movie&yfrom=1990&yto=1999"
+              />
+            )}
+          </>
         )}
-
-        <QuantumTrain 
-          items={goldenAge.data || []} 
-          title={lang === 'ar' ? 'العصر الذهبي (قبل 1970)' : 'Golden Age (Pre-1970)'} 
-          link="/search?types=movie&yto=1970"
-        />
-        
-        <QuantumTrain 
-          items={eighties.data || []} 
-          title={lang === 'ar' ? 'كلاسيكيات الثمانينات' : '80s Classics'} 
-          link="/search?types=movie&yfrom=1980&yto=1989"
-        />
-
-        <QuantumTrain 
-          items={nineties.data || []} 
-          title={lang === 'ar' ? 'نوستالجيا التسعينات' : '90s Nostalgia'} 
-          link="/search?types=movie&yfrom=1990&yto=1999"
-        />
-
-        <QuantumTrain 
-          items={classicAction.data || []} 
-          title={lang === 'ar' ? 'أكشن كلاسيكي' : 'Classic Action'} 
-          link="/search?types=movie&genres=28&yto=1990"
-        />
-
-        <QuantumTrain 
-          items={classicRomance.data || []} 
-          title={lang === 'ar' ? 'رومانسية الزمن الجميل' : 'Classic Romance'} 
-          link="/search?types=movie&genres=10749&yto=1990"
-        />
       </div>
     </div>
   )

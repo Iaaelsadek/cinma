@@ -46,7 +46,7 @@ export class ProductionValidator {
         metrics,
         duration: Date.now() - startTime
       };
-    } catch (error) {
+    } catch (error: any) {
       auditLogger.error('ProductionValidator', 'Production validation failed', { error });
       return {
         component: 'ProductionValidator',
@@ -104,7 +104,7 @@ export class ProductionValidator {
           }
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       issues.push({
         severity: 'critical',
         category: 'configuration',
@@ -146,7 +146,7 @@ export class ProductionValidator {
           autoFixable: false
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       // Already reported in verifyEnvironmentVariables
     }
 
@@ -179,7 +179,7 @@ export class ProductionValidator {
           });
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       // Already reported
     }
 
@@ -203,7 +203,7 @@ export class ProductionValidator {
           autoFixable: false
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       // Already reported
     }
 

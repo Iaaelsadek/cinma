@@ -2,14 +2,46 @@
  * Slug Resolver Service
  * 
  * Resolves slugs to content IDs with LRU caching support.
+ * 
  * Features:
- * - LRU cache with 1-hour TTL
+ * - LRU cache with 1-hour TTL (10,000 entries max)
  * - Batch resolution for multiple slugs
  * - Database query with parameterized statements (SQL injection protection)
  * - Cache invalidation support
+ * - Automatic cache expiration
+ * 
+ * @module slugResolver
+ * @example
+ * ```typescript
+ * import { resolveSlug, resolveBatch, clearCache } from './slugResolver'
+ * 
+ * // Resolve single slug
+ * const movieId = await resolveSlug('spider-man-2024', 'movie')
+ * console.log(movieId) // 12345
+ * 
+ * // Batch resolve multiple slugs
+ * const results = await resolveBatch([
+ *   { slug: 'spider-man', type: 'movie' },
+ *   { slug: 'breaking-bad', type: 'tv' }
+ * ])
+ * console.log(results.get('spider-man')) // 12345
+ * console.log(results.get('breaking-bad')) // 67890
+ * 
+ * // Clear cache
+ * clearCache('movie') // Clear only movie cache
+ * clearCache() // Clear all cache
+ * ```
  */
 
+import { CONFIG } from './constants'
+
+/**
+ * Content type enumeration
+ * @typedef {'movie' | 'tv' | 'actor' | 'game' | 'software' | 'cinematic'} ContentType
+ */
 export type ContentType = 'movie' | 'tv' | 'actor' | 'game' | 'software' | 'cinematic'
+
+const API_BASE = CONFIG.API_BASE || ''
 
 /**
  * Cache entry with TTL support
@@ -179,6 +211,29 @@ function getCacheKey(contentType: ContentType, slug: string): string {
 
 /**
  * Resolve a slug to content ID
+ * 
+ * Queries the database to find the content ID associated with a slug.
+ * Results are cached for 1 hour to improve performance.
+ * 
+ * @param {string} slug - URL slug to resolve
+ * @param {ContentType} contentType - Type of content (movie, tv, actor, etc.)
+ * @returns {Promise<number | null>} Content ID or null if not found
+ * 
+ * @example
+ * ```typescript
+ * // Resolve movie slug
+ * const movieId = await resolveSlug('spider-man-2024', 'movie')
+ * if (movieId) {
+ *   console.log(`Found movie with ID: ${movieId}`)
+ * }
+ * 
+ * // Resolve TV series slug
+ * const seriesId = await resolveSlug('breaking-bad', 'tv')
+ * 
+ * // Handle not found
+ * const id = await resolveSlug('non-existent', 'movie')
+ * console.log(id) // null
+ * ```
  */
 export async function resolveSlug(
   slug: string,
@@ -196,30 +251,14 @@ export async function resolveSlug(
     return cachedId
   }
   
-  // Cache miss - query database
+  // Cache miss - query CockroachDB via API
   try {
-    const tableName = getTableName(contentType)
-    const API_BASE = '/api/db'
+    const endpoint = contentType === 'movie' ? '/api/db/movies' : '/api/db/tv'
+    const url = API_BASE ? `${API_BASE}${endpoint}/slug/${encodeURIComponent(slug)}` : `${endpoint}/slug/${encodeURIComponent(slug)}`
     
-    // Query database via API with parameterized query
-    const response = await fetch(`${API_BASE}/slug/resolve`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        slug,
-        table: tableName
-      })
-    })
-    
-    if (response.status === 404) {
-      return null
-    }
+    const response = await fetch(url)
     
     if (!response.ok) {
-      console.error('API Error', {
-        status: response.status,
-        statusText: response.statusText
-      })
       return null
     }
     
@@ -233,13 +272,40 @@ export async function resolveSlug(
     }
     
     return null
-  } catch (error) {
+  } catch (error: any) {
     return null
   }
 }
 
 /**
  * Batch resolve multiple slugs
+ * 
+ * Efficiently resolves multiple slugs in a single operation.
+ * Slugs are grouped by content type and queried together.
+ * Cached results are used when available.
+ * 
+ * @param {Array<{slug: string, type: ContentType}>} slugs - Array of slug-type pairs to resolve
+ * @returns {Promise<Map<string, number>>} Map of slug to content ID
+ * 
+ * @example
+ * ```typescript
+ * // Batch resolve multiple items
+ * const results = await resolveBatch([
+ *   { slug: 'spider-man', type: 'movie' },
+ *   { slug: 'iron-man', type: 'movie' },
+ *   { slug: 'breaking-bad', type: 'tv' }
+ * ])
+ * 
+ * // Access results
+ * const spidermanId = results.get('spider-man')
+ * const ironmanId = results.get('iron-man')
+ * const breakingbadId = results.get('breaking-bad')
+ * 
+ * // Check if slug was found
+ * if (results.has('spider-man')) {
+ *   console.log('Found!')
+ * }
+ * ```
  */
 export async function resolveBatch(
   slugs: Array<{slug: string, type: ContentType}>
@@ -307,7 +373,7 @@ export async function resolveBatch(
         }
       }
     }
-  } catch (error) {
+  } catch (error: any) {
   }
   
   return result
@@ -315,6 +381,23 @@ export async function resolveBatch(
 
 /**
  * Clear cache for specific content type or all
+ * 
+ * Invalidates cached slug resolutions. Useful when content is updated
+ * or slugs are regenerated.
+ * 
+ * @param {ContentType} [contentType] - Optional content type to clear, or all if omitted
+ * 
+ * @example
+ * ```typescript
+ * // Clear all movie cache
+ * clearCache('movie')
+ * 
+ * // Clear all TV series cache
+ * clearCache('tv')
+ * 
+ * // Clear entire cache
+ * clearCache()
+ * ```
  */
 export function clearCache(contentType?: ContentType): void {
   if (contentType) {

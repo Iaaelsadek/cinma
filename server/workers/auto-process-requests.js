@@ -182,7 +182,6 @@ async function processRequest(request) {
       [request.id]
     )
     
-    console.log(`✅ Processed request ${request.id}: ${request.title}`)
     return true
   } catch (error) {
     console.error(`❌ Failed to process request ${request.id}:`, error.message)
@@ -198,13 +197,10 @@ async function processRequest(request) {
 
 async function processPendingRequests() {
   try {
-    console.log('🔄 Checking for pending requests...')
     
     const available = await checkGlobalLimit()
-    console.log(`📊 Global limit: ${available} requests available`)
     
     if (available === 0) {
-      console.log('⏸️  Global limit reached. Waiting for next window.')
       return
     }
     
@@ -219,11 +215,8 @@ async function processPendingRequests() {
     )
     
     if (result.rows.length === 0) {
-      console.log('✨ No pending requests to process')
       return
     }
-    
-    console.log(`📦 Processing ${result.rows.length} pending requests...`)
     
     let successCount = 0
     for (const request of result.rows) {
@@ -233,16 +226,12 @@ async function processPendingRequests() {
     
     await incrementGlobalLimit(successCount)
     
-    console.log(`✅ Processed ${successCount}/${result.rows.length} requests successfully`)
-    
   } catch (error) {
     console.error('❌ Worker error:', error)
   }
 }
 
 async function startWorker() {
-  console.log('🚀 Auto-process worker started')
-  console.log('⏰ Running every 5 minutes')
   
   await processPendingRequests()
   

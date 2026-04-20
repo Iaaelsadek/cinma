@@ -10,7 +10,11 @@ export const PwaInstallPrompt = () => {
   const { lang } = useLang()
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [show, setShow] = useState(false)
-  const [installed, setInstalled] = useState(false)
+  const [installed, setInstalled] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return window.matchMedia('(display-mode: standalone)').matches
+      || (window.navigator as any).standalone === true
+  })
 
   useEffect(() => {
     const dismissed = sessionStorage.getItem(STORAGE_KEY)
@@ -23,11 +27,6 @@ export const PwaInstallPrompt = () => {
     }
 
     window.addEventListener('beforeinstallprompt', handler)
-
-    // Standalone = already installed (PWA opened as app)
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches
-      || (window.navigator as any).standalone === true
-    if (isStandalone) setInstalled(true)
 
     return () => window.removeEventListener('beforeinstallprompt', handler)
   }, [])

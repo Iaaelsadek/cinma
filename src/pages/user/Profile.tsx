@@ -2,9 +2,11 @@ import { useEffect, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import {updateProfile, uploadAvatar, supabase, getWatchlist, getContinueWatching, getHistory, removeFromWatchlist, getUserAchievements, getFollowers, getFollowing, followUser, unfollowUser, getActivityFeed, removeFollower} from '../../lib/supabase'
+import { fetchBatchContent, ContentDetails } from '../../services/contentAPI'
+import { WatchlistCard } from '../../components/features/user/WatchlistCard'
 import { Link, useNavigate } from 'react-router-dom'
-import { toast } from 'sonner'
-import {useQueryClient, useInfiniteQuery} from '@tanstack/react-query'
+import { toast } from '../../lib/toast-manager'
+import {useQueryClient, useInfiniteQuery, useQuery as useRQ} from '@tanstack/react-query'
 import { getRecommendations, RecommendationItem } from '../../services/recommendations'
 import { Helmet } from 'react-helmet-async'
 import { SkeletonGrid, SkeletonProfile } from '../../components/common/Skeletons'
@@ -13,7 +15,7 @@ import { errorLogger } from '../../services/errorLogging'
 import { motion, AnimatePresence } from 'framer-motion'
 
 import { QRCodeSVG } from 'qrcode.react'
-import {Shield, Smartphone, AlertCircle, CheckCircle2, Award, Star, Zap, Film, Trophy, Activity, Clock, Heart, Twitter, Instagram, Facebook, Globe, Users, Settings, LogOut, Sparkles, Trash2, Share2, Moon, PlayCircle} from 'lucide-react'
+import {Shield, Smartphone, AlertCircle, CheckCircle2, Award, Star, Zap, Film, Trophy, Activity, Clock, Heart, Twitter, Instagram, Facebook, Globe, Users, User as UserIcon, Settings, LogOut, Sparkles, Trash2, Share2, Moon, PlayCircle, ThumbsUp, Eye, CheckCircle} from 'lucide-react'
 import { PlaylistManager } from '../../components/features/social/PlaylistManager'
 import { FollowList } from '../../components/features/social/FollowList'
 import { UserListsTab } from '../../components/features/social/UserListsTab'
@@ -36,7 +38,7 @@ const NEUTRAL_AVATARS = [
 ]
 
 // StatCard Component for Dashboard
-const StatCard = ({ icon: Icon, label, value, unit, color }: any) => (
+const StatCard = ({ icon: Icon, label, value, unit, color }: { icon: React.ComponentType<{ size?: number }>; label: string; value: number; unit: string; color: string }) => (
   <motion.div 
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
@@ -107,7 +109,6 @@ const ProfileErrorBoundary = ({ children }: { children: React.ReactNode }) => {
 
 export const Profile = () => {
   const { user, profile: authProfile, loading, refreshProfile, error: authError, signOut } = useAuth()
-  const navigate = useNavigate()
   const [username, setUsername] = useState('')
   const [avatar, setAvatar] = useState<string | null>(null)
   const [role, setRole] = useState<Role>('user')
@@ -121,8 +122,8 @@ export const Profile = () => {
   const [socialSubTab, setSocialSubTab] = useState<'edit' | 'followers' | 'following' | 'lists' | 'challenges'>('edit')
   
   const [busy, setBusy] = useState(false)
-  const [msg, setMsg] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [msg, setMsg] = useState<string | null>(null)
   const queryClient = useQueryClient()
 
   const { 
@@ -130,8 +131,7 @@ export const Profile = () => {
     isLoading: loadingFollowers, 
     refetch: refetchFollowers,
     fetchNextPage: fetchNextFollowers,
-    hasNextPage: hasMoreFollowers,
-    isFetchingNextPage: isFetchingMoreFollowers
+    hasNextPage: hasMoreFollowers
   } = useInfiniteQuery({
     queryKey: ['followers', user?.id],
     queryFn: ({ pageParam = 0 }) => getFollowers(user!.id, 20, pageParam as number),
@@ -145,8 +145,7 @@ export const Profile = () => {
     isLoading: loadingFollowing, 
     refetch: refetchFollowing,
     fetchNextPage: fetchNextFollowing,
-    hasNextPage: hasMoreFollowing,
-    isFetchingNextPage: isFetchingMoreFollowing
+    hasNextPage: hasMoreFollowing
   } = useInfiniteQuery({
     queryKey: ['following', user?.id],
     queryFn: ({ pageParam = 0 }) => getFollowing(user!.id, 20, pageParam as number),
@@ -191,7 +190,6 @@ export const Profile = () => {
     data: activityFeedData, 
     fetchNextPage: fetchNextActivity, 
     hasNextPage: hasMoreActivity, 
-    isLoading: loadingActivity,
     isFetchingNextPage: isFetchingMoreActivity
   } = useInfiniteQuery({
     queryKey: ['activity-feed', user?.id],
@@ -313,6 +311,16 @@ export const Profile = () => {
   const { data: recommendations } = useRQ({
     queryKey: ['recommendations', user?.id],
     queryFn: () => getRecommendations(user!.id),
+    enabled: !!user
+  })
+
+  const { data: reviewStats } = useRQ({
+    queryKey: ['reviewStats', user?.id],
+    queryFn: async () => {
+      const response = await fetch(`/api/reviews/user/${user!.id}/stats`)
+      if (!response.ok) throw new Error('Failed to fetch review stats')
+      return response.json()
+    },
     enabled: !!user
   })
 
@@ -531,7 +539,7 @@ export const Profile = () => {
                         )}
                         title={navatar.label}
                       >
-                        <img src={navatar.url} alt={navatar.label} className="w-full h-full object-cover" />
+                        <img src={navatar.url} alt={navatar.label} className="w-full h-full object-cover" loading="lazy" />
                         {avatar === navatar.url && (
                           <div className="absolute inset-0 bg-lumen-gold/20 flex items-center justify-center">
                             <CheckCircle2 size={12} className="text-lumen-gold" />
@@ -636,7 +644,7 @@ export const Profile = () => {
                     <StatCard 
                       icon={Trophy} 
                       label="نقاط الخبرة" 
-                      value={achievements?.reduce((acc, ua) => acc + (ua.achievement?.points || 0), 0) || 0} 
+                      value={achievements?.reduce((acc: number, ua: any) => acc + (ua.achievement?.points || 0), 0) || 0} 
                       unit="نقطة" 
                       color="text-lumen-gold"
                     />
@@ -646,6 +654,27 @@ export const Profile = () => {
                       value={watchlist?.length || 0} 
                       unit="عنصر" 
                       color="text-red-400"
+                    />
+                    <StatCard 
+                      icon={Star} 
+                      label="المراجعات" 
+                      value={reviewStats?.total_reviews || 0} 
+                      unit="مراجعة" 
+                      color="text-yellow-400"
+                    />
+                    <StatCard 
+                      icon={Sparkles} 
+                      label="تصويتات مفيدة" 
+                      value={reviewStats?.total_helpful_votes || 0} 
+                      unit="تصويت" 
+                      color="text-green-400"
+                    />
+                    <StatCard 
+                      icon={Star} 
+                      label="متوسط التقييم" 
+                      value={reviewStats?.average_rating || 0} 
+                      unit="/10" 
+                      color="text-orange-400"
                     />
                   </div>
                 <div className="rounded-3xl border border-white/5 bg-white/[0.02] p-6 backdrop-blur-md lg:col-span-2">
@@ -829,6 +858,9 @@ export const Profile = () => {
                     <AchievementsSection achievements={achievements} loading={loadingAchievements} />
                   </div>
                 </div>
+
+                {/* User Reviews Section */}
+                <UserReviewsSection userId={user!.id} />
               </>
             )}
 
@@ -924,7 +956,7 @@ export const Profile = () => {
                                 )}
                                 title={nav.label}
                               >
-                                <img src={nav.url} alt={nav.label} className="w-full h-full object-cover" />
+                                <img src={nav.url} alt={nav.label} className="w-full h-full object-cover" loading="lazy" />
                                 {avatar === nav.url && (
                                   <div className="absolute inset-0 bg-lumen-gold/20 flex items-center justify-center">
                                     <CheckCircle2 size={24} className="text-lumen-gold" />
@@ -1437,70 +1469,106 @@ const RecommendationsRow = ({ recommendations }: { recommendations: Recommendati
 // Watchlist Section Component
 const WatchlistSection = () => {
   const { user } = useAuth()
-  const { data: watchlist, isLoading, error } = useRQ({
+  const queryClient = useQueryClient()
+  
+  // Fetch watchlist entries from Supabase (returns external_ids)
+  const { data: watchlistEntries, isLoading: loadingEntries, error: entriesError } = useRQ({
     queryKey: ['watchlist', user?.id],
     queryFn: () => getWatchlist(user!.id),
     enabled: !!user
   })
 
+  // Fetch full content details from CockroachDB using batch API
+  const { data: contentDetails, isLoading: loadingContent } = useRQ({
+    queryKey: ['watchlist-content', watchlistEntries],
+    queryFn: async () => {
+      if (!watchlistEntries || watchlistEntries.length === 0) return []
+      
+      // Map entries to batch API format
+      const items = watchlistEntries.map(entry => ({
+        external_id: entry.external_id,
+        content_type: entry.content_type as 'movie' | 'tv',
+        external_source: entry.external_source || 'tmdb'
+      }))
+      
+      // Call batch API
+      return await fetchBatchContent(items)
+    },
+    enabled: !!watchlistEntries && watchlistEntries.length > 0
+  })
+
+  // Combine entries with content details
+  const enrichedWatchlist = watchlistEntries?.map((entry, index) => ({
+    ...entry,
+    content: contentDetails?.[index] || null
+  })) || []
+
+  const isLoading = loadingEntries || loadingContent
+  const error = entriesError
+
+  const handleRemove = async (external_id: string, content_type: 'movie' | 'tv') => {
+    if (!user) return
+    
+    try {
+      await removeFromWatchlist(user.id, external_id, content_type)
+      toast.success('تمت الإزالة من قائمة المتابعة')
+      // Invalidate queries to refresh the list
+      queryClient.invalidateQueries({ queryKey: ['watchlist', user.id] })
+    } catch (err: any) {
+      toast.error(getArabicErrorMessage(err as string | Error | null))
+    }
+  }
+
   if (isLoading) return (
-    <div className="rounded-lg border border-zinc-800 p-4 bg-zinc-900/50">
-      <div className="h-6 w-24 bg-zinc-800 rounded mb-4"></div>
+    <div className="rounded-[2rem] border border-white/5 p-6 bg-white/[0.02] backdrop-blur-md">
+      <div className="h-6 w-32 bg-zinc-800 rounded mb-4"></div>
       <SkeletonGrid count={3} />
     </div>
   )
 
   if (error) return (
-    <div className="rounded-lg border border-red-800 bg-red-900/20 p-4">
-      <h3 className="text-lg font-semibold text-red-400 mb-2">قائمة المتابعة</h3>
+    <div className="rounded-[2rem] border border-red-800 bg-red-900/20 p-6">
+      <h3 className="text-lg font-bold text-red-400 mb-2">قائمة المتابعة</h3>
       <p className="text-red-300 text-sm">{getArabicErrorMessage(error)}</p>
     </div>
   )
 
   return (
-    <div className="rounded-lg border border-zinc-800 p-4 bg-zinc-900/50 backdrop-blur-sm">
-      <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-        📋 قائمة المتابعة
+    <div className="rounded-[2rem] border border-white/5 p-6 bg-white/[0.02] backdrop-blur-md">
+      <h3 className="text-lg font-black text-white mb-6 flex items-center gap-3 tracking-tighter uppercase">
+        <div className="p-2 rounded-xl bg-lumen-gold/10 text-lumen-gold">
+          <Heart size={18} />
+        </div>
+        قائمة المتابعة
+        <span className="text-[10px] text-zinc-500 font-medium">({enrichedWatchlist.length})</span>
       </h3>
-      {watchlist && watchlist.length > 0 ? (
+      {enrichedWatchlist.length > 0 ? (
         <div className="space-y-2">
-          {watchlist.slice(0, 5).map((item: any) => (
-            <div key={item.id} className="flex items-center gap-3 p-2 bg-zinc-800/50 rounded-lg">
-              <img 
-                src={item.poster_path || '/default-poster.jpg'} 
-                alt={item.title} 
-                className="w-12 h-16 object-cover rounded"
-                onError={(e) => e.currentTarget.src = '/default-poster.jpg'}
-                loading="lazy"
-                decoding="async"
-              />
-              <div className="flex-1">
-                <h4 className="text-sm font-medium text-white">{item.title}</h4>
-                <p className="text-xs text-zinc-400">{(item as any).category || 'غير مصنف'}</p>
-              </div>
-              <button
-                onClick={async () => {
-                  try {
-                    await removeFromWatchlist(user!.id, item.id, item.type || 'movie')
-                    toast.success('تمت الإزالة من قائمة المتابعة')
-                  } catch (err) {
-                    toast.error(getArabicErrorMessage(err as string | Error | null))
-                  }
-                }}
-                className="text-red-400 hover:text-red-300 text-xs"
-              >
-                إزالة
-              </button>
-            </div>
+          {enrichedWatchlist.slice(0, 5).map((item) => (
+            <WatchlistCard
+              key={`${item.external_id}-${item.content_type}`}
+              external_id={item.external_id}
+              content_type={item.content_type as 'movie' | 'tv'}
+              content={item.content}
+              onRemove={() => handleRemove(item.external_id, item.content_type as 'movie' | 'tv')}
+              created_at={item.created_at}
+            />
           ))}
-          {watchlist.length > 5 && (
-            <Link to="/watchlist" className="text-blue-400 hover:text-blue-300 text-sm">
-              عرض الكل ({watchlist.length})
+          {enrichedWatchlist.length > 5 && (
+            <Link 
+              to="/watchlist" 
+              className="block text-center py-3 rounded-xl border border-white/5 text-[10px] font-black text-zinc-500 uppercase tracking-widest hover:bg-white/5 hover:text-lumen-gold transition-all mt-4"
+            >
+              عرض الكل ({enrichedWatchlist.length})
             </Link>
           )}
         </div>
       ) : (
-        <p className="text-zinc-400 text-sm">لا توجد عناصر في قائمة المتابعة</p>
+        <div className="flex flex-col items-center justify-center py-12 text-center opacity-40">
+          <Heart size={48} className="text-zinc-800 mb-4" />
+          <p className="text-zinc-500 text-sm font-bold">لا توجد عناصر في قائمة المتابعة</p>
+          <p className="text-[10px] text-zinc-600 uppercase tracking-widest mt-2">Your watchlist is empty</p>
+        </div>
       )}
     </div>
   )
@@ -1509,67 +1577,133 @@ const WatchlistSection = () => {
 // Continue Watching Section Component
 const ContinueWatchingSection = () => {
   const { user } = useAuth()
-  const { data: continueWatching, isLoading, error } = useRQ({
+  
+  // Fetch continue watching entries from Supabase (returns external_ids)
+  const { data: continueWatchingEntries, isLoading: loadingEntries, error: entriesError } = useRQ({
     queryKey: ['continue-watching', user?.id],
     queryFn: () => getContinueWatching(user!.id),
     enabled: !!user
   })
 
+  // Fetch full content details from CockroachDB using batch API
+  const { data: contentDetails, isLoading: loadingContent } = useRQ({
+    queryKey: ['continue-watching-content', continueWatchingEntries],
+    queryFn: async () => {
+      if (!continueWatchingEntries || continueWatchingEntries.length === 0) return []
+      
+      // Map entries to batch API format
+      const items = continueWatchingEntries.map(entry => ({
+        external_id: entry.external_id,
+        content_type: entry.content_type as 'movie' | 'tv',
+        external_source: entry.external_source || 'tmdb'
+      }))
+      
+      // Call batch API
+      return await fetchBatchContent(items)
+    },
+    enabled: !!continueWatchingEntries && continueWatchingEntries.length > 0
+  })
+
+  // Combine entries with content details
+  const enrichedContinueWatching = continueWatchingEntries?.map((entry, index) => ({
+    ...entry,
+    content: contentDetails?.[index] || null
+  })) || []
+
+  const isLoading = loadingEntries || loadingContent
+  const error = entriesError
+
   if (isLoading) return (
-    <div className="rounded-lg border border-zinc-800 p-4 bg-zinc-900/50">
-      <div className="h-6 w-32 bg-zinc-800 rounded mb-4"></div>
+    <div className="rounded-[2rem] border border-white/5 p-6 bg-white/[0.02] backdrop-blur-md">
+      <div className="h-6 w-40 bg-zinc-800 rounded mb-4"></div>
       <SkeletonGrid count={3} />
     </div>
   )
 
   if (error) return (
-    <div className="rounded-lg border border-red-800 bg-red-900/20 p-4">
-      <h3 className="text-lg font-semibold text-red-400 mb-2">متابعة المشاهدة</h3>
+    <div className="rounded-[2rem] border border-red-800 bg-red-900/20 p-6">
+      <h3 className="text-lg font-bold text-red-400 mb-2">متابعة المشاهدة</h3>
       <p className="text-red-300 text-sm">{getArabicErrorMessage(error)}</p>
     </div>
   )
 
   return (
-    <div className="rounded-lg border border-zinc-800 p-4 bg-zinc-900/50 backdrop-blur-sm">
-      <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-        ⏯️ متابعة المشاهدة
+    <div className="rounded-[2rem] border border-white/5 p-6 bg-white/[0.02] backdrop-blur-md">
+      <h3 className="text-lg font-black text-white mb-6 flex items-center gap-3 tracking-tighter uppercase">
+        <div className="p-2 rounded-xl bg-blue-500/10 text-blue-500">
+          <PlayCircle size={18} />
+        </div>
+        متابعة المشاهدة
+        <span className="text-[10px] text-zinc-500 font-medium">({enrichedContinueWatching.length})</span>
       </h3>
-      {continueWatching && continueWatching.length > 0 ? (
+      {enrichedContinueWatching.length > 0 ? (
         <div className="space-y-2">
-          {continueWatching.slice(0, 5).map((item: any) => (
-            <div key={item.id} className="flex items-center gap-3 p-2 bg-zinc-800/50 rounded-lg">
-              <img 
-                src={item.poster_path || '/default-poster.jpg'} 
-                alt={item.title} 
-                className="w-12 h-16 object-cover rounded"
-                onError={(e) => e.currentTarget.src = '/default-poster.jpg'}
-                loading="lazy"
-                decoding="async"
-              />
-              <div className="flex-1">
-                <h4 className="text-sm font-medium text-white">{item.title}</h4>
-                <div className="w-full bg-zinc-700 rounded-full h-1 mt-1">
-                  <div 
-                    className="bg-blue-600 h-1 rounded-full" 
-                    style={{ width: `${(item.current_time / item.duration) * 100}%` }}
-                  ></div>
+          {enrichedContinueWatching.slice(0, 5).map((item) => {
+            const content = item.content
+            const title = content?.title || content?.name || 'المحتوى غير متوفر'
+            const posterUrl = content?.poster_url || '/default-poster.jpg'
+            const slug = content?.slug
+            const progressPercent = item.duration_seconds > 0 
+              ? (item.progress_seconds / item.duration_seconds) * 100 
+              : 0
+
+            return (
+              <div key={`${item.external_id}-${item.content_type}`} className="flex items-center gap-3 p-2 bg-zinc-800/30 rounded-xl hover:bg-zinc-800/50 transition-all group">
+                {content && slug ? (
+                  <Link to={`/${item.content_type}/${slug}`} className="flex-shrink-0">
+                    <img 
+                      src={posterUrl} 
+                      alt={title} 
+                      className="w-12 h-16 object-cover rounded border border-white/5 group-hover:border-blue-500/30 transition-all"
+                      onError={(e) => e.currentTarget.src = '/default-poster.jpg'}
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  </Link>
+                ) : (
+                  <div className="w-12 h-16 rounded bg-zinc-800 flex items-center justify-center flex-shrink-0">
+                    <AlertCircle size={20} className="text-red-500/50" />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  {content && slug ? (
+                    <Link to={`/${item.content_type}/${slug}`}>
+                      <h4 className="text-sm font-bold text-white truncate group-hover:text-blue-400 transition-colors">
+                        {title}
+                      </h4>
+                    </Link>
+                  ) : (
+                    <h4 className="text-sm font-bold text-red-400 truncate">{title}</h4>
+                  )}
+                  <div className="w-full bg-zinc-700 rounded-full h-1 mt-1.5">
+                    <div 
+                      className="bg-blue-500 h-1 rounded-full transition-all" 
+                      style={{ width: `${progressPercent}%` }}
+                    ></div>
+                  </div>
+                  <p className="text-[10px] text-zinc-500 mt-1 font-medium">
+                    {Math.floor(item.progress_seconds / 60)}:{(item.progress_seconds % 60).toString().padStart(2, '0')} / 
+                    {Math.floor(item.duration_seconds / 60)}:{(item.duration_seconds % 60).toString().padStart(2, '0')}
+                  </p>
                 </div>
-                <p className="text-xs text-zinc-400 mt-1">
-                  {Math.floor(item.current_time / 60)}:{(item.current_time % 60).toString().padStart(2, '0')} / 
-                  {Math.floor(item.duration / 60)}:{(item.duration % 60).toString().padStart(2, '0')}
-                </p>
+                {content && slug && (
+                  <Link
+                    to={`/watch/${item.content_type}/${slug}`}
+                    className="px-4 py-2 rounded-xl bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 text-[10px] font-black uppercase tracking-wider transition-all opacity-0 group-hover:opacity-100"
+                  >
+                    استئناف
+                  </Link>
+                )}
               </div>
-              <Link
-                to={`/watch/${(item as any).type}/${item.id}`}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-xs transition-colors"
-              >
-                استئناف
-              </Link>
-            </div>
-          ))}
+            )
+          })}
         </div>
       ) : (
-        <p className="text-zinc-400 text-sm">لا توجد عناصر لمتابعة المشاهدة</p>
+        <div className="flex flex-col items-center justify-center py-12 text-center opacity-40">
+          <PlayCircle size={48} className="text-zinc-800 mb-4" />
+          <p className="text-zinc-500 text-sm font-bold">لا توجد عناصر لمتابعة المشاهدة</p>
+          <p className="text-[10px] text-zinc-600 uppercase tracking-widest mt-2">No content in progress</p>
+        </div>
       )}
     </div>
   )
@@ -1578,54 +1712,363 @@ const ContinueWatchingSection = () => {
 // History Section Component
 const HistorySection = () => {
   const { user } = useAuth()
-  const { data: history, isLoading, error } = useRQ({
+  
+  // Fetch history entries from Supabase (returns external_ids)
+  const { data: historyEntries, isLoading: loadingEntries, error: entriesError } = useRQ({
     queryKey: ['history', user?.id],
     queryFn: () => getHistory(user!.id),
     enabled: !!user
   })
 
+  // Fetch full content details from CockroachDB using batch API
+  const { data: contentDetails, isLoading: loadingContent } = useRQ({
+    queryKey: ['history-content', historyEntries],
+    queryFn: async () => {
+      if (!historyEntries || historyEntries.length === 0) return []
+      
+      // Map entries to batch API format
+      const items = historyEntries.map(entry => ({
+        external_id: entry.external_id,
+        content_type: entry.content_type as 'movie' | 'tv',
+        external_source: entry.external_source || 'tmdb'
+      }))
+      
+      // Call batch API
+      return await fetchBatchContent(items)
+    },
+    enabled: !!historyEntries && historyEntries.length > 0
+  })
+
+  // Combine entries with content details
+  const enrichedHistory = historyEntries?.map((entry, index) => ({
+    ...entry,
+    content: contentDetails?.[index] || null
+  })) || []
+
+  const isLoading = loadingEntries || loadingContent
+  const error = entriesError
+
   if (isLoading) return (
-    <div className="rounded-lg border border-zinc-800 p-4 bg-zinc-900/50">
-      <div className="h-6 w-20 bg-zinc-800 rounded mb-4"></div>
+    <div className="rounded-[2rem] border border-white/5 p-6 bg-white/[0.02] backdrop-blur-md">
+      <div className="h-6 w-28 bg-zinc-800 rounded mb-4"></div>
       <SkeletonGrid count={3} />
     </div>
   )
 
   if (error) return (
-    <div className="rounded-lg border border-red-800 bg-red-900/20 p-4">
-      <h3 className="text-lg font-semibold text-red-400 mb-2">سجل المشاهدة</h3>
+    <div className="rounded-[2rem] border border-red-800 bg-red-900/20 p-6">
+      <h3 className="text-lg font-bold text-red-400 mb-2">سجل المشاهدة</h3>
       <p className="text-red-300 text-sm">{getArabicErrorMessage(error)}</p>
     </div>
   )
 
   return (
-    <div className="rounded-lg border border-zinc-800 p-4 bg-zinc-900/50 backdrop-blur-sm">
-      <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-        📜 سجل المشاهدة
+    <div className="rounded-[2rem] border border-white/5 p-6 bg-white/[0.02] backdrop-blur-md">
+      <h3 className="text-lg font-black text-white mb-6 flex items-center gap-3 tracking-tighter uppercase">
+        <div className="p-2 rounded-xl bg-purple-500/10 text-purple-500">
+          <Clock size={18} />
+        </div>
+        سجل المشاهدة
+        <span className="text-[10px] text-zinc-500 font-medium">({enrichedHistory.length})</span>
       </h3>
-      {history && history.length > 0 ? (
+      {enrichedHistory.length > 0 ? (
         <div className="space-y-2">
-          {history.slice(0, 5).map((item: any) => (
-            <div key={item.id} className="flex items-center gap-3 p-2 bg-zinc-800/50 rounded-lg">
-              <img 
-                src={item.poster_path || '/default-poster.jpg'} 
-                alt={item.title} 
-                className="w-12 h-16 object-cover rounded"
-                onError={(e) => e.currentTarget.src = '/default-poster.jpg'}
-                loading="lazy"
-                decoding="async"
-              />
-              <div className="flex-1">
-                <h4 className="text-sm font-medium text-white">{item.title}</h4>
-                <p className="text-xs text-zinc-400">
-                  تمت المشاهدة في {new Date(item.watched_at).toLocaleDateString('ar-EG')}
-                </p>
+          {enrichedHistory.slice(0, 5).map((item, idx) => {
+            const content = item.content
+            const title = content?.title || content?.name || 'المحتوى غير متوفر'
+            const posterUrl = content?.poster_url || '/default-poster.jpg'
+            const slug = content?.slug
+            const watchedDate = new Date(item.watched_at).toLocaleDateString('ar-EG', {
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric'
+            })
+
+            return (
+              <div key={`${item.external_id}-${item.content_type}-${idx}`} className="flex items-center gap-3 p-2 bg-zinc-800/30 rounded-xl hover:bg-zinc-800/50 transition-all group">
+                {content && slug ? (
+                  <Link to={`/${item.content_type}/${slug}`} className="flex-shrink-0">
+                    <img 
+                      src={posterUrl} 
+                      alt={title} 
+                      className="w-12 h-16 object-cover rounded border border-white/5 group-hover:border-purple-500/30 transition-all"
+                      onError={(e) => e.currentTarget.src = '/default-poster.jpg'}
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  </Link>
+                ) : (
+                  <div className="w-12 h-16 rounded bg-zinc-800 flex items-center justify-center flex-shrink-0">
+                    <AlertCircle size={20} className="text-red-500/50" />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  {content && slug ? (
+                    <Link to={`/${item.content_type}/${slug}`}>
+                      <h4 className="text-sm font-bold text-white truncate group-hover:text-purple-400 transition-colors">
+                        {title}
+                      </h4>
+                    </Link>
+                  ) : (
+                    <h4 className="text-sm font-bold text-red-400 truncate">{title}</h4>
+                  )}
+                  <p className="text-[10px] text-zinc-500 mt-0.5 font-medium">
+                    تمت المشاهدة في {watchedDate}
+                  </p>
+                  <p className="text-[9px] text-zinc-600 uppercase tracking-wider">
+                    {item.content_type === 'movie' ? 'فيلم' : 'مسلسل'}
+                  </p>
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       ) : (
-        <p className="text-zinc-400 text-sm">لا يوجد سجل مشاهدة</p>
+        <div className="flex flex-col items-center justify-center py-12 text-center opacity-40">
+          <Clock size={48} className="text-zinc-800 mb-4" />
+          <p className="text-zinc-500 text-sm font-bold">لا يوجد سجل مشاهدة</p>
+          <p className="text-[10px] text-zinc-600 uppercase tracking-widest mt-2">No viewing history</p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+
+// User Reviews Section Component
+const UserReviewsSection = ({ userId }: { userId: string }) => {
+  const [reviews, setReviews] = useState<any[]>([])
+  const [contentMap, setContentMap] = useState<Map<string, any>>(new Map())
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [page, setPage] = useState(0)
+  const [hasMore, setHasMore] = useState(false)
+  const limit = 10
+
+  useEffect(() => {
+    fetchUserReviews()
+  }, [userId, page])
+
+  const fetchUserReviews = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      // Fetch user's reviews from backend
+      const response = await fetch(`/api/reviews?user_id=${userId}&limit=${limit}&offset=${page * limit}&sort=newest`)
+      if (!response.ok) throw new Error('Failed to fetch reviews')
+      
+      const data = await response.json()
+      setReviews(data.reviews || [])
+      setHasMore(data.pagination?.hasMore || false)
+
+      // Extract unique external_ids for batch content lookup
+      const uniqueItems = new Map<string, { external_id: string; content_type: 'movie' | 'tv' | 'game' | 'software' }>()
+      data.reviews?.forEach((review: any) => {
+        const key = `${review.external_id}-${review.content_type}`
+        if (!uniqueItems.has(key)) {
+          uniqueItems.set(key, {
+            external_id: review.external_id,
+            content_type: review.content_type as 'movie' | 'tv' | 'game' | 'software'
+          })
+        }
+      })
+
+      // Fetch content details from CockroachDB batch API
+      if (uniqueItems.size > 0) {
+        const items = Array.from(uniqueItems.values())
+        const contentDetails = await fetchBatchContent(items)
+        
+        // Build content map
+        const newContentMap = new Map()
+        items.forEach((item, index) => {
+          const key = `${item.external_id}-${item.content_type}`
+          newContentMap.set(key, contentDetails[index])
+        })
+        setContentMap(newContentMap)
+      }
+
+      setLoading(false)
+    } catch (err: any) {
+      console.error('Error fetching user reviews:', err)
+      setError(err.message || 'Failed to load reviews')
+      setLoading(false)
+    }
+  }
+
+  if (loading && page === 0) {
+    return (
+      <div className="rounded-[2.5rem] border border-white/5 bg-white/[0.01] p-8 backdrop-blur-md">
+        <div className="flex justify-center py-10">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-lumen-gold"></div>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-[2.5rem] border border-red-800 bg-red-900/20 p-6">
+        <h3 className="text-lg font-bold text-red-400 mb-2">مراجعاتي</h3>
+        <p className="text-red-300 text-sm">{error}</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="rounded-[2.5rem] border border-white/5 bg-white/[0.01] p-8 backdrop-blur-md">
+      <h3 className="text-xl font-black text-white mb-8 flex items-center gap-4 tracking-tighter uppercase">
+        <div className="p-3 rounded-2xl bg-purple-500/10 text-purple-500">
+          <Star size={20} />
+        </div>
+        مراجعاتي
+        <span className="text-[10px] text-zinc-500 font-medium">({reviews.length})</span>
+      </h3>
+
+      {reviews.length > 0 ? (
+        <div className="space-y-6">
+          {reviews.map((review) => {
+            const contentKey = `${review.external_id}-${review.content_type}`
+            const content = contentMap.get(contentKey)
+            
+            return (
+              <div
+                key={review.id}
+                className="p-6 rounded-2xl bg-white/[0.03] border border-white/5 hover:border-white/10 transition-all"
+              >
+                {/* Content Info */}
+                <div className="flex items-start gap-4 mb-4">
+                  <Link
+                    to={content?.slug ? `/watch/${content.slug}` : '#'}
+                    className="flex-shrink-0 w-16 h-24 rounded-lg overflow-hidden border border-white/10 hover:border-lumen-gold transition-colors"
+                  >
+                    <img
+                      src={content?.poster_url || '/default-poster.jpg'}
+                      alt={content?.title || content?.name || 'Content Unavailable'}
+                      className="w-full h-full object-cover"
+                      onError={(e) => { e.currentTarget.src = '/default-poster.jpg' }}
+                    />
+                  </Link>
+                  
+                  <div className="flex-1 min-w-0">
+                    <Link
+                      to={content?.slug ? `/watch/${content.slug}` : '#'}
+                      className="text-lg font-bold text-white hover:text-lumen-gold transition-colors line-clamp-1"
+                    >
+                      {content?.title || content?.name || 'Content Unavailable'}
+                    </Link>
+                    <div className="flex items-center gap-2 mt-1 text-xs text-zinc-500">
+                      <span>{review.content_type === 'movie' ? 'فيلم' : review.content_type === 'tv' ? 'مسلسل' : review.content_type}</span>
+                      <span>•</span>
+                      <span>{new Date(review.created_at).toLocaleDateString('ar-SA')}</span>
+                      {review.edit_count > 0 && (
+                        <>
+                          <span>•</span>
+                          <span className="text-zinc-600">(معدّلة)</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Rating */}
+                {review.rating && (
+                  <div className="mb-3">
+                    <div className="flex items-center gap-2">
+                      {[...Array(10)].map((_, i) => (
+                        <Star
+                          key={i}
+                          size={14}
+                          className={i < review.rating ? 'text-lumen-gold fill-lumen-gold' : 'text-zinc-700'}
+                        />
+                      ))}
+                      <span className="text-sm font-bold text-lumen-gold">{review.rating}/10</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Title */}
+                {review.title && (
+                  <h4 className="text-base font-bold text-white mb-2" dir={review.language === 'ar' ? 'rtl' : 'ltr'}>
+                    {review.title}
+                  </h4>
+                )}
+
+                {/* Review Text */}
+                <p
+                  className="text-zinc-300 text-sm leading-relaxed line-clamp-3"
+                  dir={review.language === 'ar' ? 'rtl' : 'ltr'}
+                >
+                  {review.review_text}
+                </p>
+
+                {/* Footer */}
+                <div className="flex items-center gap-4 mt-4 pt-4 border-t border-white/5">
+                  <div className="flex items-center gap-1.5 text-xs text-zinc-500">
+                    <ThumbsUp size={14} />
+                    <span>{review.helpful_count || 0} مفيدة</span>
+                  </div>
+                  
+                  {review.language && (
+                    <div className="flex items-center gap-1.5 text-xs text-zinc-500">
+                      <span>{review.language === 'ar' ? '🇸🇦 عربي' : '🇬🇧 English'}</span>
+                    </div>
+                  )}
+
+                  {review.contains_spoilers && (
+                    <div className="flex items-center gap-1.5 text-xs text-yellow-500">
+                      <Eye size={14} />
+                      <span>تحتوي على حرق</span>
+                    </div>
+                  )}
+
+                  {review.is_verified && (
+                    <div className="flex items-center gap-1.5 text-xs text-green-500">
+                      <CheckCircle size={14} />
+                      <span>Verified</span>
+                    </div>
+                  )}
+
+                  <Link
+                    to={`/reviews/${review.id}`}
+                    className="mr-auto text-xs font-bold text-lumen-gold hover:text-lumen-gold/80 transition-colors"
+                  >
+                    عرض المراجعة الكاملة ←
+                  </Link>
+                </div>
+              </div>
+            )
+          })}
+
+          {/* Pagination */}
+          {(hasMore || page > 0) && (
+            <div className="flex items-center justify-center gap-4 pt-4">
+              {page > 0 && (
+                <button
+                  onClick={() => setPage(page - 1)}
+                  className="px-6 py-3 rounded-xl bg-white/5 text-white font-bold text-sm hover:bg-white/10 transition-all"
+                >
+                  السابق
+                </button>
+              )}
+              {hasMore && (
+                <button
+                  onClick={() => setPage(page + 1)}
+                  disabled={loading}
+                  className="px-6 py-3 rounded-xl bg-lumen-gold text-black font-bold text-sm hover:scale-105 disabled:opacity-50 transition-all"
+                >
+                  {loading ? 'جاري التحميل...' : 'التالي'}
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="text-center py-20 rounded-[2.5rem] border-2 border-dashed border-white/5">
+          <Star size={48} className="mx-auto text-zinc-800 mb-4" />
+          <p className="text-zinc-500 text-sm font-bold">لم تكتب أي مراجعات بعد</p>
+          <p className="text-[10px] text-zinc-600 uppercase tracking-widest mt-2">Start reviewing content you've watched</p>
+        </div>
       )}
     </div>
   )

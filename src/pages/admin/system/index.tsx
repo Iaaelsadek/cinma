@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
-import {Terminal, Database, FileCode, Play, Server, Save, Folder, File, Activity} from 'lucide-react';
-import { toast } from 'sonner';
+import React, { useState, useEffect, useRef, useCallback, startTransition } from 'react';
+import { Terminal, Database, FileCode, Play, Server, Save, Folder, File, Activity } from 'lucide-react';
+import { toast } from '../../../lib/toast-manager';
 import { supabase } from '../../../lib/supabase';
 
 const API_BASE = import.meta.env.VITE_API_BASE || '';
@@ -22,14 +22,14 @@ const SystemControl = () => {
       <div className="flex items-center justify-between border-b border-gray-800 pb-4">
         <h1 className="text-3xl font-bold text-cyan-400 flex items-center gap-2">
           <Server className="w-8 h-8" />
-          GOD MODE CONTROL
+          لوحة التحكم المتقدمة / System Control
         </h1>
         <div className="flex gap-2">
-          <TabButton id="terminal" icon={Terminal} label="Terminal" active={activeTab} set={setActiveTab} />
-          <TabButton id="files" icon={FileCode} label="Files" active={activeTab} set={setActiveTab} />
-          <TabButton id="database" icon={Database} label="Database" active={activeTab} set={setActiveTab} />
-          <TabButton id="engines" icon={Play} label="Engines" active={activeTab} set={setActiveTab} />
-          <TabButton id="ops" icon={Activity} label="Ops" active={activeTab} set={setActiveTab} />
+          <TabButton id="terminal" icon={Terminal} label="الطرفية / Terminal" active={activeTab} set={setActiveTab} />
+          <TabButton id="files" icon={FileCode} label="الملفات / Files" active={activeTab} set={setActiveTab} />
+          <TabButton id="database" icon={Database} label="قاعدة البيانات / DB" active={activeTab} set={setActiveTab} />
+          <TabButton id="engines" icon={Play} label="المحركات / Engines" active={activeTab} set={setActiveTab} />
+          <TabButton id="ops" icon={Activity} label="الحالة / Status" active={activeTab} set={setActiveTab} />
         </div>
       </div>
 
@@ -47,9 +47,8 @@ const SystemControl = () => {
 const TabButton = ({ id, icon: Icon, label, active, set }: any) => (
   <button
     onClick={() => set(id)}
-    className={`px-4 py-2 rounded-md flex items-center gap-2 transition-colors ${
-      active === id ? 'bg-cyan-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-    }`}
+    className={`px-4 py-2 rounded-md flex items-center gap-2 transition-colors ${active === id ? 'bg-cyan-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+      }`}
   >
     <Icon className="w-4 h-4" />
     {label}
@@ -66,10 +65,11 @@ const TerminalView = ({ token }: { token: string }) => {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const quickActions = [
-    { label: '🔄 Restart Server', command: 'pm2 restart all' },
-    { label: '🚀 Deploy', command: 'git pull && npm run build && pm2 restart all' },
-    { label: '🧹 Clear Cache', command: 'npm run cache:clear' },
-    { label: '📥 Auto-Import Content', command: 'npm run import:content' }
+    { label: '📊 عرض الحالة / Status', command: 'node scripts/check-count.mjs' },
+    { label: '🎬 استيراد أفلام عربية', command: 'node scripts/ingestion/02_seed_movies_arabic.js' },
+    { label: '🎥 استيراد أفلام أجنبية', command: 'node scripts/ingestion/03_seed_movies_foreign.js' },
+    { label: '📺 استيراد مسلسلات', command: 'node scripts/ingestion/04_seed_tv_series.js' },
+    { label: '🎌 استيراد أنمي', command: 'node scripts/ingestion/05_seed_anime.js' }
   ];
 
   const execute = async (e: React.FormEvent) => {
@@ -79,7 +79,7 @@ const TerminalView = ({ token }: { token: string }) => {
     const command = cmd;
     setCmd('');
     setHistory(h => [...h, `$ ${command}`]);
-    
+
     try {
       const res = await fetch(`${API_BASE}/api/admin/exec`, {
         method: 'POST',
@@ -110,7 +110,7 @@ const TerminalView = ({ token }: { token: string }) => {
         <div ref={endRef} />
       </div>
       <form onSubmit={execute} className="flex gap-2">
-        <input 
+        <input
           value={cmd}
           onChange={e => setCmd(e.target.value)}
           ref={inputRef}
@@ -138,7 +138,7 @@ const TerminalView = ({ token }: { token: string }) => {
         ))}
       </div>
       <div className="text-xs text-gray-500 mt-2">
-        Warning: Commands run on the server with full privileges. Be careful.
+        ⚠️ تحذير: الأوامر تُنفذ على السيرفر بصلاحيات كاملة. كن حذراً / Warning: Commands run with full privileges.
       </div>
     </div>
   );
@@ -150,8 +150,8 @@ const FileManager = ({ token }: { token: string }) => {
   const [files, setFiles] = useState<any[]>([]);
   const [currentFile, setCurrentFile] = useState<string | null>(null);
   const [content, setContent] = useState('');
-  
-  const loadPath = async (p: string) => {
+
+  const loadPath = useCallback(async (p: string) => {
     try {
       const res = await fetch(`${API_BASE}/api/admin/fs?path=${encodeURIComponent(p)}`, {
         headers: { 'x-admin-token': token }
@@ -165,10 +165,10 @@ const FileManager = ({ token }: { token: string }) => {
         setCurrentFile(data.path);
         setContent(data.content);
       }
-    } catch (err) {
+    } catch (err: any) {
       toast.error('Failed to load path');
     }
-  };
+  }, [token]);
 
   const saveFile = async () => {
     if (!currentFile) return;
@@ -179,12 +179,18 @@ const FileManager = ({ token }: { token: string }) => {
         body: JSON.stringify({ path: currentFile, content })
       });
       toast.success('File saved');
-    } catch (err) {
+    } catch (err: any) {
       toast.error('Failed to save');
     }
   };
 
-  useEffect(() => { loadPath('.'); }, []);
+  useEffect(() => {
+    let mounted = true;
+    startTransition(() => {
+      loadPath('.').catch(() => { });
+    });
+    return () => { mounted = false; };
+  }, [loadPath]);
 
   return (
     <div className="flex h-[600px] gap-4">
@@ -194,15 +200,15 @@ const FileManager = ({ token }: { token: string }) => {
         </div>
         <div className="flex-1 overflow-auto p-2">
           {path !== '.' && (
-            <div 
+            <div
               onClick={() => loadPath(`${path}/..`)}
               className="cursor-pointer p-1 hover:bg-gray-800 text-yellow-500 flex items-center gap-2"
             >
               <Folder className="w-4 h-4" /> ..
             </div>
           )}
-          {files.sort((a,b) => (a.type === 'dir' ? -1 : 1)).map(f => (
-            <div 
+          {files.sort((a, b) => (a.type === 'dir' ? -1 : 1)).map(f => (
+            <div
               key={f.name}
               onClick={() => loadPath(`${path}/${f.name}`)}
               className={`cursor-pointer p-1 hover:bg-gray-800 flex items-center gap-2 ${f.type === 'dir' ? 'text-yellow-500' : 'text-blue-400'}`}
@@ -222,7 +228,7 @@ const FileManager = ({ token }: { token: string }) => {
                 <Save className="w-3 h-3" /> Save
               </button>
             </div>
-            <textarea 
+            <textarea
               value={content}
               onChange={e => setContent(e.target.value)}
               className="flex-1 bg-gray-900 text-gray-300 font-mono text-sm p-2 outline-none resize-none"
@@ -258,7 +264,7 @@ const DatabaseManager = ({ token }: { token: string }) => {
       setResult(data);
       if (data.error) toast.error('Query Error');
       else toast.success('Query Executed');
-    } catch (err) {
+    } catch (err: any) {
       toast.error('Failed to run query');
     }
     setLoading(false);
@@ -267,7 +273,7 @@ const DatabaseManager = ({ token }: { token: string }) => {
   return (
     <div className="flex flex-col h-[500px] gap-4">
       <div className="flex flex-col gap-2 h-1/3">
-        <textarea 
+        <textarea
           value={query}
           onChange={e => setQuery(e.target.value)}
           className="flex-1 bg-black border border-gray-700 rounded p-2 font-mono text-green-400 text-sm"
@@ -280,14 +286,14 @@ const DatabaseManager = ({ token }: { token: string }) => {
       <div className="flex-1 bg-black border border-gray-800 rounded overflow-auto p-2">
         {result?.error && <div className="text-red-500 font-mono whitespace-pre-wrap">{result.error}</div>}
         {result?.stdout && (
-           <div className="font-mono text-xs text-gray-300 whitespace-pre-wrap">
-             {result.stdout}
-           </div>
+          <div className="font-mono text-xs text-gray-300 whitespace-pre-wrap">
+            {result.stdout}
+          </div>
         )}
         {result?.stderr && (
-           <div className="font-mono text-xs text-yellow-500 whitespace-pre-wrap border-t border-gray-800 mt-2 pt-2">
-             {result.stderr}
-           </div>
+          <div className="font-mono text-xs text-yellow-500 whitespace-pre-wrap border-t border-gray-800 mt-2 pt-2">
+            {result.stderr}
+          </div>
         )}
       </div>
     </div>
@@ -299,95 +305,165 @@ const EngineManager = ({ token }: { token: string }) => {
   const [logs, setLogs] = useState<string[]>([]);
   const [running, setRunning] = useState(false);
 
-  const runEngine = async (type: string) => {
+  const runScript = async (command: string, label: string) => {
     setRunning(true);
-    setLogs(prev => [...prev, `Starting ${type}...`]);
+    setLogs(prev => [...prev, `🚀 ${label}...`]);
     try {
-      let endpoint = '/api/admin/refresh/anime';
-      if (type === 'quran') endpoint = '/api/admin/refresh/quran';
-      
-      const res = await fetch(`${API_BASE}${endpoint}`, {
+      const res = await fetch(`${API_BASE}/api/admin/exec`, {
         method: 'POST',
-        headers: { 'x-admin-token': token }
+        headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+        body: JSON.stringify({ command })
       });
       const data = await res.json();
-      if (data.logs) {
-         setLogs(prev => [...prev, ...data.logs]);
+      if (data.stdout) setLogs(prev => [...prev, data.stdout]);
+      if (data.stderr) setLogs(prev => [...prev, `⚠️ ${data.stderr}`]);
+      if (data.error) {
+        setLogs(prev => [...prev, `❌ Error: ${data.error}`]);
+        toast.error(`❌ ${label} فشل`);
+      } else {
+        setLogs(prev => [...prev, `✅ ${label} اكتمل بنجاح`]);
+        toast.success(`✅ ${label} اكتمل`);
       }
-      setLogs(prev => [...prev, `Status: ${data.ok ? 'SUCCESS' : 'FAILED'}`]);
     } catch (err: any) {
-      setLogs(prev => [...prev, `Error: ${err.message}`]);
+      setLogs(prev => [...prev, `❌ Network Error: ${err.message}`]);
+      toast.error(`❌ خطأ في الشبكة`);
     }
     setRunning(false);
   };
 
   return (
     <div className="grid grid-cols-3 gap-4 h-[500px]">
-      <div className="col-span-1 space-y-4">
-        <EngineCard title="Anime Engine" desc="Fetch Anime Data" onClick={() => runEngine('anime')} running={running} />
-        <EngineCard title="Quran Engine" desc="Update Quran Data" onClick={() => runEngine('quran')} running={running} />
-        
-        <div className="mt-8 border-t border-gray-800 pt-4">
-          <h3 className="font-bold mb-2">Deploy / System</h3>
-          <div className="grid grid-cols-2 gap-2 mb-2">
-            <button 
-               onClick={async () => {
-                  setRunning(true);
-                  setLogs(p => [...p, 'Installing dependencies...']);
-                  try {
-                    const res = await fetch(`${API_BASE}/api/admin/exec`, {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
-                      body: JSON.stringify({ command: 'pip install -r backend/requirements.txt' })
-                    });
-                    const d = await res.json();
-                    setLogs(p => [...p, d.stdout, d.stderr]);
-                  } catch(e: any) { setLogs(p => [...p, e.message]); }
-                  setRunning(false);
-               }}
-               className="bg-green-600 hover:bg-green-700 py-2 rounded font-bold text-sm"
+      <div className="col-span-1 space-y-4 overflow-auto">
+        <div className="border-t border-gray-800 pt-4">
+          <h3 className="font-bold mb-2 text-purple-400">📥 استيراد المحتوى / Content Ingestion</h3>
+          <div className="space-y-2">
+            <button
+              onClick={() => runScript('node scripts/ingestion/02_seed_movies_arabic.js', 'استيراد أفلام عربية')}
+              disabled={running}
+              className="w-full bg-purple-600 hover:bg-purple-700 py-2 rounded font-bold text-sm disabled:opacity-50"
             >
-               📦 INSTALL DEPS
+              🎬 أفلام عربية
             </button>
-            <button 
-               onClick={async () => {
-                  setRunning(true);
-                  setLogs(p => [...p, 'Restarting Server (via PM2)...']);
-                  try {
-                    const res = await fetch(`${API_BASE}/api/admin/exec`, {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
-                      body: JSON.stringify({ command: 'pm2 restart all' })
-                    });
-                    const d = await res.json();
-                    setLogs(p => [...p, d.stdout, d.stderr]);
-                  } catch(e: any) { setLogs(p => [...p, e.message]); }
-                  setRunning(false);
-               }}
-               className="bg-yellow-600 hover:bg-yellow-700 py-2 rounded font-bold text-sm"
+            <button
+              onClick={() => runScript('node scripts/ingestion/03_seed_movies_foreign.js', 'استيراد أفلام أجنبية')}
+              disabled={running}
+              className="w-full bg-indigo-600 hover:bg-indigo-700 py-2 rounded font-bold text-sm disabled:opacity-50"
             >
-               🔄 RESTART SERVER
+              🎥 أفلام أجنبية
+            </button>
+            <button
+              onClick={() => runScript('node scripts/ingestion/04_seed_tv_series.js', 'استيراد مسلسلات')}
+              disabled={running}
+              className="w-full bg-blue-600 hover:bg-blue-700 py-2 rounded font-bold text-sm disabled:opacity-50"
+            >
+              📺 مسلسلات
+            </button>
+            <button
+              onClick={() => runScript('node scripts/ingestion/05_seed_anime.js', 'استيراد أنمي')}
+              disabled={running}
+              className="w-full bg-pink-600 hover:bg-pink-700 py-2 rounded font-bold text-sm disabled:opacity-50"
+            >
+              🎌 أنمي
             </button>
           </div>
-          <button 
-             onClick={async () => {
+        </div>
+
+        <div className="border-t border-gray-800 pt-4">
+          <h3 className="font-bold mb-2 text-green-400">🔧 التصليحات / Fixes</h3>
+          <div className="space-y-2">
+            <button
+              onClick={() => runScript('node scripts/fix-primary-genre.js', 'تصليح Primary Genre')}
+              disabled={running}
+              className="w-full bg-green-600 hover:bg-green-700 py-2 rounded font-bold text-sm disabled:opacity-50"
+            >
+              🔧 Primary Genre
+            </button>
+            <button
+              onClick={() => runScript('node scripts/fix-slugs.js', 'تصليح Slugs')}
+              disabled={running}
+              className="w-full bg-teal-600 hover:bg-teal-700 py-2 rounded font-bold text-sm disabled:opacity-50"
+            >
+              🔗 Slugs
+            </button>
+            <button
+              onClick={() => runScript('node scripts/verify-all-fixes.js', 'التحقق من التصليحات')}
+              disabled={running}
+              className="w-full bg-cyan-600 hover:bg-cyan-700 py-2 rounded font-bold text-sm disabled:opacity-50"
+            >
+              ✅ التحقق
+            </button>
+          </div>
+        </div>
+
+        <div className="border-t border-gray-800 pt-4">
+          <h3 className="font-bold mb-2 text-orange-400">🤖 معالجة AI / AI Processing</h3>
+          <div className="space-y-2">
+            <button
+              onClick={() => runScript('node scripts/moderate-content-batch-200.js', 'معالجة 200 عنصر')}
+              disabled={running}
+              className="w-full bg-orange-600 hover:bg-orange-700 py-2 rounded font-bold text-sm disabled:opacity-50"
+            >
+              🤖 معالجة (200)
+            </button>
+            <button
+              onClick={() => runScript('node scripts/check-count.mjs', 'فحص العدد')}
+              disabled={running}
+              className="w-full bg-yellow-600 hover:bg-yellow-700 py-2 rounded font-bold text-sm disabled:opacity-50"
+            >
+              📊 فحص العدد
+            </button>
+          </div>
+        </div>
+
+        <div className="border-t border-gray-800 pt-4">
+          <h3 className="font-bold mb-2 text-red-400">🧹 الصيانة / Maintenance</h3>
+          <div className="space-y-2">
+            <button
+              onClick={async () => {
                 setRunning(true);
-                setLogs(p => [...p, 'Deploying...']);
+                setLogs(p => [...p, '🧹 مسح الكاش / Clearing cache...']);
                 try {
-                  const res = await fetch(`${API_BASE}/api/admin/exec`, {
+                  const res = await fetch(`${API_BASE}/api/admin/cache/clear`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
-                    body: JSON.stringify({ command: 'npm run build && git add . && git commit -m "Admin Deploy" && git push' })
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'x-admin-key': 'cinma-prod-8f2kx9m4-q7wp-2026'
+                    }
                   });
                   const d = await res.json();
-                  setLogs(p => [...p, d.stdout, d.stderr]);
-                } catch(e: any) { setLogs(p => [...p, e.message]); }
+                  if (d.success) {
+                    setLogs(p => [...p, '✅ تم مسح الكاش بنجاح']);
+                    toast.success('✅ تم مسح الكاش');
+                  } else {
+                    setLogs(p => [...p, `❌ فشل: ${d.error || 'Unknown'}`]);
+                    toast.error('❌ فشل مسح الكاش');
+                  }
+                } catch (e: any) {
+                  setLogs(p => [...p, `❌ خطأ: ${e.message}`]);
+                  toast.error('❌ خطأ في الشبكة');
+                }
                 setRunning(false);
-             }}
-             className="w-full bg-purple-600 hover:bg-purple-700 py-3 rounded font-bold"
-          >
-             🚀 DEPLOY TO PRODUCTION
-          </button>
+              }}
+              disabled={running}
+              className="w-full bg-red-600 hover:bg-red-700 py-2 rounded font-bold text-sm disabled:opacity-50"
+            >
+              🧹 مسح الكاش
+            </button>
+            <button
+              onClick={() => runScript('npm install', 'تثبيت الحزم')}
+              disabled={running}
+              className="w-full bg-emerald-600 hover:bg-emerald-700 py-2 rounded font-bold text-sm disabled:opacity-50"
+            >
+              📦 تثبيت الحزم
+            </button>
+            <button
+              onClick={() => runScript('npm run build', 'بناء المشروع')}
+              disabled={running}
+              className="w-full bg-sky-600 hover:bg-sky-700 py-2 rounded font-bold text-sm disabled:opacity-50"
+            >
+              🏗️ بناء المشروع
+            </button>
+          </div>
         </div>
       </div>
       <div className="col-span-2 bg-black border border-gray-800 rounded p-4 overflow-auto font-mono text-xs">
@@ -399,17 +475,6 @@ const EngineManager = ({ token }: { token: string }) => {
     </div>
   );
 };
-
-const EngineCard = ({ title, desc, onClick, running }: any) => (
-  <button 
-    onClick={onClick}
-    disabled={running}
-    className="w-full bg-gray-800 hover:bg-gray-700 p-4 rounded text-left border border-gray-700 transition-all active:scale-95"
-  >
-    <div className="font-bold text-lg text-cyan-400">{title}</div>
-    <div className="text-sm text-gray-400">{desc}</div>
-  </button>
-);
 
 const OpsStatusPanel = ({ token }: { token: string }) => {
   const [loading, setLoading] = useState(false);
@@ -437,7 +502,9 @@ const OpsStatusPanel = ({ token }: { token: string }) => {
   };
 
   useEffect(() => {
-    load();
+    startTransition(() => {
+      load().catch(() => { });
+    });
   }, []);
 
   const statusClass = (s: string) => {

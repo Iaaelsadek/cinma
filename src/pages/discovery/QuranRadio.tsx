@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { ChevronLeft, ChevronRight, X, Radio, Clock, Sun, Cloud, CloudRain, CloudSnow, CloudLightning, Wind } from 'lucide-react'
-import { Helmet } from 'react-helmet-async'
+import { SeoHead } from '../../components/common/SeoHead'
 import { motion, AnimatePresence } from 'framer-motion'
 
 type PrayerKey = 'Fajr' | 'Dhuhr' | 'Asr' | 'Maghrib' | 'Isha'
@@ -120,7 +120,7 @@ export default function QuranRadio() {
       audio.volume = 1
       await audio.play()
       setIsAutoplayBlocked(false)
-    } catch (err) {
+    } catch (err: any) {
       const name = err instanceof DOMException ? err.name : (err as { name?: string } | null)?.name
       if (name === 'NotAllowedError') {
         setIsAutoplayBlocked(true)
@@ -232,9 +232,22 @@ export default function QuranRadio() {
 
   return (
     <div className="fixed inset-0 bg-[#07070a]/98 backdrop-blur-2xl flex items-center justify-center p-4 z-[500] select-none">
-      <Helmet>
-        <title>Radio Quran | راديو القرآن</title>
-      </Helmet>
+      <SeoHead
+        title="راديو القرآن الكريم - بث مباشر"
+        description="استمع إلى بث مباشر للقرآن الكريم على مدار الساعة من أفضل الإذاعات والقراء. إذاعة القرآن الكريم من القاهرة وتلاوات خاشعة متنوعة."
+        type="website"
+        image="https://placehold.co/1200x630/0f0f14/FFFFFF/png?text=راديو+القرآن+الكريم"
+        schema={{
+          "@context": "https://schema.org",
+          "@type": "RadioStation",
+          "name": "راديو القرآن الكريم - سينما أونلاين",
+          "description": "بث مباشر للقرآن الكريم على مدار الساعة",
+          "url": "https://cinma.online/discovery/quran-radio",
+          "broadcastFrequency": "Online Streaming",
+          "genre": "Religious",
+          "inLanguage": "ar"
+        }}
+      />
 
       {/* Main Radio Container */}
       <motion.div 

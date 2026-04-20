@@ -82,7 +82,7 @@ export class DatabaseAuditor {
         metrics,
         duration: Date.now() - startTime
       };
-    } catch (error) {
+    } catch (error: any) {
       auditLogger.error('DatabaseAuditor', 'Database audit failed', { error });
       return {
         component: 'DatabaseAuditor',
@@ -324,7 +324,7 @@ export class DatabaseAuditor {
       }
 
       auditLogger.info('DatabaseAuditor', `Found ${indexCount} database indexes`);
-    } catch (error) {
+    } catch (error: any) {
       issues.push({
         severity: 'high',
         category: 'database',
@@ -355,7 +355,7 @@ export class DatabaseAuditor {
           files.push(fullPath);
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       auditLogger.error('DatabaseAuditor', `Failed to read directory: ${dir}`, { error });
     }
     

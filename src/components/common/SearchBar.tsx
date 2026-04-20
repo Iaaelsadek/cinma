@@ -1,4 +1,4 @@
-import {useEffect, useState} from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useDebounce } from '../../hooks/useDebounce'
 import { Input, InputSize } from './Input'
@@ -64,6 +64,8 @@ export const SearchBar = ({ placeholder, className, size = 'md', onQueryChange, 
   return (
     <div className={`relative w-full ${className || ''}`}>
       <Input
+        id="searchbar-input"
+        name="q"
         value={q}
         onChange={(e) => setQ(e.target.value)}
         onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
@@ -74,7 +76,7 @@ export const SearchBar = ({ placeholder, className, size = 'md', onQueryChange, 
         className="w-full bg-black/60 border-white/20 hover:border-white/40 focus:border-primary/60 transition-colors pl-28 rtl:pl-28 rtl:pr-4"
         {...props}
       />
-      
+
       {/* Position icons on the far LEFT (in RTL) or RIGHT (in LTR) */}
       <div className={`absolute top-1/2 -translate-y-1/2 flex items-center gap-1 ${lang === 'ar' ? 'left-2' : 'right-2'}`}>
         <button

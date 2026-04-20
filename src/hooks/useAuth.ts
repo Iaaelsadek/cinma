@@ -70,7 +70,7 @@ export const useAuth = create<AuthState>((set, get) => ({
           localStorage.removeItem('guest_progress');
         }
       }
-    } catch (e) {
+    } catch (e: any) {
       logAuthError('Failed to sync local data', e);
     }
   },
@@ -80,7 +80,7 @@ export const useAuth = create<AuthState>((set, get) => ({
       try {
         await refreshPromise;
         return;
-      } catch (e) {
+      } catch (e: any) {
         if (!silent) set({ loading: false });
         return;
       }

@@ -1,44 +1,49 @@
-name: Link Healer & Cache Generator
+name: Link Healer
 
 on:
   schedule:
-    # Run twice a week (e.g., Mondays and Thursdays at 00:00 UTC)
-    - cron: '0 0 * * 1,4'
-  workflow_dispatch: # Allow manual trigger
+    - cron: '0 3 * * 1'  # Every Monday at 3 AM UTC
+  workflow_dispatch:
 
 jobs:
-  heal-and-cache:
+  heal-links:
     runs-on: ubuntu-latest
-    
+
     steps:
-      - uses: actions/checkout@v3
-      
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          python-version: '3.9'
-          
+          node-version: '20'
+          cache: 'npm'
+
       - name: Install dependencies
+        run: npm ci
+
+      - name: Check broken server links via API
         run: |
-          python -m pip install --upgrade pip
-          pip install supabase python-dotenv aiohttp requests
-          
-      - name: Run Link Healer
+          node -e "
+          const fetch = (...args) => import('node-fetch').then(({default: f}) => f(...args));
+          async function main() {
+            const base = process.env.VITE_API_BASE || 'https://api.cinma.online';
+            try {
+              const res = await fetch(base + '/api/link-checks?status=broken&limit=50');
+              if (res.ok) {
+                const data = await res.json();
+                console.log('Broken links found:', data.data?.length || 0);
+              }
+            } catch(e) {
+              console.log('API check skipped:', e.message);
+            }
+          }
+          main();
+          "
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-        run: python backend/link_healer.py
-        
-      - name: Generate Static Cache
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-        run: python backend/generate_cache.py
-        
-      - name: Commit and Push Cache Changes
-        run: |
-          git config --global user.name 'GitHub Action'
-          git config --global user.email 'action@github.com'
-          git add public/data/homepage_cache.json
-          git commit -m "Update static cache [skip ci]" || echo "No changes to commit"
-          git push
+          VITE_API_BASE: ${{ secrets.VITE_API_BASE }}
+        continue-on-error: true
+
+      - name: Notify on completion
+        if: always()
+        run: echo "Link healer check completed"

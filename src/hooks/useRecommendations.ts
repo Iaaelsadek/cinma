@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
-import { supabase, getUserPreferences } from '../lib/supabase'
+import { getUserPreferences } from '../lib/supabase'
 import { useAuth } from './useAuth'
-import { tmdb } from '../lib/tmdb'
+import axios from 'axios'
 
 type ContentItem = {
   id: number
@@ -17,10 +17,10 @@ type ContentItem = {
 }
 
 // Helper to fetch details for history/watchlist items to get genres
-async function fetchContentDetails(items: { content_id: number; content_type: string }[]) {
+async function fetchContentDetails(items: { external_id: string; content_type: string }[]) {
   // We'll just take the last 5 distinct items to form a preference profile
-  // Using TMDB to get details including genres and cast if possible
-  const distinctItems = Array.from(new Set(items.map(i => `${i.content_type}:${i.content_id}`)))
+  // Using CockroachDB API to get details including genres
+  const distinctItems = Array.from(new Set(items.map(i => `${i.content_type}:${i.external_id}`)))
     .slice(0, 5)
     .map(s => {
       const [type, id] = s.split(':')
@@ -30,14 +30,13 @@ async function fetchContentDetails(items: { content_id: number; content_type: st
   const details = await Promise.all(
     distinctItems.map(async (item) => {
       try {
-        const { data } = await tmdb.get(`/${item.type}/${item.id}`, {
-          params: { append_to_response: 'credits' }
-        })
+        const endpoint = item.type === 'movie' ? `/api/movies/${item.id}` : `/api/tv/${item.id}`
+        const { data } = await axios.get(endpoint)
         return {
           ...data,
           media_type: item.type
         }
-      } catch (e) {
+      } catch (e: any) {
         return null
       }
     })
@@ -67,14 +66,17 @@ export function useRecommendations() {
       const castCounts: Record<number, number> = {}
 
       details.forEach((item: any) => {
-        // Count Genres
-        item.genres?.forEach((g: any) => {
-          genreCounts[g.id] = (genreCounts[g.id] || 0) + 1
+        // Count Genres - parse from JSON string if needed
+        const genres = typeof item.genres === 'string' ? JSON.parse(item.genres) : item.genres
+        genres?.forEach((g: any) => {
+          const genreId = typeof g === 'object' ? g.id : g
+          genreCounts[genreId] = (genreCounts[genreId] || 0) + 1
         })
         
-        // Count Cast (top 3 billed actors)
-        if (item.credits && item.credits.cast) {
-          item.credits.cast.slice(0, 3).forEach((actor: any) => {
+        // Count Cast (top 3 billed actors) - parse from JSON string if needed
+        const castData = typeof item.cast_data === 'string' ? JSON.parse(item.cast_data) : item.cast_data
+        if (castData && Array.isArray(castData)) {
+          castData.slice(0, 3).forEach((actor: any) => {
             castCounts[actor.id] = (castCounts[actor.id] || 0) + 1
           })
         }
@@ -95,7 +97,7 @@ export function useRecommendations() {
       if (topGenres.length === 0 && topCast.length === 0) return []
 
       // 3. Similarity Algorithm: Fetch recommendations based on top genres & cast
-      // We'll use TMDB discover for this to get high quality recommendations
+      // We'll use CockroachDB API for this to get high quality recommendations
       const recommendations: ContentItem[] = []
       
       // Strategy: 
@@ -104,56 +106,36 @@ export function useRecommendations() {
       
       // Fetch for top genre (Movie)
       try {
-        const { data: movies } = await tmdb.get('/discover/movie', {
+        const { data: movies } = await axios.get('/api/movies', {
           params: {
-            with_genres: topGenres.join('|'), // OR logic for broader results
-            with_people: topCast.length > 0 ? topCast.join('|') : undefined, // Include favorite actors
-            sort_by: 'popularity.desc',
-            'vote_count.gte': 100,
-            page: 1,
-            include_adult: false
+            genres: topGenres.join(','),
+            limit: 20
           }
         })
         // Add media_type
         const movieResults = movies.results?.map((m: any) => ({ ...m, media_type: 'movie' })) || []
         recommendations.push(...movieResults)
-        
-        // If we have cast but few results from mixed query, try cast-only query
-        if (topCast.length > 0 && recommendations.length < 5) {
-             const { data: castMovies } = await tmdb.get('/discover/movie', {
-              params: {
-                with_people: topCast.join('|'),
-                sort_by: 'popularity.desc',
-                page: 1,
-                include_adult: false
-              }
-            })
-            recommendations.push(...(castMovies.results?.map((m: any) => ({ ...m, media_type: 'movie' })) || []))
-        }
-      } catch (e) {
+      } catch (e: any) {
         // Ignore error
       }
 
       // Fetch for top genre (TV)
       try {
-        const { data: tv } = await tmdb.get('/discover/tv', {
+        const { data: tv } = await axios.get('/api/tv', {
           params: {
-            with_genres: topGenres.join('|'),
-            sort_by: 'popularity.desc',
-            'vote_count.gte': 100,
-            page: 1,
-            include_adult: false
+            genres: topGenres.join(','),
+            limit: 20
           }
         })
         const tvResults = tv.results?.map((t: any) => ({ ...t, media_type: 'tv' })) || []
         recommendations.push(...tvResults)
-      } catch (e) {
+      } catch (e: any) {
         // Ignore error
       }
 
       // 4. Filter out watched/watchlist items
       // Create a set of "type:id" strings for quick lookup
-      const watchedSet = new Set(allItems.map(i => `${i.content_type}:${i.content_id}`))
+      const watchedSet = new Set(allItems.map(i => `${i.content_type}:${i.external_id}`))
       
       const filtered = recommendations.filter(item => 
         !watchedSet.has(`${item.media_type}:${item.id}`)

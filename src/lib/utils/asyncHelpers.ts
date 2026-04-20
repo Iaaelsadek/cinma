@@ -9,7 +9,7 @@ export function asyncHandler<T, Args extends any[]>(
   return async (...args: Args): Promise<T | null> => {
     try {
       return await fn(...args)
-    } catch (error) {
+    } catch (error: any) {
       return null
     }
   }
@@ -39,7 +39,7 @@ export async function retryAsync<T>(
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       return await fn()
-    } catch (error) {
+    } catch (error: any) {
       lastError = error as Error
       
       if (attempt < maxRetries) {
@@ -100,7 +100,7 @@ export function debounceAsync<T, Args extends any[]>(
         try {
           const result = await fn(...args)
           resolve(result)
-        } catch (error) {
+        } catch (error: any) {
           reject(error)
         } finally {
           pendingPromise = null

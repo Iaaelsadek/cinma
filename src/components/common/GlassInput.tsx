@@ -22,7 +22,7 @@ export const GlassInput = memo(forwardRef<HTMLInputElement, GlassInputProps>(({
       <input
         ref={ref}
         className={twMerge(
-          "w-full bg-amber-950/60 border border-amber-500/20 rounded-xl py-3 text-sm text-white focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20 transition-all placeholder:text-amber-500/50 backdrop-blur-md",
+          "w-full bg-gray-800/80 border border-gray-600/30 rounded-xl py-3 text-sm text-white focus:outline-none focus:border-gray-500/50 focus:ring-1 focus:ring-gray-500/20 transition-all placeholder:text-gray-400/60 backdrop-blur-md",
           icon ? "pl-12 pr-4" : "px-4",
           className
         )}

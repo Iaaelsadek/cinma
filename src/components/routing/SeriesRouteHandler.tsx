@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { lazy, Suspense } from 'react';
 import { PageLoader } from '../common/PageLoader';
@@ -11,27 +12,25 @@ const CategoryHub = lazy(() =>
 
 export const SeriesRouteHandler = () => {
   const params = useParams();
-  // The param name in App.tsx will be "id" to match existing usage in SeriesDetails
-  // But wait, SeriesDetails expects "id" from useParams if not passed as prop.
-  // We modified SeriesDetails to accept prop.
+  const { slug } = params;
 
-  // The route in App.tsx will be "/series/:id".
-  // So params.id will be "top_rated" or "12345".
-  const { id } = params;
+  // Check if it's a known category first
+  const knownCategories = ['top_rated', 'popular', 'on_the_air', 'airing_today', 'trending'];
+  const isKnownCategory = knownCategories.includes(slug || '');
 
-  const isNumeric = /^\d+$/.test(id || '');
-
-  if (isNumeric) {
+  // If it's a known category, show CategoryHub
+  if (isKnownCategory) {
     return (
       <Suspense fallback={<PageLoader />}>
-        <SeriesDetails slug={id} />
+        <CategoryHub type='tv' category={slug} />
       </Suspense>
     );
   }
 
+  // Otherwise, treat it as a series slug and show SeriesDetails
   return (
     <Suspense fallback={<PageLoader />}>
-      <CategoryHub type='tv' category={id} />
+      <SeriesDetails slug={slug} />
     </Suspense>
   );
 };

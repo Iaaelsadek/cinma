@@ -7,8 +7,7 @@
 /* -------------------------------------------------------------------------- */
 :root {
   color-scheme: dark;
-  
-  /* Legacy LUMEN Variables */
+
   --lumen-void: #08080C;
   --lumen-surface: #0F0F14;
   --lumen-muted: #1C1B1F;
@@ -21,108 +20,23 @@
   --deep-space: #08080C;
   --neon-primary: #C9A962;
   --neon-secondary: #A8A5A0;
-  
-  /* Design Token System - Semantic Colors */
+
   --color-primary: #C9A962;
   --color-primary-light: #E8D5A3;
   --color-primary-dark: #A88542;
-  
   --color-success: #10B981;
-  --color-success-light: #34D399;
-  --color-success-dark: #059669;
-  
   --color-warning: #F59E0B;
-  --color-warning-light: #FBBF24;
-  --color-warning-dark: #D97706;
-  
   --color-error: #EF4444;
-  --color-error-light: #F87171;
-  --color-error-dark: #DC2626;
-  
   --color-info: #3B82F6;
-  --color-info-light: #60A5FA;
-  --color-info-dark: #2563EB;
-  
-  /* Surface Colors */
   --color-void: #08080C;
   --color-surface: #0F0F14;
   --color-raised: #1C1B1F;
   --color-overlay: rgba(8, 8, 12, 0.9);
-  
-  /* Text Colors */
   --color-text-primary: #E8E4DC;
   --color-text-secondary: #A8A5A0;
   --color-text-tertiary: #71717A;
-  --color-text-disabled: rgba(232, 228, 220, 0.4);
-  
-  /* Border Colors */
   --color-border-default: rgba(255, 255, 255, 0.15);
   --color-border-muted: rgba(255, 255, 255, 0.08);
-  --color-border-focus: #C9A962;
-  --color-border-hover: rgba(255, 255, 255, 0.20);
-  
-  /* Spacing Scale (4px base) */
-  --spacing-1: 4px;
-  --spacing-2: 8px;
-  --spacing-3: 12px;
-  --spacing-4: 16px;
-  --spacing-6: 24px;
-  --spacing-8: 32px;
-  --spacing-12: 48px;
-  --spacing-16: 64px;
-  --spacing-24: 96px;
-  
-  /* Typography */
-  --font-family-arabic: "Cairo", system-ui, sans-serif;
-  --font-family-english: "DM Sans", system-ui, sans-serif;
-  --font-family-universal: "DM Sans", "Cairo", system-ui, sans-serif;
-  
-  /* Font Sizes */
-  --font-size-xs: 0.75rem;
-  --font-size-sm: 0.875rem;
-  --font-size-base: 1rem;
-  --font-size-lg: 1.125rem;
-  --font-size-xl: 1.25rem;
-  --font-size-2xl: 1.5rem;
-  --font-size-3xl: 1.875rem;
-  --font-size-4xl: 2.25rem;
-  --font-size-5xl: 3rem;
-  
-  /* Font Weights */
-  --font-weight-normal: 400;
-  --font-weight-medium: 500;
-  --font-weight-semibold: 600;
-  --font-weight-bold: 700;
-  
-  /* Line Heights */
-  --line-height-tight: 1.25;
-  --line-height-normal: 1.5;
-  --line-height-relaxed: 1.75;
-  
-  /* Shadows */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-  --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-  
-  --shadow-lumen-card: 0 4px 24px -4px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(28, 27, 31, 0.6);
-  --shadow-lumen-card-hover: 0 24px 48px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(201, 169, 98, 0.35), 0 0 40px -8px rgba(201, 169, 98, 0.2);
-  
-  --shadow-gold-glow-sm: 0 0 10px rgba(201, 169, 98, 0.25);
-  --shadow-gold-glow-md: 0 0 20px rgba(201, 169, 98, 0.35);
-  --shadow-gold-glow-lg: 0 0 30px rgba(201, 169, 98, 0.45);
-  
-  /* Animation Durations */
-  --duration-fast: 150ms;
-  --duration-normal: 300ms;
-  --duration-slow: 500ms;
-  
-  /* Easing Functions */
-  --ease-lumen: cubic-bezier(0.22, 1, 0.36, 1);
-  --ease-in-out: cubic-bezier(0.42, 0, 0.58, 1);
-  --ease-out: cubic-bezier(0, 0, 0.58, 1);
-  --ease-in: cubic-bezier(0.42, 0, 1, 1);
 }
 
 /* -------------------------------------------------------------------------- */
@@ -130,12 +44,15 @@
 /* -------------------------------------------------------------------------- */
 html {
   scroll-behavior: smooth;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 body {
   background: var(--lumen-void);
   font-family: 'Cairo', 'DM Sans', system-ui, sans-serif;
   overflow-x: hidden;
+  overflow-y: auto;
   color: var(--lumen-cream);
   -webkit-font-smoothing: antialiased;
 }
@@ -145,26 +62,54 @@ body {
 }
 
 /* -------------------------------------------------------------------------- */
-/*  Scrollbar — minimal, LUMEN                                                */
+/*  Scrollbar — hide internal only, keep main page scrollbar                 */
 /* -------------------------------------------------------------------------- */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-  background: var(--lumen-surface);
+
+/* Hide scrollbars on all internal elements */
+*:not(html):not(body) {
+  scrollbar-width: none;
 }
 
-::-webkit-scrollbar-thumb {
+*:not(html):not(body)::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+/* Main page scrollbar - minimal */
+html,
+body {
+  scrollbar-width: thin;
+  scrollbar-color: var(--lumen-muted) transparent;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  width: 4px;
+  height: 0;
+}
+
+html::-webkit-scrollbar-thumb,
+body::-webkit-scrollbar-thumb {
   background: var(--lumen-muted);
-  border-radius: 3px;
+  border-radius: 2px;
 }
 
-::-webkit-scrollbar-thumb:hover {
+html::-webkit-scrollbar-thumb:hover,
+body::-webkit-scrollbar-thumb:hover {
   background: var(--lumen-silver);
 }
 
 @media (max-width: 768px) {
-  ::-webkit-scrollbar {
+
+  html::-webkit-scrollbar,
+  body::-webkit-scrollbar {
     display: none;
+  }
+
+  html,
+  body {
+    scrollbar-width: none;
   }
 }
 
@@ -183,7 +128,6 @@ a:focus-visible,
   outline-offset: 2px;
 }
 
-/* Optional: focus ring utility for custom components */
 .lumen-focus-ring:focus-visible {
   outline: 3px solid var(--lumen-gold);
   outline-offset: 2px;
@@ -191,7 +135,7 @@ a:focus-visible,
 }
 
 /* -------------------------------------------------------------------------- */
-/*  LUMEN — Film grain (pure CSS, lightweight)                               */
+/*  LUMEN — Film grain                                                        */
 /* -------------------------------------------------------------------------- */
 .lumen-grain {
   position: absolute;
@@ -208,16 +152,14 @@ a:focus-visible,
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: radial-gradient(
-    ellipse 80% 70% at 50% 100%,
-    transparent 30%,
-    rgba(8, 8, 12, 0.4) 70%,
-    rgba(8, 8, 12, 0.9) 100%
-  );
+  background: radial-gradient(ellipse 80% 70% at 50% 100%,
+      transparent 30%,
+      rgba(8, 8, 12, 0.4) 70%,
+      rgba(8, 8, 12, 0.9) 100%);
 }
 
 /* -------------------------------------------------------------------------- */
-/*  Hero title — readable on any background                                   */
+/*  Hero title                                                                */
 /* -------------------------------------------------------------------------- */
 .hero-title {
   text-shadow:
@@ -226,7 +168,7 @@ a:focus-visible,
 }
 
 /* -------------------------------------------------------------------------- */
-/*  LUMEN Card — base class for movie/content cards                           */
+/*  LUMEN Card                                                                */
 /* -------------------------------------------------------------------------- */
 @layer components {
   .lumen-card {
@@ -279,7 +221,7 @@ a:focus-visible,
 }
 
 /* -------------------------------------------------------------------------- */
-/*  Utilities — keep existing where used                                      */
+/*  Utilities                                                                 */
 /* -------------------------------------------------------------------------- */
 @layer utilities {
   .perspective-1000 {
@@ -297,6 +239,7 @@ a:focus-visible,
   .text-glitch {
     position: relative;
   }
+
   .text-glitch::before,
   .text-glitch::after {
     content: attr(data-text);
@@ -307,12 +250,14 @@ a:focus-visible,
     height: 100%;
     background: var(--lumen-void);
   }
+
   .text-glitch::before {
     left: 2px;
     text-shadow: -1px 0 var(--lumen-silver);
     clip: rect(24px, 550px, 90px, 0);
     animation: glitch-anim-2 3s infinite linear alternate-reverse;
   }
+
   .text-glitch::after {
     left: -2px;
     text-shadow: -1px 0 var(--lumen-gold);
@@ -323,6 +268,7 @@ a:focus-visible,
   .text-glitch-sm {
     position: relative;
   }
+
   .text-glitch-sm::before,
   .text-glitch-sm::after {
     content: attr(data-text);
@@ -333,12 +279,14 @@ a:focus-visible,
     height: 100%;
     background: var(--lumen-void);
   }
+
   .text-glitch-sm::before {
     left: 1px;
     text-shadow: -1px 0 var(--lumen-silver);
     clip: rect(0, 900px, 0, 0);
     animation: glitch-anim-sm-2 3s infinite linear alternate-reverse;
   }
+
   .text-glitch-sm::after {
     left: -1px;
     text-shadow: -1px 0 var(--lumen-gold);
@@ -363,6 +311,7 @@ a:focus-visible,
   .glow-primary {
     box-shadow: 0 0 16px rgba(201, 169, 98, 0.25);
   }
+
   .glow-secondary {
     box-shadow: 0 0 16px rgba(168, 165, 160, 0.2);
   }
@@ -372,107 +321,207 @@ a:focus-visible,
 /*  Animations                                                                */
 /* -------------------------------------------------------------------------- */
 @keyframes glitch-anim {
-  0% { clip: rect(12px, 9999px, 5px, 0); }
-  20% { clip: rect(78px, 9999px, 96px, 0); }
-  40% { clip: rect(12px, 9999px, 25px, 0); }
-  60% { clip: rect(45px, 9999px, 5px, 0); }
-  80% { clip: rect(98px, 9999px, 65px, 0); }
-  100% { clip: rect(32px, 9999px, 85px, 0); }
+  0% {
+    clip: rect(12px, 9999px, 5px, 0);
+  }
+
+  20% {
+    clip: rect(78px, 9999px, 96px, 0);
+  }
+
+  40% {
+    clip: rect(12px, 9999px, 25px, 0);
+  }
+
+  60% {
+    clip: rect(45px, 9999px, 5px, 0);
+  }
+
+  80% {
+    clip: rect(98px, 9999px, 65px, 0);
+  }
+
+  100% {
+    clip: rect(32px, 9999px, 85px, 0);
+  }
 }
 
 @keyframes glitch-anim-2 {
-  0% { clip: rect(65px, 9999px, 100px, 0); }
-  20% { clip: rect(12px, 9999px, 5px, 0); }
-  40% { clip: rect(87px, 9999px, 32px, 0); }
-  60% { clip: rect(5px, 9999px, 65px, 0); }
-  80% { clip: rect(25px, 9999px, 12px, 0); }
-  100% { clip: rect(96px, 9999px, 78px, 0); }
+  0% {
+    clip: rect(65px, 9999px, 100px, 0);
+  }
+
+  20% {
+    clip: rect(12px, 9999px, 5px, 0);
+  }
+
+  40% {
+    clip: rect(87px, 9999px, 32px, 0);
+  }
+
+  60% {
+    clip: rect(5px, 9999px, 65px, 0);
+  }
+
+  80% {
+    clip: rect(25px, 9999px, 12px, 0);
+  }
+
+  100% {
+    clip: rect(96px, 9999px, 78px, 0);
+  }
 }
 
 @keyframes glitch-anim-sm {
-  0% { clip: rect(3px, 9999px, 1px, 0); }
-  20% { clip: rect(19px, 9999px, 24px, 0); }
-  40% { clip: rect(3px, 9999px, 6px, 0); }
-  60% { clip: rect(11px, 9999px, 1px, 0); }
-  80% { clip: rect(24px, 9999px, 16px, 0); }
-  100% { clip: rect(8px, 9999px, 21px, 0); }
+  0% {
+    clip: rect(3px, 9999px, 1px, 0);
+  }
+
+  20% {
+    clip: rect(19px, 9999px, 24px, 0);
+  }
+
+  40% {
+    clip: rect(3px, 9999px, 6px, 0);
+  }
+
+  60% {
+    clip: rect(11px, 9999px, 1px, 0);
+  }
+
+  80% {
+    clip: rect(24px, 9999px, 16px, 0);
+  }
+
+  100% {
+    clip: rect(8px, 9999px, 21px, 0);
+  }
 }
 
 @keyframes glitch-anim-sm-2 {
-  0% { clip: rect(16px, 9999px, 25px, 0); }
-  20% { clip: rect(3px, 9999px, 1px, 0); }
-  40% { clip: rect(21px, 9999px, 8px, 0); }
-  60% { clip: rect(1px, 9999px, 16px, 0); }
-  80% { clip: rect(6px, 9999px, 3px, 0); }
-  100% { clip: rect(24px, 9999px, 19px, 0); }
+  0% {
+    clip: rect(16px, 9999px, 25px, 0);
+  }
+
+  20% {
+    clip: rect(3px, 9999px, 1px, 0);
+  }
+
+  40% {
+    clip: rect(21px, 9999px, 8px, 0);
+  }
+
+  60% {
+    clip: rect(1px, 9999px, 16px, 0);
+  }
+
+  80% {
+    clip: rect(6px, 9999px, 3px, 0);
+  }
+
+  100% {
+    clip: rect(24px, 9999px, 19px, 0);
+  }
 }
 
 @keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-20px); }
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-20px);
+  }
 }
 
 @keyframes pulse-ring {
-  0% { transform: scale(0.8); opacity: 0.5; }
-  100% { transform: scale(2); opacity: 0; }
+  0% {
+    transform: scale(0.8);
+    opacity: 0.5;
+  }
+
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
 }
 
 /* -------------------------------------------------------------------------- */
-/*  Holographic Glare — Disable on touch devices (Requirement 5.6)            */
+/*  Responsive                                                                */
 /* -------------------------------------------------------------------------- */
 @media (hover: none) {
   .hover-only {
     display: none !important;
   }
-}
 
-/* -------------------------------------------------------------------------- */
-/*  Responsive Design — Disable hover effects on touch devices (Req 5.6)     */
-/* -------------------------------------------------------------------------- */
-@media (hover: none) {
-  /* Disable 3D tilt on touch devices for better performance */
   .group:hover {
     transform: none !important;
   }
-  
-  /* Disable hover shadow transitions on touch devices */
-  .group-hover\:shadow-lumen-card-hover {
-    box-shadow: inherit !important;
-  }
-  
-  /* Disable hover color transitions on touch devices */
-  .group-hover\:text-gold {
-    color: inherit !important;
-  }
 }
 
-/* -------------------------------------------------------------------------- */
-/*  Responsive Typography — Mobile-first breakpoints (Req 5.4)               */
-/* -------------------------------------------------------------------------- */
 @media (max-width: 767px) {
-  /* Ensure minimum font sizes on mobile */
   body {
     font-size: 16px;
   }
-  
-  /* Reduce animation complexity on mobile */
+
   * {
     animation-duration: 0.3s !important;
   }
 }
 
-@media (min-width: 768px) and (max-width: 1023px) {
-  /* Tablet-specific adjustments */
-  .container {
-    padding-left: 1.5rem;
-    padding-right: 1.5rem;
-  }
+/* -------------------------------------------------------------------------- */
+/*  Global Select Styling                                                     */
+/* -------------------------------------------------------------------------- */
+select {
+  background-color: var(--color-raised, #1C1B1F);
+  color: var(--color-text-primary, #E8E4DC);
+  border-color: var(--color-border-default, rgba(255, 255, 255, 0.15));
 }
 
-@media (min-width: 1024px) {
-  /* Desktop-specific adjustments */
-  .container {
-    padding-left: 2rem;
-    padding-right: 2rem;
-  }
+select:hover {
+  background-color: var(--color-surface, #0F0F14);
+}
+
+select:focus {
+  outline: none;
+  border-color: var(--color-primary, #C9A962);
+}
+
+select option {
+  background-color: var(--color-raised, #1C1B1F);
+  color: var(--color-text-primary, #E8E4DC);
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Toast Notifications - Fixed Position                                      */
+/* -------------------------------------------------------------------------- */
+[data-sonner-toaster] {
+  position: fixed !important;
+  top: 20px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  z-index: 999999 !important;
+}
+
+[data-sonner-toast] {
+  position: relative !important;
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Toast Notifications - Fixed Position                                      */
+/* -------------------------------------------------------------------------- */
+[data-sonner-toaster] {
+  position: fixed !important;
+  top: 20px !important;
+  z-index: 999999 !important;
+}
+
+[data-sonner-toast] {
+  position: fixed !important;
+}
+
+.toast-fixed {
+  position: fixed !important;
 }

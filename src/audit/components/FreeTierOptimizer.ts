@@ -37,7 +37,7 @@ export class FreeTierOptimizer {
         metrics,
         duration: Date.now() - startTime
       };
-    } catch (error) {
+    } catch (error: any) {
       auditLogger.error('FreeTierOptimizer', 'Free Tier optimization failed', { error });
       return {
         component: 'FreeTierOptimizer',
@@ -121,7 +121,7 @@ export class FreeTierOptimizer {
             autoFixable: false
           });
         }
-      } catch (error) {
+      } catch (error: any) {
         auditLogger.warn('FreeTierOptimizer', `Failed to scan file: ${file}`, { error });
       }
     }
@@ -151,7 +151,7 @@ export class FreeTierOptimizer {
             });
           }
         }
-      } catch (error) {
+      } catch (error: any) {
         auditLogger.warn('FreeTierOptimizer', `Failed to scan file: ${file}`, { error });
       }
     }

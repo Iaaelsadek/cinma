@@ -7,6 +7,7 @@ const Auth = lazy(() => import('../pages/Auth').then(m => ({ default: m.default 
 const Profile = lazy(() => import('../pages/user/Profile').then(m => ({ default: m.Profile })))
 const PublicProfile = lazy(() => import('../pages/user/PublicProfile').then(m => ({ default: m.PublicProfile })))
 const RequestPage = lazy(() => import('../pages/user/Request').then(m => ({ default: m.RequestPage })))
+const ReviewPage = lazy(() => import('../pages/ReviewPage').then(m => ({ default: m.ReviewPage })))
 
 const ProtectedRoute = ({ children }: { children: React.JSX.Element }) => {
   const { user, loading } = useAuth()
@@ -31,6 +32,7 @@ export const UserRoutes = () => (
       }
     />
     <Route path="/user/:username" element={<PublicProfile />} />
+    <Route path="/reviews/:reviewId" element={<ReviewPage />} />
     <Route
       path="/favorites"
       element={

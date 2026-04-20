@@ -4,365 +4,243 @@ import 'swiper/css'
 import 'swiper/css/navigation'
 import 'swiper/css/free-mode'
 import { Link, useParams, useSearchParams, useNavigate, useLocation } from 'react-router-dom'
-import {useEffect, useMemo, useState} from 'react'
-import { createPortal } from 'react-dom'
+import { useEffect, useMemo, useState, useRef, useCallback } from 'react'
 import { useAuth } from '../../hooks/useAuth'
-import {supabase, createWatchParty, grantAchievement} from '../../lib/supabase'
+import { supabase, grantAchievement } from '../../lib/supabase'
 import { AdsManager } from '../../components/features/system/AdsManager'
 import { tmdb } from '../../lib/tmdb'
 import { MovieCard } from '../../components/features/media/MovieCard'
 import { SeoHead } from '../../components/common/SeoHead'
-import {AlertTriangle, X, Heart, Layers, ChevronLeft, ChevronRight, Calendar, Clock, Star, Users, ThumbsUp, Sparkles, Play} from 'lucide-react'
+import { generateMovieKeywords, generateSeriesKeywords } from '../../lib/seo-keywords'
+import { translateGenre } from '../../lib/genre-translations'
+import { AlertTriangle, Heart, Layers, ChevronLeft, ChevronRight, Calendar, Clock, Star, Sparkles, Play, Users } from 'lucide-react'
 import { ShareButton } from '../../components/common/ShareButton'
 import { NotFound } from '../NotFound'
 import { SkeletonGrid } from '../../components/common/Skeletons'
-import { SubtitleManager } from '../../components/features/media/SubtitleManager'
 import { useServers } from '../../hooks/useServers'
 import { useWatchProgress } from '../../hooks/useWatchProgress'
-import { useDualTitles } from '../../hooks/useDualTitles'
+import { useTripleTitles } from '../../hooks/useTripleTitles'
+import { getSeasons } from '../../services/contentAPI'
 
 import { EmbedPlayer } from '../../components/features/media/EmbedPlayer'
 import { EpisodeSelector } from '../../components/features/media/EpisodeSelector'
-import { WatchParty } from '../../components/features/social/WatchParty'
-import { toast } from 'sonner'
-import { motion, AnimatePresence } from 'framer-motion'
+
+import { toast } from '../../lib/toast-manager'
+import { motion } from 'framer-motion'
 import clsx from 'clsx'
 import { logger } from '../../lib/logger'
 
 import { generateWatchUrl } from '../../lib/utils'
+import { detectLegacyUrl, generateRedirectUrl } from '../../lib/url-utils'
 
 type TmdbCastMember = {
-  id: number
+  id: number | string
   name: string
+  name_ar?: string | null
   profile_path?: string | null
+  profile_url?: string | null
   slug?: string
+  character_name?: string
 }
 
 type TmdbCrewMember = {
-    id: number
-    name: string
-    job: string
-  }
-  
-  type TmdbDetails = {
-    title?: string
-    name?: string
-    original_language?: string
-    release_date?: string
-    first_air_date?: string
-    runtime?: number
-    episode_run_time?: number[]
-    vote_average?: number
-    vote_count?: number
-    genres?: Array<{ id: number; name: string }>
-    overview?: string
-    poster_path?: string | null
-    backdrop_path?: string | null
-    credits?: { cast?: TmdbCastMember[]; crew?: TmdbCrewMember[] }
-    videos?: { results: Array<{ key: string; type: string; site: string }> }
-    external_ids?: { imdb_id?: string }
-    seasons?: Array<{ season_number: number; episode_count: number; name: string }>
-  }
+  id: number
+  name: string
+  job: string
+}
+
+type TmdbDetails = {
+  title?: string
+  title_ar?: string
+  title_en?: string
+  original_title?: string
+  name?: string
+  name_ar?: string
+  name_en?: string
+  original_name?: string
+  original_language?: string
+  release_date?: string
+  first_air_date?: string
+  runtime?: number
+  episode_run_time?: number[]
+  vote_average?: number
+  vote_count?: number
+  genres?: Array<{ id: number; name: string }>
+  overview?: string
+  overview_ar?: string
+  overview_en?: string
+  poster_path?: string | null
+  backdrop_path?: string | null
+  credits?: { cast?: TmdbCastMember[]; crew?: TmdbCrewMember[] }
+  videos?: { results: Array<{ key: string; type: string; site: string }> }
+  external_ids?: { imdb_id?: string }
+  external_id?: string // TMDB ID from CockroachDB
+  external_source?: string // Source (e.g., 'TMDB')
+  seasons?: Array<{ season_number: number; episode_count: number; name: string }>
+  slug?: string
+}
 
 export const Watch = () => {
   const { type: typeParam, id: idParam, slug: slugParam, s, e, lang: langParam } = useParams()
   const [sp, setSp] = useSearchParams()
   const navigate = useNavigate()
-  const location = useLocation()
-  const [resolvedId, setResolvedId] = useState<string | null>(null)
   const { user, loading: authLoading } = useAuth()
 
-  const isNumericId = useMemo(() => idParam && /^\d+$/.test(idParam), [idParam])
-  
+  // Update initial logic to prioritize slug, but fall back to ID if necessary
   const { initialType, initialId, initialSlug, initialSeason, initialEpisode, lang } = useMemo(() => {
-    // Case A: SEO Route (/watch/:lang/:type/:genre/:slug)
-    // Matched if langParam is ar or en
-    if (langParam === 'ar' || langParam === 'en' || typeParam === 'ar' || typeParam === 'en') {
-      const actualLang = (langParam === 'ar' || langParam === 'en') ? langParam : typeParam as 'ar' | 'en'
-      const actualTypeParam = (langParam === 'ar' || langParam === 'en') ? typeParam : idParam
-      const actualSlug = slugParam
-      
-      let t = actualTypeParam || 'movie'
-      if (t === 'series' || t === 'anime') t = 'tv'
-      if (t === 'movies' || t === 'plays') t = 'movie'
-      
-      return {
-        initialType: t,
-        initialId: null,
-        initialSlug: actualSlug || null,
-        initialSeason: 1,
-        initialEpisode: 1,
-        lang: actualLang
-      }
-    }
-
-    // Case B: ID Route (/watch/:type/:id/:s/:e)
-    // If typeParam is a valid media type, it's likely an ID route
-    const isValidType = typeParam === 'movie' || typeParam === 'tv' || typeParam === 'series' || typeParam === 'movies' || typeParam === 'anime' || typeParam === 'plays'
-    
-    if (isValidType && isNumericId) {
-      let t = typeParam || 'movie'
-      if (t === 'series' || t === 'anime') t = 'tv'
-      if (t === 'movies' || t === 'plays') t = 'movie'
-      
-      return {
-        initialType: t,
-        initialId: idParam,
-        initialSlug: slugParam,
-        initialSeason: null,
-        initialEpisode: null,
-        lang: 'ar' as 'ar' | 'en'
-      }
-    }
-
-    // Default Fallback
     let t = typeParam || 'movie'
-    if (!typeParam && /^\/series\/\d+\/season\/\w+\/episode\/\w+$/i.test(location.pathname)) {
-      t = 'tv'
-    }
     if (t === 'series' || t === 'anime') t = 'tv'
     if (t === 'movies' || t === 'plays') t = 'movie'
+    if (t === 'games') t = 'game'
+    // Keep 'video' type as-is for YouTube videos
+    if (t === 'video') t = 'video'
+
+    // CRITICAL FIX: Movies should NEVER have season/episode
+    const isEpisodicType = t === 'tv' || t === 'anime' || t === 'series'
 
     return {
       initialType: t,
       initialId: idParam || null,
-      initialSlug: slugParam,
-      initialSeason: null,
-      initialEpisode: null,
-      lang: 'ar' as 'ar' | 'en'
+      initialSlug: slugParam || null,
+      // Only set season/episode for episodic content (TV shows)
+      initialSeason: isEpisodicType && s ? (typeof s === 'string' && s.startsWith('s') ? Number(s.slice(1)) : Number(s)) : null,
+      initialEpisode: isEpisodicType && e ? (typeof e === 'string' && e.startsWith('ep') ? Number(e.slice(2)) : Number(e)) : null,
+      lang: (langParam === 'ar' || langParam === 'en') ? langParam : 'ar'
     }
-  }, [typeParam, idParam, slugParam, s, e, langParam, isNumericId, location.pathname])
+  }, [typeParam, idParam, slugParam, s, e, langParam])
 
-  // 1. Check for partyId in URL and verify user
+
+
+  // Handle legacy URLs with IDs embedded in slugs
   useEffect(() => {
-    const urlPartyId = sp.get('partyId')
-    if (urlPartyId && !user && !authLoading) {
-      const newSp = new URLSearchParams(sp)
-      newSp.delete('partyId')
-      setSp(newSp, { replace: true })
-      setPartyId(null)
-      toast.error(lang === 'ar' ? 'يجب تسجيل الدخول للانضمام إلى غرفة المشاهدة الجماعية' : 'Please login to join the group watch party', { id: 'auth-required' })
+    if (!initialSlug || initialId) return
+
+    // Skip legacy detection for games (games don't have legacy URLs)
+    if (initialType === 'game') return
+
+    const handleLegacyUrl = async () => {
+      const detection = detectLegacyUrl(initialSlug)
+
+      if (!detection.isLegacy || !detection.id) {
+        return // Not a legacy URL
+      }
+
+      logger.info(`Legacy URL detected: ${initialSlug} -> ID: ${detection.id}`)
+
+      try {
+        // Generate clean redirect URL
+        const cleanUrl = await generateRedirectUrl(
+          detection.id,
+          initialType as 'movie' | 'tv',
+          initialSeason || undefined,
+          initialEpisode || undefined
+        )
+
+        if (cleanUrl) {
+          logger.info(`Redirecting to clean URL: ${cleanUrl}`)
+          const location = window.location
+          navigate(`${cleanUrl}${location.search}${location.hash}`, { replace: true })
+        }
+      } catch (err: any) {
+        // Silently fail - no error logging
+      }
     }
-  }, [sp, user, authLoading, lang, setSp])
+
+    handleLegacyUrl()
+  }, [initialSlug, initialId, initialType, initialSeason, initialEpisode, navigate])
+
+
 
   const t = (ar: string, en: string) => (lang === 'ar' ? ar : en)
 
-  // Clean s and e from "s1" or "ep1" format
+  const type = initialType
+  const id = initialId
+  const slug = initialSlug
+
+  // CRITICAL FIX: Movies should NOT have season/episode
+  const isEpisodic = type === 'tv' || type === 'anime' || type === 'series'
+
   const sNum = useMemo(() => {
+    // CRITICAL: Only return season number for episodic content
+    if (!isEpisodic) return null
     if (initialSeason) return initialSeason
     if (!s) return null
     if (s.toString().startsWith('s')) return Number(s.toString().slice(1))
     return Number(s)
-  }, [s, initialSeason])
+  }, [initialSeason, s, isEpisodic])
 
   const eNum = useMemo(() => {
+    // CRITICAL: Only return episode number for episodic content
+    if (!isEpisodic) return null
     if (initialEpisode) return initialEpisode
     if (!e) return null
     if (e.toString().startsWith('ep')) return Number(e.toString().slice(2))
     return Number(e)
-  }, [e, initialEpisode])
+  }, [initialEpisode, e, isEpisodic])
 
-  const type = initialType
-  const id = resolvedId || initialId
-  const slug = initialSlug
+  const [season, setSeason] = useState(isEpisodic ? Math.max(1, sNum || 1) : undefined)
+  const [episode, setEpisode] = useState(isEpisodic ? Math.max(1, eNum || 1) : undefined)
 
-  // Initial Sync from URL or SearchParams
   useEffect(() => {
-    const sFromQuery = Number(sp.get('season'))
-    const eFromQuery = Number(sp.get('episode'))
-    
-    // If we have query params, redirect to clean URL and return
-    if ((sFromQuery || eFromQuery) && idParam) {
-      const typeParamFinal = typeParam || sp.get('type') || 'movie'
-      // Use replace to avoid history stack buildup
-      navigate(`/watch/${typeParamFinal}/${idParam}/s${sFromQuery || 1}/ep${eFromQuery || 1}`, { replace: true })
-      return
+    if (isEpisodic) {
+      if (sNum) setSeason(sNum)
+      if (eNum) setEpisode(eNum)
     }
-  }, []) // Run once on mount
+  }, [sNum, eNum, isEpisodic])
 
-  const [season, setSeason] = useState(Math.max(1, sNum || 1))
-  const [episode, setEpisode] = useState(Math.max(1, eNum || 1))
-  
-  // Sync state with URL params
-  useEffect(() => {
-    if (sNum) setSeason(sNum)
-    if (eNum) setEpisode(eNum)
-  }, [sNum, eNum])
+  const navigateRef = useRef(navigate)
+  useEffect(() => { navigateRef.current = navigate }, [navigate])
 
-  useEffect(() => {
-    if (type !== 'tv') return
-    if (!id) return
-    if (sNum && eNum) return
-    navigate(`/watch/tv/${id}/s${season || 1}/ep${episode || 1}`, { replace: true })
-  }, [type, id, sNum, eNum, season, episode, navigate])
-
-  const [mounted, setMounted] = useState(false)
-  
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  const handleSeasonChange = (newSeason: number) => {
-    if (type === 'tv') {
-      navigate(`/watch/tv/${id}/s${newSeason}/ep1`, { replace: true })
+  const handleSeasonChange = useCallback((newSeason: number) => {
+    if (type === 'tv' && (slug || id)) {
+      const watchUrl = generateWatchUrl(
+        { id: id || slug || '', slug: slug || id || '', media_type: 'tv' },
+        newSeason,
+        1
+      )
+      navigateRef.current(watchUrl, { replace: true })
     }
-  }
+  }, [type, slug]) // Fixed: removed 'id' to keep stable
 
-  const handleEpisodeChange = (newEpisode: number) => {
-    if (type === 'tv') {
-      navigate(`/watch/tv/${id}/s${season}/ep${newEpisode}`, { replace: true })
+  const handleEpisodeChange = useCallback((newEpisode: number) => {
+    if (type === 'tv' && (slug || id)) {
+      const watchUrl = generateWatchUrl(
+        { id: id || slug || '', slug: slug || id || '', media_type: 'tv' },
+        season,
+        newEpisode
+      )
+      navigateRef.current(watchUrl, { replace: true })
     }
-  }
+  }, [type, slug, season]) // Fixed: removed 'id' to keep stable
 
-  const { elapsed, setElapsed } = useWatchProgress({ user, id: id || null, type, season, episode })
-  
+  const { elapsed } = useWatchProgress({
+    user,
+    id: id || null,
+    type,
+    // CRITICAL: Only pass season/episode for episodic content (TV shows)
+    // Movies should NEVER have season/episode parameters
+    season: isEpisodic ? season : undefined,
+    episode: isEpisodic ? episode : undefined
+  })
   const [showPreroll, setShowPreroll] = useState(true)
-  const [showTrailer, setShowTrailer] = useState(false)
-  
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowTrailer(true)
-    }, 3000)
-    return () => clearTimeout(timer)
-  }, [])
-  
-  // Normalize type param (movies -> movie, series -> tv)
-  // (type normalized above)
-
   const [details, setDetails] = useState<TmdbDetails | null>(null)
-  
-  const translatedOverview = null; // Translation is now handled by backend
-  const dualTitles = useDualTitles(details as any)
-
+  const [seasons, setSeasons] = useState<any[]>([])
+  const tripleTitles = useTripleTitles(details as TmdbDetails)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
   const [fetchError, setFetchError] = useState<boolean>(false)
   const [cinemaMode, setCinemaMode] = useState(false)
-  const [isPlaying, setIsPlaying] = useState(false)
-  const [partyId, setPartyId] = useState<string | null>(sp.get('partyId'))
-  const [showCreateParty, setShowCreateParty] = useState(false)
-  const [roomName, setRoomName] = useState('')
-  const [isCreating, setIsCreating] = useState(false)
-  
-  const [syncSeek, setSyncSeek] = useState<number | undefined>(undefined)
-  const [castPage, setCastPage] = useState(0)
-  const itemsPerPage = 4
+  const [mounted, setMounted] = useState(false)
 
-  const handleCreateParty = async () => {
-    if (!user) {
-      toast.error(lang === 'ar' ? 'يجب تسجيل الدخول لإنشاء غرفة مشاهدة جماعية' : 'Please login to create a group watch party', { id: 'auth-required' })
-      return
-    }
-    if (!roomName.trim()) {
-      toast.error(lang === 'ar' ? 'يرجى إدخال اسم الغرفة' : 'Please enter room name')
-      return
-    }
-
-    setIsCreating(true)
-    try {
-      const party = await createWatchParty({
-        room_name: roomName,
-        content_id: id || '',
-        content_type: type,
-        creator_id: user.id,
-        current_time: elapsed,
-        is_playing: isPlaying
-      })
-      
-      setPartyId(party.id)
-      setSp(prev => {
-        prev.set('partyId', party.id)
-        return prev
-      })
-      setShowCreateParty(false)
-      toast.success(lang === 'ar' ? 'تم إنشاء غرفة المشاهدة الجماعية بنجاح' : 'Group watch party created successfully')
-      
-      // Grant achievement
-      try {
-        const granted = await grantAchievement(user.id, 'party_host')
-        if (granted) toast.success(lang === 'ar' ? 'إنجاز جديد: صاحب المجلس 🏠' : 'New achievement: Group Watch Party Host 🏠')
-      } catch (err) {
-        logger.error('Failed to grant achievement:', err)
-      }
-    } catch (err: any) {
-      logger.error('Failed to create group watch party:', err)
-      toast.error(lang === 'ar' ? `فشل إنشاء الغرفة: ${err.message || 'خطأ غير معروف'}` : `Failed to create group watch party: ${err.message || 'Unknown error'}`)
-    } finally {
-      setIsCreating(false)
-    }
-  }
-
-  const handleSync = (time: number, playing: boolean) => {
-    setSyncSeek(time)
-    setIsPlaying(playing)
-    // Clear sync seek after a moment to allow manual seeking again
-    setTimeout(() => setSyncSeek(undefined), 1000)
-  }
-
-  // Hook 0: Resolve Slug to ID
   useEffect(() => {
-    if (initialId) return // Already have ID
-    if (!slug) return
+    setMounted(true)
+    return () => setMounted(false)
+  }, [])
 
-    const resolveSlug = async () => {
-      setLoading(true)
-      try {
-        // Try to extract ID from slug (e.g. "title-12345")
-        const parts = slug.split('-')
-        const potentialId = parts[parts.length - 1]
-        if (/^\d+$/.test(potentialId)) {
-          setResolvedId(potentialId)
-          return
-        }
 
-        // If no ID in slug, search TMDB
-        const query = slug.replace(/-/g, ' ')
-        const { data } = await tmdb.get(`/search/${type}`, {
-          params: { query, page: 1 }
-        })
-        
-        if (data.results?.[0]?.id) {
-          setResolvedId(String(data.results[0].id))
-        } else {
-          setError(true)
-          setLoading(false)
-        }
-      } catch (e) {
-        setError(true)
-        setLoading(false)
-      }
-    }
 
-    resolveSlug()
-  }, [slug, initialId, type])
-
-  // Hook 1: Remove redundant SearchParams sync that causes infinite redirect loops
-  // Path params are already the primary source of truth.
-  // COMMENTED OUT TO FIX INFINITE LOOP BUG
-  /*
+  // Fetch content from backend API using slug or id
   useEffect(() => {
-    // Only update SearchParams if we are using an ID route and need to preserve other query params
-    // But DON'T set season/episode if we are already using path params like /s1/ep1
-    if (sNum || eNum) return
-
-    // If type is TV and we don't have season/episode in path, we might need to redirect to default
-    // But be careful not to cause loop if we just came from there.
-    // Actually, the initial Sync useEffect at line 160 handles redirection to /s/ep path if query params exist.
-    // If we are here, it means we might be at /watch/tv/:id (without s/ep).
-    // In that case, we should probably default to s1/ep1 in the URL for consistency.
-    
-    // This logic is dangerous and causing loops. Let's rely on `initialSeason` and `initialEpisode` defaults.
-    // If the user navigates to /watch/tv/123, `sNum` and `eNum` will be null (or 1 from defaults).
-    // We can just update the internal state without changing URL, or redirect once.
-   
-  }, [season, episode, type, setSp, sNum, eNum])
-  */
-
-  // Hook 2: Fetch Details
-  useEffect(() => {
-    // If using slug and not yet resolved, wait
-    if (slug && !id) return
-
     const controller = new AbortController()
     const signal = controller.signal
 
@@ -370,132 +248,328 @@ export const Watch = () => {
     setLoading(true)
     setError(false)
     setFetchError(false)
-    ;(async () => {
-      if (!id) {
-        // If we have no ID, and no slug, we can't do anything.
-        // But if we have slug and it failed resolution, we already set error in resolveSlug
+      ; (async () => {
+        // CRITICAL: Only accept slug, reject ID-only requests
         if (!slug) {
-           setError(true)
-           setFetchError(true)
-           setLoading(false)
-        }
-        return
-      }
-      try {
-        const path = type === 'movie' ? `/movie/${id}` : `/tv/${id}`
-        const { data } = await tmdb.get(path, { 
-          params: { append_to_response: 'credits,videos,external_ids,recommendations,similar' },
-          signal
-        })
-        
-        // If it's a movie and belongs to a collection, fetch the collection
-        if (type === 'movie' && data.belongs_to_collection) {
-          try {
-            const { data: collectionData } = await tmdb.get(`/collection/${data.belongs_to_collection.id}`, { signal })
-            data.collection = collectionData
-          } catch (err) {
-            logger.error('Failed to fetch collection:', err)
-          }
-        }
-        
-        if (mounted && !signal.aborted) {
-            setDetails(data)
-            setLoading(false)
-        }
-      } catch (e: any) {
-        // Only set error if we really can't find anything
-        // Don't redirect immediately, show error UI
-        if (signal.aborted) {
-          logger.info('Fetch aborted')
+          setError(true)
+          setFetchError(true)
+          setLoading(false)
           return
         }
-        logger.error('TMDB Fetch Error:', e)
-        if (mounted) {
+
+        const identifier = slug
+
+        try {
+          // Special handling for YouTube videos (type=video)
+          if (type === 'video') {
+            // Fetch from backend API endpoint (which will query Supabase temporarily)
+            // TODO: Move videos table to CockroachDB
+            const response = await fetch(`/api/videos/${identifier}`, { signal })
+
+            if (!response.ok) {
+              throw new Error('Video not found')
+            }
+
+            const videoData = await response.json()
+
+            // Map video data to details format
+            const mappedData = {
+              title: videoData.title,
+              name: videoData.title,
+              overview: videoData.description || '',
+              poster_path: videoData.thumbnail,
+              backdrop_path: videoData.thumbnail,
+              release_date: videoData.created_at,
+              vote_average: 8.5,
+              external_id: videoData.id,
+              external_source: 'youtube',
+              videos: {
+                results: [{
+                  key: videoData.id,
+                  type: 'Trailer',
+                  site: 'YouTube'
+                }]
+              }
+            }
+
+            if (mounted && !signal.aborted) {
+              setDetails(mappedData)
+              setLoading(false)
+            }
+            return
+          }
+
+          // Fetch from backend API using slug or id (for movies/tv)
+          const apiPath = type === 'movie'
+            ? `/api/movies/${identifier}`
+            : `/api/tv/${identifier}`
+          const response = await fetch(apiPath, { signal })
+
+          if (!response.ok) {
+            throw new Error(`Failed to fetch ${type}`)
+          }
+
+          const data = await response.json()
+
+          if (mounted && !signal.aborted) {
+            setDetails(data)
+            setLoading(false)
+          }
+        } catch (e: any) {
+          if (signal.aborted) return
+          // Silently handle missing content - show error UI without console logging
+          if (mounted) {
             setError(true)
             setFetchError(true)
             setLoading(false)
+          }
         }
-      }
-    })()
-    return () => { 
+      })()
+    return () => {
       mounted = false
       controller.abort()
     }
-  }, [id, type, slug])
+  }, [type, slug]) // Fixed: removed 'id' to keep array size stable
 
-  // Hook 3: Progress Tracking (REPLACED by useWatchProgress)
+  // Fetch seasons for TV series from CockroachDB API
+  useEffect(() => {
+    if (type === 'tv' && slug) {
+      getSeasons(slug)
+        .then(data => {
+          setSeasons(data)
+        })
+        .catch(err => {
+          console.error('❌ Failed to fetch seasons:', err)
+          setSeasons([])
+        })
+    } else {
+      setSeasons([])
+    }
+  }, [type, slug])
 
-  // Hook 4: Memos (Moved UP before early returns)
   const title = useMemo(() => {
-    // Prefer translated title if available
-    if (dualTitles.sub) return dualTitles.sub
-    return details?.title || details?.name || (type === 'movie' ? `فيلم #${id}` : `مسلسل #${id}`)
-  }, [details, type, id, dualTitles])
-  
+    if (tripleTitles.primary) return tripleTitles.primary
+    return details?.title || details?.name || (type === 'movie' ? 'فيلم' : 'مسلسل')
+  }, [details, type, tripleTitles]) // Fixed: removed 'id'
+
   const year = useMemo(() => {
     const d = type === 'movie' ? details?.release_date : details?.first_air_date
     return d ? new Date(d).getFullYear() : null
   }, [details, type])
-  
+
   const runtimeMin: number | null = useMemo(() => {
     if (type === 'movie' && typeof details?.runtime === 'number') return details.runtime
     if (type === 'tv' && Array.isArray(details?.episode_run_time) && details.episode_run_time[0]) return details.episode_run_time[0]
     return null
   }, [details, type])
-  
+
   const rating = useMemo(() => {
     return typeof details?.vote_average === 'number' ? Math.round(details.vote_average * 10) / 10 : null
   }, [details])
-  
+
   const genres = useMemo<Array<{ id: number; name: string }>>(() => details?.genres || [], [details])
-  const overview = useMemo(() => translatedOverview || details?.overview || 'لا يوجد وصف متاح', [details, translatedOverview])
-  const poster = useMemo(() => (details?.poster_path ? `https://image.tmdb.org/t/p/w500${details.poster_path}` : ''), [details])
-  const backdrop = useMemo(() => (details?.backdrop_path ? `https://image.tmdb.org/t/p/original${details.backdrop_path}` : ''), [details])
-  const cast = useMemo(() => (details?.credits?.cast || []).slice(0, 12), [details])
-  
-  const trailer = useMemo(() => {
-    return details?.videos?.results?.find((v) => v.type === 'Trailer' && v.site === 'YouTube')?.key
-  }, [details])
 
-  const relatedParts = useMemo(() => {
-    // 1. If it's a movie and belongs to a collection, show other parts
-    if (type === 'movie' && (details as any)?.collection?.parts) {
-      const collectionParts = ((details as any).collection.parts as any[])
-        .filter(p => p.id !== Number(id)) // exclude current
-        .sort((a, b) => new Date(a.release_date).getTime() - new Date(b.release_date).getTime())
-        .map(p => ({
-          id: p.id,
-          title: p.title,
-          poster_path: p.poster_path,
-          release_date: p.release_date,
-          media_type: 'movie'
-        }))
-      
-      if (collectionParts.length > 0) return collectionParts
+  const overview = useMemo(() => {
+    // overview_ar = Arabic translation (from DB or auto-translated)
+    // overview = Original overview (usually English from TMDB)
+    const arOverview = details?.overview_ar
+    const enOverview = details?.overview_en || details?.overview
+
+    if (lang === 'ar') {
+      return arOverview || enOverview || 'لا يوجد وصف متاح'
     }
-    
-    // 2. Combine recommendations and similar results to ensure content
-    const recommendations = (details as any)?.recommendations?.results || []
-    const similar = (details as any)?.similar?.results || []
-    
-    // Merge and remove duplicates by ID
-    const combined = [...recommendations, ...similar]
-    const uniqueMap = new Map()
-    combined.forEach(p => {
-      if (p.id !== Number(id) && !uniqueMap.has(p.id)) {
-        uniqueMap.set(p.id, p)
-      }
-    })
-    
-    const finalResults = Array.from(uniqueMap.values())
-      .slice(0, 18) // Show more results (up to 18)
-      .map((p: any) => ({
-        ...p,
-        media_type: p.media_type || (type === 'tv' ? 'tv' : 'movie')
-      }))
+    return enOverview || arOverview || 'No description available'
+  }, [details, lang])
 
-    return finalResults
-  }, [details, id, type])
+  const poster = useMemo(() => (details?.poster_path ? `https://image.tmdb.org/t/p/w300${details.poster_path}` : ''), [details])
+  const backdrop = useMemo(() => (details?.backdrop_path ? `https://image.tmdb.org/t/p/original${details.backdrop_path}` : ''), [details])
+
+  // Fetch cast from our API instead of TMDB
+  const [cast, setCast] = useState<TmdbCastMember[]>([])
+  const [keywords, setKeywords] = useState<Array<{ id: string | number; name: string }>>([])
+  const [crew, setCrew] = useState<Array<{ id: number; name: string; job: string; department: string }>>([])
+
+  // Generate SEO keywords
+  const seoKeywords = useMemo(() => {
+    if (!details) return []
+
+    if (type === 'movie') {
+      return generateMovieKeywords({
+        title: details.title,
+        title_ar: details.title_ar,
+        title_en: details.title_en,
+        original_title: details.original_title,
+        release_date: details.release_date,
+        genres: details.genres,
+        cast: cast
+      })
+    } else {
+      return generateSeriesKeywords({
+        name: details.name,
+        name_ar: details.name_ar,
+        name_en: details.name_en,
+        original_name: details.original_name,
+        first_air_date: details.first_air_date,
+        genres: details.genres
+      }, season, episode)
+    }
+  }, [details, type, season, episode, cast])
+
+  useEffect(() => {
+    let mounted = true
+
+    const fetchCast = async () => {
+      if (!slug || type === 'video') return
+
+      try {
+        const apiPath = type === 'movie'
+          ? `/api/movies/${slug}/cast?limit=8`
+          : `/api/tv/${slug}/cast?limit=8`
+
+        const response = await fetch(apiPath)
+
+        if (!response.ok) {
+          // Silently fail - no error logging for missing content
+          if (mounted) setCast([])
+          return
+        }
+
+        const data = await response.json()
+
+        if (mounted) {
+          setCast(data.data || [])
+        }
+      } catch (e: any) {
+        // Silently fail - no error logging
+        if (mounted) setCast([])
+      }
+    }
+
+    if (slug) {
+      fetchCast()
+    }
+
+    return () => { mounted = false }
+  }, [slug, type])
+
+  // Fetch keywords
+  useEffect(() => {
+    let mounted = true
+
+    const fetchKeywords = async () => {
+      if (!slug || type === 'video') return
+
+      try {
+        const apiPath = type === 'movie'
+          ? `/api/movies/${slug}/keywords`
+          : `/api/tv/${slug}/keywords`
+
+        const response = await fetch(apiPath)
+
+        if (!response.ok) {
+          // Silently fail - no error logging for missing content
+          if (mounted) setKeywords([])
+          return
+        }
+
+        const data = await response.json()
+
+        if (mounted) {
+          setKeywords(data.data || [])
+        }
+      } catch (e: any) {
+        // Silently fail - no error logging
+        if (mounted) setKeywords([])
+      }
+    }
+
+    if (slug) {
+      fetchKeywords()
+    }
+
+    return () => { mounted = false }
+  }, [slug, type])
+
+  // Fetch crew
+  useEffect(() => {
+    let mounted = true
+
+    const fetchCrew = async () => {
+      if (!slug || type === 'video') return
+
+      try {
+        const apiPath = type === 'movie'
+          ? `/api/movies/${slug}/crew?limit=10`
+          : `/api/tv/${slug}/crew?limit=10`
+
+        const response = await fetch(apiPath)
+
+        if (!response.ok) {
+          // Silently fail - no error logging for missing content
+          if (mounted) setCrew([])
+          return
+        }
+
+        const data = await response.json()
+
+        if (mounted) {
+          setCrew(data.data || [])
+        }
+      } catch (e: any) {
+        // Silently fail - no error logging
+        if (mounted) setCrew([])
+      }
+    }
+
+    if (slug) {
+      fetchCrew()
+    }
+
+    return () => { mounted = false }
+  }, [slug, type])
+
+  // Fetch similar content from API
+  const [similarContent, setSimilarContent] = useState<any[]>([])
+
+  useEffect(() => {
+    let mounted = true
+
+    const fetchSimilar = async () => {
+      if (!slug || type === 'video') {
+        return
+      }
+
+      try {
+        const apiPath = type === 'movie'
+          ? `/api/movies/${slug}/similar?limit=18`
+          : `/api/tv/${slug}/similar?limit=18`
+
+        const response = await fetch(apiPath)
+
+        if (!response.ok) {
+          // Silently fail - no error logging for missing content
+          if (mounted) setSimilarContent([])
+          return
+        }
+
+        const data = await response.json()
+
+        if (mounted) {
+          const items = data.data || []
+          setSimilarContent(items)
+        }
+      } catch (e: any) {
+        // Silently fail - no error logging
+        if (mounted) setSimilarContent([])
+      }
+    }
+
+    if (slug) {
+      fetchSimilar()
+    }
+
+    return () => { mounted = false }
+  }, [slug, type])
 
   const jsonLdWatch = useMemo(() => {
     if (!details) return undefined
@@ -517,35 +591,70 @@ export const Watch = () => {
     }
   }, [details, title, overview, backdrop, poster, type, runtimeMin, rating])
 
-  // New Server Hook
-  // Don't call useServers with 0 or NaN if we are waiting for resolution
-  const effectiveId = id ? Number(id) : 0
+  // Use external_id from details (TMDB ID) for server generation
+  // Fallback to id parameter if external_id is not available yet
+  // For YouTube videos (type=video), effectiveId is 0 (no servers needed)
+  const effectiveId = useMemo(() => {
+    if (type === 'video') return 0 // YouTube videos don't need servers
+
+    // PRIORITY 1: Use details.id (TMDB ID from database)
+    if (details?.id) {
+      const parsed = Number(details.id)
+      if (!isNaN(parsed) && parsed > 0) return parsed
+    }
+
+    // PRIORITY 2: Use details.external_id (fallback)
+    if (details?.external_id) {
+      const parsed = Number(details.external_id)
+      if (!isNaN(parsed) && parsed > 0) return parsed
+    }
+
+    // PRIORITY 3: Use id from URL (last resort)
+    if (id && !isNaN(Number(id))) {
+      const parsed = Number(id)
+      if (parsed > 0) return parsed
+    }
+
+    return 0
+  }, [details, type]) // Fixed: removed 'id'
+
+  // CRITICAL: Use content_type from DB if available — prevents movie being fetched as TV
+  const effectiveType = useMemo((): 'movie' | 'tv' => {
+    if (type === 'video') return 'movie'
+    const dbType = (details as any)?.content_type
+    if (dbType === 'tv' || dbType === 'series') return 'tv'
+    if (dbType === 'movie') return 'movie'
+    return type === 'tv' ? 'tv' : 'movie'
+  }, [details, type])
+
+  // CRITICAL FIX: Pass undefined for season/episode if not episodic content
   const { servers, active, setActive, loading: serversLoading, reportBroken, reporting, checkBatchAvailability } = useServers(
-    effectiveId, 
-    type as 'movie' | 'tv', 
-    season, 
-    episode,
+    effectiveId,
+    effectiveType,
+    isEpisodic ? season : undefined,
+    isEpisodic ? episode : undefined,
     details?.external_ids?.imdb_id
   )
+
   const dlUrl = useMemo(() => {
     if (!effectiveId) return '#'
-    if (type === 'tv') return `https://dl.vidsrc.vip/tv/${effectiveId}/${season}/${episode}`
+    if (effectiveType === 'tv' && isEpisodic) return `https://dl.vidsrc.vip/tv/${effectiveId}/${season}/${episode}`
     return `https://dl.vidsrc.vip/movie/${effectiveId}`
-  }, [effectiveId, type, season, episode])
+  }, [effectiveId, effectiveType, season, episode, isEpisodic])
 
   const [availableEpisodes, setAvailableEpisodes] = useState<Record<string, boolean>>({})
   const [availableSeasonsMap, setAvailableSeasonsMap] = useState<Record<number, boolean>>({})
   const [summaryId, setSummaryId] = useState<string | null>(null)
 
-  // Fetch Summary if available
+  // Track what we've already checked to prevent infinite loops
+  const checkedSeasonsRef = useRef<Set<string>>(new Set())
+  const checkedEpisodesRef = useRef<Set<string>>(new Set())
+
   useEffect(() => {
     if (!title) return
     const fetchSummary = async () => {
-      // Try to find a summary that contains the title
-      // Clean title from special chars to improve matching
       const cleanTitle = title.replace(/[^\w\s\u0600-\u06FF]/g, '').trim()
       if (!cleanTitle) return
-
       const { data } = await supabase
         .from('videos')
         .select('id')
@@ -553,42 +662,56 @@ export const Watch = () => {
         .ilike('title', `%${cleanTitle}%`)
         .limit(1)
         .maybeSingle()
-      
-      if (data) {
-        setSummaryId(data.id)
-      }
+      if (data) setSummaryId(data.id)
     }
     fetchSummary()
   }, [title])
 
   const episodesCount = useMemo(() => {
-    return details?.seasons?.find(s => s.season_number === season)?.episode_count || 0
-  }, [details?.seasons, season])
+    // Use seasons from CockroachDB (not TMDB details.seasons)
+    // CRITICAL FIX: Ensure season is a number for comparison
+    const seasonNum = typeof season === 'number' ? season : Number(season)
+    const foundSeason = seasons?.find(s => s.season_number === seasonNum)
+    const count = foundSeason?.episode_count || 0
 
-  // 1. Fetch availability for current season episodes
+    return count
+  }, [seasons, season, type])
   useEffect(() => {
+    // Only check episodes availability once per season
     if (type === 'tv' && effectiveId && season && episodesCount > 0) {
+      const checkKey = `${effectiveId}-${season}`
+
+      // Skip if already checked
+      if (checkedEpisodesRef.current.has(checkKey)) return
+
+      checkedEpisodesRef.current.add(checkKey)
+
       const episodesToCheck = Array.from({ length: episodesCount }).map((_, i) => ({
         s: season,
         e: i + 1
       }))
-      
       checkBatchAvailability(episodesToCheck).then(results => {
         setAvailableEpisodes(prev => ({ ...prev, ...results }))
       })
     }
   }, [type, effectiveId, season, episodesCount, checkBatchAvailability])
 
-  // 2. Fetch availability for all seasons (check first episode of each)
   useEffect(() => {
-    if (type === 'tv' && effectiveId && details?.seasons) {
-      const seasonsToCheck = details.seasons
+    // Only check seasons availability once
+    if (type === 'tv' && effectiveId && seasons && seasons.length > 0) {
+      const checkKey = `${effectiveId}-seasons`
+
+      // Skip if already checked
+      if (checkedSeasonsRef.current.has(checkKey)) return
+
+      checkedSeasonsRef.current.add(checkKey)
+
+      const seasonsToCheck = seasons
         .filter(s => s.season_number > 0 && s.episode_count > 0)
         .map(s => ({
           s: s.season_number,
           e: 1
         }))
-      
       checkBatchAvailability(seasonsToCheck).then(results => {
         const seasonMap: Record<number, boolean> = {}
         Object.entries(results).forEach(([key, isAvailable]) => {
@@ -598,44 +721,40 @@ export const Watch = () => {
         setAvailableSeasonsMap(prev => ({ ...prev, ...seasonMap }))
       })
     }
-  }, [type, effectiveId, details?.seasons, checkBatchAvailability])
+  }, [type, effectiveId, seasons, checkBatchAvailability])
 
-    // Filter out seasons with no episodes or invalid data
-    const availableSeasons = useMemo(() => {
-      if (!details?.seasons) return []
-      return details.seasons.filter(s => {
-        if (s.season_number <= 0) return false
-        if (s.episode_count <= 0) return false
-        
-        // ONLY hide if we have explicitly checked it and it's false
-        // If it's undefined (not checked yet), show it
-        if (availableSeasonsMap[s.season_number] === false) {
-          // But if we have NO other seasons, show it anyway to avoid empty UI
-          const otherAvailable = details?.seasons?.some(other => 
-            other.season_number > 0 && 
-            other.season_number !== s.season_number && 
-            availableSeasonsMap[other.season_number] !== false
-          )
-          if (!otherAvailable) return true
-          return false
-        }
-        return true
-      })
-    }, [details?.seasons, availableSeasonsMap])
+  const availableSeasons = useMemo(() => {
+    // Use seasons from CockroachDB (not TMDB details.seasons)
+    if (!seasons || seasons.length === 0) return []
+    return seasons.filter(s => {
+      if (s.season_number <= 0) return false
+      if (s.episode_count <= 0) return false
+      if (availableSeasonsMap[s.season_number] === false) {
+        const otherAvailable = seasons.some(other =>
+          other.season_number > 0 &&
+          other.season_number !== s.season_number &&
+          availableSeasonsMap[other.season_number] !== false
+        )
+        if (!otherAvailable) return true
+        return false
+      }
+      return true
+    })
+  }, [seasons, availableSeasonsMap])
 
   const scrollToPlayer = () => {
     const playerEl = document.getElementById('player')
     if (playerEl) {
       playerEl.scrollIntoView({ behavior: 'smooth', block: 'start' })
       setShowPreroll(false)
-      setIsPlaying(true)
     }
   }
 
-  // Early Returns (Now safe because all hooks are declared above)
   if (fetchError) return <NotFound />
   if (error) return <NotFound />
   if (loading && !details) return <div className="min-h-screen bg-[#0f0f0f] p-8"><SkeletonGrid count={1} variant="video" /></div>
+
+  // Debug cast display
 
   return (
     <div className="min-h-screen bg-[#0f0f0f]">
@@ -644,12 +763,12 @@ export const Watch = () => {
         description={overview || ''}
         image={backdrop || poster || undefined}
         type={type === 'movie' ? 'video.movie' : 'video.tv_show'}
+        keywords={seoKeywords}
         schema={jsonLdWatch}
       />
-      
-      {/* Cinema Mode Overlay */}
+
       {cinemaMode && (
-        <div 
+        <div
           className="fixed inset-0 z-50 bg-black/95 transition-all duration-700 backdrop-blur-sm"
           onClick={() => setCinemaMode(false)}
         />
@@ -666,13 +785,31 @@ export const Watch = () => {
         )}
         <div className="relative z-10 mx-auto max-w-[1800px] px-4 md:px-12 pt-14 pb-6">
           <div className="flex flex-col md:flex-row md:items-start justify-between gap-12">
-            {/* Left Side: Title, Details, Actions, Cast */}
             <div className="flex-1 flex flex-col items-start text-left order-2 md:order-1">
-              <h1 className="text-3xl md:text-6xl font-black tracking-tight text-white mb-6 leading-[1.1]">
-                {title}
-              </h1>
-              
+              <div className="mb-6">
+                <h1 className="text-3xl md:text-6xl font-black tracking-tight text-white leading-[1.1]">
+                  {tripleTitles.arabic && tripleTitles.english ? (
+                    <>
+                      {tripleTitles.arabic}
+                      <span className="text-zinc-400 font-semibold"> | </span>
+                      {tripleTitles.english}
+                    </>
+                  ) : (
+                    tripleTitles.primary
+                  )}
+                </h1>
+              </div>
+
               <div className="flex flex-wrap items-center gap-3 text-sm text-zinc-300 mb-8 justify-start">
+                {/* نوع المحتوى */}
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-primary/10 border border-primary/20 text-primary font-bold">
+                  <Layers size={16} />
+                  {type === 'movie' && t('فيلم', 'Movie')}
+                  {type === 'tv' && t('مسلسل', 'Series')}
+                  {type === 'game' && t('لعبة', 'Game')}
+                  {type === 'video' && t('فيديو', 'Video')}
+                </span>
+
                 {year && (
                   <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white/5 border border-white/10">
                     <Calendar size={16} className="text-[#f5c518]" /> {year}
@@ -685,7 +822,7 @@ export const Watch = () => {
                 )}
                 {!!genres.length && (
                   <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white/5 border border-white/10">
-                    {genres.slice(0, 2).map((g) => g.name).join(' • ')}
+                    {genres.slice(0, 2).map((g) => lang === 'ar' ? translateGenre(g.name) : g.name).join(' • ')}
                   </span>
                 )}
                 {rating != null && (
@@ -693,106 +830,67 @@ export const Watch = () => {
                     <Star size={16} className="fill-[#f5c518]" /> {rating}
                   </span>
                 )}
-              </div>
-              
-              <p className="max-w-2xl text-lg text-zinc-300 leading-relaxed line-clamp-4 mb-10 text-left">{overview}</p>
-              
-              {/* Actions Section */}
-              <div className="flex flex-wrap items-center gap-4 mb-10">
-                <button 
-                  onClick={scrollToPlayer}
-                  className="rounded-2xl bg-[#e50914] px-12 h-16 flex items-center justify-center text-white text-xl font-black shadow-[0_0_40px_rgba(229,9,20,0.4)] hover:scale-105 hover:brightness-110 transition-all active:scale-95 uppercase tracking-wider"
-                >
-                  مشاهدة الآن
-                </button>
-                
-                <button
-                  onClick={() => {
-                      if (!user) {
-                        toast.error(lang === 'ar' ? 'يجب عليك تسجيل الدخول أولاً للمشاركة في غرفة المشاهدة الجماعية' : 'You must login first to join a group watch party', { id: 'auth-required' })
-                        return
-                      }
-                      setShowCreateParty(true)
-                    }}
-                  className="rounded-2xl border border-primary/20 bg-primary/10 px-8 h-16 flex items-center justify-center text-primary text-sm font-black shadow-lg hover:bg-primary/20 transition-all gap-3"
-                >
-                  <Users size={24} />
-                  غرفة المشاهدة الجماعية
-                </button>
 
-                <ShareButton 
-                  title={title} 
-                  text={overview?.slice(0, 100)} 
-                  currentTime={elapsed}
-                  className="h-16 w-16 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/10 transition-all"
-                />
+                {/* أزرار المشاهدة والمشاركة */}
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={scrollToPlayer}
+                    className="rounded-2xl bg-gradient-to-r from-[#e50914] to-[#b20710] px-8 h-12 flex items-center justify-center gap-2 text-white text-sm font-black shadow-[0_8px_30px_rgba(229,9,20,0.4)] hover:shadow-[0_8px_40px_rgba(229,9,20,0.6)] hover:scale-105 transition-all active:scale-95"
+                  >
+                    <Play size={18} className="fill-white" />
+                    {t('مشاهدة الآن', 'Watch Now')}
+                  </button>
+
+                  <ShareButton
+                    title={title}
+                    text={overview?.slice(0, 100)}
+                    currentTime={elapsed}
+                    className="h-12 px-6 rounded-2xl border-2 border-white/20 bg-white/10 backdrop-blur-md flex items-center justify-center gap-2 text-white hover:bg-white/20 hover:border-white/30 transition-all font-bold text-sm"
+                  />
+                </div>
               </div>
+
+              <p className="max-w-2xl text-lg text-zinc-300 leading-relaxed line-clamp-4 mb-10 text-left">{overview}</p>
 
               {!!cast.length && (
                 <div className="w-full max-w-xl">
                   <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-zinc-500 mb-4">
                     <span className="w-4 h-[1px] bg-zinc-800" />
-                    طاقم العمل
+                    {lang === 'ar' ? 'طاقم العمل' : 'Cast'}
                   </div>
-                  {/* Cast Slider Content - Keeping original logic but inside the new layout */}
-                  <div className="relative group/cast-slider">
-                    <Swiper
-                      modules={[Navigation, FreeMode]}
-                      navigation={{
-                        nextEl: '.cast-next',
-                        prevEl: '.cast-prev',
-                      }}
-                      freeMode={true}
-                      spaceBetween={16}
-                      slidesPerView="auto"
-                      className="!static"
-                    >
-                      {cast.map((p) => (
-                        <SwiperSlide key={p.id} className="!w-fit">
-                          <Link 
-                            to={`/actor/${p.id}`}
-                            className="group/cast flex flex-col items-center gap-2 w-20 text-center hover:scale-105 transition-all"
-                          >
-                            <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-white/5 group-hover/cast:border-primary/50 transition-all shadow-xl">
-                              {p.profile_path ? (
-                                <img 
-                                  src={`https://image.tmdb.org/t/p/w185${p.profile_path}`} 
-                                  alt={p.name} 
-                                  className="w-full h-full object-cover grayscale group-hover/cast:grayscale-0 transition-all duration-500"
-                                />
-                              ) : (
-                                <div className="w-full h-full bg-zinc-800 flex items-center justify-center">
-                                  <Users size={18} className="text-zinc-500" />
-                                </div>
-                              )}
+                  <div className="flex items-start gap-2 overflow-x-visible">
+                    {cast.slice(0, 8).map((p) => (
+                      <Link
+                        key={p.id}
+                        to={`/actor/${p.slug}`}
+                        className="group/cast flex flex-col items-center gap-1.5 text-center hover:scale-105 transition-all flex-shrink-0"
+                        style={{ width: '70px' }}
+                      >
+                        <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white/5 group-hover/cast:border-primary/50 transition-all shadow-xl">
+                          {p.profile_url || p.profile_path ? (
+                            <img
+                              src={p.profile_url || `https://image.tmdb.org/t/p/w185${p.profile_path}`}
+                              alt={p.name_ar || p.name}
+                              className="w-full h-full object-cover grayscale group-hover/cast:grayscale-0 transition-all duration-500"
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-zinc-800 flex items-center justify-center">
+                              <Users size={16} className="text-zinc-500" />
                             </div>
-                            <span className="font-bold text-zinc-300 text-xs line-clamp-1 group-hover/cast:text-primary transition-colors">{p.name}</span>
-                          </Link>
-                        </SwiperSlide>
-                      ))}
-                    </Swiper>
-                    <button
-                      className="cast-prev absolute -left-4 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-black/40 border border-white/10 hover:bg-primary hover:text-black transition-all opacity-0 group-hover/cast-slider:opacity-100 disabled:hidden z-20 backdrop-blur-sm"
-                      type="button"
-                      aria-label={lang === 'ar' ? 'الممثلون السابقون' : 'Previous cast members'}
-                    >
-                      <ChevronLeft size={14} />
-                    </button>
-                    <button
-                      className="cast-next absolute -right-4 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-black/40 border border-white/10 hover:bg-primary hover:text-black transition-all opacity-0 group-hover/cast-slider:opacity-100 disabled:hidden z-20 backdrop-blur-sm"
-                      type="button"
-                      aria-label={lang === 'ar' ? 'الممثلون التاليون' : 'Next cast members'}
-                    >
-                      <ChevronRight size={14} />
-                    </button>
+                          )}
+                        </div>
+                        <span className="font-bold text-zinc-300 text-[9px] line-clamp-2 leading-tight group-hover/cast:text-primary transition-colors w-full">
+                          {p.name_ar || p.name}
+                        </span>
+                      </Link>
+                    ))}
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Right Side: Poster */}
             <div className="w-44 md:w-64 shrink-0 order-1 md:order-2 mx-auto md:mx-0">
-              <div 
+              <div
                 onClick={scrollToPlayer}
                 className="relative aspect-[2/3] overflow-hidden rounded-3xl border-4 border-white/5 bg-black shadow-[0_0_50px_rgba(0,0,0,0.5)] cursor-pointer group/poster transition-all duration-500 hover:border-primary/30"
               >
@@ -803,9 +901,9 @@ export const Watch = () => {
                 </div>
                 <div className="h-full w-full bg-[#1a1a1a]">
                   {poster && (
-                    <img 
-                      src={poster} 
-                      alt={title} 
+                    <img
+                      src={poster}
+                      alt={title}
                       className="h-full w-full object-cover transition-transform duration-700 group-hover/poster:scale-105"
                       loading="lazy"
                     />
@@ -818,311 +916,274 @@ export const Watch = () => {
       </div>
 
       <div className="mx-auto max-w-[1800px] px-4 md:px-12 py-6 space-y-6">
-        
-
-
-        {/* NEW LAYOUT: Full Width Stack */}
         <section id="player" className="flex flex-col gap-10 md:gap-12 mt-4 md:mt-8">
-            
-            {/* Top Row: Player and Servers */}
-            <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-6">
-                {/* Video Player */}
-                <div id="player" className="space-y-4">
-                    {showPreroll ? (
-                    <div className="aspect-video w-full max-h-[65vh] overflow-hidden rounded-2xl border border-zinc-800 bg-black">
-                        <AdsManager type="preroll" position="player" onDone={() => setShowPreroll(false)} />
-                    </div>
-                    ) : (
-                    <EmbedPlayer
-                        server={servers[active]}
-                        serverIndex={active}
-                        cinemaMode={cinemaMode}
-                        toggleCinemaMode={() => setCinemaMode(!cinemaMode)}
-                        loading={serversLoading}
-                        onNextServer={() => active < servers.length - 1 ? setActive(active + 1) : setActive(0)}
-                        onReport={reportBroken}
-                        reporting={reporting}
-                        lang={lang}
-                        servers={servers}
-                        activeServerIndex={active}
-                        onServerSelect={setActive}
-                        downloadUrl={dlUrl}
-                    />
-                    )}
-
-                    {/* Disclaimer Notice */}
-                    <motion.div 
-                      initial={{ opacity: 0, y: 10 }}
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-6">
+            <div id="player" className="space-y-4">
+              {showPreroll ? (
+                <div
+                  className="aspect-video w-full max-h-[65vh] overflow-hidden rounded-2xl border border-zinc-800 bg-black bg-cover bg-center bg-no-repeat"
+                  style={{ backgroundImage: backdrop ? `url(${backdrop})` : 'none' }}
+                >
+                  <div className="w-full h-full bg-black/60 backdrop-blur-sm">
+                    <AdsManager type="preroll" position="player" onDone={() => setShowPreroll(false)} />
+                  </div>
+                </div>
+              ) : type === 'video' && details?.external_id ? (
+                // YouTube video player
+                <div
+                  className={clsx(
+                    "relative aspect-video w-full overflow-hidden transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] bg-cover bg-center bg-no-repeat",
+                    cinemaMode
+                      ? 'fixed inset-0 z-[60] h-screen w-screen rounded-none border-none bg-black'
+                      : 'rounded-[2rem] border border-white/10 bg-black shadow-2xl ring-1 ring-white/5 max-h-[65vh]'
+                  )}
+                  style={{ backgroundImage: backdrop ? `url(${backdrop})` : 'none' }}
+                >
+                  <iframe
+                    src={`https://www.youtube.com/embed/${details.external_id}?autoplay=1&rel=0&modestbranding=1`}
+                    className="h-full w-full bg-black"
+                    allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+                    title={title}
+                    style={{ border: 'none', overflow: 'hidden', width: '100%', height: '100%' }}
+                  />
+                  {cinemaMode && (
+                    <motion.button
+                      initial={{ opacity: 0, y: -20 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="p-4 rounded-2xl bg-white/[0.02] border border-dashed border-white/10"
+                      onClick={() => setCinemaMode(false)}
+                      className="absolute top-8 right-8 z-[70] flex items-center gap-3 px-6 py-3 rounded-2xl bg-white/10 backdrop-blur-2xl border border-white/20 text-white hover:bg-white/20 transition-all group"
                     >
-                      <div className="flex items-center justify-center gap-2 mb-2 text-zinc-500">
-                        <AlertTriangle size={14} />
-                        <span className="text-xs font-black uppercase tracking-widest">{t('إخلاء مسؤولية', 'DISCLAIMER')}</span>
-                      </div>
-                      <p className="text-xs text-zinc-500 leading-relaxed text-center max-w-3xl mx-auto">
-                        {t(
-                          'تُجلب كافة المحتويات المعروضة آلياً من مصادر خارجية؛ الموقع غير مسؤول عن أي إعلانات تظهر داخل المشغلات أو أي مشاهد قد لا تلائم البعض. لا يقوم الموقع بتخزين أي ملفات فيديو على خوادمه الخاصة، وتعود حقوق الملكية الفكرية لأصحابها الأصليين.',
-                          'All content displayed is automatically fetched from external sources; the site is not responsible for any advertisements appearing within the players or any content that may not be suitable for all audiences. The site does not host any video files on its servers; all intellectual property rights belong to their respective owners.'
+                      <span className="text-sm font-bold opacity-0 group-hover:opacity-100 transition-opacity">{lang === 'ar' ? 'إغلاق وضع السينما' : 'Exit Cinema'}</span>
+                      <Sparkles size={20} className="fill-white" />
+                    </motion.button>
+                  )}
+                </div>
+              ) : (
+                <EmbedPlayer
+                  server={servers[active]}
+                  serverIndex={active}
+                  cinemaMode={cinemaMode}
+                  toggleCinemaMode={() => setCinemaMode(!cinemaMode)}
+                  loading={serversLoading}
+                  onNextServer={() => active < servers.length - 1 ? setActive(active + 1) : setActive(0)}
+                  onReport={reportBroken}
+                  reporting={reporting}
+                  poster={backdrop || poster}
+                  lang={lang as 'ar' | 'en'}
+                  servers={servers}
+                  activeServerIndex={active}
+                  onServerSelect={setActive}
+                />
+              )}
+
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="p-4 rounded-2xl bg-white/[0.02] border border-dashed border-white/10"
+              >
+                <div className="flex items-center justify-center gap-2 mb-2 text-zinc-500">
+                  <AlertTriangle size={14} />
+                  <span className="text-xs font-black uppercase tracking-widest">{t('إخلاء مسؤولية', 'DISCLAIMER')}</span>
+                </div>
+                <p className="text-xs text-zinc-500 leading-relaxed text-center max-w-3xl mx-auto">
+                  {t(
+                    'تُجلب كافة المحتويات المعروضة آلياً من مصادر خارجية؛ الموقع غير مسؤول عن أي إعلانات تظهر داخل المشغلات أو أي مشاهد قد لا تلائم البعض. لا يقوم الموقع بتخزين أي ملفات فيديو على خوادمه الخاصة، وتعود حقوق الملكية الفكرية لأصحابها الأصليين.',
+                    'All content displayed is automatically fetched from external sources; the site is not responsible for any advertisements appearing within the players or any content that may not be suitable for all audiences. The site does not host any video files on its servers; all intellectual property rights belong to their respective owners.'
+                  )}
+                </p>
+              </motion.div>
+            </div>
+
+            <div className="space-y-4">
+              {summaryId && (
+                <Link
+                  to={`/watch/video/${summaryId}`}
+                  className="w-full flex items-center justify-between gap-3 px-5 py-4 rounded-2xl bg-[#e50914] text-white shadow-lg hover:scale-[1.02] transition-all group overflow-hidden relative"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-black/20 to-transparent" />
+                  <div className="relative z-10 flex items-center gap-3">
+                    <div className="p-2 rounded-xl bg-white/20 backdrop-blur-sm">
+                      <Sparkles size={20} className="fill-white text-white" />
+                    </div>
+                    <div className="flex flex-col items-start text-start">
+                      <span className="text-[10px] font-black uppercase tracking-widest opacity-90">{t('ملخص القصة', 'Story Summary')}</span>
+                      <span className="text-sm font-black">{t('شاهد ملخص الفيلم/المسلسل', 'Watch Full Summary')}</span>
+                    </div>
+                  </div>
+                  <ChevronLeft size={20} className={`relative z-10 ${lang === 'ar' ? '' : 'rotate-180'} group-hover:-translate-x-1 transition-transform`} />
+                </Link>
+              )}
+
+              {type === 'tv' && (
+                <div className="bg-black/40 border border-white/5 rounded-2xl p-4 backdrop-blur-sm space-y-4">
+                  <div className="flex items-center gap-2 px-1">
+                    <div className="p-1.5 rounded-lg bg-primary/10 text-primary">
+                      <Layers size={14} />
+                    </div>
+                    <h3 className="text-[11px] font-black text-white uppercase tracking-tight">
+                      {t('المواسم', 'Seasons')}
+                    </h3>
+                  </div>
+                  <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-1 pr-2">
+                    {availableSeasons.map((s: any) => (
+                      <button
+                        key={s.season_number}
+                        onClick={() => handleSeasonChange(s.season_number)}
+                        className={clsx(
+                          "group relative flex items-center justify-center rounded-lg border transition-all duration-300 h-11 w-full overflow-hidden",
+                          season === s.season_number
+                            ? "bg-primary border-transparent text-black shadow-lg shadow-primary/20"
+                            : "bg-white/5 border-white/5 text-zinc-500 hover:border-white/10 hover:bg-white/[0.07] hover:text-white"
                         )}
-                      </p>
-                    </motion.div>
-                </div>
-
-                {/* Sidebar: Seasons, and Episodes */}
-                <div className="space-y-4">
-                    {/* Summary Button */}
-                    {summaryId && (
-                        <Link 
-                            to={`/watch/video/${summaryId}`}
-                            className="w-full flex items-center justify-between gap-3 px-5 py-4 rounded-2xl bg-[#e50914] text-white shadow-lg hover:scale-[1.02] transition-all group overflow-hidden relative"
-                        >
-                            <div className="absolute inset-0 bg-gradient-to-r from-black/20 to-transparent" />
-                            <div className="relative z-10 flex items-center gap-3">
-                                <div className="p-2 rounded-xl bg-white/20 backdrop-blur-sm">
-                                    <Sparkles size={20} className="fill-white text-white" />
-                                </div>
-                                <div className="flex flex-col items-start text-start">
-                                    <span className="text-[10px] font-black uppercase tracking-widest opacity-90">{t('ملخص القصة', 'Story Summary')}</span>
-                                    <span className="text-sm font-black">{t('شاهد ملخص الفيلم/المسلسل', 'Watch Full Summary')}</span>
-                                </div>
-                            </div>
-                            <ChevronLeft size={20} className={`relative z-10 ${lang === 'ar' ? '' : 'rotate-180'} group-hover:-translate-x-1 transition-transform`} />
-                        </Link>
-                    )}
-
-                    {/* Seasons Selector (TV Only) */}
-                    {type === 'tv' && (
-                      <div className="bg-black/40 border border-white/5 rounded-2xl p-4 backdrop-blur-sm space-y-4">
-                        <div className="flex items-center gap-2 px-1">
-                          <div className="p-1.5 rounded-lg bg-primary/10 text-primary">
-                            <Layers size={14} />
-                          </div>
-                          <h3 className="text-[11px] font-black text-white uppercase tracking-tight">
-                            {t('المواسم', 'Seasons')}
-                          </h3>
-                        </div>
-                        <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-1 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
-                          {availableSeasons.map((s: any) => (
-                              <button
-                                key={s.season_number}
-                                onClick={() => handleSeasonChange(s.season_number)}
-                                className={clsx(
-                                  "group relative flex items-center justify-center rounded-lg border transition-all duration-300 h-11 w-full overflow-hidden",
-                                  season === s.season_number 
-                                    ? "bg-primary border-transparent text-black shadow-lg shadow-primary/20"
-                                    : "bg-white/5 border-white/5 text-zinc-500 hover:border-white/10 hover:bg-white/[0.07] hover:text-white"
-                                )}
-                              >
-                              {/* Rotating Border Effect for Active Season (Blue/Cyan) */}
-                              {season === s.season_number && (
-                                <div className="absolute inset-0 z-0">
-                                  <motion.div
-                                    animate={{ rotate: 360 }}
-                                    transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-                                    className="absolute inset-[-150%] bg-[conic-gradient(transparent,transparent,transparent,#3b82f6)]"
-                                  />
-                                </div>
-                              )}
-
-                              {/* Inner Content */}
-                              <div className={clsx(
-                                "relative z-10 flex items-center justify-center gap-1.5 w-[calc(100%-4px)] h-[calc(100%-4px)] rounded-[6px]",
-                                season === s.season_number ? "bg-primary" : ""
-                              )}>
-                                <span className="text-[10px] font-bold opacity-70 uppercase">{t('موسم', 'Season')}</span>
-                                <span className="text-sm md:text-base font-black">{s.season_number}</span>
-                              </div>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Collection Parts (Movie Only) */}
-                    {type === 'movie' && (details as any)?.collection?.parts && (
-                      <div className="bg-black/40 border border-white/5 rounded-2xl p-4 backdrop-blur-sm space-y-4">
-                        <div className="flex items-center gap-3 px-1">
-                          <div className="p-2 rounded-xl bg-primary/10 text-primary">
-                            <Layers size={18} />
-                          </div>
-                          <h3 className="text-sm font-black text-white uppercase tracking-tight">
-                            {t('الأجزاء', 'Parts')}
-                          </h3>
-                        </div>
-                        <div className="flex flex-col gap-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
-                          {((details as any).collection.parts as any[])
-                            .sort((a, b) => new Date(a.release_date).getTime() - new Date(b.release_date).getTime())
-                            .map((p) => (
-                              <Link
-                                key={p.id}
-                                to={generateWatchUrl({ id: p.id, type: 'movie' })}
-                                className={clsx(
-                                  "px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-tight transition-all border text-center",
-                                  Number(id) === p.id 
-                                    ? "bg-primary border-primary text-black shadow-lg shadow-primary/20" 
-                                    : "bg-white/5 border-white/5 text-zinc-400 hover:border-white/10 hover:bg-white/[0.07] hover:text-white"
-                                )}
-                              >
-                                {p.title}
-                              </Link>
-                            ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Episodes Selector (TV Only) */}
-                    {type === 'tv' && (
-                      <div className="bg-black/40 border border-white/5 rounded-2xl p-4 backdrop-blur-sm">
-                        <EpisodeSelector 
-                            season={season}
-                            episode={episode}
-                            setSeason={handleSeasonChange}
-                            setEpisode={handleEpisodeChange}
-                            seasonsCount={details?.seasons?.length}
-                            episodesCount={episodesCount}
-                            lang={lang}
-                            availableEpisodes={availableEpisodes}
-                        />
-                      </div>
-                    )}
-                </div>
-            </div>
-
-            {/* Recommendations Section */}
-            <div className="space-y-6 pt-6">
-                {/* Similar Recommendations Section */}
-                {relatedParts.length > 0 && (
-                  <div className="space-y-6">
-                    <div className="flex items-center justify-between px-1">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-xl bg-primary/20 text-primary">
-                          <Heart size={18} />
-                        </div>
-                        <h2 className="text-xl font-black text-white uppercase tracking-tight">
-                          {t('قد يعجبك أيضاً', 'You Might Also Like')}
-                        </h2>
-                      </div>
-                      
-                      <Link 
-                        to={`/parts/${type}/${id}`} 
-                        className="group flex items-center gap-2 text-[10px] font-black text-zinc-500 hover:text-primary transition-all uppercase tracking-widest bg-white/5 px-4 py-2 rounded-xl border border-white/5 hover:border-primary/20"
                       >
-                        <span>{t('عرض المزيد', 'View More')}</span>
-                        <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform rotate-180" />
-                      </Link>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
-                      {relatedParts.slice(0, 100).map((p: any, index: number) => (
-                        <MovieCard key={p.id} movie={p} index={index} />
-                      ))}
-                    </div>
+                        {season === s.season_number && (
+                          <div className="absolute inset-0 z-0">
+                            <motion.div
+                              animate={{ rotate: 360 }}
+                              transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                              className="absolute inset-[-150%] bg-[conic-gradient(transparent,transparent,transparent,#3b82f6)]"
+                            />
+                          </div>
+                        )}
 
-                    {relatedParts.length > 100 && (
-                      <div className="flex justify-center pt-8">
-                        <Link 
-                          to={`/parts/${type}/${id}`}
-                          className="px-8 py-3 rounded-2xl bg-primary/10 border border-primary/20 text-primary text-xs font-black uppercase tracking-widest hover:bg-primary hover:text-black transition-all shadow-xl hover:shadow-primary/20"
-                        >
-                          {t('عرض جميع الأفلام (+' + (relatedParts.length - 100) + ')', 'View All Movies (+' + (relatedParts.length - 100) + ')')}
-                        </Link>
-                      </div>
-                    )}
-                  </div>
-                )}
-            </div>
-        </section>
-      </div>
-      {/* Group Watch Party Component - Moved to Portal */}
-      {mounted && partyId && createPortal(
-        <WatchParty 
-          partyId={partyId}
-          onSync={handleSync}
-          onClose={() => {
-            setPartyId(null)
-            setSp(prev => {
-              prev.delete('partyId')
-              return prev
-            })
-          }}
-          currentVideoTime={elapsed}
-          isVideoPlaying={isPlaying}
-          lang={lang}
-        />,
-        document.body
-      )}
-
-      {/* Create Group Watch Party Modal - Moved to Portal for fixed positioning */}
-      <AnimatePresence>
-        {mounted && showCreateParty && createPortal(
-          <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="w-full max-w-md overflow-hidden rounded-3xl border border-white/10 bg-[#1a1a1a] shadow-2xl relative"
-            >
-              <div className="border-b border-white/5 bg-white/5 p-6 flex justify-between items-center">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-xl bg-primary/20 text-primary">
-                    <Users size={24} />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-black text-white">{lang === 'ar' ? 'إنشاء غرفة مشاهدة جماعية' : 'Create Group Watch Party'}</h2>
-                    <p className="text-xs text-zinc-400">{lang === 'ar' ? 'شاهد مع أصدقائك في نفس الوقت وبشكل جماعي' : 'Watch with friends together in sync'}</p>
+                        <div className={clsx(
+                          "relative z-10 flex items-center justify-center gap-1.5 w-[calc(100%-4px)] h-[calc(100%-4px)] rounded-[6px]",
+                          season === s.season_number ? "bg-primary" : ""
+                        )}>
+                          <span className="text-[10px] font-bold opacity-70 uppercase">{t('موسم', 'Season')}</span>
+                          <span className="text-sm md:text-base font-black">{s.season_number}</span>
+                        </div>
+                      </button>
+                    ))}
                   </div>
                 </div>
-                <button onClick={() => setShowCreateParty(false)} className="text-zinc-500 hover:text-white transition-colors">
-                  <X size={20} />
-                </button>
-              </div>
+              )}
 
-              <div className="p-6 space-y-6">
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest mr-1">{lang === 'ar' ? 'اسم الغرفة' : 'Room Name'}</label>
-                  <input
-                    type="text"
-                    value={roomName}
-                    onChange={(e) => setRoomName(e.target.value)}
-                    placeholder={lang === 'ar' ? 'مثلاً: سهرة الخميس 🍿' : 'e.g. Movie Night 🍿'}
-                    className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all"
+              {type === 'movie' && (details as any)?.collection?.parts && (
+                <div className="bg-black/40 border border-white/5 rounded-2xl p-4 backdrop-blur-sm space-y-4">
+                  <div className="flex items-center gap-3 px-1">
+                    <div className="p-2 rounded-xl bg-primary/10 text-primary">
+                      <Layers size={18} />
+                    </div>
+                    <h3 className="text-sm font-black text-white uppercase tracking-tight">
+                      {t('الأجزاء', 'Parts')}
+                    </h3>
+                  </div>
+                  <div className="flex flex-col gap-2 pr-2">
+                    {((details as any).collection.parts as any[])
+                      .sort((a, b) => new Date(a.release_date).getTime() - new Date(b.release_date).getTime())
+                      .map((p) => (
+                        <Link
+                          key={p.id}
+                          to={generateWatchUrl({ id: p.id, type: 'movie' })}
+                          className={clsx(
+                            "px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-tight transition-all border text-center",
+                            Number(id) === p.id
+                              ? "bg-primary border-primary text-black shadow-lg shadow-primary/20"
+                              : "bg-white/5 border-white/5 text-zinc-400 hover:border-white/10 hover:bg-white/[0.07] hover:text-white"
+                          )}
+                        >
+                          {p.title}
+                        </Link>
+                      ))}
+                  </div>
+                </div>
+              )}
+
+              {type === 'tv' && (
+                <div className="bg-black/40 border border-white/5 rounded-2xl p-4 backdrop-blur-sm">
+                  <EpisodeSelector
+                    season={season}
+                    episode={episode}
+                    setSeason={handleSeasonChange}
+                    setEpisode={handleEpisodeChange}
+                    seasonsCount={seasons?.length}
+                    episodesCount={episodesCount}
+                    lang={lang as 'ar' | 'en'}
+                    availableEpisodes={availableEpisodes}
                   />
                 </div>
+              )}
+            </div>
+          </div>
 
-                <div className="rounded-2xl bg-primary/5 border border-primary/10 p-4 flex gap-4">
-                  <div className="p-2 h-fit rounded-lg bg-primary/20 text-primary">
-                    <ThumbsUp size={18} />
-                  </div>
-                  <div className="text-xs text-zinc-300 leading-relaxed">
-                    {lang === 'ar' 
-                      ? 'بصفتك المنشئ، سيتم مزامنة تشغيل الفيديو وإيقافه ووقته مع جميع المنضمين للغرفة تلقائياً.'
-                      : 'As the host, video playback and sync will be controlled by you for all participants.'}
+          <div className="space-y-6 pt-6">
+            {(() => {
+              return null
+            })()}
+
+            {similarContent.length > 0 && (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between px-1">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-xl bg-primary/20 text-primary">
+                      <Heart size={18} />
+                    </div>
+                    <h2 className="text-xl font-black text-white uppercase tracking-tight">
+                      {t('قد يعجبك أيضاً', 'You Might Also Like')}
+                    </h2>
                   </div>
                 </div>
 
-                <button
-                  onClick={handleCreateParty}
-                  disabled={isCreating}
-                  className="w-full flex items-center justify-center gap-2 rounded-2xl bg-primary py-4 text-sm font-black text-black hover:brightness-110 active:scale-[0.98] transition-all shadow-xl shadow-primary/20 disabled:opacity-50"
-                >
-                  {isCreating ? (
-                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-black/20 border-t-black" />
-                  ) : (
-                    <>
-                      <Play size={18} fill="currentColor" />
-                      {lang === 'ar' ? 'بدء الحفلة الآن' : 'Start Group Party Now'}
-                    </>
-                  )}
-                </button>
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
+                  {similarContent.map((item: any, index: number) => {
+                    // Map API response fields to MovieCard expected fields
+                    const mappedItem = {
+                      id: item.id,
+                      slug: item.slug || String(item.id),
+                      media_type: type,
+                      // Titles
+                      title: item.title,
+                      title_ar: item.title_ar,
+                      title_en: item.title_en || item.title,
+                      name: item.name,
+                      name_ar: item.name_ar,
+                      name_en: item.name_en || item.name,
+                      original_title: item.original_title,
+                      // Images - use poster_path from API (not poster_url)
+                      poster_path: item.poster_path,
+                      backdrop_path: item.backdrop_path,
+                      // Dates
+                      release_date: item.release_date,
+                      first_air_date: item.first_air_date,
+                      // Rating
+                      vote_average: item.vote_average || 0,
+                      vote_count: item.vote_count,
+                      // Genre
+                      primary_genre: item.primary_genre,
+                      genres: item.genres,
+                      // Overview
+                      overview: item.overview,
+                      overview_ar: item.overview_ar,
+                      overview_en: item.overview_en
+                    }
+                    return (
+                      <MovieCard
+                        key={item.id}
+                        movie={mappedItem}
+                        index={index}
+                      />
+                    )
+                  })}
+                </div>
               </div>
-            </motion.div>
-          </div>,
-          document.body
+            )}
+          </div>
+        </section>
+
+        {/* SEO Keywords - Hidden from user view but visible to search engines */}
+        {keywords.length > 0 && (
+          <section className="sr-only" aria-hidden="true">
+            <h2>{t('الكلمات المفتاحية', 'Keywords')}</h2>
+            <div>
+              {keywords.map((keyword) => (
+                <span key={keyword.id}>{keyword.name}, </span>
+              ))}
+            </div>
+            <meta name="keywords" content={keywords.map(k => k.name).join(', ')} />
+          </section>
         )}
-      </AnimatePresence>
+      </div>
     </div>
   )
 }
-
-

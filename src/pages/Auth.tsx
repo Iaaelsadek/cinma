@@ -7,7 +7,7 @@ import { ensureProfile } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { logAuthError, errorLogger } from '../services/errorLogging'
 import { Eye, EyeOff, Mail, Lock, User, Chrome, ArrowRight, Film } from 'lucide-react'
-import { toast } from 'sonner'
+import { toast } from '../lib/toast-manager'
 
 const FORBIDDEN_USERNAMES = [
   'admin', 'administrator', 'cinema', 'online', 'system', 'moderator', 'support', 'cinima', 'سينما', 'اونلاين', 'أونلاين', 'ادمن', 'أدمن', 'مشرف', 'مدير', 'دعم', 'فني', 'staff', 'owner', 'root', 'superadmin',
@@ -96,7 +96,7 @@ const Auth = () => {
     toast.success('تم تسجيل الدخول بنجاح')
     try {
       await runWithTimeout(refreshProfile(), 3000)
-    } catch (e) {
+    } catch (e: any) {
       errorLogger.logError({
         message: 'Failed to refresh profile or timed out',
         severity: 'low',
@@ -133,7 +133,7 @@ const Auth = () => {
             localStorage.removeItem(key)
           }
         })
-      } catch (e) {
+      } catch (e: any) {
         errorLogger.logError({
           message: 'Session cleanup failed',
           severity: 'low',
@@ -364,7 +364,7 @@ const Auth = () => {
 
   const getTitle = () => {
     switch (mode) {
-      case 'login': return 'مرحباً بعودتك'
+      case 'login': return 'تسجيل الدخول'
       case 'register': return 'انضم إلينا'
       case 'forgot-password': return 'استعادة كلمة المرور'
       case 'mfa': return 'التحقق الثنائي'
@@ -374,7 +374,7 @@ const Auth = () => {
 
   const getSubtitle = () => {
     switch (mode) {
-      case 'login': return 'استكمل رحلة المشاهدة السينمائية'
+      case 'login': return 'سجل دخولك للوصول إلى المفضلة والمزايا الحصرية'
       case 'register': return 'أنشئ حسابك واستمتع بتجربة فريدة'
       case 'forgot-password': return 'أدخل بريدك الإلكتروني لاستلام رابط الاستعادة'
       case 'mfa': return 'أدخل الرمز المكون من 6 أرقام من تطبيق التحقق'

@@ -1,4 +1,4 @@
-import { vi } from 'vitest';
+﻿import { vi } from 'vitest';
 
 // Ensure helper is mocked before loading logger so the module initializer
 // sees the stubbed function.
@@ -10,9 +10,9 @@ vi.mock('../lib/envHelper');
 
 describe('logger utility', () => {
   let origEnv: NodeJS.ProcessEnv;
-  let logSpy: any;
-  let warnSpy: any;
-  let errorSpy: any;
+  let logSpy: ReturnType<typeof vi.spyOn>;
+  let warnSpy: ReturnType<typeof vi.spyOn>;
+  let errorSpy: ReturnType<typeof vi.spyOn>;
 
   beforeAll(() => {
     origEnv = process.env;

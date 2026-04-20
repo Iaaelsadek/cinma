@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { toast } from 'sonner'
+import { toast } from '../../lib/toast-manager'
 import { supabase } from '../../lib/supabase'
 import { tmdb } from '../../lib/tmdb'
 import { api } from '../../lib/api'
@@ -206,7 +206,7 @@ export const RequestPage = () => {
       
       // If no results found anywhere, proceed directly
       await submitToSupabase(data)
-    } catch (e) {
+    } catch (e: any) {
       errorLogger.logError({
         message: 'Search failed, proceeding with request',
         severity: 'low',

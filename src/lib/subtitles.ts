@@ -64,7 +64,7 @@ export async function fetchSubtitles(tmdbId: number | string, imdbId?: string, l
              }
         }
       }
-    } catch (e) {
+    } catch (e: any) {
       errorLogger.logError({
         message: 'Failed to fetch subtitles',
         severity: 'low',

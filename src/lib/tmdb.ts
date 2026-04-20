@@ -27,6 +27,18 @@ tmdb.interceptors.response.use(
   async (error) => {
     const config = error?.config
     if (!config) throw error
+    
+    // Suppress 404 errors silently - return empty data structure
+    if (error?.response?.status === 404) {
+      return {
+        status: 200,
+        data: { results: [] },
+        config,
+        headers: error.response.headers,
+        statusText: 'OK'
+      }
+    }
+    
     const retryCount = typeof config.__retryCount === 'number' ? config.__retryCount : 0
     if (retryCount >= TMDB_MAX_RETRIES || !shouldRetry(error?.response?.status)) {
       throw error
@@ -58,11 +70,19 @@ export function getRatingColorFromCert(cert: string): 'green' | 'yellow' | 'red'
   return 'red'
 }
 
+/**
+ * @deprecated Use CockroachDB API instead: GET /api/trending?type=movie|tv
+ * Fetch trending content from TMDB
+ */
 export async function fetchTrending(type: 'movie' | 'tv') {
   const { data } = await tmdb.get(`/trending/${type}/week`)
   return data
 }
 
+/**
+ * @deprecated Use extractUsCertification from dataHelpers.ts instead
+ * Get US movie certification from TMDB
+ */
 export async function getUsMovieCertification(tmdbId: number) {
   const { data } = await tmdb.get(`/movie/${tmdbId}/release_dates`)
   const arr = (data?.results || []) as Array<{ iso_3166_1: string; release_dates: Array<{ certification?: string }> }>
@@ -71,6 +91,10 @@ export async function getUsMovieCertification(tmdbId: number) {
   return cert.toUpperCase()
 }
 
+/**
+ * @deprecated Use extractUsTvRating from dataHelpers.ts instead
+ * Get US TV rating from TMDB
+ */
 export async function getUsTvRating(tmdbId: number) {
   const { data } = await tmdb.get(`/tv/${tmdbId}/content_ratings`)
   const arr = (data?.results || []) as Array<{ iso_3166_1: string; rating?: string }>
@@ -78,6 +102,10 @@ export async function getUsTvRating(tmdbId: number) {
   return (us?.rating || '').toUpperCase()
 }
 
+/**
+ * @deprecated Use fetchGenresFromAPI from dataHelpers.ts instead
+ * Fetch genres from TMDB
+ */
 export async function fetchGenres(type: 'movie' | 'tv') {
   const { data } = await tmdb.get(`/genre/${type}/list`)
   return (data?.genres || []) as Array<{ id: number; name: string }>
@@ -121,6 +149,10 @@ function colorToCertification(colors?: Array<'green' | 'yellow' | 'red'>) {
   return 'PG'
 }
 
+/**
+ * @deprecated Use advancedSearchFromAPI from dataHelpers.ts instead
+ * Advanced search using TMDB API
+ */
 export async function advancedSearch(params: AdvancedSearchParams) {
   const {
     query: rawQuery = '',

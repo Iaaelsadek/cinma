@@ -1,18 +1,55 @@
-node_modules
-dist
-.DS_Store
+# Dependencies
+node_modules/
+android_app/node_modules/
+
+# Build outputs
+dist/
+dev-dist/
+
+# Environment files
 .env
 .env.*
 !.env.example
-coverage
+
+# Logs
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Testing & Coverage
+coverage/
+.lighthouseci/
+
+# Python
 __pycache__/
 .venv/
+*.pyc
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
 *.bak
 temp_*
-.vercel
-dev-dist
+
+# Deployment
+.vercel/
+
+# Migration data
 scripts/migration/data/
-on/data/
 server/migration/data/
-*.log
+
+# Expo (Android App)
+android_app/.expo/
+android_app/dist/
+
+# Large JSON files (progress tracking)
+scripts/ingestion/failed-pages-*.json
+scripts/ingestion/progress-*.json
+
+# Test outputs
+test_output.txt
+typecheck_output.txt
+eslint_output.txt

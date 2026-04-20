@@ -22,12 +22,8 @@ const routeMap: Array<{ match: RegExp | string; load: () => Promise<unknown> }> 
   { match: /^\/profile/, load: () => import('../pages/user/Profile') },
   { match: /^\/category\/|^\/kids$/, load: () => import('../pages/discovery/Category') },
   { match: /^\/anime/, load: () => import('../pages/discovery/Anime') },
-  { match: /^\/gaming$/, load: () => import('../pages/discovery/Gaming') },
-  { match: /^\/game\/[a-z0-9-]+$/, load: () => import('../pages/media/GameDetails') },
-  { match: /^\/game\/\d+$/, load: () => import('../pages/media/GameDetails') },
   { match: /^\/software$/, load: () => import('../pages/discovery/Software') },
   { match: /^\/software\/[a-z0-9-]+$/, load: () => import('../pages/media/SoftwareDetails') },
-  { match: /^\/software\/\d+$/, load: () => import('../pages/media/SoftwareDetails') },
   { match: /^\/actor\/[a-z0-9-]+$/, load: () => import('../pages/media/Actor') },
   { match: /^\/actor\/\d+$/, load: () => import('../pages/media/Actor') },
   { match: /^\/quran/, load: () => import('../pages/discovery/Quran') },
@@ -35,8 +31,8 @@ const routeMap: Array<{ match: RegExp | string; load: () => Promise<unknown> }> 
   { match: /^\/plays$/, load: () => import('../pages/discovery/Plays') },
   { match: /^\/classics$/, load: () => import('../pages/discovery/Classics') },
   { match: /^\/request/, load: () => import('../pages/user/Request') },
-  { match: /^\/terms/, load: () => import('../pages/legal/Terms') },
-  { match: /^\/privacy/, load: () => import('../pages/legal/Privacy') },
+  { match: /^\/terms/, load: () => import('../pages/Terms') },
+  { match: /^\/privacy/, load: () => import('../pages/Privacy') },
 ]
 
 function getPath(to: string | { pathname?: string }): string {
@@ -51,7 +47,7 @@ export function prefetchRoute(to: string | { pathname?: string }): void {
     if (ok) {
       if (prefetchedLoaders.has(load)) return
       prefetchedLoaders.add(load)
-      load().catch(() => {})
+      load().catch(() => { })
       return
     }
   }

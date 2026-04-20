@@ -1,7 +1,8 @@
 // ✅ API Client - Centralized API calls with error handling
 import axios, { AxiosError } from 'axios'
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+// ✅ UPDATED: Point to new Express server (Koyeb-ready)
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080'
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
@@ -12,14 +13,21 @@ export const api = axios.create({
   },
 })
 
-// Request interceptor - Add CSRF token if available
+// ✅ Add API Key to all requests if available
 api.interceptors.request.use(
   (config) => {
+    // Add API Key for authentication
+    const apiKey = import.meta.env.VITE_API_KEY;
+    if (apiKey) {
+      config.headers['X-API-Key'] = apiKey;
+    }
+    
     // Get CSRF token from cookie or localStorage
     const csrfToken = getCsrfToken()
     if (csrfToken) {
       config.headers['X-CSRF-Token'] = csrfToken
     }
+    
     return config
   },
   (error) => {
@@ -70,19 +78,15 @@ function getCsrfToken(): string | null {
 
 // Helper to fetch and store CSRF token
 export async function fetchCsrfToken(): Promise<string> {
-  try {
-    const response = await axios.get(`${API_BASE_URL}/api/csrf-token`)
-    const token = response.data.csrfToken
-    
-    if (token) {
-      localStorage.setItem('csrf_token', token)
-      return token
-    }
-    
-    throw new Error('No CSRF token received')
-  } catch (error) {
-    throw error
+  const response = await axios.get(`${API_BASE_URL}/api/csrf-token`)
+  const token = response.data.csrfToken
+  
+  if (token) {
+    localStorage.setItem('csrf_token', token)
+    return token
   }
+  
+  throw new Error('No CSRF token received')
 }
 
 // API Methods
@@ -137,16 +141,6 @@ export const requestsAPI = {
   }
 }
 
-export const tmdbAPI = {
-  search: async (query: string, type: 'movie' | 'tv' = 'movie') => {
-    const response = await api.get(`/api/tmdb/search/${type}`, {
-      params: { query },
-    })
-    return response.data
-  },
-  
-  getDetails: async (id: number, type: 'movie' | 'tv' = 'movie') => {
-    const response = await api.get(`/api/tmdb/${type}/${id}`)
-    return response.data
-  },
-}
+// tmdbAPI removed - use CockroachDB API endpoints instead:
+// - For search: use /api/movies or /api/tv with query parameter
+// - For details: use /api/movies/:slug or /api/tv/:slug

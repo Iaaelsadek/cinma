@@ -26,10 +26,10 @@ export const AD_NEUTRALIZER_JS = `
         ghost.style.cssText = 'position:fixed;width:1px;height:1px;opacity:0;pointer-events:none;z-index:-9999;top:-9999px;left:-9999px;';
         document.body.appendChild(ghost);
         setTimeout(function() {
-          try { document.body.removeChild(ghost); } catch(e) {}
+          try { document.body.removeChild(ghost); } catch (e: any) {}
         }, 2000);
       }
-    } catch(e) {}
+    } catch (e: any) {}
     // Return a fake window object so the server thinks the popup opened
     return {
       closed: false, focus: function(){}, blur: function(){},
@@ -54,7 +54,7 @@ export const AD_NEUTRALIZER_JS = `
           img.src = href;
           setTimeout(function(){ img.src = ''; }, 2000);
         }
-      } catch(e2) {}
+      } catch (e2: any) {}
     }
   }, true);
 

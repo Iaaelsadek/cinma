@@ -70,6 +70,13 @@ export const Toast = ({
   const config = toastConfig[type]
   const Icon = config.icon
 
+  const handleClose = () => {
+    setIsExiting(true)
+    setTimeout(() => {
+      onClose()
+    }, 200) // Match exit animation duration
+  }
+
   useEffect(() => {
     // Trigger appear animation
     requestAnimationFrame(() => {
@@ -83,13 +90,6 @@ export const Toast = ({
 
     return () => clearTimeout(timer)
   }, [duration])
-
-  const handleClose = () => {
-    setIsExiting(true)
-    setTimeout(() => {
-      onClose()
-    }, 200) // Match exit animation duration
-  }
 
   return (
     <div

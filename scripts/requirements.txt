@@ -1,4 +1,0 @@
-requests
-supabase
-google-generativeai
-youtube-transcript-api

@@ -20,7 +20,7 @@ export interface Movie {
   overview?: string | null;
   poster_path?: string | null;
   backdrop_path?: string | null;
-  release_date?: string | null;
+  release_date?: string | null | undefined;
   status?: string | null;
   vote_average?: number | null;
   vote_count?: number | null;
@@ -33,10 +33,10 @@ export interface Movie {
   imdb_votes?: number | null;
   original_language?: string | null;
   spoken_languages?: unknown | null;
-  production_countries?: unknown | null;
+  production_countries?: Array<{ iso_3166_1?: string; name?: string }> | unknown | null;
   production_companies?: unknown | null;
   genres?: unknown | null;
-  keywords?: unknown | null;
+  keywords?: string[] | unknown | null;
   cast_data?: unknown | null;
   crew_data?: unknown | null;
   videos?: unknown | null;

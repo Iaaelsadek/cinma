@@ -81,7 +81,7 @@ export class SecurityScanner {
         },
         duration: Date.now() - startTime,
       };
-    } catch (error) {
+    } catch (error: any) {
       auditLogger.error('SecurityScanner', 'Scan failed', { error });
       throw error;
     }
@@ -117,7 +117,7 @@ export class SecurityScanner {
         low: severityCounts.low,
         vulnerabilities,
       };
-    } catch (error) {
+    } catch (error: any) {
       auditLogger.warn('SecurityScanner', 'npm audit failed', { error });
       return { critical: 0, high: 0, moderate: 0, low: 0, vulnerabilities: [] };
     }
@@ -152,7 +152,7 @@ export class SecurityScanner {
             }
           });
         });
-      } catch (error) {
+      } catch (error: any) {
         auditLogger.warn('SecurityScanner', `Failed to scan file: ${file}`, { error });
       }
     }
@@ -221,7 +221,7 @@ export class SecurityScanner {
         issuesFixed: 0,
         errors: [],
       };
-    } catch (error) {
+    } catch (error: any) {
       auditLogger.error('SecurityScanner', 'npm audit fix failed', { error });
       return {
         filesModified: [],

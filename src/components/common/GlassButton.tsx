@@ -20,7 +20,7 @@ export const GlassButton = memo(({
   
   const variants = {
     default: active 
-      ? "bg-amber-500 text-black shadow-lg shadow-amber-500/20 border-amber-500" 
+      ? "bg-gray-400 text-black shadow-lg shadow-gray-400/20 border-gray-400" 
       : "bg-amber-950/60 text-amber-400/70 border-amber-500/20 hover:text-amber-300 hover:bg-amber-500/10 hover:border-amber-500/40",
     accent: active
       ? "bg-cyan-500 text-black shadow-lg shadow-cyan-500/20 border-cyan-500"

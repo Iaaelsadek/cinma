@@ -123,7 +123,7 @@ describe('Button Component', () => {
           Download
         </Button>
       )
-      const button = screen.getByRole('button', { name: /download/i })
+      const _button = screen.getByRole('button', { name: /download/i })
       const icon = screen.getByTestId('icon')
       expect(icon).toBeInTheDocument()
     })

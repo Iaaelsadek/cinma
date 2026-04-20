@@ -4,100 +4,157 @@ import { QuantumHero } from '../../components/features/hero/QuantumHero'
 import { QuantumTrain } from '../../components/features/media/QuantumTrain'
 import { MovieCard } from '../../components/features/media/MovieCard'
 import { useLang } from '../../state/useLang'
-import { Helmet } from 'react-helmet-async'
-import { PageLoader } from '../../components/common/PageLoader'
-import { tmdb } from '../../lib/tmdb'
-import { useCategoryVideos } from '../../hooks/useFetchContent'
-import { logger } from '../../lib/logger'
+import { SeoHead } from '../../components/common/SeoHead'
+import { SkeletonHero, SkeletonGrid } from '../../components/common/Skeletons'
+import { ErrorMessage } from '../../components/common/ErrorMessage'
+import { getPlays } from '../../services/contentQueries'
+import type { Movie } from '../../types/database'
 
-// Specific queries to ensure accurate categorization
-const ADEL_IMAM_QUERY = 'مدرسة المشاغبين|الواد سيد الشغال|الزعيم|شاهد ماشفش حاجة|بودي جارد'
-const CLASSICS_QUERY = 'المتزوجون|ريا وسكينة|سك على بناتك|العيال كبرت|انها حقا عائلة محترمة|الهمجي|تخاريف|وجهة نظر|لعبة الست|ماما امريكا|أخويا هايص وأنا لايص|فارس بني خيبان|أهلا يا دكتور'
-const GULF_QUERY = 'باي باي لندن|حامي الديار|سيف العرب|فرسان المناخ|على هامان يا فرعون|مراهق في الخمسين|انتخبوا ام علي|الكرة مدورة|لولاكي'
-
-// Fetch from TMDB (Search Movies)
-const fetchPlays = async (query: string, allowedCountries?: string[]) => {
-  const queries = query.split('|')
-  let allResults: any[] = []
-  
-  for (const q of queries) {
-      try {
-        const { data } = await tmdb.get('/search/movie', {
-          params: { query: q.trim(), language: 'ar-SA', page: 1 }
-        })
-        if (data.results) {
-            // Filter out items with generic titles like "Play" or "Masrahiyat"
-            const validResults = data.results.filter((item: any) => {
-                const title = item.title || ''
-                return title !== 'مسرحية' && title !== 'Masrahiyat' && !title.includes('مسرحية مصرية')
-            })
-            allResults = [...allResults, ...validResults]
-        }
-      } catch (e) {
-        logger.error(e)
-      }
-  }
-  
-  // Deduplicate by ID
-  let unique = Array.from(new Map(allResults.map(item => [item.id, item])).values())
-
-  // Strict Country Filtering
-  if (allowedCountries && allowedCountries.length > 0) {
-      const verified: any[] = []
-      await Promise.all(unique.map(async (item: any) => {
-          try {
-              const { data } = await tmdb.get(`/movie/${item.id}`)
-              const countries = (data.production_countries || []).map((c: any) => c.iso_3166_1)
-              
-              if (countries.length > 0) {
-                  if (countries.some((c: string) => allowedCountries.includes(c))) {
-                      verified.push(item)
-                  }
-              }
-          } catch (e) {
-              // If details fail, exclude it to be safe
-          }
-      }))
-      unique = verified
-  }
-  
-  return unique.map((item: any) => ({ ...item, media_type: 'movie', is_play: true }))
-}
-
-export const PlaysPage = () => {
+export const PlaysPage = ({ category }: { category?: string } = {}) => {
   const { lang } = useLang()
   const { genre, year, rating } = useParams()
-
-  // Use TMDB for categories (They have posters and work with servers)
-  const adelImam = useQuery({ queryKey: ['plays-adel-imam'], queryFn: () => fetchPlays(ADEL_IMAM_QUERY) })
-  const classics = useQuery({ queryKey: ['plays-classic'], queryFn: () => fetchPlays(CLASSICS_QUERY) })
-  const gulf = useQuery({ queryKey: ['plays-gulf'], queryFn: () => fetchPlays(GULF_QUERY, ['KW', 'SA', 'QA', 'BH', 'AE', 'OM']) })
   
-  // Masrah Masr from Database (YouTube)
-  const masrahMasr = useCategoryVideos('plays-masrah-masr', { limit: 20 })
-  
-  const isLoading = adelImam.isLoading || classics.isLoading || gulf.isLoading || masrahMasr.isLoading
+  // Use category prop if provided, otherwise use genre from URL params
+  const activeCategory = category || genre
 
-  if (isLoading) return <PageLoader />
+  // CRITICAL: Fetch plays from CockroachDB using contentQueries service
+  const { data: allPlays, isLoading, error, refetch } = useQuery({
+    queryKey: ['plays', activeCategory],
+    queryFn: async () => {
+      const result = await getPlays(activeCategory as any, { page: 1, limit: 100 })
+      return result.data
+    },
+    staleTime: 1000 * 60 * 5 // 5 minutes
+  })
 
-  // Filter logic
-  let displayFiltered: any[] = []
-  if (genre) {
-      if (genre === 'adel-imam') displayFiltered = adelImam.data || []
-      else if (genre === 'classic' || genre === 'classics') displayFiltered = classics.data || []
-      else if (genre === 'gulf') displayFiltered = gulf.data || []
-      else if (genre === 'masrah-masr') displayFiltered = masrahMasr.data || []
-      else displayFiltered = []
+  // SEO metadata
+  const getCategoryTitle = (cat?: string) => {
+    if (!cat) return ''
+    const titles: Record<string, string> = {
+      'adel-imam': 'مسرحيات عادل إمام',
+      'classic': 'مسرحيات كلاسيكية',
+      'classics': 'مسرحيات كلاسيكية',
+      'gulf': 'مسرحيات خليجية',
+      'masrah-masr': 'مسرح مصر'
+    }
+    return titles[cat] || cat
   }
 
-  const isFiltered = !!genre
-  const heroItems = [...(adelImam.data || []), ...(classics.data || []), ...(gulf.data || [])].slice(0, 10)
+  const seoTitle = activeCategory 
+    ? `${getCategoryTitle(activeCategory)} - المسرحيات | سينما أونلاين`
+    : "المسرحيات - سينما أونلاين"
+  
+  const seoDescription = activeCategory
+    ? `شاهد أفضل ${getCategoryTitle(activeCategory)} بجودة عالية وبدون إعلانات مزعجة.`
+    : "استمتع بمشاهدة أفضل المسرحيات العربية والخليجية بجودة عالية. مسرح مصر، عادل إمام، والمزيد."
+
+  // Loading state with skeleton loaders
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-black text-white pb-4 max-w-[2400px] mx-auto px-4 md:px-12 w-full">
+        <SeoHead title={seoTitle} description={seoDescription} />
+        <SkeletonHero />
+        <div className="space-y-2 pt-4">
+          <SkeletonGrid count={12} variant="video" />
+        </div>
+      </div>
+    )
+  }
+
+  // Error state with ErrorMessage
+  if (error) {
+    // Determine error type based on error object
+    const errorType = error instanceof TypeError && error.message.includes('fetch') 
+      ? 'network' 
+      : 'server'
+    
+    return (
+      <div className="min-h-screen bg-black text-white">
+        <SeoHead title={seoTitle} description={seoDescription} noIndex />
+        <ErrorMessage
+          type={errorType}
+          title="خطأ في تحميل المسرحيات"
+          message="تعذر الاتصال بالخادم. يرجى المحاولة مرة أخرى."
+          error={error}
+          onRetry={() => refetch()}
+          showHomeButton
+          showBackButton
+        />
+      </div>
+    )
+  }
+
+  const plays = allPlays || []
+
+  // Client-side filtering for subcategories
+  let displayFiltered: Movie[] = []
+  if (activeCategory) {
+    if (activeCategory === 'adel-imam') {
+      // Filter by keywords or cast containing Adel Imam
+      displayFiltered = plays.filter((play: Movie) => {
+        const keywords = Array.isArray(play.keywords) ? play.keywords : []
+        return play.title?.includes('عادل إمام') || 
+          play.overview?.includes('عادل إمام') ||
+          keywords.some((k: any) => String(k).includes('عادل إمام'))
+      })
+    } else if (activeCategory === 'classic' || activeCategory === 'classics') {
+      // Classic plays (before 1999)
+      displayFiltered = plays.filter((play: Movie) => {
+        const year = play.release_date ? new Date(play.release_date).getFullYear() : 0
+        return year < 1999
+      })
+    } else if (activeCategory === 'gulf') {
+      // Gulf plays (by production countries)
+      displayFiltered = plays.filter((play: Movie) => {
+        const countries = Array.isArray(play.production_countries) ? play.production_countries : []
+        const gulfCountries = ['KW', 'SA', 'QA', 'BH', 'AE', 'OM']
+        return countries.some((c: any) => gulfCountries.includes(c.iso_3166_1 || c))
+      })
+    } else if (activeCategory === 'masrah-masr') {
+      // Masrah Masr (by keywords)
+      displayFiltered = plays.filter((play: Movie) => {
+        const keywords = Array.isArray(play.keywords) ? play.keywords : []
+        return play.title?.includes('مسرح مصر') || 
+          keywords.some((k: any) => String(k).includes('مسرح مصر'))
+      })
+    } else {
+      displayFiltered = []
+    }
+  }
+
+  const isFiltered = !!activeCategory
+  const heroItems = plays.slice(0, 10)
+
+  // Split plays into categories for display
+  const adelImamPlays = plays.filter((play: Movie) => {
+    const keywords = Array.isArray(play.keywords) ? play.keywords : []
+    return play.title?.includes('عادل إمام') || keywords.some((k: any) => String(k).includes('عادل إمام'))
+  }).slice(0, 20)
+
+  const classicPlays = plays.filter((play: Movie) => {
+    const year = play.release_date ? new Date(play.release_date).getFullYear() : 0
+    return year < 1999
+  }).slice(0, 20)
+
+  const gulfPlays = plays.filter((play: Movie) => {
+    const countries = Array.isArray(play.production_countries) ? play.production_countries : []
+    const gulfCountries = ['KW', 'SA', 'QA', 'BH', 'AE', 'OM']
+    return countries.some((c: any) => gulfCountries.includes(c.iso_3166_1 || c))
+  }).slice(0, 20)
+
+  const masrahMasrPlays = plays.filter((play: Movie) => {
+    const keywords = Array.isArray(play.keywords) ? play.keywords : []
+    return play.title?.includes('مسرح مصر') || keywords.some((k: any) => String(k).includes('مسرح مصر'))
+  }).slice(0, 20)
 
   return (
-    <div className="min-h-screen text-white pb-4 max-w-[2400px] mx-auto px-4 md:px-12 w-full">
-      <Helmet>
-        <title>{lang === 'ar' ? 'المسرحيات - سينما أونلاين' : 'Plays - Cinema Online'}</title>
-      </Helmet>
+    <div className="min-h-screen bg-black text-white pb-4 max-w-[2400px] mx-auto px-4 md:px-12 w-full">
+      <SeoHead 
+        title={seoTitle}
+        description={seoDescription}
+        type="website"
+        image="https://cinma.online/og-plays.jpg"
+      />
 
       <QuantumHero items={heroItems} />
 
@@ -105,7 +162,7 @@ export const PlaysPage = () => {
         
         {isFiltered ? (
            <div>
-              <h2 className="text-xl font-bold mb-4 capitalize">{genre?.replace('-', ' ')}</h2>
+              <h2 className="text-xl font-bold mb-4 capitalize">{activeCategory?.replace('-', ' ')}</h2>
               {displayFiltered.length > 0 ? (
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
                     {displayFiltered.map((item: any, idx: number) => (
@@ -120,30 +177,43 @@ export const PlaysPage = () => {
            </div>
         ) : (
           <>
-            <QuantumTrain 
-              items={masrahMasr.data || []} 
-              title={lang === 'ar' ? 'مسرح مصر' : 'Masrah Masr'} 
-              link="/plays/masrah-masr"
-              type="video"
-            />
+            {masrahMasrPlays.length > 0 && (
+              <QuantumTrain 
+                items={masrahMasrPlays} 
+                title={lang === 'ar' ? 'مسرح مصر' : 'Masrah Masr'} 
+                link="/plays/masrah-masr"
+              />
+            )}
 
-            <QuantumTrain 
-              items={adelImam.data || []} 
-              title={lang === 'ar' ? 'مسرحيات عادل إمام' : 'Adel Imam Plays'} 
-              link="/plays/adel-imam"
-            />
+            {adelImamPlays.length > 0 && (
+              <QuantumTrain 
+                items={adelImamPlays} 
+                title={lang === 'ar' ? 'مسرحيات عادل إمام' : 'Adel Imam Plays'} 
+                link="/plays/adel-imam"
+              />
+            )}
 
-            <QuantumTrain 
-              items={classics.data || []} 
-              title={lang === 'ar' ? 'مسرحيات كلاسيكية' : 'Classic Plays'} 
-              link="/plays/classics"
-            />
+            {classicPlays.length > 0 && (
+              <QuantumTrain 
+                items={classicPlays} 
+                title={lang === 'ar' ? 'مسرحيات كلاسيكية' : 'Classic Plays'} 
+                link="/plays/classics"
+              />
+            )}
 
-            <QuantumTrain 
-              items={gulf.data || []} 
-              title={lang === 'ar' ? 'مسرحيات خليجية' : 'Gulf Plays'} 
-              link="/plays/gulf"
-            />
+            {gulfPlays.length > 0 && (
+              <QuantumTrain 
+                items={gulfPlays} 
+                title={lang === 'ar' ? 'مسرحيات خليجية' : 'Gulf Plays'} 
+                link="/plays/gulf"
+              />
+            )}
+
+            {plays.length === 0 && (
+              <div className="text-center text-zinc-500 py-12">
+                {lang === 'ar' ? 'لا توجد مسرحيات متاحة حالياً' : 'No plays available'}
+              </div>
+            )}
           </>
         )}
       </div>

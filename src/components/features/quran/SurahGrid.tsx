@@ -11,6 +11,7 @@ interface SurahGridProps {
   isPlaying: boolean
   currentTrack: any
   onPlaySurah: (id: number, name: string) => void
+  onAddToQueue?: (surah: any) => void
 }
 
 export const SurahGrid = ({
@@ -19,7 +20,8 @@ export const SurahGrid = ({
   viewMode,
   isPlaying,
   currentTrack,
-  onPlaySurah
+  onPlaySurah,
+  onAddToQueue
 }: SurahGridProps) => {
   const { lang } = useLang()
 
@@ -47,10 +49,10 @@ export const SurahGrid = ({
   }
 
   return (
-    <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 pb-20">
+    <div className="flex-1 overflow-y-auto custom-scrollbar pb-20">
       <motion.div 
         layout
-        className={viewMode === 'grid' ? 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-2' : 'space-y-2'}
+        className={viewMode === 'grid' ? 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-7 gap-2' : 'space-y-2'}
       >
         <AnimatePresence mode="popLayout">
           {filteredSurahs.map((surah, idx) => {
@@ -62,6 +64,7 @@ export const SurahGrid = ({
                 active={active}
                 isPlaying={isPlaying}
                 onClick={() => onPlaySurah(surah.id, surah.name)}
+                onAddToQueue={() => onAddToQueue?.(surah)}
                 idx={idx}
                 viewMode={viewMode}
               />

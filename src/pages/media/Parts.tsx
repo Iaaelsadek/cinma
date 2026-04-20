@@ -42,7 +42,7 @@ export const Parts = () => {
           const { data: colData } = await tmdb.get(`/collection/${data.belongs_to_collection.id}`)
           if (mounted) setCollection(colData)
         }
-      } catch (err) {
+      } catch (err: any) {
         logger.error('Failed to fetch parts:', err)
       } finally {
         if (mounted) setLoading(false)

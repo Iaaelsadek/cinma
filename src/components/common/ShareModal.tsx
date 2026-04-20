@@ -1,6 +1,6 @@
 import {X, Copy, Twitter, Facebook, MessageCircle, Send, LinkIcon} from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { toast } from 'sonner'
+import { toast } from '../../lib/toast-manager'
 import clsx from 'clsx'
 
 interface ShareModalProps {

@@ -4,12 +4,11 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import InfiniteScroll from 'react-infinite-scroll-component'
-import { advancedSearch, fetchGenres } from '../../lib/tmdb'
+import { fetchGenresFromAPI } from '../../lib/dataHelpers'
 import { processSmartSearch } from '../../lib/gemini'
 import { MovieCard } from '../../components/features/media/MovieCard'
 import { VideoCard, VideoItem } from '../../components/features/media/VideoCard'
 import { useDebounce } from '../../hooks/useDebounce'
-import { supabase } from '../../lib/supabase'
 import { SeoHead } from '../../components/common/SeoHead'
 import { CONFIG } from '../../lib/constants'
 import { SkeletonGrid } from '../../components/common/Skeletons'
@@ -57,12 +56,12 @@ export const Search = () => {
   const yto = Number(sp.get('yto') || '') || undefined
   const rfrom = Number(sp.get('rfrom') || '') || undefined
   const rto = Number(sp.get('rto') || '') || undefined
-  const rcolor = (sp.get('rcolor') || '').split(',').filter(Boolean) as Array<'green'|'yellow'|'red'>
+  const rcolor = (sp.get('rcolor') || '').split(',').filter(Boolean) as Array<'green' | 'yellow' | 'red'>
   const sort = sp.get('sort') || 'popularity.desc'
   const [page, setPage] = useState(1)
   const [items, setItems] = useState<SearchItem[]>([])
   const [isSmartSearchLoading, setIsSmartSearchLoading] = useState(false)
-  const [smartResult, setSmartResult] = useState<any>(null)
+  const [smartResult, setSmartResult] = useState<Record<string, unknown> | null>(null)
 
   // Natural Language Search Effect
   useEffect(() => {
@@ -73,23 +72,23 @@ export const Search = () => {
         try {
           const result = await processSmartSearch(q)
           if (result) {
-            setSmartResult(result)
+            setSmartResult(result as Record<string, unknown>)
             // Optionally update URL params based on AI extraction
             const newSp = new URLSearchParams(sp)
-            if (result.type && !sp.get('types')) newSp.set('types', result.type)
-            if (result.genre_id && !sp.get('genres')) newSp.set('genres', result.genre_id.toString())
+            if (result.type && !sp.get('types')) newSp.set('types', result.type as string)
+            if (result.genre_id && !sp.get('genres')) newSp.set('genres', (result.genre_id as number).toString())
             if (result.year && !sp.get('yfrom')) {
-              newSp.set('yfrom', (result.year - 2).toString())
-              newSp.set('yto', (result.year + 2).toString())
+              newSp.set('yfrom', ((result.year as number) - 2).toString())
+              newSp.set('yto', ((result.year as number) + 2).toString())
             }
-            if (result.sort_by && !sp.get('sort')) newSp.set('sort', result.sort_by)
-            
+            if (result.sort_by && !sp.get('sort')) newSp.set('sort', result.sort_by as string)
+
             // Only update if something changed
             if (newSp.toString() !== sp.toString()) {
               setSp(newSp, { replace: true })
             }
           }
-        } catch (err) {
+        } catch (err: any) {
           logger.error('Smart Search Error:', err)
         } finally {
           setIsSmartSearchLoading(false)
@@ -105,47 +104,25 @@ export const Search = () => {
   const supabaseQuery = useQuery<VideoItem[]>({
     queryKey: ['search-supabase', q],
     queryFn: async () => {
-      // Special handling for Spacetoon
-      if (q.toLowerCase().includes('spacetoon') || q.includes('سبيستون')) {
-         const { data } = await supabase
-          .from('videos')
-          .select('*')
-          .or('category.ilike.%spacetoon%,category.ilike.%kids%,tags.cs.{"spacetoon"}')
-          .limit(50)
-         return (data as VideoItem[]) || []
-      }
-
-      if (!q || q.length < 2) return []
-      // Use fuzzy search RPC function
-      const { data, error } = await supabase.rpc('fuzzy_search_videos', { query_text: q })
-      let results: VideoItem[] = []
-      if (!error && data) results = data as VideoItem[]
-      else {
-        // Fallback if RPC not ready or error
-        const { data: fallback } = await supabase
-          .from('videos')
-          .select('*')
-          .ilike('title', `%${q}%`)
-          .limit(20)
-        results = fallback || []
-      }
-      return results
+      // DISABLED: Videos are now in CockroachDB, not Supabase
+      // This query is kept for backward compatibility but returns empty array
+      return []
     },
-    enabled: q.length >= 2
+    enabled: false // Disable this query completely
   })
 
   const mediaSearchQuery = useQuery<SearchItem[]>({
     queryKey: ['search-media', q, types.join(','), rawGenres, keywords],
     queryFn: async () => {
       if (!q || q.length < 2) return []
-      
+
       const { searchDB } = await import('../../lib/db')
       const results = await searchDB({
         query: q,
         type: types.includes('movie') && types.includes('tv') ? 'all' : types.includes('movie') ? 'movies' : 'tv',
         limit: 20
       })
-      
+
       return results.map(item => ({
         id: item.id,
         slug: item.slug,
@@ -164,22 +141,10 @@ export const Search = () => {
     queryKey: ['search-games', q, types.join(','), rawGenres, keywords],
     queryFn: async () => {
       if (!types.includes('game')) return []
-      
-      // Use CockroachDB API
-      const { searchGamesDB } = await import('../../lib/db')
-      const results = await searchGamesDB({
-        query: q || undefined,
-        category: keywords || rawGenres || undefined,
-        limit: 20
-      })
-      
-      return results.map(item => ({
-        id: item.id,
-        title: item.title,
-        poster_url: item.poster_url || null,
-        category: item.category || null,
-        rating: item.rating || null
-      }))
+
+      // TODO: Implement games search via API
+      // For now, return empty array
+      return []
     },
     enabled: (q.length >= 2) || (types.includes('game') && (keywords.length > 0 || rawGenres.length > 0))
   })
@@ -188,7 +153,7 @@ export const Search = () => {
     queryKey: ['search-software', q, types.join(','), rawGenres, keywords],
     queryFn: async () => {
       if (!types.includes('software')) return []
-      
+
       // Use CockroachDB API
       const { searchSoftwareDB } = await import('../../lib/db')
       const results = await searchSoftwareDB({
@@ -196,7 +161,7 @@ export const Search = () => {
         category: keywords || rawGenres || undefined,
         limit: 20
       })
-      
+
       return results.map(item => ({
         id: item.id,
         title: item.title,
@@ -211,19 +176,23 @@ export const Search = () => {
   const animeQuery = useQuery<AnimeRow[]>({
     queryKey: ['search-anime', q, types.join(','), rawGenres, keywords],
     queryFn: async () => {
-      let query = supabase.from('anime').select('id,title,image_url,category,score')
-      
-      if (q && q.length >= 2) {
-        query = query.ilike('title', `%${q}%`)
-      } else if (types.includes('anime')) {
-        if (keywords) query = query.ilike('category', `%${keywords}%`)
-        else if (rawGenres) query = query.ilike('category', `%${rawGenres}%`)
-      } else {
-        return []
-      }
+      if (!types.includes('anime') && (!q || q.length < 2)) return []
 
-      const { data } = await query.limit(20)
-      return (data as AnimeRow[]) || []
+      // Use CockroachDB API
+      const { searchAnimeDB } = await import('../../lib/db')
+      const results = await searchAnimeDB({
+        query: q || undefined,
+        category: keywords || rawGenres || undefined,
+        limit: 20
+      })
+
+      return results.map(item => ({
+        id: item.id,
+        title: item.title,
+        image_url: item.image_url || null,
+        category: item.category || null,
+        score: item.score || null
+      }))
     },
     enabled: (q.length >= 2) || (types.includes('anime') && (keywords.length > 0 || rawGenres.length > 0))
   })
@@ -231,26 +200,31 @@ export const Search = () => {
   const recitersQuery = useQuery<ReciterRow[]>({
     queryKey: ['search-reciters', q, types.join(','), keywords],
     queryFn: async () => {
-      let query = supabase.from('quran_reciters').select('id,name,image,rewaya')
-      
+      // Use CockroachDB API endpoint
+      const params = new URLSearchParams()
+
       if (q && q.length >= 2) {
-        query = query.ilike('name', `%${q}%`)
+        params.set('search', q)
       } else if (types.includes('quran')) {
         if (keywords === 'famous') {
-          // Just return top ones
-          query = query.limit(20)
+          params.set('limit', '20')
         } else if (keywords === 'hafs') {
-          query = query.ilike('rewaya', '%حفص%')
+          params.set('rewaya', 'حفص')
         } else if (keywords === 'warsh') {
-          query = query.ilike('rewaya', '%ورش%')
+          params.set('rewaya', 'ورش')
         } else if (keywords) {
-          query = query.ilike('rewaya', `%${keywords}%`)
+          params.set('rewaya', keywords)
         }
       } else {
         return []
       }
 
-      const { data } = await query.limit(20)
+      params.set('limit', '20')
+
+      const response = await fetch(`/api/quran/reciters?${params.toString()}`)
+      if (!response.ok) return []
+
+      const data = await response.json()
       return (data as ReciterRow[]) || []
     },
     enabled: (q.length >= 2) || (types.includes('quran') && keywords.length > 0),
@@ -264,33 +238,64 @@ export const Search = () => {
   const { data, isLoading, isFetching } = useQuery<PageRes>({
     queryKey: ['search-adv', q, types.join(','), genres.join(','), yfrom, yto, rfrom, rto, rcolor.join(','), sort, page, filterLang, keywords],
     queryFn: async () => {
-      // If no query but we have text keywords (not IDs), use keywords as search query
+      // CRITICAL: Use CockroachDB API instead of TMDB advancedSearch
       const isKeywordSearch = !q && keywords && !/^\d+(,\d+)*$/.test(keywords)
       const searchQuery = q || (isKeywordSearch ? keywords : '')
-      
-      const res = await advancedSearch({
-        query: searchQuery,
-        types: (types.length ? types : ['movie']) as any,
-        genres,
-        yearFrom: yfrom,
-        yearTo: yto,
-        ratingFrom: rfrom,
-        ratingTo: rto,
-        rating_color: rcolor,
-        sort_by: sort,
+
+      // Build API endpoint based on types
+      const endpoints: string[] = []
+      if (types.includes('movie') || types.length === 0) {
+        endpoints.push('/api/movies')
+      }
+      if (types.includes('tv')) {
+        endpoints.push('/api/tv')
+      }
+
+      // Build query parameters
+      const params: any = {
         page,
-        with_original_language: filterLang,
-        with_keywords: !isKeywordSearch ? keywords : undefined
+        limit: 20
+      }
+
+      if (searchQuery) params.query = searchQuery
+      if (genres.length > 0) params.genres = genres.join(',')
+      if (yfrom) params.yearFrom = yfrom
+      if (yto) params.yearTo = yto
+      if (rfrom) params.ratingFrom = rfrom
+      if (rto) params.ratingTo = rto
+      if (filterLang) params.language = filterLang
+      if (keywords && !isKeywordSearch) params.keywords = keywords
+      if (sort) params.sort = sort
+
+      // Fetch from all endpoints
+      const responses = await Promise.all(
+        endpoints.map(endpoint =>
+          fetch(`${endpoint}?${new URLSearchParams(params)}`).then(r => r.json())
+        )
+      )
+
+      // Merge results
+      const allResults = responses.flatMap((res, idx) => {
+        const mediaType = endpoints[idx].includes('movies') ? 'movie' : 'tv'
+        return (res.results || res || []).map((item: any) => ({
+          ...item,
+          media_type: mediaType
+        }))
       })
-      return res as PageRes
+
+      return {
+        page,
+        results: allResults,
+        total_pages: Math.max(...responses.map(r => r.total_pages || 1))
+      } as PageRes
     },
-    enabled: !!CONFIG.TMDB_API_KEY && (q.trim().length > 0 || genres.length > 0 || !!yfrom || !!yto || !!rfrom || !!rto || rcolor.length > 0 || !!sort || !!filterLang || !!keywords)
+    enabled: (q.trim().length > 0 || genres.length > 0 || !!yfrom || !!yto || !!rfrom || !!rto || rcolor.length > 0 || !!sort || !!filterLang || !!keywords)
   })
   const gq = useQuery<GenreItem[]>({
     queryKey: ['genres', types.join(',')],
     queryFn: async () => {
       const t = types.includes('movie') ? 'movie' : 'tv'
-      const list = await fetchGenres(t as 'movie'|'tv')
+      const list = await fetchGenresFromAPI(t as 'movie' | 'tv')
       return list
     }
   })
@@ -303,10 +308,10 @@ export const Search = () => {
     }
   }, [data, page])
 
- 
+
   const [searchText, setSearchText] = useState(q)
   const debouncedQuery = useDebounce(searchText, 400)
-  
+
   // Only sync q to searchText if the change didn't originate from our own debounce
   useEffect(() => {
     if (q !== debouncedQuery) {
@@ -317,11 +322,11 @@ export const Search = () => {
   useEffect(() => {
     const value = debouncedQuery
     if (value === q) return // Prevent loop
-    
+
     // If the URL (q) just changed to something that searchText ALSO matches,
     // but debouncedQuery hasn't caught up yet, we should NOT revert URL to debouncedQuery.
     // So: only update URL if debouncedQuery === searchText (debounce settled).
-    if (value !== searchText) return 
+    if (value !== searchText) return
 
     setSp(prev => {
       const p = new URLSearchParams(prev)
@@ -376,7 +381,7 @@ export const Search = () => {
 
           <AnimatePresence>
             {isSmartSearchLoading && (
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
@@ -389,7 +394,7 @@ export const Search = () => {
               </motion.div>
             )}
             {!isSmartSearchLoading && smartResult && (
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="mt-2 flex flex-wrap items-center gap-2 px-1"
@@ -398,19 +403,19 @@ export const Search = () => {
                   <Sparkles size={10} />
                   بحث ذكي نشط
                 </div>
-                {smartResult.genre && (
+                {!!smartResult.genre && (
                   <span className="text-[9px] text-zinc-500 bg-white/5 px-2 py-0.5 rounded-md border border-white/10 italic">
-                    التصنيف: {smartResult.genre}
+                    التصنيف: {smartResult.genre as string}
                   </span>
                 )}
-                {smartResult.year && (
+                {!!smartResult.year && (
                   <span className="text-[9px] text-zinc-500 bg-white/5 px-2 py-0.5 rounded-md border border-white/10 italic">
-                    السنة: {smartResult.year}
+                    السنة: {smartResult.year as number}
                   </span>
                 )}
-                {smartResult.actor && (
+                {!!smartResult.actor && (
                   <span className="text-[9px] text-zinc-500 bg-white/5 px-2 py-0.5 rounded-md border border-white/10 italic">
-                    الممثل: {smartResult.actor}
+                    الممثل: {smartResult.actor as string}
                   </span>
                 )}
               </motion.div>
@@ -483,11 +488,11 @@ export const Search = () => {
                           setParam('yto', '')
                         }
                       }}
-                      className="h-9 rounded-xl border border-white/10 bg-black/40 px-3 text-xs text-white focus:border-primary outline-none transition-all"
+                      className="h-9 rounded-xl border border-white/10 bg-[#1C1B1F] px-3 text-xs text-white focus:border-primary outline-none transition-all hover:bg-[#0F0F14]"
                     >
-                      <option value="">{'السنة'}</option>
+                      <option value="" className="bg-[#1C1B1F] text-white">{'السنة'}</option>
                       {years.map((y) => (
-                        <option key={y} value={y}>{y}</option>
+                        <option key={y} value={y} className="bg-[#1C1B1F] text-white">{y}</option>
                       ))}
                     </select>
                   </div>
@@ -508,15 +513,15 @@ export const Search = () => {
                         </button>
                       )
                     })}
-              </div>
-            </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-        
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
         <h1 className="text-xl font-bold">نتائج البحث</h1>
-        
+
         {supabaseQuery.data && supabaseQuery.data.length > 0 && (
           <div className="mb-4 space-y-3">
             <h2 className="text-lg font-semibold text-zinc-300">محتوى حصري</h2>
@@ -544,8 +549,8 @@ export const Search = () => {
             <h2 className="text-lg font-semibold text-zinc-300">الألعاب</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
               {gamesQuery.data.map((g, idx) => (
-                <MovieCard 
-                  key={g.id} 
+                <MovieCard
+                  key={g.id}
                   movie={{
                     id: g.id,
                     title: g.title,
@@ -553,7 +558,7 @@ export const Search = () => {
                     vote_average: g.rating || 0,
                     media_type: 'game',
                     category: g.category || ''
-                  }} 
+                  }}
                   index={idx}
                 />
               ))}
@@ -566,8 +571,8 @@ export const Search = () => {
             <h2 className="text-lg font-semibold text-zinc-300">البرمجيات</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
               {softwareQuery.data.map((g, idx) => (
-                <MovieCard 
-                  key={g.id} 
+                <MovieCard
+                  key={g.id}
                   movie={{
                     id: g.id,
                     title: g.title,
@@ -575,7 +580,7 @@ export const Search = () => {
                     vote_average: g.rating || 0,
                     media_type: 'software',
                     category: g.category || ''
-                  }} 
+                  }}
                   index={idx}
                 />
               ))}
@@ -588,8 +593,8 @@ export const Search = () => {
             <h2 className="text-lg font-semibold text-zinc-300">الأنمي</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
               {animeQuery.data.map((g, idx) => (
-                <MovieCard 
-                  key={g.id} 
+                <MovieCard
+                  key={g.id}
                   movie={{
                     id: g.id,
                     title: g.title,
@@ -597,7 +602,7 @@ export const Search = () => {
                     vote_average: g.score || 0,
                     media_type: 'anime',
                     category: g.category || ''
-                  }} 
+                  }}
                   index={idx}
                 />
               ))}
@@ -610,8 +615,8 @@ export const Search = () => {
             <h2 className="text-lg font-semibold text-zinc-300">القرّاء</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
               {recitersQuery.data.map((g, idx) => (
-                <MovieCard 
-                  key={g.id} 
+                <MovieCard
+                  key={g.id}
                   movie={{
                     id: g.id,
                     title: g.name,
@@ -619,7 +624,7 @@ export const Search = () => {
                     media_type: 'quran',
                     category: g.rewaya || '',
                     vote_average: 0
-                  }} 
+                  }}
                   index={idx}
                 />
               ))}
@@ -637,7 +642,7 @@ export const Search = () => {
               {lang === 'ar' ? 'لم يتم العثور على نتائج' : 'No results found'}
             </h3>
             <p className="mb-6 max-w-md text-sm text-zinc-400">
-              {lang === 'ar' 
+              {lang === 'ar'
                 ? 'جرب البحث بكلمات مختلفة أو تحقق من الإملاء. إذا لم تجد ما تبحث عنه، يمكنك طلبه.'
                 : 'Try searching with different keywords or check spelling. If you can\'t find it, you can request it.'}
             </p>
@@ -657,8 +662,8 @@ export const Search = () => {
             loader={<SkeletonGrid count={10} variant="poster" />}
             scrollThreshold={0.8}
           >
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
-            {items.map((m) => (
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
+              {items.map((m) => (
                 <MovieCard key={`${m.media_type}-${m.id}`} movie={m} />
               ))}
             </div>

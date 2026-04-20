@@ -11,6 +11,7 @@ interface SeoHeadProps {
   duration?: string
   releaseDate?: string
   genres?: string[]
+  keywords?: string | string[]
   schema?: Record<string, any>
   noIndex?: boolean
 }
@@ -25,6 +26,7 @@ export const SeoHead = ({
   duration,
   releaseDate,
   genres,
+  keywords,
   schema,
   noIndex = false
 }: SeoHeadProps) => {
@@ -107,6 +109,7 @@ export const SeoHead = ({
     <Helmet>
       <title>{title}</title>
       <meta name="description" content={description} />
+      {keywords && <meta name="keywords" content={Array.isArray(keywords) ? keywords.join(', ') : keywords} />}
       <link rel="canonical" href={fullUrl} />
       
       {/* Open Graph */}

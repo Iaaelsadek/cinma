@@ -1,22 +1,24 @@
 import { useState, useEffect, memo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Play, Volume2, VolumeX, Star, Calendar, Film } from 'lucide-react'
+import { Play, Volume2, VolumeX, Star, Calendar } from 'lucide-react'
 import { PrefetchLink } from '../../common/PrefetchLink'
 import { TmdbImage } from '../../common/TmdbImage'
 import { useLang } from '../../../state/useLang'
 import { tmdb } from '../../../lib/tmdb'
-import { getGenreName } from '../../../lib/genres'
 import ReactPlayer from 'react-player/lazy'
 import { Swiper, SwiperSlide } from 'swiper/react'
 import { Autoplay } from 'swiper/modules'
 import 'swiper/css'
 
 import { generateWatchUrl } from '../../../lib/utils'
+import { translateGenre } from '../../../lib/genre-translations'
 
 const getLocalizedType = (type: string, lang: string) => {
-  if (lang !== 'ar') return type === 'tv' ? 'Series' : 'Movie'
-  return type === 'tv' ? 'مسلسل' : 'فيلم'
+  // Always return Arabic for Arabic language
+  if (lang === 'ar') return type === 'tv' ? 'مسلسل' : 'فيلم'
+  // English for other languages
+  return type === 'tv' ? 'Series' : 'Movie'
 }
 
 const getLocalizedOrigin = (origin: string, lang: string) => {
@@ -48,9 +50,15 @@ export const QuantumHero = memo(({ items }: { items: any[] }) => {
   const [activeId, setActiveId] = useState<number | null>(null)
   const [trailers, setTrailers] = useState<Record<number, string>>({})
   const [isMuted, setIsMuted] = useState(true)
-  
-  // Use all items provided by the diverse fetcher
-  const heroItems = items
+
+  // CRITICAL: Filter out items without valid slugs (defensive filtering)
+  const heroItems = (items || []).filter(item =>
+    item &&
+    item.slug &&
+    typeof item.slug === 'string' &&
+    item.slug.trim() !== '' &&
+    item.slug !== 'content'
+  )
 
   useEffect(() => {
     if (!activeId) return
@@ -64,30 +72,28 @@ export const QuantumHero = memo(({ items }: { items: any[] }) => {
 
         // Handle Custom Videos (YouTube)
         if (item.media_type === 'video' || item.source === 'youtube' || item.category === 'plays' || item.category === 'quran' || item.category === 'prophets' || item.category === 'summary') {
-             let videoId = typeof item.id === 'string' ? item.id : null
-             if (!videoId && item.url) {
-                 const match = item.url.match(/[?&]v=([^&]+)/)
-                 videoId = match ? match[1] : null
-             }
-             
-             if (mounted && videoId) {
-                 setTrailers(prev => ({ ...prev, [activeId]: videoId }))
-             }
-             return
+          let videoId = typeof item.id === 'string' ? item.id : null
+          if (!videoId && item.url) {
+            const match = item.url.match(/[?&]v=([^&]+)/)
+            videoId = match ? match[1] : null
+          }
+
+          if (mounted && videoId) {
+            setTrailers(prev => ({ ...prev, [activeId]: videoId }))
+          }
+          return
         }
 
-        const type = item.media_type || 'movie'
-        // Prevent calling TMDB for invalid types
-        if (type !== 'movie' && type !== 'tv') return
-
-        const { data } = await tmdb.get(`/${type}/${item.id}/videos`)
-        const trailer = data.results?.find(
-          (v: any) => v.site === 'YouTube' && (v.type === 'Trailer' || v.type === 'Teaser')
-        )
-        if (mounted && trailer?.key) {
-          setTrailers(prev => ({ ...prev, [activeId]: trailer.key }))
+        // Use videos from database (stored in CockroachDB during ingestion)
+        if (item.videos && Array.isArray(item.videos) && item.videos.length > 0) {
+          const trailer = item.videos.find(
+            (v: any) => v.site === 'YouTube' && (v.type === 'Trailer' || v.type === 'Teaser')
+          )
+          if (mounted && trailer?.key) {
+            setTrailers(prev => ({ ...prev, [activeId]: trailer.key }))
+          }
         }
-      } catch (e) {
+      } catch (e: any) {
         // Silent fail
       }
     }
@@ -123,10 +129,10 @@ export const QuantumHero = memo(({ items }: { items: any[] }) => {
         {heroItems.map((item) => {
           const trailerKey = trailers[item.id]
           const isHovered = activeId === item.id
-          
+
           return (
             <SwiperSlide key={item.id} className="h-full">
-              <div 
+              <div
                 className="relative h-full w-full border-r border-white/10 overflow-hidden group cursor-pointer"
                 onMouseEnter={() => setActiveId(item.id)}
                 onMouseLeave={() => setActiveId(null)}
@@ -179,58 +185,82 @@ export const QuantumHero = memo(({ items }: { items: any[] }) => {
                 {/* Content Layer */}
                 <div className="absolute inset-0 z-20 flex flex-col justify-end p-6 transition-all duration-500 group-hover:pb-12">
                   <div className="space-y-3 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
-                    {/* Category Label */}
-                    <div className="inline-flex items-center px-2 py-1 rounded bg-lumen-gold/20 text-lumen-gold text-xs font-bold uppercase tracking-wider backdrop-blur-sm border border-lumen-gold/20">
-                      {getLocalizedOrigin(item.original_language, lang)}
-                      <span className="mx-1">•</span>
-                      {getLocalizedType(item.media_type || 'movie', lang)}
-                    </div>
+                    {/* Genre + Type Label */}
+                    {(() => {
+                      // Get all genres from item
+                      const allGenres = item.genres || (item.primary_genre ? [item.primary_genre] : [])
 
-                    {/* Title */}
-                    <h2 className="font-syne font-black text-white leading-tight text-2xl lg:text-3xl line-clamp-2 drop-shadow-lg" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
-                      {item.title || item.name}
-                    </h2>
+                      // Translate genres using centralized function
+                      const translatedGenres = lang === 'ar'
+                        ? allGenres.map((g: string) => translateGenre(g, lang)).filter(Boolean)
+                        : allGenres.filter(Boolean)
+
+                      const genreLabel = translatedGenres.slice(0, 2).join(' • ')
+
+                      return genreLabel ? (
+                        <div className="inline-flex items-center px-2 py-1 rounded bg-lumen-gold/20 text-lumen-gold text-xs font-bold uppercase tracking-wider backdrop-blur-sm border border-lumen-gold/20">
+                          {getLocalizedType(item.media_type || 'movie', lang)}
+                          <span className="mx-1">•</span>
+                          {genreLabel}
+                        </div>
+                      ) : (
+                        <div className="inline-flex items-center px-2 py-1 rounded bg-lumen-gold/20 text-lumen-gold text-xs font-bold uppercase tracking-wider backdrop-blur-sm border border-lumen-gold/20">
+                          {getLocalizedType(item.media_type || 'movie', lang)}
+                        </div>
+                      )
+                    })()}
+
+                    {/* Title - Arabic + English */}
+                    {(() => {
+                      const titleAr = item.title_ar || item.name_ar
+                      const titleEn = item.title_en || item.title || item.name
+                      const primaryTitle = lang === 'ar' ? (titleAr || titleEn) : (titleEn || titleAr)
+                      const secondaryTitle = lang === 'ar' ? (titleAr ? titleEn : null) : (titleEn !== titleAr ? titleAr : null)
+                      return (
+                        <div>
+                          <h2 className="font-syne font-black text-white leading-tight text-2xl lg:text-3xl line-clamp-2 drop-shadow-lg">
+                            {primaryTitle}
+                          </h2>
+                          {secondaryTitle && (
+                            <p className="text-zinc-400 text-sm mt-1 line-clamp-1">{secondaryTitle}</p>
+                          )}
+                        </div>
+                      )
+                    })()}
 
                     {/* Metadata Row */}
                     <div className="flex items-center gap-3 text-xs text-zinc-300 font-medium">
-                       {item.vote_average > 0 && (
-                         <div className="flex items-center gap-1 text-yellow-400">
-                           <Star size={12} fill="currentColor" />
-                           <span>{item.vote_average.toFixed(1)}</span>
-                         </div>
-                       )}
-                       
-                       {(item.release_date || item.first_air_date) && (
-                         <div className="flex items-center gap-1">
-                           <Calendar size={12} />
-                           <span>{(item.release_date || item.first_air_date).substring(0, 4)}</span>
-                         </div>
-                       )}
-                       
-                       {item.genre_ids?.[0] && (
-                         <div className="flex items-center gap-1 text-lumen-blue">
-                           <Film size={12} />
-                           <span>{getGenreName(item.genre_ids[0], lang)}</span>
-                         </div>
-                       )}
+                      {item.vote_average > 0 && (
+                        <div className="flex items-center gap-1 text-yellow-400">
+                          <Star size={12} fill="currentColor" />
+                          <span>{item.vote_average.toFixed(1)}</span>
+                        </div>
+                      )}
+
+                      {(item.release_date || item.first_air_date) && (
+                        <div className="flex items-center gap-1">
+                          <Calendar size={12} />
+                          <span>{(item.release_date || item.first_air_date).substring(0, 4)}</span>
+                        </div>
+                      )}
                     </div>
 
                     {/* Expanded Content (Hover) */}
                     <div className="max-h-0 overflow-hidden group-hover:max-h-[300px] transition-all duration-500 ease-in-out opacity-0 group-hover:opacity-100">
                       <p className="text-zinc-300 text-sm line-clamp-3 mb-4 pt-2">
-                        {item.overview}
+                        {lang === 'ar' ? (item.overview_ar || item.overview) : (item.overview || item.overview_ar)}
                       </p>
 
                       <div className="flex flex-wrap gap-2">
                         <PrefetchLink
-                          to={`/watch/${item.media_type || 'movie'}/${item.id}`}
+                          to={generateWatchUrl(item)}
                           className="flex items-center gap-2 bg-lumen-gold text-black px-4 py-2 rounded-lg font-bold text-xs hover:bg-yellow-400 transition-colors"
                           onClick={(e) => e.stopPropagation()}
                         >
                           <Play size={14} fill="currentColor" />
                           <span>{lang === 'ar' ? 'مشاهدة' : 'Watch'}</span>
                         </PrefetchLink>
-                        
+
                         {trailerKey && (
                           <button
                             onClick={(e) => {

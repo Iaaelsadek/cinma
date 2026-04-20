@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useForm } from 'react-hook-form'
 import { Link, useParams } from 'react-router-dom'
-import { toast } from 'sonner'
+import { toast } from '../../../lib/toast-manager'
 import { useAdmin, AdminEpisode } from '../../../context/AdminContext'
 import { errorLogger } from '../../../services/errorLogging'
 import { ArrowRight, Trash2, Save, Play, Plus } from 'lucide-react'
@@ -94,7 +94,7 @@ const SeasonManage = () => {
         subtitles_url: '', 
         download_urls: '' 
       })
-    } catch (error) {
+    } catch (error: any) {
       errorLogger.logError({
         message: 'Failed to add episode',
         severity: 'high',
@@ -112,14 +112,14 @@ const SeasonManage = () => {
       
       try {
         if (d.subtitles_url.trim()) subs = JSON.parse(d.subtitles_url)
-      } catch (err) {
+      } catch (err: any) {
         toast.error('Invalid JSON in subtitles')
         return
       }
       
       try {
         if (d.download_urls.trim()) dls = JSON.parse(d.download_urls)
-      } catch (err) {
+      } catch (err: any) {
         toast.error('Invalid JSON in download URLs')
         return
       }

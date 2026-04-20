@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import {PlayCircle, Star, Award, Heart, MessageCircle, Send, Trash2, X, Smile, Reply} from 'lucide-react'
+import { PlayCircle, Star, Award, Heart, MessageCircle, Send, Trash2, X, Smile, Reply } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { 
+import {
   addActivityReaction,
   removeActivityReaction,
   getActivityReactions,
@@ -18,12 +18,12 @@ import {
   createNotification,
   type ActivityComment,
   type ActivityCommentReply,
-  type Profile,
   type Activity as SupabaseActivity
 } from '../../../lib/supabase'
-import { toast } from 'sonner'
+import { fetchBatchContent, ContentDetails } from '../../../services/contentAPI'
+import { toast } from '../../../lib/toast-manager'
 import clsx from 'clsx'
-import {MoreVertical, Flag, UserX} from 'lucide-react'
+import { MoreVertical, Flag, UserX } from 'lucide-react'
 import { logger } from '../../../lib/logger'
 
 const MentionText = ({ text }: { text: string }) => {
@@ -74,12 +74,31 @@ export const ActivityItem = ({ activity, currentUserId, currentUserRole }: Activ
   const [newReply, setNewReply] = useState('')
   const [isBusy, setIsBusy] = useState(false)
   const [activeMenu, setActiveMenu] = useState<string | null>(null)
+  const [contentDetails, setContentDetails] = useState<ContentDetails | null>(null)
 
   const isAdmin = currentUserRole === 'admin' || currentUserRole === 'supervisor'
 
   useEffect(() => {
     fetchReactions()
+    fetchContentDetails()
   }, [activity.id])
+
+  const fetchContentDetails = async () => {
+    // For content-related activities, fetch content details using external_id
+    if ((activity.type === 'watch' || activity.type === 'review') && activity.metadata?.external_id) {
+      try {
+        const results = await fetchBatchContent([{
+          external_id: activity.metadata.external_id,
+          content_type: activity.content_type as 'movie' | 'tv'
+        }])
+        if (results[0]) {
+          setContentDetails(results[0])
+        }
+      } catch (err: any) {
+        // Silently fail
+      }
+    }
+  }
 
   const handleReportComment = async (commentId: string) => {
     if (!currentUserId) return
@@ -89,7 +108,7 @@ export const ActivityItem = ({ activity, currentUserId, currentUserRole }: Activ
     try {
       await reportActivityComment(commentId, currentUserId, reason)
       toast.success('تم إرسال البلاغ')
-    } catch (e) {
+    } catch {
       toast.error('لقد أبلغت عن هذا التعليق مسبقاً')
     }
   }
@@ -101,7 +120,7 @@ export const ActivityItem = ({ activity, currentUserId, currentUserRole }: Activ
     try {
       await blockUser(currentUserId, targetUserId)
       toast.success('تم حظر المستخدم')
-    } catch (e) {
+    } catch {
       toast.error('حدث خطأ أثناء الحظر')
     }
   }
@@ -110,8 +129,8 @@ export const ActivityItem = ({ activity, currentUserId, currentUserRole }: Activ
     try {
       const data = await getActivityReactions(activity.id)
       setReactions(data)
-    } catch (e) {
-      logger.error('Error fetching reactions:', e)
+    } catch (err: any) {
+      // Silently fail
     }
   }
 
@@ -153,9 +172,9 @@ export const ActivityItem = ({ activity, currentUserId, currentUserRole }: Activ
 
     if (isBusy) return
     setIsBusy(true)
-    
+
     const myExistingReaction = reactions.find(r => r.user_id === currentUserId)
-    
+
     try {
       if (myExistingReaction?.type === type) {
         await removeActivityReaction(activity.id, currentUserId)
@@ -168,7 +187,7 @@ export const ActivityItem = ({ activity, currentUserId, currentUserRole }: Activ
         })
       }
       setShowReactionPicker(false)
-    } catch (e) {
+    } catch {
       toast.error('حدث خطأ أثناء التفاعل', { id: 'reaction-error' })
     } finally {
       setIsBusy(false)
@@ -180,7 +199,7 @@ export const ActivityItem = ({ activity, currentUserId, currentUserRole }: Activ
       try {
         const data = await getActivityComments(activity.id)
         setComments(data.map(c => ({ ...c, replies: [], showReplies: false })))
-      } catch (e) {
+      } catch {
         toast.error('حدث خطأ أثناء تحميل التعليقات')
       }
     }
@@ -190,10 +209,10 @@ export const ActivityItem = ({ activity, currentUserId, currentUserRole }: Activ
   const fetchReplies = async (commentId: string) => {
     try {
       const replies = await getActivityCommentReplies(commentId)
-      setComments(prev => prev.map(c => 
+      setComments(prev => prev.map(c =>
         c.id === commentId ? { ...c, replies, showReplies: true } : c
       ))
-    } catch (e) {
+    } catch {
       toast.error('حدث خطأ أثناء تحميل الردود')
     }
   }
@@ -206,7 +225,7 @@ export const ActivityItem = ({ activity, currentUserId, currentUserRole }: Activ
     try {
       const comment = await addActivityComment(activity.id, currentUserId, newComment.trim())
       setComments(prev => [...prev, { ...comment, replies: [], showReplies: false }])
-      
+
       // Process mentions
       await notifyMentions(newComment, {
         message: `ذكرك ${activity.user?.username || 'مستخدم'} في تعليق`,
@@ -215,7 +234,7 @@ export const ActivityItem = ({ activity, currentUserId, currentUserRole }: Activ
 
       setNewComment('')
       toast.success('تم إضافة التعليق')
-    } catch (e) {
+    } catch {
       toast.error('حدث خطأ أثناء إضافة التعليق')
     } finally {
       setIsBusy(false)
@@ -228,7 +247,7 @@ export const ActivityItem = ({ activity, currentUserId, currentUserRole }: Activ
     setIsBusy(true)
     try {
       const reply = await addActivityCommentReply(commentId, currentUserId, newReply.trim())
-      setComments(prev => prev.map(c => 
+      setComments(prev => prev.map(c =>
         c.id === commentId ? { ...c, replies: [...(c.replies || []), reply], showReplies: true } : c
       ))
 
@@ -241,7 +260,7 @@ export const ActivityItem = ({ activity, currentUserId, currentUserRole }: Activ
       setNewReply('')
       setReplyingTo(null)
       toast.success('تم إضافة الرد')
-    } catch (e) {
+    } catch {
       toast.error('حدث خطأ أثناء إضافة الرد')
     } finally {
       setIsBusy(false)
@@ -256,7 +275,7 @@ export const ActivityItem = ({ activity, currentUserId, currentUserRole }: Activ
       await deleteActivityComment(commentId, currentUserId)
       setComments(prev => prev.filter(c => c.id !== commentId))
       toast.success('تم حذف التعليق')
-    } catch (e) {
+    } catch {
       toast.error('حدث خطأ أثناء حذف التعليق')
     }
   }
@@ -265,11 +284,11 @@ export const ActivityItem = ({ activity, currentUserId, currentUserRole }: Activ
     if (!currentUserId) return
     try {
       await deleteActivityCommentReply(replyId, currentUserId)
-      setComments(prev => prev.map(c => 
+      setComments(prev => prev.map(c =>
         c.id === commentId ? { ...c, replies: c.replies?.filter(r => r.id !== replyId) } : c
       ))
       toast.success('تم حذف الرد')
-    } catch (e) {
+    } catch {
       toast.error('حدث خطأ أثناء حذف الرد')
     }
   }
@@ -322,6 +341,97 @@ export const ActivityItem = ({ activity, currentUserId, currentUserRole }: Activ
             {activity.type === 'achievement' && `حصل على إنجاز جديد: ${activity.metadata?.achievement_title || 'إنجاز'}`}
             {activity.type === 'follow' && `بدأ بمتابعة مستخدم جديد`}
           </p>
+
+          {/* Display content details if available */}
+          {(activity.type === 'watch' || activity.type === 'review') && (
+            <div className="mt-2">
+              {/* For watch activities, show content details inline */}
+              {activity.type === 'watch' && (
+                <>
+                  {contentDetails ? (
+                    <Link
+                      to={`/watch/${activity.content_type}/${activity.metadata?.external_id || activity.content_id}`}
+                      className="flex items-center gap-2 text-xs text-zinc-400 hover:text-lumen-gold transition-colors"
+                    >
+                      {contentDetails.poster_path && (
+                        <img
+                          src={`https://image.tmdb.org/t/p/w92${contentDetails.poster_path}`}
+                          alt={contentDetails.title || contentDetails.name}
+                          className="w-8 h-12 rounded object-cover"
+                        />
+                      )}
+                      <span className="font-medium">{contentDetails.title || contentDetails.name}</span>
+                    </Link>
+                  ) : activity.metadata?.external_id ? (
+                    <div className="flex items-center gap-2 text-xs text-zinc-600">
+                      <div className="w-8 h-12 rounded bg-white/5 flex items-center justify-center">
+                        <PlayCircle size={12} />
+                      </div>
+                      <span>المحتوى غير متوفر</span>
+                    </div>
+                  ) : null}
+                </>
+              )}
+
+              {/* Review Details */}
+              {activity.type === 'review' && activity.metadata && (
+                <div className="mt-2 p-3 bg-zinc-900/50 rounded-lg border border-zinc-800">
+                  {/* Content Title and Poster */}
+                  {contentDetails ? (
+                    <Link
+                      to={`/watch/${activity.content_type}/${activity.metadata.external_id}`}
+                      className="flex items-center gap-2 mb-2 hover:opacity-80 transition-opacity"
+                    >
+                      {contentDetails.poster_path && (
+                        <img
+                          src={`https://image.tmdb.org/t/p/w92${contentDetails.poster_path}`}
+                          alt={contentDetails.title || contentDetails.name}
+                          className="w-10 h-14 rounded object-cover"
+                        />
+                      )}
+                      <span className="text-xs font-bold text-white">{contentDetails.title || contentDetails.name}</span>
+                    </Link>
+                  ) : activity.metadata.external_id ? (
+                    <div className="flex items-center gap-2 mb-2 text-xs text-zinc-600">
+                      <div className="w-10 h-14 rounded bg-white/5 flex items-center justify-center">
+                        <PlayCircle size={14} />
+                      </div>
+                      <span>المحتوى غير متوفر</span>
+                    </div>
+                  ) : null}
+
+                  {/* Review Title */}
+                  {activity.metadata.title && (
+                    <h4 className="text-sm font-bold text-white mb-1">{activity.metadata.title}</h4>
+                  )}
+
+                  {/* Rating */}
+                  {activity.metadata.rating && (
+                    <div className="flex items-center gap-1 mb-2">
+                      <Star size={12} className="text-yellow-500 fill-yellow-500" />
+                      <span className="text-xs text-yellow-500 font-bold">{activity.metadata.rating}/10</span>
+                    </div>
+                  )}
+
+                  {/* Review Excerpt */}
+                  {activity.metadata.excerpt && (
+                    <p className="text-xs text-zinc-400 line-clamp-2 mb-2">{activity.metadata.excerpt}</p>
+                  )}
+
+                  {/* Link to Full Review */}
+                  {activity.metadata.review_id && (
+                    <Link
+                      to={`/reviews/${activity.metadata.review_id}`}
+                      className="text-xs text-lumen-gold hover:underline inline-block"
+                    >
+                      اقرأ المراجعة الكاملة
+                    </Link>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           <p className="text-[10px] text-zinc-500 font-medium uppercase tracking-tighter mt-1">
             {new Date(activity.created_at).toLocaleDateString('ar-EG', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}
           </p>
@@ -329,7 +439,7 @@ export const ActivityItem = ({ activity, currentUserId, currentUserRole }: Activ
       </div>
 
       <div className="flex items-center gap-4 px-2 relative">
-        <div 
+        <div
           className="relative"
           onMouseEnter={() => setShowReactionPicker(true)}
           onMouseLeave={() => setShowReactionPicker(false)}
@@ -386,7 +496,7 @@ export const ActivityItem = ({ activity, currentUserId, currentUserRole }: Activ
         </button>
 
         <div className="flex -space-x-1 ml-auto">
-          {topReactions.map(([type, count]) => (
+          {topReactions.map(([type, _count]) => (
             <div key={type} className="w-5 h-5 rounded-full bg-zinc-800 border border-white/5 flex items-center justify-center text-[10px]">
               {REACTIONS.find(r => r.type === type)?.emoji}
             </div>
@@ -402,7 +512,7 @@ export const ActivityItem = ({ activity, currentUserId, currentUserRole }: Activ
             exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden space-y-4 pt-2 border-t border-white/5"
           >
-            <div className="space-y-4 max-h-80 overflow-y-auto no-scrollbar px-1">
+            <div className="space-y-4 max-h-80 no-scrollbar px-1">
               {comments.map((comment) => (
                 <div key={comment.id} className="space-y-2">
                   <div className="flex gap-3 p-3 rounded-2xl bg-white/[0.01]">
@@ -510,9 +620,9 @@ export const ActivityItem = ({ activity, currentUserId, currentUserRole }: Activ
                         </div>
                       </div>
                     ))}
-                    
+
                     {!comment.showReplies && (
-                      <button 
+                      <button
                         onClick={() => fetchReplies(comment.id)}
                         className="text-[9px] font-black text-lumen-gold/50 hover:text-lumen-gold transition-colors flex items-center gap-1"
                       >

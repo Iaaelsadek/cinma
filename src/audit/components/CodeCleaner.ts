@@ -71,7 +71,7 @@ export class CodeCleaner {
         },
         duration: Date.now() - startTime,
       };
-    } catch (error) {
+    } catch (error: any) {
       auditLogger.error('CodeCleaner', 'Scan failed', { error });
       throw error;
     }
@@ -134,7 +134,7 @@ export class CodeCleaner {
             }
           }
         });
-      } catch (error) {
+      } catch (error: any) {
         auditLogger.warn('CodeCleaner', `Failed to scan file: ${file}`, { error });
       }
     }
@@ -170,7 +170,7 @@ export class CodeCleaner {
             });
           }
         });
-      } catch (error) {
+      } catch (error: any) {
         auditLogger.warn('CodeCleaner', `Failed to scan file: ${file}`, { error });
       }
     }
@@ -250,7 +250,7 @@ export class CodeCleaner {
           
           braceDepth -= closes;
         });
-      } catch (error) {
+      } catch (error: any) {
         auditLogger.warn('CodeCleaner', `Failed to scan file: ${file}`, { error });
       }
     }
@@ -316,12 +316,12 @@ export class CodeCleaner {
           
           await fs.writeFile(file, lines.join('\n'), 'utf-8');
           filesModified.push(file);
-        } catch (error) {
+        } catch (error: any) {
           errors.push(error as Error);
           auditLogger.error('CodeCleaner', `Failed to fix file: ${file}`, { error });
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       errors.push(error as Error);
     }
 
@@ -362,12 +362,12 @@ export class CodeCleaner {
           
           await fs.writeFile(file, lines.join('\n'), 'utf-8');
           filesModified.push(file);
-        } catch (error) {
+        } catch (error: any) {
           errors.push(error as Error);
           auditLogger.error('CodeCleaner', `Failed to fix file: ${file}`, { error });
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       errors.push(error as Error);
     }
 

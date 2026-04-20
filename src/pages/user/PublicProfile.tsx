@@ -7,7 +7,7 @@ import { SkeletonProfile } from '../../components/common/Skeletons'
 import { Users, Heart, Award, Activity, Star, PlayCircle, Globe, Twitter, Instagram, Facebook, UserPlus, UserMinus, Shield } from 'lucide-react'
 import clsx from 'clsx'
 import { useState } from 'react'
-import { toast } from 'sonner'
+import { toast } from '../../lib/toast-manager'
 
 const ICON_MAP: Record<string, React.ComponentType<any>> = {
   Award, Star, Activity, PlayCircle, Heart, Users

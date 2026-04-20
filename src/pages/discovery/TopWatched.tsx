@@ -2,32 +2,75 @@ import { useQuery } from '@tanstack/react-query'
 import { QuantumTrain } from '../../components/features/media/QuantumTrain'
 import { useLang } from '../../state/useLang'
 import { Helmet } from 'react-helmet-async'
-import { fetchTrending } from '../../lib/tmdb'
-import { supabase } from '../../lib/supabase'
+import { filterValidSlugs } from '../../lib/dataHelpers'
 import { QuantumHero } from '../../components/features/hero/QuantumHero'
+import axios from 'axios'
+import { errorLogger } from '../../services/errorLogging'
 
 export const TopWatched = () => {
   const { lang } = useLang()
 
   const { data: trendingMovies } = useQuery({
     queryKey: ['trending-movies-page'],
-    queryFn: () => fetchTrending('movie')
+    queryFn: async () => {
+      try {
+        const { data } = await axios.get('/api/trending', {
+          params: { type: 'movie', limit: 20 }
+        })
+        const results = filterValidSlugs(data.data || [])
+        return { results: results.map((item: any) => ({ ...item, media_type: 'movie' })) }
+      } catch (error: any) {
+        errorLogger.logError({
+          message: 'Failed to fetch trending movies',
+          severity: 'medium',
+          category: 'network',
+          context: { error }
+        })
+        return { results: [] }
+      }
+    }
   })
 
   const { data: trendingSeries } = useQuery({
     queryKey: ['trending-series-page'],
-    queryFn: () => fetchTrending('tv')
+    queryFn: async () => {
+      try {
+        const { data } = await axios.get('/api/trending', {
+          params: { type: 'tv', limit: 20 }
+        })
+        const results = filterValidSlugs(data.data || [])
+        return { results: results.map((item: any) => ({ ...item, media_type: 'tv' })) }
+      } catch (error: any) {
+        errorLogger.logError({
+          message: 'Failed to fetch trending series',
+          severity: 'medium',
+          category: 'network',
+          context: { error }
+        })
+        return { results: [] }
+      }
+    }
   })
 
   const { data: topRatedMovies } = useQuery({
     queryKey: ['top-rated-movies-page'],
     queryFn: async () => {
-        const { data } = await supabase
-            .from('movies')
-            .select('*')
-            .order('vote_average', { ascending: false })
-            .limit(20)
-        return data?.map((item: any) => ({ ...item, media_type: 'movie' })) || []
+      try {
+        // CRITICAL: Use CockroachDB API instead of Supabase
+        const { data } = await axios.get('/api/movies', {
+          params: { sort: 'vote_average', ratingFrom: 7, limit: 20 }
+        })
+        const results = filterValidSlugs(data.results || [])
+        return results.map((item: any) => ({ ...item, media_type: 'movie' }))
+      } catch (error: any) {
+        errorLogger.logError({
+          message: 'Failed to fetch top rated movies',
+          severity: 'medium',
+          category: 'network',
+          context: { error }
+        })
+        return []
+      }
     }
   })
 

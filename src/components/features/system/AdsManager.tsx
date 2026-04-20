@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
-import { supabase } from '../../../lib/supabase'
 import { FLAGS } from '../../../lib/constants'
 import { errorLogger } from '../../../services/errorLogging'
 
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+
 type AdRow = {
   id: number
-  name: string
+  title: string
   type: 'popunder' | 'banner' | 'preroll' | 'midroll'
-  code: string
+  content: string
   position?: 'top' | 'bottom' | 'sidebar' | 'player' | 'global' | string | null
   active?: boolean | null
   impressions?: number | null
@@ -61,45 +62,43 @@ function extractSafeAdUrl(input: string) {
 }
 
 async function fetchAd(type: AdRow['type'], position?: string) {
-  let q = supabase.from('ads').select('*').eq('active', true).eq('type', type).order('created_at', { ascending: false })
-  if (position) {
-    q = q.eq('position', position)
+  try {
+    const params = new URLSearchParams({ active: 'true', type })
+    if (position) params.append('position', position)
+    
+    const response = await fetch(`${API_BASE}/api/ads?${params.toString()}`)
+    if (!response.ok) return null
+    
+    const ads = await response.json() as AdRow[]
+    return ads[0] || null
+  } catch {
+    return null
   }
-  const { data } = await q.limit(1)
-  return (data?.[0] as AdRow | undefined) || null
 }
 
 async function incImpression(ad: AdRow) {
   try {
-    await supabase.rpc?.('increment_ad_impressions', { ad_id: ad.id })
-  } catch (err) {
-    try {
-      await supabase.from('ads').update({ impressions: (ad.impressions || 0) + 1 }).eq('id', ad.id)
-    } catch (updateErr) {
-      errorLogger.logError({
-        message: 'Failed to increment ad impression',
-        severity: 'low',
-        category: 'ads',
-        context: { adId: ad.id, error: updateErr }
-      })
-    }
+    await fetch(`${API_BASE}/api/ads/${ad.id}/impression`, { method: 'POST' })
+  } catch (err: any) {
+    errorLogger.logError({
+      message: 'Failed to increment ad impression',
+      severity: 'low',
+      category: 'ads',
+      context: { adId: ad.id, error: err }
+    })
   }
 }
 
 async function incClick(ad: AdRow) {
   try {
-    await supabase.rpc?.('increment_ad_clicks', { ad_id: ad.id })
-  } catch (err) {
-    try {
-      await supabase.from('ads').update({ clicks: (ad.clicks || 0) + 1 }).eq('id', ad.id)
-    } catch (updateErr) {
-      errorLogger.logError({
-        message: 'Failed to increment ad click',
-        severity: 'low',
-        category: 'ads',
-        context: { adId: ad.id, error: updateErr }
-      })
-    }
+    await fetch(`${API_BASE}/api/ads/${ad.id}/click`, { method: 'POST' })
+  } catch (err: any) {
+    errorLogger.logError({
+      message: 'Failed to increment ad click',
+      severity: 'low',
+      category: 'ads',
+      context: { adId: ad.id, error: err }
+    })
   }
 }
 
@@ -107,12 +106,18 @@ export const AdsManager = ({ type, position, onDone, durationSeconds = 8 }: Prop
   const [ad, setAd] = useState<AdRow | null>(null)
   const [countdown, setCountdown] = useState(durationSeconds)
   const onceRef = useRef(false)
-  
+
+  // Reset countdown when ad changes
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setCountdown(durationSeconds)
+  }, [ad?.id, durationSeconds])
+
   // 1. Fetch Ad
   useEffect(() => {
     if (!FLAGS.ADS_ENABLED) {
-        if (type === 'preroll') onDone?.()
-        return
+      if (type === 'preroll') onDone?.()
+      return
     }
 
     let cancelled = false
@@ -134,7 +139,9 @@ export const AdsManager = ({ type, position, onDone, durationSeconds = 8 }: Prop
         }
       }
     })()
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [type, position])
 
   // 2. Impressions
@@ -152,7 +159,7 @@ export const AdsManager = ({ type, position, onDone, durationSeconds = 8 }: Prop
       if (onceRef.current) return
       onceRef.current = true
       sessionStorage.setItem(key, '1')
-      const safeUrl = extractSafeAdUrl(ad.code || '')
+      const safeUrl = extractSafeAdUrl(ad.content || '')
       if (!safeUrl) return
       const w = window.open(safeUrl, '_blank', 'noopener,noreferrer')
       if (w) incImpression(ad).catch(() => {})
@@ -161,11 +168,10 @@ export const AdsManager = ({ type, position, onDone, durationSeconds = 8 }: Prop
     return () => document.removeEventListener('click', handler)
   }, [type, ad])
 
-  // 4. Preroll Logic (Timer) - MOVED TO TOP LEVEL
+  // 4. Preroll Logic (Timer)
   useEffect(() => {
     if (type !== 'preroll' || !ad) return
-    
-    setCountdown(durationSeconds)
+
     const t = setInterval(() => {
       setCountdown((c) => {
         if (c <= 1) {
@@ -177,14 +183,14 @@ export const AdsManager = ({ type, position, onDone, durationSeconds = 8 }: Prop
       })
     }, 1000)
     return () => clearInterval(t)
-  }, [type, ad, durationSeconds]) // Removed onDone from deps to avoid loop if onDone isn't stable, but safe if stable
+  }, [type, ad, durationSeconds])
 
   // Render Logic
   if (!FLAGS.ADS_ENABLED) return null
   if (!ad) return null
 
   if (type === 'banner') {
-    const sanitizedCode = sanitizeAdHtml(ad?.code || '')
+    const sanitizedCode = sanitizeAdHtml(ad?.content || '')
     return (
       <div
         className={`rounded-md border border-zinc-800 bg-zinc-900 p-3 text-center overflow-hidden`}
@@ -201,7 +207,7 @@ export const AdsManager = ({ type, position, onDone, durationSeconds = 8 }: Prop
   }
 
   if (type === 'preroll') {
-    const sanitizedCode = sanitizeAdHtml(ad?.code || '<div>إعلان</div>')
+    const sanitizedCode = sanitizeAdHtml(ad?.content || '<div>إعلان</div>')
     return (
       <div className="relative z-10 flex h-full w-full items-center justify-center bg-black/90">
         <div className="absolute right-3 top-3 text-xs text-white/80">ينتهي خلال {countdown}s</div>

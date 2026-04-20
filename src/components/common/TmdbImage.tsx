@@ -5,13 +5,14 @@ import { motion, AnimatePresence } from 'framer-motion'
 // Fallback poster image (gradient with cinema theme)
 const FALLBACK_POSTER = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 450"%3E%3Cdefs%3E%3ClinearGradient id="grad" x1="0%25" y1="0%25" x2="100%25" y2="100%25"%3E%3Cstop offset="0%25" style="stop-color:%23374151;stop-opacity:1" /%3E%3Cstop offset="100%25" style="stop-color:%231f2937;stop-opacity:1" /%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width="300" height="450" fill="url(%23grad)"/%3E%3Ctext x="150" y="225" font-size="24" fill="%239ca3af" text-anchor="middle" dominant-baseline="middle" font-family="Arial" font-weight="bold"%3E🎬%3C/text%3E%3Ctext x="150" y="280" font-size="16" fill="%236b7280" text-anchor="middle" dominant-baseline="middle" font-family="Arial"%3Eسينما أونلاين%3C/text%3E%3C/svg%3E'
 
-export type TmdbImageSize = 'w92' | 'w154' | 'w185' | 'w342' | 'w500' | 'w780' | 'w1280' | 'original'
+export type TmdbImageSize = 'w92' | 'w154' | 'w185' | 'w300' | 'w342' | 'w500' | 'w780' | 'w1280' | 'original'
 
 /** TMDB size to pixel dimensions for CLS prevention */
 const SIZE_DIMENSIONS: Record<TmdbImageSize, { w: number; h: number }> = {
   w92: { w: 92, h: 138 },
   w154: { w: 154, h: 231 },
   w185: { w: 185, h: 278 },
+  w300: { w: 300, h: 450 },
   w342: { w: 342, h: 513 },
   w500: { w: 500, h: 750 },
   w780: { w: 780, h: 1170 },
@@ -31,13 +32,15 @@ interface TmdbImageProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 const getUrl = (path: string, size: TmdbImageSize) => {
-   if (path.startsWith('http')) return path
+   // If it's already a full URL, return as-is
+   if (path.startsWith('http://') || path.startsWith('https://')) return path
+   // Otherwise, construct TMDB URL
    return `https://image.tmdb.org/t/p/${size}${path}`
  }
 
 export const TmdbImage = memo(({
   path,
-  size = 'w500',
+  size = 'w300',
   fallback,
   showLoading = true,
   className = '',
@@ -69,7 +72,7 @@ export const TmdbImage = memo(({
   const src = getUrl(path, size)
   // Generate srcset for responsive images if using standard sizes
   const srcSet = !path.startsWith('http') && size !== 'original'
-    ? `${getUrl(path, 'w342')} 342w, ${getUrl(path, 'w500')} 500w, ${getUrl(path, 'w780')} 780w`
+    ? `${getUrl(path, 'w300')} 300w, ${getUrl(path, 'w342')} 342w, ${getUrl(path, 'w500')} 500w`
     : undefined
 
   return (

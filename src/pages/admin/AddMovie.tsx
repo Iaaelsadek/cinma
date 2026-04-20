@@ -5,7 +5,7 @@ import { translateTitleToArabic } from '../../lib/gemini'
 import { useAdmin } from '../../context/AdminContext'
 import { errorLogger } from '../../services/errorLogging'
 import {Search, Plus, Save, Trash2, Server, Film, Upload} from 'lucide-react'
-import { toast } from 'sonner'
+import { toast } from '../../lib/toast-manager'
 
 const GENRES: Record<number, string> = {
   28: 'Action',
@@ -54,7 +54,7 @@ export const AddMovie = () => {
         params: { query, include_adult: false }
       })
       setResults(data.results || [])
-    } catch (err) {
+    } catch (err: any) {
       toast.error('Failed to search TMDB')
     } finally {
       setLoading(false)

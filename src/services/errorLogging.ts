@@ -1,4 +1,4 @@
-import { toast } from 'sonner';
+import { toast } from '../lib/toast-manager';
 import { logger } from '../lib/logger';
 
 // Configuration
@@ -72,7 +72,7 @@ class ErrorLoggingService {
     if (saved) {
       try {
         this.queue = JSON.parse(saved);
-      } catch (e) {
+      } catch (e: any) {
         logger.error('Failed to load error queue', e)
       }
     }
@@ -139,7 +139,7 @@ class ErrorLoggingService {
       // Remove processed items
       this.queue = this.queue.slice(batch.length);
       this.saveQueue();
-    } catch (error) {
+    } catch (error: any) {
       logger.error('Failed to process error queue:', error)
     } finally {
       this.isProcessing = false;
@@ -186,7 +186,7 @@ class ErrorLoggingService {
     }
   }
 
-  public captureException(_error: any, _context?: Record<string, any>) {
+  public captureException(_error: unknown, _context?: Record<string, unknown>) {
     // DISABLED
     return;
   }
@@ -195,6 +195,6 @@ class ErrorLoggingService {
 export const errorLogger = new ErrorLoggingService();
 
 // Added back exported helper function to satisfy build
-export const logAuthError = (..._args: any[]) => {
+export const logAuthError = (..._args: unknown[]) => {
   // Stub
 };

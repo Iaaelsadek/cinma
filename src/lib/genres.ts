@@ -1,37 +1,62 @@
-export const GENRES: Record<number, { ar: string; en: string }> = {
-  // Movie Genres
-  28: { ar: 'أكشن', en: 'Action' },
-  12: { ar: 'مغامرة', en: 'Adventure' },
-  16: { ar: 'رسوم متحركة', en: 'Animation' },
-  35: { ar: 'كوميديا', en: 'Comedy' },
-  80: { ar: 'جريمة', en: 'Crime' },
-  99: { ar: 'وثائقي', en: 'Documentary' },
-  18: { ar: 'دراما', en: 'Drama' },
-  10751: { ar: 'عائلي', en: 'Family' },
-  14: { ar: 'خيال', en: 'Fantasy' },
-  36: { ar: 'تاريخ', en: 'History' },
-  27: { ar: 'رعب', en: 'Horror' },
-  10402: { ar: 'موسيقى', en: 'Music' },
-  9648: { ar: 'غموض', en: 'Mystery' },
-  10749: { ar: 'رومانسية', en: 'Romance' },
-  878: { ar: 'خيال علمي', en: 'Science Fiction' },
-  10770: { ar: 'فيلم تلفزيوني', en: 'TV Movie' },
-  53: { ar: 'إثارة', en: 'Thriller' },
-  10752: { ar: 'حرب', en: 'War' },
-  37: { ar: 'غرب أمريكي', en: 'Western' },
+/**
+ * Genre Translation Utility
+ * 
+ * Provides genre name translation between English and Arabic
+ * Used across MovieCard, Watch page, and other components
+ */
 
-  // TV Genres (Some overlap with movies, mapped by ID)
-  10759: { ar: 'أكشن ومغامرة', en: 'Action & Adventure' },
-  10762: { ar: 'أطفال', en: 'Kids' },
-  10763: { ar: 'أخبار', en: 'News' },
-  10764: { ar: 'واقع', en: 'Reality' },
-  10765: { ar: 'خيال علمي وفانتازيا', en: 'Sci-Fi & Fantasy' },
-  10766: { ar: 'أوبرا صابونية', en: 'Soap' },
-  10767: { ar: 'برامج حوارية', en: 'Talk' },
-  10768: { ar: 'حرب وسياسة', en: 'War & Politics' },
+export const GENRE_TRANSLATIONS: Record<string, string> = {
+  'action': 'أكشن',
+  'adventure': 'مغامرات',
+  'animation': 'رسوم متحركة',
+  'comedy': 'كوميدي',
+  'crime': 'جريمة',
+  'documentary': 'وثائقي',
+  'drama': 'دراما',
+  'family': 'عائلي',
+  'fantasy': 'خيال',
+  'history': 'تاريخي',
+  'horror': 'رعب',
+  'music': 'موسيقي',
+  'mystery': 'غموض',
+  'romance': 'رومانسي',
+  'sci-fi': 'خيال علمي',
+  'science fiction': 'خيال علمي',
+  'thriller': 'إثارة',
+  'war': 'حرب',
+  'western': 'غربي',
+  'kids': 'أطفال',
+  'news': 'أخبار',
+  'reality': 'واقعي',
+  'soap': 'درامي',
+  'talk': 'حواري',
+  'tv movie': 'فيلم تلفزيوني'
 }
 
-export function getGenreName(id: number | undefined, lang: 'ar' | 'en' = 'ar'): string | null {
-  if (!id) return null
-  return GENRES[id]?.[lang] || null
+/**
+ * Translate genre name to Arabic
+ * @param genreEn - English genre name
+ * @returns Arabic translation or original name if no translation exists
+ */
+export function translateGenre(genreEn: string): string {
+  if (!genreEn) return genreEn
+
+  const normalized = genreEn.toLowerCase().trim()
+  return GENRE_TRANSLATIONS[normalized] || genreEn
 }
+
+/**
+ * Get genre name based on language preference
+ * @param genreEn - English genre name
+ * @param lang - Language preference ('ar' or 'en')
+ * @returns Translated genre name if lang='ar', otherwise English name
+ */
+export function getGenreName(genreEn: string, lang: 'ar' | 'en' = 'en'): string {
+  if (lang === 'ar') {
+    return translateGenre(genreEn)
+  }
+  return genreEn
+}
+
+// Legacy export for backward compatibility
+export { getGenreName as default }

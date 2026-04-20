@@ -3,10 +3,36 @@ import { errorLogger } from '../services/errorLogging';
 
 const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:3001') + '/api/admin/proxy';
 
+// ✅ Whitelist: Only user-data tables are allowed (NO content tables)
+const ALLOWED_TABLES = [
+  'profiles',
+  'watchlist',
+  'continue_watching',
+  'history',
+  'comments',
+  'user_devices',
+  'playback_handoffs',
+  'follows',
+  'activity_feed',
+  'activity_likes',
+  'activity_comments',
+  'challenges',
+  'achievements',
+  'playlists',
+  'notifications'
+];
+
+function validateTable(table: string): void {
+  if (!ALLOWED_TABLES.includes(table)) {
+    throw new Error(`❌ Table "${table}" is not allowed. Only user-data tables can be accessed via proxy.`);
+  }
+}
+
 export async function fetchTable(table: string, options: { select?: string, order?: string, orderAsc?: boolean, eq?: Record<string, any>, limit?: number } = {}) {
+  validateTable(table);
   try {
     let q = supabase.from(table).select(options.select || '*');
-    
+
     if (options.order) {
       q = q.order(options.order, { ascending: options.orderAsc ?? true });
     }
@@ -18,11 +44,11 @@ export async function fetchTable(table: string, options: { select?: string, orde
         q = q.eq(k, v);
       }
     }
-    
+
     const { data, error } = await q;
     if (error) throw error;
     return data;
-  } catch (err) {
+  } catch (err: any) {
     errorLogger.logError({
       message: `Direct fetch for ${table} failed, trying proxy`,
       severity: 'low',
@@ -36,11 +62,11 @@ export async function fetchTable(table: string, options: { select?: string, orde
       if (options.orderAsc !== undefined) params.append('orderAsc', String(options.orderAsc));
       if (options.limit) params.append('limit', String(options.limit));
       if (options.eq) params.append('eq', JSON.stringify(options.eq));
-      
+
       const res = await fetch(`${API_BASE}/${table}?${params.toString()}`);
       if (!res.ok) throw new Error(`Proxy error: ${res.statusText}`);
       return await res.json();
-    } catch (proxyErr) {
+    } catch (proxyErr: any) {
       errorLogger.logError({
         message: `Proxy fetch for ${table} failed`,
         severity: 'high',
@@ -53,11 +79,12 @@ export async function fetchTable(table: string, options: { select?: string, orde
 }
 
 export async function insertTable(table: string, data: any) {
+  validateTable(table);
   try {
     const { data: res, error } = await supabase.from(table).insert(data).select().single();
     if (error) throw error;
     return res;
-  } catch (err) {
+  } catch (err: any) {
     errorLogger.logError({
       message: `Direct insert for ${table} failed, trying proxy`,
       severity: 'low',
@@ -72,18 +99,19 @@ export async function insertTable(table: string, data: any) {
       });
       if (!res.ok) throw new Error(`Proxy error: ${res.statusText}`);
       return await res.json();
-    } catch (proxyErr) {
+    } catch (proxyErr: any) {
       throw err;
     }
   }
 }
 
 export async function updateTable(table: string, id: string | number, data: any) {
+  validateTable(table);
   try {
     const { data: res, error } = await supabase.from(table).update(data).eq('id', id).select().single();
     if (error) throw error;
     return res;
-  } catch (err) {
+  } catch (err: any) {
     errorLogger.logError({
       message: `Direct update for ${table} failed, trying proxy`,
       severity: 'low',
@@ -98,18 +126,19 @@ export async function updateTable(table: string, id: string | number, data: any)
       });
       if (!res.ok) throw new Error(`Proxy error: ${res.statusText}`);
       return await res.json();
-    } catch (proxyErr) {
+    } catch (proxyErr: any) {
       throw err;
     }
   }
 }
 
 export async function deleteTable(table: string, id: string | number) {
+  validateTable(table);
   try {
     const { error } = await supabase.from(table).delete().eq('id', id);
     if (error) throw error;
     return true;
-  } catch (err) {
+  } catch (err: any) {
     errorLogger.logError({
       message: `Direct delete for ${table} failed, trying proxy`,
       severity: 'low',
@@ -122,7 +151,7 @@ export async function deleteTable(table: string, id: string | number) {
       });
       if (!res.ok) throw new Error(`Proxy error: ${res.statusText}`);
       return true;
-    } catch (proxyErr) {
+    } catch (proxyErr: any) {
       throw err;
     }
   }

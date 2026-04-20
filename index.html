@@ -39,7 +39,6 @@
     <link rel="preconnect" href="https://image.tmdb.org" crossorigin />
     <link rel="preconnect" href="https://api.themoviedb.org" crossorigin />
     <link rel="preconnect" href="https://lhpuwupbhpcqkwqugkhh.supabase.co" crossorigin />
-    <link rel="preconnect" href="https://api.dailymotion.com" crossorigin />
     <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
     <link rel="dns-prefetch" href="https://fonts.gstatic.com" crossorigin />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -50,8 +49,6 @@
     <link rel="manifest" href="/manifest.webmanifest">
     <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700&family=Syne:wght@400;600;700;800&display=swap" />
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
-    <!-- Preload ChatBot Lottie animation to prevent FOUC -->
-    <link rel="preload" as="fetch" href="/cinmabot.json" crossorigin />
     <noscript>
       <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet" />
     </noscript>
@@ -60,5 +57,43 @@
   <body class="bg-lumen-void text-lumen-cream font-dm">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    
+    <!-- Suppress known third-party console warnings -->
+    <script>
+      // Suppress third-party warnings from embedded content (vidsrc.cc)
+      (function() {
+        const originalError = console.error;
+        const originalWarn = console.warn;
+        
+        const suppressPatterns = [
+          'Permissions-Policy',
+          'Content-Security-Policy directive',
+          'navigate-to',
+          'Cannot redefine property: location',
+          'CORS policy',
+          'Access to XMLHttpRequest',
+          'Creating a worker from',
+          'violates the following Content Security Policy',
+          'Failed to load resource',
+          'net::ERR_FAILED'
+        ];
+        
+        console.error = function(...args) {
+          const message = String(args[0] || '');
+          if (suppressPatterns.some(pattern => message.includes(pattern))) {
+            return; // Suppress
+          }
+          originalError.apply(console, args);
+        };
+        
+        console.warn = function(...args) {
+          const message = String(args[0] || '');
+          if (suppressPatterns.some(pattern => message.includes(pattern))) {
+            return; // Suppress
+          }
+          originalWarn.apply(console, args);
+        };
+      })();
+    </script>
   </body>
   </html>

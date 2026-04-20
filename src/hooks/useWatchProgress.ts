@@ -6,8 +6,8 @@ interface UseWatchProgressProps {
   user: any
   id: string | null
   type: string
-  season: number
-  episode: number
+  season: number | undefined
+  episode: number | undefined
 }
 
 export const useWatchProgress = ({ user, id, type, season, episode }: UseWatchProgressProps) => {
@@ -19,51 +19,50 @@ export const useWatchProgress = ({ user, id, type, season, episode }: UseWatchPr
   }, [elapsed])
 
   useEffect(() => {
-    let timer: ReturnType<typeof setInterval> | undefined
     let mounted = true
-    
-    // Initial fetch
-    ;(async () => {
-      if (!id) return
-      
-      if (user) {
-        const p = await getProgress(user.id, Number(id), (type === 'movie' ? 'movie' : 'tv'))
-        if (!mounted) return
-        if (p?.progress_seconds) setElapsed(p.progress_seconds)
-      } else {
-        // Guest: Read from local storage
-        try {
-          const guestProgress = JSON.parse(localStorage.getItem('guest_progress') || '{}')
-          const key = `${type}_${id}${type === 'tv' ? `_${season}_${episode}` : ''}`
-          if (guestProgress[key]) {
-            setElapsed(guestProgress[key].progress)
-          }
-        } catch {}
-      }
-    })()
+
+      // Initial fetch
+      ; (async () => {
+        if (!id) return
+
+        if (user) {
+          const p = await getProgress(user.id, id, (type === 'movie' ? 'movie' : 'tv'))
+          if (!mounted) return
+          if (p?.progress_seconds) setElapsed(p.progress_seconds)
+        } else {
+          // Guest: Read from local storage
+          try {
+            const guestProgress = JSON.parse(localStorage.getItem('guest_progress') || '{}')
+            const key = `${type}_${id}${type === 'tv' ? `_${season}_${episode}` : ''}`
+            if (guestProgress[key]) {
+              setElapsed(guestProgress[key].progress)
+            }
+          } catch { }
+        }
+      })()
 
     // Interval save
-    timer = setInterval(() => {
+    const timer = setInterval(() => {
       if (!id) return
       setElapsed((e) => {
         const next = e + 10
-        
+
         if (user) {
           upsertProgress({
             userId: user.id,
-            contentId: Number(id),
+            externalId: id,
             contentType: type === 'movie' ? 'movie' : 'tv',
             season: type === 'tv' ? season : null,
             episode: type === 'tv' ? episode : null,
             progressSeconds: next
-          }).catch(() => {})
+          }).catch(() => { })
         } else {
           // Guest: Save to local storage
           try {
             const guestProgress = JSON.parse(localStorage.getItem('guest_progress') || '{}')
             const key = `${type}_${id}${type === 'tv' ? `_${season}_${episode}` : ''}`
             guestProgress[key] = {
-              contentId: Number(id),
+              externalId: id,
               contentType: type,
               season: type === 'tv' ? season : null,
               episode: type === 'tv' ? episode : null,
@@ -71,7 +70,7 @@ export const useWatchProgress = ({ user, id, type, season, episode }: UseWatchPr
               updatedAt: Date.now()
             }
             localStorage.setItem('guest_progress', JSON.stringify(guestProgress))
-          } catch {}
+          } catch { }
         }
         return next
       })
@@ -83,7 +82,7 @@ export const useWatchProgress = ({ user, id, type, season, episode }: UseWatchPr
           try {
             await upsertProgress({
               userId: user.id,
-              contentId: Number(id),
+              externalId: id,
               contentType: type === 'movie' ? 'movie' : 'tv',
               season: type === 'tv' ? season : null,
               episode: type === 'tv' ? episode : null,
@@ -91,17 +90,17 @@ export const useWatchProgress = ({ user, id, type, season, episode }: UseWatchPr
             })
             await addHistory({
               userId: user.id,
-              contentId: Number(id),
+              externalId: id,
               contentType: type === 'movie' ? 'movie' : 'tv',
               season: type === 'tv' ? season : null,
               episode: type === 'tv' ? episode : null
             })
-          } catch (err) {
+          } catch (err: any) {
             errorLogger.logError({
               message: 'Failed to save history on visibility hidden',
               severity: 'low',
               category: 'user_action',
-              context: { error: err, userId: user.id, contentId: id }
+              context: { error: err, userId: user.id, externalId: id }
             })
           }
         }
@@ -110,7 +109,7 @@ export const useWatchProgress = ({ user, id, type, season, episode }: UseWatchPr
 
     window.addEventListener('visibilitychange', onVisibilityChange)
     window.addEventListener('beforeunload', onVisibilityChange)
-    
+
     return () => {
       mounted = false
       clearInterval(timer)
