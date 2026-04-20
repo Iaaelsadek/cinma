@@ -21,6 +21,7 @@ import { generateContentUrl } from '../../lib/utils'
 import { RatingInput, AggregateRating, ReviewForm, ReviewList } from '../../components/features/reviews'
 import type { ReviewFormData } from '../../components/features/reviews'
 import { EditReviewModal } from '../../components/features/reviews/EditReviewModal'
+import type { Review } from '../../components/features/reviews/EditReviewModal'
 import { ReportReviewDialog } from '../../components/features/reviews/ReportReviewDialog'
 import { translateGenres } from '../../lib/genreTranslations'
 

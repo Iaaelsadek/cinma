@@ -88,7 +88,7 @@ export const ActivityItem = ({ activity, currentUserId, currentUserRole }: Activ
     if ((activity.type === 'watch' || activity.type === 'review') && activity.metadata?.external_id) {
       try {
         const results = await fetchBatchContent([{
-          external_id: activity.metadata.external_id,
+          id: activity.metadata.external_id,
           content_type: activity.content_type as 'movie' | 'tv'
         }])
         if (results[0]) {

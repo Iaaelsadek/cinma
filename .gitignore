@@ -5,6 +5,7 @@ android_app/node_modules/
 # Build outputs
 dist/
 dev-dist/
+build/
 
 # Environment files
 .env
@@ -38,12 +39,11 @@ temp_*
 .vercel/
 
 # Migration data
-scripts/migration/data/
+scripts/migration/
 server/migration/data/
 
-# Expo (Android App)
-android_app/.expo/
-android_app/dist/
+# Expo (Android App) - Don't track entire app
+android_app/
 
 # Large JSON files (progress tracking)
 scripts/ingestion/failed-pages-*.json
@@ -53,3 +53,8 @@ scripts/ingestion/progress-*.json
 test_output.txt
 typecheck_output.txt
 eslint_output.txt
+admin_req.txt
+requirements.txt
+
+# Test directories
+scripts/test/

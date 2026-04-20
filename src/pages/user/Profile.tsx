@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
-import {updateProfile, uploadAvatar, supabase, getWatchlist, getContinueWatching, getHistory, removeFromWatchlist, getUserAchievements, getFollowers, getFollowing, followUser, unfollowUser, getActivityFeed, removeFollower} from '../../lib/supabase'
+import { updateProfile, uploadAvatar, supabase, getWatchlist, getContinueWatching, getHistory, removeFromWatchlist, getUserAchievements, getFollowers, getFollowing, followUser, unfollowUser, getActivityFeed, removeFollower } from '../../lib/supabase'
 import { fetchBatchContent, ContentDetails } from '../../services/contentAPI'
 import { WatchlistCard } from '../../components/features/user/WatchlistCard'
 import { Link, useNavigate } from 'react-router-dom'
 import { toast } from '../../lib/toast-manager'
-import {useQueryClient, useInfiniteQuery, useQuery as useRQ} from '@tanstack/react-query'
+import { useQueryClient, useInfiniteQuery, useQuery as useRQ } from '@tanstack/react-query'
 import { getRecommendations, RecommendationItem } from '../../services/recommendations'
 import { Helmet } from 'react-helmet-async'
 import { SkeletonGrid, SkeletonProfile } from '../../components/common/Skeletons'
@@ -15,7 +15,7 @@ import { errorLogger } from '../../services/errorLogging'
 import { motion, AnimatePresence } from 'framer-motion'
 
 import { QRCodeSVG } from 'qrcode.react'
-import {Shield, Smartphone, AlertCircle, CheckCircle2, Award, Star, Zap, Film, Trophy, Activity, Clock, Heart, Twitter, Instagram, Facebook, Globe, Users, User as UserIcon, Settings, LogOut, Sparkles, Trash2, Share2, Moon, PlayCircle, ThumbsUp, Eye, CheckCircle} from 'lucide-react'
+import { Shield, Smartphone, AlertCircle, CheckCircle2, Award, Star, Zap, Film, Trophy, Activity, Clock, Heart, Twitter, Instagram, Facebook, Globe, Users, User as UserIcon, Settings, LogOut, Sparkles, Trash2, Share2, Moon, PlayCircle, ThumbsUp, Eye, CheckCircle } from 'lucide-react'
 import { PlaylistManager } from '../../components/features/social/PlaylistManager'
 import { FollowList } from '../../components/features/social/FollowList'
 import { UserListsTab } from '../../components/features/social/UserListsTab'
@@ -39,7 +39,7 @@ const NEUTRAL_AVATARS = [
 
 // StatCard Component for Dashboard
 const StatCard = ({ icon: Icon, label, value, unit, color }: { icon: React.ComponentType<{ size?: number }>; label: string; value: number; unit: string; color: string }) => (
-  <motion.div 
+  <motion.div
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
     className="relative overflow-hidden rounded-2xl border border-white/5 bg-white/[0.03] p-4 backdrop-blur-sm hover:bg-white/[0.05] transition-all group"
@@ -90,7 +90,7 @@ const ProfileErrorBoundary = ({ children }: { children: React.ReactNode }) => {
         <div className="rounded-lg border border-red-800 bg-red-900/20 p-6 text-center">
           <h2 className="text-xl font-bold text-red-400 mb-2">حدث خطأ في صفحة الملف الشخصي</h2>
           <p className="text-zinc-300 mb-4">نأسف للإزعاج، حدث خطأ غير متوقع</p>
-          <button 
+          <button
             onClick={() => {
               setHasError(false)
               window.location.reload()
@@ -120,15 +120,15 @@ export const Profile = () => {
   const [isPublic, setIsPublic] = useState(true)
   const [activeTab, setActiveTab] = useState<'dashboard' | 'social' | 'security' | 'admin' | 'leaderboard'>('dashboard')
   const [socialSubTab, setSocialSubTab] = useState<'edit' | 'followers' | 'following' | 'lists' | 'challenges'>('edit')
-  
+
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [msg, setMsg] = useState<string | null>(null)
   const queryClient = useQueryClient()
 
-  const { 
-    data: followersData, 
-    isLoading: loadingFollowers, 
+  const {
+    data: followersData,
+    isLoading: loadingFollowers,
     refetch: refetchFollowers,
     fetchNextPage: fetchNextFollowers,
     hasNextPage: hasMoreFollowers
@@ -140,9 +140,9 @@ export const Profile = () => {
     enabled: !!user
   })
 
-  const { 
-    data: followingData, 
-    isLoading: loadingFollowing, 
+  const {
+    data: followingData,
+    isLoading: loadingFollowing,
     refetch: refetchFollowing,
     fetchNextPage: fetchNextFollowing,
     hasNextPage: hasMoreFollowing
@@ -186,10 +186,10 @@ export const Profile = () => {
     }
   }
 
-  const { 
-    data: activityFeedData, 
-    fetchNextPage: fetchNextActivity, 
-    hasNextPage: hasMoreActivity, 
+  const {
+    data: activityFeedData,
+    fetchNextPage: fetchNextActivity,
+    hasNextPage: hasMoreActivity,
     isFetchingNextPage: isFetchingMoreActivity
   } = useInfiniteQuery({
     queryKey: ['activity-feed', user?.id],
@@ -254,15 +254,15 @@ export const Profile = () => {
         factorId: enrollData.id
       })
       if (challengeError) throw challengeError
-      
+
       const { error: verifyError } = await supabase.auth.mfa.verify({
         factorId: enrollData.id,
         challengeId: challenge.id,
         code: enrollCode
       })
-      
+
       if (verifyError) throw verifyError
-      
+
       toast.success('تم تفعيل المصادقة الثنائية بنجاح')
       setShowMfaEnroll(false)
       setEnrollData(null)
@@ -358,13 +358,13 @@ export const Profile = () => {
   // If not loading and no profile (despite user being logged in), show error
   if (!authProfile) {
     const displayError = error || (authError?.message ? getArabicErrorMessage(authError) : 'حدث خطأ أثناء تحميل البيانات. يرجى المحاولة مرة أخرى.');
-    
+
     return (
       <div className="max-w-[2400px] mx-auto px-4 md:px-12 w-full space-y-4 p-4 pt-24">
         <div className="rounded-lg border border-red-800 bg-red-900/20 p-6 text-center">
           <h2 className="text-xl font-bold text-red-400 mb-2">فشل تحميل الملف الشخصي</h2>
           <p className="text-zinc-300 mb-4">{displayError}</p>
-          <button 
+          <button
             onClick={() => {
               setError(null)
               refreshProfile(true).catch(err => setError(getArabicErrorMessage(err)))
@@ -501,7 +501,7 @@ export const Profile = () => {
         {/* Profile Header */}
         <div className="relative overflow-hidden rounded-[2.5rem] border border-white/5 bg-white/[0.02] p-8 backdrop-blur-xl">
           <div className="absolute top-0 right-0 w-64 h-64 bg-lumen-gold/5 blur-[100px] -mr-32 -mt-32 rounded-full" />
-          
+
           <div className="relative flex flex-col md:flex-row items-center gap-8">
             <div className="relative group">
               <div className="absolute inset-0 bg-lumen-gold/20 blur-2xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
@@ -525,7 +525,7 @@ export const Profile = () => {
               <div className="flex flex-col md:flex-row items-center gap-4 mb-4">
                 <div className="flex flex-col gap-2">
                   <h2 className="text-4xl font-black text-white tracking-tighter">{username || 'مستخدم'}</h2>
-                  
+
                   {/* Neutral Avatars Selection */}
                   <div className="flex flex-wrap gap-2 mt-2 justify-center md:justify-start">
                     {NEUTRAL_AVATARS.map((navatar) => (
@@ -551,14 +551,14 @@ export const Profile = () => {
                 </div>
                 <span className={clsx(
                   "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border",
-                  role === 'admin' ? "bg-red-500/10 text-red-500 border-red-500/20" : 
-                  role === 'supervisor' ? "bg-lumen-gold/10 text-lumen-gold border-lumen-gold/20" : 
-                  "bg-white/5 text-zinc-400 border-white/10"
+                  role === 'admin' ? "bg-red-500/10 text-red-500 border-red-500/20" :
+                    role === 'supervisor' ? "bg-lumen-gold/10 text-lumen-gold border-lumen-gold/20" :
+                      "bg-white/5 text-zinc-400 border-white/10"
                 )}>
                   {role === 'admin' ? 'Administrator' : role === 'supervisor' ? 'Supervisor' : 'Member'}
                 </span>
               </div>
-              
+
               <div className="flex flex-wrap justify-center md:justify-start gap-6 text-zinc-400">
                 <div className="flex flex-col items-center md:items-start">
                   <span className="text-2xl font-black text-white">{followers?.length || 0}</span>
@@ -576,7 +576,7 @@ export const Profile = () => {
             </div>
 
             <div className="flex flex-col gap-3">
-              <button 
+              <button
                 onClick={() => signOut()}
                 className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-white/5 hover:bg-red-500/10 text-zinc-400 hover:text-red-500 border border-white/10 hover:border-red-500/20 transition-all font-bold text-sm"
               >
@@ -601,8 +601,8 @@ export const Profile = () => {
               onClick={() => setActiveTab(tab.id as any)}
               className={clsx(
                 "flex items-center gap-2 px-6 py-3 rounded-[1.5rem] text-sm font-black transition-all whitespace-nowrap",
-                activeTab === tab.id 
-                  ? "bg-lumen-gold text-black shadow-[0_0_20px_rgba(212,175,55,0.3)]" 
+                activeTab === tab.id
+                  ? "bg-lumen-gold text-black shadow-[0_0_20px_rgba(212,175,55,0.3)]"
                   : "text-zinc-500 hover:text-white hover:bg-white/5"
               )}
             >
@@ -627,81 +627,81 @@ export const Profile = () => {
                 {/* Stats Grid */}
                 <div className="grid md:grid-cols-2 lg:grid-cols-6 gap-6">
                   <div className="md:col-span-2 lg:col-span-4 grid grid-cols-2 gap-4">
-                    <StatCard 
-                      icon={Film} 
-                      label="تمت مشاهدته" 
-                      value={history?.length || 0} 
-                      unit="عنصر" 
+                    <StatCard
+                      icon={Film}
+                      label="تمت مشاهدته"
+                      value={history?.length || 0}
+                      unit="عنصر"
                       color="text-blue-400"
                     />
-                    <StatCard 
-                      icon={Clock} 
-                      label="وقت المشاهدة" 
-                      value={Math.floor((history?.length || 0) * 1.5)} 
-                      unit="ساعة" 
+                    <StatCard
+                      icon={Clock}
+                      label="وقت المشاهدة"
+                      value={Math.floor((history?.length || 0) * 1.5)}
+                      unit="ساعة"
                       color="text-purple-400"
                     />
-                    <StatCard 
-                      icon={Trophy} 
-                      label="نقاط الخبرة" 
-                      value={achievements?.reduce((acc: number, ua: any) => acc + (ua.achievement?.points || 0), 0) || 0} 
-                      unit="نقطة" 
+                    <StatCard
+                      icon={Trophy}
+                      label="نقاط الخبرة"
+                      value={achievements?.reduce((acc: number, ua: any) => acc + (ua.achievement?.points || 0), 0) || 0}
+                      unit="نقطة"
                       color="text-lumen-gold"
                     />
-                    <StatCard 
-                      icon={Heart} 
-                      label="في القائمة" 
-                      value={watchlist?.length || 0} 
-                      unit="عنصر" 
+                    <StatCard
+                      icon={Heart}
+                      label="في القائمة"
+                      value={watchlist?.length || 0}
+                      unit="عنصر"
                       color="text-red-400"
                     />
-                    <StatCard 
-                      icon={Star} 
-                      label="المراجعات" 
-                      value={reviewStats?.total_reviews || 0} 
-                      unit="مراجعة" 
+                    <StatCard
+                      icon={Star}
+                      label="المراجعات"
+                      value={reviewStats?.total_reviews || 0}
+                      unit="مراجعة"
                       color="text-yellow-400"
                     />
-                    <StatCard 
-                      icon={Sparkles} 
-                      label="تصويتات مفيدة" 
-                      value={reviewStats?.total_helpful_votes || 0} 
-                      unit="تصويت" 
+                    <StatCard
+                      icon={Sparkles}
+                      label="تصويتات مفيدة"
+                      value={reviewStats?.total_helpful_votes || 0}
+                      unit="تصويت"
                       color="text-green-400"
                     />
-                    <StatCard 
-                      icon={Star} 
-                      label="متوسط التقييم" 
-                      value={reviewStats?.average_rating || 0} 
-                      unit="/10" 
+                    <StatCard
+                      icon={Star}
+                      label="متوسط التقييم"
+                      value={reviewStats?.average_rating || 0}
+                      unit="/10"
                       color="text-orange-400"
                     />
                   </div>
-                <div className="rounded-3xl border border-white/5 bg-white/[0.02] p-6 backdrop-blur-md lg:col-span-2">
-                  <NotificationCenter />
-                </div>
-              </div>
-
-              {/* AI Recommendations */}
-              <div className="rounded-[2.5rem] border border-lumen-gold/20 bg-lumen-gold/[0.02] p-8 backdrop-blur-md relative overflow-hidden group">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-lumen-gold/10 blur-3xl -mr-16 -mt-16 rounded-full group-hover:scale-150 transition-transform duration-700" />
-                <div className="flex items-center justify-between mb-8">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 rounded-2xl bg-lumen-gold text-black shadow-lg shadow-lumen-gold/20">
-                      <Sparkles size={20} />
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-black text-white tracking-tighter uppercase">توصيات الذكاء الاصطناعي</h3>
-                      <p className="text-[10px] text-lumen-gold/60 font-black uppercase tracking-[0.2em]">AI-Powered Intelligence</p>
-                    </div>
+                  <div className="rounded-3xl border border-white/5 bg-white/[0.02] p-6 backdrop-blur-md lg:col-span-2">
+                    <NotificationCenter />
                   </div>
                 </div>
-                <RecommendationsRow recommendations={recommendations} />
-              </div>
 
-              {/* Social Feed & Lists */}
-              <div className="grid md:grid-cols-2 lg:grid-cols-6 gap-8">
-                <div className="md:col-span-2 lg:col-span-4 space-y-8">
+                {/* AI Recommendations */}
+                <div className="rounded-[2.5rem] border border-lumen-gold/20 bg-lumen-gold/[0.02] p-8 backdrop-blur-md relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-lumen-gold/10 blur-3xl -mr-16 -mt-16 rounded-full group-hover:scale-150 transition-transform duration-700" />
+                  <div className="flex items-center justify-between mb-8">
+                    <div className="flex items-center gap-4">
+                      <div className="p-3 rounded-2xl bg-lumen-gold text-black shadow-lg shadow-lumen-gold/20">
+                        <Sparkles size={20} />
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-black text-white tracking-tighter uppercase">توصيات الذكاء الاصطناعي</h3>
+                        <p className="text-[10px] text-lumen-gold/60 font-black uppercase tracking-[0.2em]">AI-Powered Intelligence</p>
+                      </div>
+                    </div>
+                  </div>
+                  <RecommendationsRow recommendations={recommendations} />
+                </div>
+
+                {/* Social Feed & Lists */}
+                <div className="grid md:grid-cols-2 lg:grid-cols-6 gap-8">
+                  <div className="md:col-span-2 lg:col-span-4 space-y-8">
                     {/* Activity Feed */}
                     <div className="rounded-[2.5rem] border border-white/5 bg-white/[0.01] p-8 backdrop-blur-md">
                       <h3 className="text-xl font-black text-white mb-8 flex items-center gap-4 tracking-tighter uppercase">
@@ -710,15 +710,15 @@ export const Profile = () => {
                         </div>
                         شريط النشاطات
                       </h3>
-                      
+
                       <div className="space-y-6">
                         {activityFeed && activityFeed.length > 0 ? (
                           <>
                             {activityFeed.map((activity) => (
-                              <ActivityItem 
-                                key={activity.id} 
-                                activity={activity} 
-                                currentUserId={user?.id} 
+                              <ActivityItem
+                                key={activity.id}
+                                activity={activity}
+                                currentUserId={user?.id}
                               />
                             ))}
                             {hasMoreActivity && (
@@ -753,17 +753,17 @@ export const Profile = () => {
                         <Users size={16} className="text-lumen-gold" />
                         المتابعون ({followers?.length || 0})
                       </h3>
-                      
+
                       <div className="space-y-4">
                         {followers && followers.length > 0 ? (
                           followers.slice(0, 5).map((follower: ProfileType) => (
-                            <Link 
+                            <Link
                               key={follower.id}
                               to={`/user/${follower.username}`}
                               className="flex items-center gap-3 p-2 rounded-2xl hover:bg-white/5 transition-colors group"
                             >
-                              <img 
-                                src={follower.avatar_url || '/default-avatar.png'} 
+                              <img
+                                src={follower.avatar_url || '/default-avatar.png'}
                                 alt={follower.username}
                                 className="w-10 h-10 rounded-full object-cover border-2 border-white/10 group-hover:border-lumen-gold/50 transition-colors"
                               />
@@ -777,7 +777,7 @@ export const Profile = () => {
                           <p className="text-center py-8 text-zinc-600 text-[10px] font-black uppercase tracking-widest">لا يوجد متابعون</p>
                         )}
                         {followers && followers.length > 5 && (
-                          <button 
+                          <button
                             onClick={() => {
                               setActiveTab('social')
                               setSocialSubTab('followers')
@@ -796,17 +796,17 @@ export const Profile = () => {
                         <Heart size={16} className="text-red-500" />
                         يتابع ({following?.length || 0})
                       </h3>
-                      
+
                       <div className="space-y-4">
                         {following && following.length > 0 ? (
                           following.slice(0, 5).map((followed: ProfileType) => (
-                            <Link 
+                            <Link
                               key={followed.id}
                               to={`/user/${followed.username}`}
                               className="flex items-center gap-3 p-2 rounded-2xl hover:bg-white/5 transition-colors group"
                             >
-                              <img 
-                                src={followed.avatar_url || '/default-avatar.png'} 
+                              <img
+                                src={followed.avatar_url || '/default-avatar.png'}
                                 alt={followed.username}
                                 className="w-10 h-10 rounded-full object-cover border-2 border-white/10 group-hover:border-red-500/50 transition-colors"
                               />
@@ -820,7 +820,7 @@ export const Profile = () => {
                           <p className="text-center py-8 text-zinc-600 text-[10px] font-black uppercase tracking-widest">لا تتابع أحداً</p>
                         )}
                         {following && following.length > 5 && (
-                          <button 
+                          <button
                             onClick={() => {
                               setActiveTab('social')
                               setSocialSubTab('following')
@@ -849,7 +849,7 @@ export const Profile = () => {
                     <ContinueWatchingSection />
                   </div>
                 </div>
-                
+
                 <div className="grid md:grid-cols-2 lg:grid-cols-6 gap-6">
                   <div className="lg:col-span-3">
                     <HistorySection />
@@ -882,8 +882,8 @@ export const Profile = () => {
                         onClick={() => setSocialSubTab(tab.id as any)}
                         className={clsx(
                           "flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black transition-all",
-                          socialSubTab === tab.id 
-                            ? "bg-white/10 text-white shadow-lg" 
+                          socialSubTab === tab.id
+                            ? "bg-white/10 text-white shadow-lg"
                             : "text-zinc-500 hover:text-zinc-300"
                         )}
                       >
@@ -1111,7 +1111,7 @@ export const Profile = () => {
                       <Users size={14} className="text-lumen-gold" />
                       المجتمع
                     </h4>
-                    
+
                     <div className="space-y-4">
                       <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/5 hover:bg-white/[0.05] transition-all group">
                         <p className="text-[10px] font-black text-zinc-500 uppercase mb-1">المتابعين</p>
@@ -1120,7 +1120,7 @@ export const Profile = () => {
                           <Users size={20} className="text-zinc-700 group-hover:text-lumen-gold/30 transition-all" />
                         </div>
                       </div>
-                      
+
                       <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/5 hover:bg-white/[0.05] transition-all group">
                         <p className="text-[10px] font-black text-zinc-500 uppercase mb-1">يتابع</p>
                         <div className="flex items-center justify-between">
@@ -1222,7 +1222,7 @@ export const Profile = () => {
                     {/* MFA Enrollment Flow */}
                     <AnimatePresence>
                       {showMfaEnroll && enrollData && (
-                        <motion.div 
+                        <motion.div
                           initial={{ opacity: 0, height: 0 }}
                           animate={{ opacity: 1, height: "auto" }}
                           exit={{ opacity: 0, height: 0 }}
@@ -1294,7 +1294,7 @@ export const Profile = () => {
               <div className="max-w-[2400px] mx-auto px-4 md:px-12 w-full space-y-8">
                 <div className="rounded-[2.5rem] border border-red-500/20 bg-red-500/[0.02] p-8 backdrop-blur-xl relative overflow-hidden">
                   <div className="absolute top-0 right-0 w-64 h-64 bg-red-500/5 blur-[100px] -mr-32 -mt-32 rounded-full" />
-                  
+
                   <div className="relative flex items-center gap-4 mb-8">
                     <div className="p-3 rounded-2xl bg-red-500 text-white shadow-lg shadow-red-500/20">
                       <Zap size={20} />
@@ -1304,7 +1304,7 @@ export const Profile = () => {
                       <p className="text-[10px] text-red-500 font-black uppercase tracking-widest">Administrative Control Center</p>
                     </div>
                   </div>
-                  
+
                   <div className="relative space-y-8">
                     <div className="grid md:grid-cols-2 gap-6">
                       <div className="space-y-2">
@@ -1326,13 +1326,13 @@ export const Profile = () => {
                         />
                       </div>
                     </div>
-                    
+
                     {adminMsg && (
                       <div className="p-4 rounded-xl bg-white/5 border border-white/10 text-zinc-400 text-xs font-medium">
                         {adminMsg}
                       </div>
                     )}
-                    
+
                     <div className="grid grid-cols-3 gap-4">
                       <button
                         onClick={() => setRoleForTarget('admin')}
@@ -1355,8 +1355,8 @@ export const Profile = () => {
                     </div>
 
                     <div className="pt-8 border-t border-white/5">
-                      <Link 
-                        to="/admin/dashboard" 
+                      <Link
+                        to="/admin/dashboard"
                         className="flex items-center justify-center gap-3 w-full h-16 rounded-[2rem] bg-gradient-to-r from-red-600 via-purple-600 to-blue-600 text-white font-black uppercase tracking-[0.2em] hover:scale-[1.01] transition-all shadow-2xl group"
                       >
                         <Zap size={20} className="group-hover:animate-pulse" />
@@ -1405,7 +1405,7 @@ const AchievementsSection = ({ achievements, loading }: { achievements: UserAchi
                 </div>
                 <h4 className="text-sm font-black text-white mb-2 tracking-tight">{achievement.title}</h4>
                 <p className="text-[10px] text-zinc-500 line-clamp-2 leading-relaxed font-medium uppercase tracking-tighter">{achievement.description}</p>
-                
+
                 <div className="absolute top-4 right-4 px-2 py-1 rounded-lg bg-lumen-gold/10 text-lumen-gold text-[8px] font-black tracking-widest uppercase">
                   +{achievement.points}
                 </div>
@@ -1444,9 +1444,9 @@ const RecommendationsRow = ({ recommendations }: { recommendations: Recommendati
           className="relative min-w-[140px] group"
         >
           <div className="aspect-[2/3] rounded-xl overflow-hidden border border-white/5 bg-white/5 mb-2 group-hover:border-primary/50 transition-all">
-            <img 
-              src={item.poster_path || '/default-poster.jpg'} 
-              alt={item.title} 
+            <img
+              src={item.poster_path || '/default-poster.jpg'}
+              alt={item.title}
               className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
               loading="lazy"
             />
@@ -1470,7 +1470,7 @@ const RecommendationsRow = ({ recommendations }: { recommendations: Recommendati
 const WatchlistSection = () => {
   const { user } = useAuth()
   const queryClient = useQueryClient()
-  
+
   // Fetch watchlist entries from Supabase (returns external_ids)
   const { data: watchlistEntries, isLoading: loadingEntries, error: entriesError } = useRQ({
     queryKey: ['watchlist', user?.id],
@@ -1483,14 +1483,13 @@ const WatchlistSection = () => {
     queryKey: ['watchlist-content', watchlistEntries],
     queryFn: async () => {
       if (!watchlistEntries || watchlistEntries.length === 0) return []
-      
-      // Map entries to batch API format
+
+      // Map entries to batch API format (using id instead of external_id)
       const items = watchlistEntries.map(entry => ({
-        external_id: entry.external_id,
-        content_type: entry.content_type as 'movie' | 'tv',
-        external_source: entry.external_source || 'tmdb'
+        id: entry.external_id,
+        content_type: entry.content_type as 'movie' | 'tv'
       }))
-      
+
       // Call batch API
       return await fetchBatchContent(items)
     },
@@ -1508,7 +1507,7 @@ const WatchlistSection = () => {
 
   const handleRemove = async (external_id: string, content_type: 'movie' | 'tv') => {
     if (!user) return
-    
+
     try {
       await removeFromWatchlist(user.id, external_id, content_type)
       toast.success('تمت الإزالة من قائمة المتابعة')
@@ -1555,8 +1554,8 @@ const WatchlistSection = () => {
             />
           ))}
           {enrichedWatchlist.length > 5 && (
-            <Link 
-              to="/watchlist" 
+            <Link
+              to="/watchlist"
               className="block text-center py-3 rounded-xl border border-white/5 text-[10px] font-black text-zinc-500 uppercase tracking-widest hover:bg-white/5 hover:text-lumen-gold transition-all mt-4"
             >
               عرض الكل ({enrichedWatchlist.length})
@@ -1577,7 +1576,7 @@ const WatchlistSection = () => {
 // Continue Watching Section Component
 const ContinueWatchingSection = () => {
   const { user } = useAuth()
-  
+
   // Fetch continue watching entries from Supabase (returns external_ids)
   const { data: continueWatchingEntries, isLoading: loadingEntries, error: entriesError } = useRQ({
     queryKey: ['continue-watching', user?.id],
@@ -1590,14 +1589,13 @@ const ContinueWatchingSection = () => {
     queryKey: ['continue-watching-content', continueWatchingEntries],
     queryFn: async () => {
       if (!continueWatchingEntries || continueWatchingEntries.length === 0) return []
-      
-      // Map entries to batch API format
+
+      // Map entries to batch API format (using id instead of external_id)
       const items = continueWatchingEntries.map(entry => ({
-        external_id: entry.external_id,
-        content_type: entry.content_type as 'movie' | 'tv',
-        external_source: entry.external_source || 'tmdb'
+        id: entry.external_id,
+        content_type: entry.content_type as 'movie' | 'tv'
       }))
-      
+
       // Call batch API
       return await fetchBatchContent(items)
     },
@@ -1643,17 +1641,17 @@ const ContinueWatchingSection = () => {
             const title = content?.title || content?.name || 'المحتوى غير متوفر'
             const posterUrl = content?.poster_url || '/default-poster.jpg'
             const slug = content?.slug
-            const progressPercent = item.duration_seconds > 0 
-              ? (item.progress_seconds / item.duration_seconds) * 100 
+            const progressPercent = item.duration_seconds > 0
+              ? (item.progress_seconds / item.duration_seconds) * 100
               : 0
 
             return (
               <div key={`${item.external_id}-${item.content_type}`} className="flex items-center gap-3 p-2 bg-zinc-800/30 rounded-xl hover:bg-zinc-800/50 transition-all group">
                 {content && slug ? (
                   <Link to={`/${item.content_type}/${slug}`} className="flex-shrink-0">
-                    <img 
-                      src={posterUrl} 
-                      alt={title} 
+                    <img
+                      src={posterUrl}
+                      alt={title}
                       className="w-12 h-16 object-cover rounded border border-white/5 group-hover:border-blue-500/30 transition-all"
                       onError={(e) => e.currentTarget.src = '/default-poster.jpg'}
                       loading="lazy"
@@ -1676,13 +1674,13 @@ const ContinueWatchingSection = () => {
                     <h4 className="text-sm font-bold text-red-400 truncate">{title}</h4>
                   )}
                   <div className="w-full bg-zinc-700 rounded-full h-1 mt-1.5">
-                    <div 
-                      className="bg-blue-500 h-1 rounded-full transition-all" 
+                    <div
+                      className="bg-blue-500 h-1 rounded-full transition-all"
                       style={{ width: `${progressPercent}%` }}
                     ></div>
                   </div>
                   <p className="text-[10px] text-zinc-500 mt-1 font-medium">
-                    {Math.floor(item.progress_seconds / 60)}:{(item.progress_seconds % 60).toString().padStart(2, '0')} / 
+                    {Math.floor(item.progress_seconds / 60)}:{(item.progress_seconds % 60).toString().padStart(2, '0')} /
                     {Math.floor(item.duration_seconds / 60)}:{(item.duration_seconds % 60).toString().padStart(2, '0')}
                   </p>
                 </div>
@@ -1712,7 +1710,7 @@ const ContinueWatchingSection = () => {
 // History Section Component
 const HistorySection = () => {
   const { user } = useAuth()
-  
+
   // Fetch history entries from Supabase (returns external_ids)
   const { data: historyEntries, isLoading: loadingEntries, error: entriesError } = useRQ({
     queryKey: ['history', user?.id],
@@ -1725,14 +1723,13 @@ const HistorySection = () => {
     queryKey: ['history-content', historyEntries],
     queryFn: async () => {
       if (!historyEntries || historyEntries.length === 0) return []
-      
-      // Map entries to batch API format
+
+      // Map entries to batch API format (using id instead of external_id)
       const items = historyEntries.map(entry => ({
-        external_id: entry.external_id,
-        content_type: entry.content_type as 'movie' | 'tv',
-        external_source: entry.external_source || 'tmdb'
+        id: entry.external_id,
+        content_type: entry.content_type as 'movie' | 'tv'
       }))
-      
+
       // Call batch API
       return await fetchBatchContent(items)
     },
@@ -1788,9 +1785,9 @@ const HistorySection = () => {
               <div key={`${item.external_id}-${item.content_type}-${idx}`} className="flex items-center gap-3 p-2 bg-zinc-800/30 rounded-xl hover:bg-zinc-800/50 transition-all group">
                 {content && slug ? (
                   <Link to={`/${item.content_type}/${slug}`} className="flex-shrink-0">
-                    <img 
-                      src={posterUrl} 
-                      alt={title} 
+                    <img
+                      src={posterUrl}
+                      alt={title}
                       className="w-12 h-16 object-cover rounded border border-white/5 group-hover:border-purple-500/30 transition-all"
                       onError={(e) => e.currentTarget.src = '/default-poster.jpg'}
                       loading="lazy"
@@ -1857,18 +1854,18 @@ const UserReviewsSection = ({ userId }: { userId: string }) => {
       // Fetch user's reviews from backend
       const response = await fetch(`/api/reviews?user_id=${userId}&limit=${limit}&offset=${page * limit}&sort=newest`)
       if (!response.ok) throw new Error('Failed to fetch reviews')
-      
+
       const data = await response.json()
       setReviews(data.reviews || [])
       setHasMore(data.pagination?.hasMore || false)
 
       // Extract unique external_ids for batch content lookup
-      const uniqueItems = new Map<string, { external_id: string; content_type: 'movie' | 'tv' | 'game' | 'software' }>()
+      const uniqueItems = new Map<string, { id: string; content_type: 'movie' | 'tv' | 'game' | 'software' }>()
       data.reviews?.forEach((review: any) => {
         const key = `${review.external_id}-${review.content_type}`
         if (!uniqueItems.has(key)) {
           uniqueItems.set(key, {
-            external_id: review.external_id,
+            id: review.external_id,
             content_type: review.content_type as 'movie' | 'tv' | 'game' | 'software'
           })
         }
@@ -1878,11 +1875,11 @@ const UserReviewsSection = ({ userId }: { userId: string }) => {
       if (uniqueItems.size > 0) {
         const items = Array.from(uniqueItems.values())
         const contentDetails = await fetchBatchContent(items)
-        
+
         // Build content map
         const newContentMap = new Map()
         items.forEach((item, index) => {
-          const key = `${item.external_id}-${item.content_type}`
+          const key = `${item.id}-${item.content_type}`
           newContentMap.set(key, contentDetails[index])
         })
         setContentMap(newContentMap)
@@ -1930,7 +1927,7 @@ const UserReviewsSection = ({ userId }: { userId: string }) => {
           {reviews.map((review) => {
             const contentKey = `${review.external_id}-${review.content_type}`
             const content = contentMap.get(contentKey)
-            
+
             return (
               <div
                 key={review.id}
@@ -1949,7 +1946,7 @@ const UserReviewsSection = ({ userId }: { userId: string }) => {
                       onError={(e) => { e.currentTarget.src = '/default-poster.jpg' }}
                     />
                   </Link>
-                  
+
                   <div className="flex-1 min-w-0">
                     <Link
                       to={content?.slug ? `/watch/${content.slug}` : '#'}
@@ -2008,7 +2005,7 @@ const UserReviewsSection = ({ userId }: { userId: string }) => {
                     <ThumbsUp size={14} />
                     <span>{review.helpful_count || 0} مفيدة</span>
                   </div>
-                  
+
                   {review.language && (
                     <div className="flex items-center gap-1.5 text-xs text-zinc-500">
                       <span>{review.language === 'ar' ? '🇸🇦 عربي' : '🇬🇧 English'}</span>

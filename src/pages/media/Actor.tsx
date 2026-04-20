@@ -238,14 +238,14 @@ export const Actor = () => {
                   id: typeof work.id === 'string' ? parseInt(work.id) : work.id,
                   slug: work.slug,
                   title: work.title || work.name || '',
-                  title_ar: work.title_ar || work.name_ar,
-                  title_en: work.title_en || work.name_en,
-                  original_title: work.title_original || work.name_original,
                   poster_path: work.poster_path || null,
                   vote_average: work.vote_average || 0,
-                  release_date: work.release_date || work.first_air_date || null,
-                  media_type: work.media_type // إضافة نوع المحتوى
-                }}
+                  release_date: work.release_date || work.first_air_date || undefined,
+                  media_type: work.media_type,
+                  ...(work as any).title_ar && { title_ar: (work as any).title_ar },
+                  ...(work as any).title_en && { title_en: (work as any).title_en },
+                  ...work.title_original && { original_title: work.title_original }
+                } as any}
                 index={idx}
               />
             ))}
@@ -267,8 +267,8 @@ export const Actor = () => {
               <h3 className="text-xl font-black">{t('عن الممثل', 'Biography')}</h3>
             </div>
             <p className="text-zinc-400 leading-relaxed text-sm whitespace-pre-wrap">
-              {lang === 'ar' && details.biography_ar
-                ? details.biography_ar
+              {lang === 'ar' && (details as any).biography_ar
+                ? (details as any).biography_ar
                 : details.biography || t('لا تتوفر سيرة ذاتية لهذا الممثل حالياً.', 'No biography available for this actor at the moment.')}
             </p>
           </div>

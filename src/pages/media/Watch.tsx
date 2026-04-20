@@ -598,8 +598,8 @@ export const Watch = () => {
     if (type === 'video') return 0 // YouTube videos don't need servers
 
     // PRIORITY 1: Use details.id (TMDB ID from database)
-    if (details?.id) {
-      const parsed = Number(details.id)
+    if ((details as any)?.id) {
+      const parsed = Number((details as any).id)
       if (!isNaN(parsed) && parsed > 0) return parsed
     }
 

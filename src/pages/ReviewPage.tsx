@@ -45,7 +45,7 @@ export const ReviewPage = () => {
   const { reviewId } = useParams<{ reviewId: string }>()
   const navigate = useNavigate()
   const { user } = useAuth()
-  
+
   const [review, setReview] = useState<Review | null>(null)
   const [content, setContent] = useState<ContentDetails | null>(null)
   const [loading, setLoading] = useState(true)
@@ -68,7 +68,7 @@ export const ReviewPage = () => {
 
       // Fetch review from Supabase (user data)
       const reviewResponse = await fetch(`${API_BASE}/api/reviews/${reviewId}`)
-      
+
       if (reviewResponse.status === 404) {
         setError('المراجعة غير موجودة')
         setLoading(false)
@@ -85,9 +85,8 @@ export const ReviewPage = () => {
       // Fetch content details from CockroachDB using external_id
       const contentResults = await fetchBatchContent([
         {
-          external_id: reviewData.external_id,
+          id: reviewData.external_id,
           content_type: reviewData.content_type,
-          external_source: reviewData.external_source || 'tmdb'
         }
       ])
 
@@ -160,12 +159,12 @@ export const ReviewPage = () => {
   const handleEdit = () => {
     if (!content) return
     // Navigate to content page with edit mode
-    const contentPath = content.content_type === 'movie' 
+    const contentPath = content.content_type === 'movie'
       ? `/movie/${content.slug}`
       : content.content_type === 'tv'
-      ? `/series/${content.slug}`
-      : `/${content.content_type}/${content.slug}`
-    
+        ? `/series/${content.slug}`
+        : `/${content.content_type}/${content.slug}`
+
     navigate(`${contentPath}?editReview=true`)
   }
 
@@ -203,7 +202,7 @@ export const ReviewPage = () => {
           <title>المراجعة غير موجودة | أونلاين سينما</title>
           <meta name="robots" content="noindex,follow" />
         </Helmet>
-        
+
         <div className="min-h-screen flex items-center justify-center px-4">
           <div className="text-center max-w-md">
             <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
@@ -229,26 +228,26 @@ export const ReviewPage = () => {
   // Prepare content display data
   const contentTitle = content?.title || content?.name || 'محتوى غير متوفر'
   const contentPoster = content?.poster_url || '/placeholder-poster.png'
-  const contentPath = content 
-    ? (content.content_type === 'movie' 
-        ? `/movie/${content.slug}`
-        : content.content_type === 'tv'
+  const contentPath = content
+    ? (content.content_type === 'movie'
+      ? `/movie/${content.slug}`
+      : content.content_type === 'tv'
         ? `/series/${content.slug}`
         : `/${content.content_type}/${content.slug}`)
     : '#'
 
   // Prepare meta tags for social sharing
-  const pageTitle = review.title 
+  const pageTitle = review.title
     ? `${review.title} - مراجعة ${review.user?.username || 'مستخدم'}`
     : `مراجعة ${review.user?.username || 'مستخدم'} لـ ${contentTitle}`
-  
+
   const pageDescription = review.review_text.length > 200
     ? review.review_text.substring(0, 200) + '...'
     : review.review_text
 
   const pageUrl = `https://cinma.online/reviews/${review.id}`
-  const pageImage = contentPoster.startsWith('http') 
-    ? contentPoster 
+  const pageImage = contentPoster.startsWith('http')
+    ? contentPoster
     : `https://cinma.online${contentPoster}`
 
   return (
@@ -257,7 +256,7 @@ export const ReviewPage = () => {
         <title>{pageTitle} | أونلاين سينما</title>
         <meta name="description" content={pageDescription} />
         <link rel="canonical" href={pageUrl} />
-        
+
         {/* Open Graph meta tags for social media sharing */}
         <meta property="og:type" content="article" />
         <meta property="og:url" content={pageUrl} />
@@ -266,18 +265,18 @@ export const ReviewPage = () => {
         <meta property="og:image" content={pageImage} />
         <meta property="og:locale" content={review.language === 'ar' ? 'ar_SA' : 'en_US'} />
         <meta property="og:site_name" content="Cinma Online" />
-        
+
         {/* Twitter Card */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={pageTitle} />
         <meta name="twitter:description" content={pageDescription} />
         <meta name="twitter:image" content={pageImage} />
-        
+
         {/* Article metadata */}
         <meta property="article:published_time" content={review.created_at} />
         <meta property="article:modified_time" content={review.updated_at} />
         <meta property="article:author" content={review.user?.username || 'مستخدم'} />
-        
+
         {/* Schema.org structured data */}
         <script type="application/ld+json">
           {JSON.stringify({
@@ -329,7 +328,7 @@ export const ReviewPage = () => {
                   }}
                 />
               </Link>
-              
+
               <div className="flex-1 min-w-0">
                 <Link
                   to={contentPath}
@@ -337,13 +336,13 @@ export const ReviewPage = () => {
                 >
                   {contentTitle}
                 </Link>
-                
+
                 {content?.overview && (
                   <p className="text-sm text-zinc-400 line-clamp-3">
                     {content.overview}
                   </p>
                 )}
-                
+
                 {!content && (
                   <p className="text-sm text-zinc-500 italic">
                     تفاصيل المحتوى غير متوفرة حالياً
@@ -358,7 +357,7 @@ export const ReviewPage = () => {
             <h1 className="text-2xl font-bold text-white mb-4">
               {review.title || 'مراجعة'}
             </h1>
-            
+
             <ReviewCard
               review={review}
               currentUserId={user?.id}

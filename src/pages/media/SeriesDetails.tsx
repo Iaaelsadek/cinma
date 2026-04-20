@@ -192,7 +192,7 @@ const SeriesDetails = ({ slug: propSlug }: SeriesDetailsProps = {}) => {
     : '');
   const title = series.data?.original_name || (series.data as any)?.original_title || dualTitles.main || series.data?.name || `مسلسل`;
   const arabicTitle = dualTitles.sub;
-  const overview = data.overview_ar || series.data?.overview || 'لا يوجد وصف متاح';
+  const overview = (series.data as any)?.overview_ar || series.data?.overview || 'لا يوجد وصف متاح';
   const year = (
     series.data?.first_air_date ? new Date(series.data.first_air_date).getFullYear() : ''
   ) as any;
