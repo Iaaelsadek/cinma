@@ -8,15 +8,15 @@ import { logger } from '../lib/logger';
 export type ErrorSeverity = 'low' | 'medium' | 'high' | 'critical';
 
 // Error categories
-export type ErrorCategory = 
-  | 'auth' 
-  | 'database' 
-  | 'network' 
-  | 'validation' 
-  | 'system' 
-  | 'user_action' 
-  | 'admin' 
-  | 'api' 
+export type ErrorCategory =
+  | 'auth'
+  | 'database'
+  | 'network'
+  | 'validation'
+  | 'system'
+  | 'user_action'
+  | 'admin'
+  | 'api'
   | 'media'
   | 'ads'
   | 'unknown';
@@ -47,16 +47,16 @@ class ErrorLoggingService {
   private readonly STORAGE_KEY = 'error_logs_queue';
   private lastToast: { message: string, time: number } | null = null;
 
-  private readonly LOG_ENDPOINT = '/api/log';
+  private readonly LOG_ENDPOINT = `${import.meta.env.VITE_API_URL || ''}/api/log`;
 
   constructor() {
     // We don't need Supabase client for logging anymore, we use the proxy
     // But we might need it for other things if we expand this service
-    
+
     // LOGGING ENABLED
     this.loadQueue();
     this.startPeriodicFlush();
-    
+
     if (typeof window !== 'undefined') {
       this.setupGlobalErrorHandlers();
       // Save queue before unload
@@ -111,7 +111,7 @@ class ErrorLoggingService {
       }
     }, this.flushInterval);
   }
-  
+
   public stopPeriodicFlush() {
     if (this.flushTimer) {
       clearInterval(this.flushTimer);
@@ -128,7 +128,7 @@ class ErrorLoggingService {
     try {
       // Send batch to API Proxy instead of direct Supabase insert
       // This allows us to use rate limiting and hide the RLS public insert
-      await Promise.all(batch.map(error => 
+      await Promise.all(batch.map(error =>
         fetch(this.LOG_ENDPOINT, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -143,7 +143,7 @@ class ErrorLoggingService {
       logger.error('Failed to process error queue:', error)
     } finally {
       this.isProcessing = false;
-      
+
       // If there are more items, schedule next batch
       if (this.queue.length > 0) {
         setTimeout(() => this.processQueue(), 1000);
@@ -156,9 +156,9 @@ class ErrorLoggingService {
 
     // Deduplicate rapid errors (simple debounce)
     const now = Date.now();
-    if (this.lastToast && 
-        this.lastToast.message === error.message && 
-        now - this.lastToast.time < 2000) {
+    if (this.lastToast &&
+      this.lastToast.message === error.message &&
+      now - this.lastToast.time < 2000) {
       return;
     }
 

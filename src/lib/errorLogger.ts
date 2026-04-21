@@ -51,7 +51,8 @@ class ErrorLogger {
   private async sendToMonitoring(log: ErrorLog) {
     try {
       // TODO: Integrate with Sentry, LogRocket, or similar
-      await fetch('/api/log-error', {
+      const apiUrl = import.meta.env.VITE_API_URL || ''
+      await fetch(`${apiUrl}/api/log-error`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(log),

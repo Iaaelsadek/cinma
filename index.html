@@ -1,99 +1,107 @@
 <!doctype html>
 <html lang="ar" dir="rtl">
-  <head>
-    <meta charset="UTF-8" />
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-P3S2TD97ZL" fetchpriority="low"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
 
-      gtag('config', 'G-P3S2TD97ZL');
-    </script>
-    <!-- Basic CSP for security -->
-    <meta
-      http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: blob: https:; font-src 'self' data: https:; connect-src 'self' https: wss: http:; media-src *; frame-src *; object-src 'none'; base-uri 'self'; block-all-mixed-content;"
-    />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#0f172a" />
-    <meta name="description" content="أكبر منصة عربية لمشاهدة الأفلام والمسلسلات الأجنبية والعربية بجودة عالية. مكتبة ضخمة، سيرفرات سريعة، وبدون إعلانات مزعجة." />
-    <meta name="keywords" content="افلام اون لاين, سينما, مشاهدة افلام, movies online, streaming, egypt best" />
-    
-    <!-- Open Graph -->
-    <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://cinma.online/" />
-    <meta property="og:title" content="أونلاين سينما | Online Cinema - شاهد أحدث الأفلام والمسلسلات" />
-    <meta property="og:description" content="أكبر منصة عربية لمشاهدة الأفلام والمسلسلات الأجنبية والعربية بجودة عالية. مكتبة ضخمة، سيرفرات سريعة، وبدون إعلانات مزعجة." />
-    <meta property="og:image" content="/og-image.jpg" />
+<head>
+  <meta charset="UTF-8" />
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-P3S2TD97ZL" fetchpriority="low"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
 
-    <!-- Twitter -->
-    <meta property="twitter:card" content="summary_large_image" />
-    <meta property="twitter:url" content="https://cinma.online/" />
-    <meta property="twitter:title" content="أونلاين سينما | Online Cinema - شاهد أحدث الأفلام والمسلسلات" />
-    <meta property="twitter:description" content="أكبر منصة عربية لمشاهدة الأفلام والمسلسلات الأجنبية والعربية بجودة عالية. مكتبة ضخمة، سيرفرات سريعة، وبدون إعلانات مزعجة." />
-    <meta property="twitter:image" content="/og-image.jpg" />
+    gtag('config', 'G-P3S2TD97ZL');
+  </script>
+  <!-- Basic CSP for security -->
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: blob: https:; font-src 'self' data: https:; connect-src 'self' https: wss: http:; media-src *; frame-src *; object-src 'none'; base-uri 'self'; block-all-mixed-content;" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0f172a" />
+  <meta name="description"
+    content="أكبر منصة عربية لمشاهدة الأفلام والمسلسلات الأجنبية والعربية بجودة عالية. مكتبة ضخمة، سيرفرات سريعة، وبدون إعلانات مزعجة." />
+  <meta name="keywords" content="افلام اون لاين, سينما, مشاهدة افلام, movies online, streaming, egypt best" />
 
-    <!-- Preconnect to critical origins - saves 100-300ms per request -->
-    <link rel="preconnect" href="https://image.tmdb.org" crossorigin />
-    <link rel="preconnect" href="https://api.themoviedb.org" crossorigin />
-    <link rel="preconnect" href="https://lhpuwupbhpcqkwqugkhh.supabase.co" crossorigin />
-    <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
-    <link rel="dns-prefetch" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-    <link rel="manifest" href="/manifest.webmanifest">
-    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700&family=Syne:wght@400;600;700;800&display=swap" />
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
-    <noscript>
-      <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet" />
-    </noscript>
-    <title>أونلاين سينما | Online Cinema - شاهد أحدث الأفلام والمسلسلات</title>
-  </head>
-  <body class="bg-lumen-void text-lumen-cream font-dm">
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-    
-    <!-- Suppress known third-party console warnings -->
-    <script>
-      // Suppress third-party warnings from embedded content (vidsrc.cc)
-      (function() {
-        const originalError = console.error;
-        const originalWarn = console.warn;
-        
-        const suppressPatterns = [
-          'Permissions-Policy',
-          'Content-Security-Policy directive',
-          'navigate-to',
-          'Cannot redefine property: location',
-          'CORS policy',
-          'Access to XMLHttpRequest',
-          'Creating a worker from',
-          'violates the following Content Security Policy',
-          'Failed to load resource',
-          'net::ERR_FAILED'
-        ];
-        
-        console.error = function(...args) {
-          const message = String(args[0] || '');
-          if (suppressPatterns.some(pattern => message.includes(pattern))) {
-            return; // Suppress
-          }
-          originalError.apply(console, args);
-        };
-        
-        console.warn = function(...args) {
-          const message = String(args[0] || '');
-          if (suppressPatterns.some(pattern => message.includes(pattern))) {
-            return; // Suppress
-          }
-          originalWarn.apply(console, args);
-        };
-      })();
-    </script>
-  </body>
-  </html>
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://cinma.online/" />
+  <meta property="og:title" content="أونلاين سينما | Online Cinema - شاهد أحدث الأفلام والمسلسلات" />
+  <meta property="og:description"
+    content="أكبر منصة عربية لمشاهدة الأفلام والمسلسلات الأجنبية والعربية بجودة عالية. مكتبة ضخمة، سيرفرات سريعة، وبدون إعلانات مزعجة." />
+  <meta property="og:image" content="/og-image.jpg" />
+
+  <!-- Twitter -->
+  <meta property="twitter:card" content="summary_large_image" />
+  <meta property="twitter:url" content="https://cinma.online/" />
+  <meta property="twitter:title" content="أونلاين سينما | Online Cinema - شاهد أحدث الأفلام والمسلسلات" />
+  <meta property="twitter:description"
+    content="أكبر منصة عربية لمشاهدة الأفلام والمسلسلات الأجنبية والعربية بجودة عالية. مكتبة ضخمة، سيرفرات سريعة، وبدون إعلانات مزعجة." />
+  <meta property="twitter:image" content="/og-image.jpg" />
+
+  <!-- Preconnect to critical origins - saves 100-300ms per request -->
+  <link rel="preconnect" href="https://image.tmdb.org" crossorigin />
+  <link rel="preconnect" href="https://api.themoviedb.org" crossorigin />
+  <link rel="preconnect" href="https://lhpuwupbhpcqkwqugkhh.supabase.co" crossorigin />
+  <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+  <link rel="dns-prefetch" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <!-- Load fonts with async technique for better performance -->
+  <link
+    href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700&family=Syne:wght@400;600;700;800&display=swap"
+    rel="stylesheet" media="print" onload="this.media='all'" />
+  <noscript>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700&family=Syne:wght@400;600;700;800&display=swap"
+      rel="stylesheet" />
+  </noscript>
+  <title>أونلاين سينما | Online Cinema - شاهد أحدث الأفلام والمسلسلات</title>
+</head>
+
+<body class="bg-lumen-void text-lumen-cream font-dm">
+  <div id="root"></div>
+  <script type="module" src="/src/main.tsx"></script>
+
+  <!-- Suppress known third-party console warnings -->
+  <script>
+    // Suppress third-party warnings from embedded content (vidsrc.cc)
+    (function () {
+      const originalError = console.error;
+      const originalWarn = console.warn;
+
+      const suppressPatterns = [
+        'Permissions-Policy',
+        'Content-Security-Policy directive',
+        'navigate-to',
+        'Cannot redefine property: location',
+        'CORS policy',
+        'Access to XMLHttpRequest',
+        'Creating a worker from',
+        'violates the following Content Security Policy',
+        'Failed to load resource',
+        'net::ERR_FAILED'
+      ];
+
+      console.error = function (...args) {
+        const message = String(args[0] || '');
+        if (suppressPatterns.some(pattern => message.includes(pattern))) {
+          return; // Suppress
+        }
+        originalError.apply(console, args);
+      };
+
+      console.warn = function (...args) {
+        const message = String(args[0] || '');
+        if (suppressPatterns.some(pattern => message.includes(pattern))) {
+          return; // Suppress
+        }
+        originalWarn.apply(console, args);
+      };
+    })();
+  </script>
+</body>
+
+</html>
