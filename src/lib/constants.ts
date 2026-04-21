@@ -13,7 +13,7 @@ export const CONFIG = {
   TMDB_API_KEY: import.meta.env.VITE_TMDB_API_KEY || envVar('VITE_TMDB_API_KEY') || runtimeConfig.VITE_TMDB_API_KEY,
   YOUTUBE_API_KEY: import.meta.env.VITE_YOUTUBE_API_KEY || envVar('VITE_YOUTUBE_API_KEY') || runtimeConfig.VITE_YOUTUBE_API_KEY,
   DOMAIN: import.meta.env.VITE_DOMAIN || envVar('VITE_DOMAIN') || runtimeConfig.VITE_DOMAIN || 'https://cinma.online',
-  API_BASE: import.meta.env.VITE_API_BASE || envVar('VITE_API_BASE') || runtimeConfig.VITE_API_BASE || 'https://cooperative-nevsa-cinma-71a99c5c.koyeb.app'
+  API_BASE: import.meta.env.VITE_API_BASE || envVar('VITE_API_BASE') || runtimeConfig.VITE_API_BASE || ''
 }
 
 // Strict check for required keys
