@@ -1,2 +1,3 @@
-/api/* https://cooperative-nevsa-cinma-71a99c5c.koyeb.app/api/:splat 200
+# Cloudflare Pages doesn't support proxy redirects like Netlify
+# All API calls go directly to Koyeb URL (configured in constants.ts)
 /* /index.html 200

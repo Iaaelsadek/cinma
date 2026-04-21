@@ -7,13 +7,18 @@ const runtimeConfig =
 
 import { envVar } from './envHelper';
 
+// CRITICAL: Cloudflare Pages doesn't support proxy redirects like Netlify
+// We MUST use the full Koyeb URL directly, not relative /api paths
+const KOYEB_API_URL = 'https://cooperative-nevsa-cinma-71a99c5c.koyeb.app'
+
 export const CONFIG = {
   SUPABASE_URL: import.meta.env.VITE_SUPABASE_URL || envVar('VITE_SUPABASE_URL') || runtimeConfig.VITE_SUPABASE_URL,
   SUPABASE_ANON_KEY: import.meta.env.VITE_SUPABASE_ANON_KEY || envVar('VITE_SUPABASE_ANON_KEY') || runtimeConfig.VITE_SUPABASE_ANON_KEY,
   TMDB_API_KEY: import.meta.env.VITE_TMDB_API_KEY || envVar('VITE_TMDB_API_KEY') || runtimeConfig.VITE_TMDB_API_KEY,
   YOUTUBE_API_KEY: import.meta.env.VITE_YOUTUBE_API_KEY || envVar('VITE_YOUTUBE_API_KEY') || runtimeConfig.VITE_YOUTUBE_API_KEY,
   DOMAIN: import.meta.env.VITE_DOMAIN || envVar('VITE_DOMAIN') || runtimeConfig.VITE_DOMAIN || 'https://cinma.online',
-  API_BASE: import.meta.env.VITE_API_BASE || envVar('VITE_API_BASE') || runtimeConfig.VITE_API_BASE || 'https://cooperative-nevsa-cinma-71a99c5c.koyeb.app'
+  // CRITICAL: Always use full Koyeb URL - Cloudflare Pages doesn't proxy /api/*
+  API_BASE: import.meta.env.VITE_API_BASE || envVar('VITE_API_BASE') || runtimeConfig.VITE_API_BASE || KOYEB_API_URL
 }
 
 // Strict check for required keys
