@@ -87,58 +87,38 @@ for (let attempt = 0; attempt < 3 && !success; attempt++) {
 
 ## ✅ الحلول المقترحة
 
-### 1. استخدام استراتيجيات متعددة (بدون تقسيم لغوي)
+### 1. استخدام TMDB Daily ID Exports (الحل الأمثل!) ⭐
+
+**الاكتشاف المهم:**
+TMDB بتوفر ملفات يومية فيها **كل الـ IDs** للأفلام والمسلسلات!
+
+**المصدر:**
+```
+https://files.tmdb.org/p/exports/movie_ids_MM_DD_YYYY.json.gz
+https://files.tmdb.org/p/exports/tv_series_ids_MM_DD_YYYY.json.gz
+```
 
 **الطريقة الجديدة:**
 ```javascript
-// ✅ استراتيجيات متنوعة - كل الأفلام بدون تمييز
-const strategies = [
-  // 1. الأشهر (500 صفحة = 10K فيلم)
-  { sort_by: 'popularity.desc', include_adult: false },
-  
-  // 2. الأحدث (500 صفحة = 10K فيلم)
-  { sort_by: 'release_date.desc', include_adult: false },
-  
-  // 3. الأعلى تقييماً (500 صفحة = 10K فيلم)
-  { sort_by: 'vote_average.desc', 'vote_count.gte': 500, include_adult: false },
-  
-  // 4. الأكثر تصويتاً (500 صفحة = 10K فيلم)
-  { sort_by: 'vote_count.desc', include_adult: false },
-  
-  // 5. حسب السنة (20 سنة × 500 صفحة = 10K فيلم لكل سنة)
-  { primary_release_year: 2024, sort_by: 'popularity.desc', include_adult: false },
-  { primary_release_year: 2023, sort_by: 'popularity.desc', include_adult: false },
-  { primary_release_year: 2022, sort_by: 'popularity.desc', include_adult: false },
-  // ... 2021 حتى 2005 (20 سنة)
-  
-  // 6. حسب النوع (19 نوع × 500 صفحة = 10K فيلم لكل نوع)
-  { with_genres: 28, sort_by: 'popularity.desc', include_adult: false },  // Action
-  { with_genres: 12, sort_by: 'popularity.desc', include_adult: false },  // Adventure
-  { with_genres: 16, sort_by: 'popularity.desc', include_adult: false },  // Animation
-  { with_genres: 35, sort_by: 'popularity.desc', include_adult: false },  // Comedy
-  { with_genres: 80, sort_by: 'popularity.desc', include_adult: false },  // Crime
-  { with_genres: 18, sort_by: 'popularity.desc', include_adult: false },  // Drama
-  { with_genres: 10751, sort_by: 'popularity.desc', include_adult: false }, // Family
-  { with_genres: 14, sort_by: 'popularity.desc', include_adult: false },  // Fantasy
-  { with_genres: 36, sort_by: 'popularity.desc', include_adult: false },  // History
-  { with_genres: 27, sort_by: 'popularity.desc', include_adult: false },  // Horror
-  { with_genres: 10402, sort_by: 'popularity.desc', include_adult: false }, // Music
-  { with_genres: 9648, sort_by: 'popularity.desc', include_adult: false }, // Mystery
-  { with_genres: 10749, sort_by: 'popularity.desc', include_adult: false }, // Romance
-  { with_genres: 878, sort_by: 'popularity.desc', include_adult: false },  // Science Fiction
-  { with_genres: 53, sort_by: 'popularity.desc', include_adult: false },   // Thriller
-  { with_genres: 10752, sort_by: 'popularity.desc', include_adult: false }, // War
-  { with_genres: 37, sort_by: 'popularity.desc', include_adult: false },   // Western
-  // ... etc.
-];
+// ✅ الحل الأمثل - لا حدود!
+// 1. Download daily ID export
+const response = await fetch('https://files.tmdb.org/p/exports/movie_ids_04_21_2026.json.gz');
+const gzipData = await response.arrayBuffer();
+const jsonData = gunzip(gzipData);
+const ids = jsonData.split('\n').map(line => JSON.parse(line).id);
+
+// 2. Process all IDs with concurrency
+const limiter = pLimit(50);
+const promises = ids.map(id => limiter(() => processMovie(id)));
+await Promise.all(promises);
 ```
 
-**الفائدة:**
-- ✅ كل الأفلام (عربي، إنجليزي، هندي، كوري، ياباني، إلخ)
-- ✅ تنوع أكبر في النتائج
-- ✅ الوصول لأفلام قديمة وأقل شهرة
-- ✅ تجاوز حد الـ 500 صفحة
-- ✅ لا تمييز لغوي - المحتوى الجيد من أي لغة
+**الفوائد:**
+- ✅ **لا حدود!** - كل الأفلام الموجودة في TMDB (~1M+ فيلم)
+- ✅ **لا استراتيجيات معقدة** - مجرد loop على IDs
+- ✅ **لا deduplication** - كل ID فريد
+- ✅ **أبسط وأسرع** - download مرة واحدة، process كل الـ IDs
+- ✅ **يتحدث يومياً** - محتوى جديد تلقائياً
 
 ---
 
@@ -300,26 +280,29 @@ async function processMovie(movieId, section) {
 
 ### قبل التحسينات:
 ```
-التقسيم: عربي (50K) + أجنبي (200K) = 250K هدف
-الواقع: 10K عربي + 10K أجنبي = 20K فقط (8%)
+الطريقة: /discover مع تقسيم عربي/أجنبي
+الحد: 500 صفحة × 20 = 10,000 فيلم لكل query
+الواقع: 10K عربي + 10K أجنبي = 20K فقط (2%)
 الوقت الضائع: 7.4 ساعة على retry فاشل
-المشكلة: التقسيم اللغوي غير منطقي ومحدود
+المشكلة: محدود جداً ومعقد
 ```
 
-### بعد التحسينات:
+### بعد التحسينات (Daily ID Exports):
 ```
-الاستراتيجيات (كل الأفلام بدون تمييز):
-- popularity: 10,000 فيلم
-- release_date: 10,000 فيلم
-- vote_average: 10,000 فيلم
-- vote_count: 10,000 فيلم
-- years (20 سنة): 200,000 فيلم
-- genres (19 نوع): 190,000 فيلم
-- المجموع (قبل dedup): 430,000 فيلم
-- المجموع (بعد dedup): ~250,000 فيلم ✅
+الطريقة: Download daily ID export → Process all IDs
+المصدر: https://files.tmdb.org/p/exports/movie_ids_MM_DD_YYYY.json.gz
+العدد: ~1,000,000+ فيلم (كل ما في TMDB!)
+الوقت: 
+  - Download: ~1 دقيقة
+  - Process (50 concurrent): ~33 ساعة لـ 1M فيلم
+  - المجموع: ~34 ساعة لكل الأفلام ✅
 
-الوقت الموفر: 7.4 ساعة (لا retry على 400)
-التنوع: أفلام من كل اللغات والثقافات
+الفوائد:
+- ✅ لا حدود - كل الأفلام
+- ✅ لا استراتيجيات معقدة
+- ✅ لا deduplication
+- ✅ أبسط وأوضح
+- ✅ يتحدث يومياً تلقائياً
 ```
 
 ---
@@ -361,15 +344,16 @@ node scripts/ingestion/INGEST-SERIES.js
 ## 📝 ملاحظات مهمة
 
 ### 1. TMDB Content Types:
-- **Movies:** كل الأفلام (عربي، أجنبي، هندي، كوري، أنمي، إلخ)
-- **TV Shows:** كل المسلسلات (عربي، أجنبي، أنمي، كوري، إلخ)
+- **Movies:** كل الأفلام (~1M+ فيلم في TMDB)
+- **TV Shows:** كل المسلسلات (~200K+ مسلسل في TMDB)
 - **People:** الممثلين (يتم سحبهم تلقائياً مع الأعمال)
 
-### 2. TMDB API Limits:
-- 500 صفحة maximum لكل query
-- 20 نتيجة لكل صفحة
-- 10,000 نتيجة maximum لكل query
-- الحل: استراتيجيات متعددة (years, genres, sort methods)
+### 2. TMDB Daily ID Exports:
+- **URL Pattern:** `https://files.tmdb.org/p/exports/{type}_ids_MM_DD_YYYY.json.gz`
+- **Types:** `movie_ids`, `tv_series_ids`, `person_ids`, `collection_ids`
+- **Format:** GZIP compressed, newline-delimited JSON
+- **Update:** يومياً الساعة 7-8 صباحاً UTC
+- **Size:** ~10-50 MB compressed
 
 ### 3. Rate Limiting:
 - TMDB: 40 requests/10 seconds
