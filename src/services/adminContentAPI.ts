@@ -10,17 +10,17 @@
 
 import { CONFIG } from '../lib/constants'
 
-const API_BASE = CONFIG.API_BASE || ''
+const API_BASE = CONFIG.API_BASE || 'https://cooperative-nevsa-cinma-71a99c5c.koyeb.app'
 
 async function fetchAPI(endpoint: string, options?: RequestInit) {
   const url = API_BASE ? `${API_BASE}${endpoint}` : endpoint
   const response = await fetch(url, options)
-  
+
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: response.statusText }))
     throw new Error(error.error || response.statusText)
   }
-  
+
   return response.json()
 }
 
@@ -31,13 +31,13 @@ async function fetchAPI(endpoint: string, options?: RequestInit) {
 export async function upsertSeries(row: Record<string, unknown>) {
   // For now, use direct DB query endpoint
   const { id, ...data } = row
-  
+
   const query = id
     ? `UPDATE tv_series SET ${Object.keys(data).map((k, i) => `${k} = $${i + 2}`).join(', ')} WHERE id = $1`
     : `INSERT INTO tv_series (${Object.keys(row).join(', ')}) VALUES (${Object.keys(row).map((_, i) => `$${i + 1}`).join(', ')})`
-  
+
   const params = id ? [id, ...Object.values(data)] : Object.values(row)
-  
+
   return fetchAPI('/api/db/query', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -62,13 +62,13 @@ export async function deleteSeries(seriesId: number) {
 
 export async function upsertSeason(row: Record<string, unknown>) {
   const { id, ...data } = row
-  
+
   const query = id
     ? `UPDATE seasons SET ${Object.keys(data).map((k, i) => `${k} = $${i + 2}`).join(', ')} WHERE id = $1`
     : `INSERT INTO seasons (${Object.keys(row).join(', ')}) VALUES (${Object.keys(row).map((_, i) => `$${i + 1}`).join(', ')}) RETURNING *`
-  
+
   const params = id ? [id, ...Object.values(data)] : Object.values(row)
-  
+
   return fetchAPI('/api/db/query', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -93,13 +93,13 @@ export async function deleteSeason(seasonId: number) {
 
 export async function upsertEpisode(row: Record<string, unknown>) {
   const { id, ...data } = row
-  
+
   const query = id
     ? `UPDATE episodes SET ${Object.keys(data).map((k, i) => `${k} = $${i + 2}`).join(', ')} WHERE id = $1`
     : `INSERT INTO episodes (${Object.keys(row).join(', ')}) VALUES (${Object.keys(row).map((_, i) => `$${i + 1}`).join(', ')}) RETURNING *`
-  
+
   const params = id ? [id, ...Object.values(data)] : Object.values(row)
-  
+
   return fetchAPI('/api/db/query', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

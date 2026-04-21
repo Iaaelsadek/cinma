@@ -12,7 +12,7 @@ import { CONFIG } from '../lib/constants';
 import { supabase } from '../lib/supabase';
 
 // API Base URL - points to new Express server
-const API_BASE = CONFIG.API_BASE || import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const API_BASE = CONFIG.API_BASE || import.meta.env.VITE_API_URL || 'https://cooperative-nevsa-cinma-71a99c5c.koyeb.app';
 
 // API Key for authentication
 const API_KEY = import.meta.env.VITE_API_KEY || '';
@@ -39,34 +39,34 @@ async function getAuthToken(): Promise<string> {
  */
 async function fetchWithAuth(endpoint: string, options: RequestInit = {}): Promise<any> {
   const token = await getAuthToken();
-  
+
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(options.headers as Record<string, string> || {}),
   };
-  
+
   // Add API Key if available
   if (API_KEY) {
     headers['X-API-Key'] = API_KEY;
   }
-  
+
   // Add Authorization token for admin routes
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
-  
+
   const url = `${API_BASE}${endpoint}`;
-  
+
   const response = await fetch(url, {
     ...options,
     headers,
   });
-  
+
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: response.statusText }));
     throw new Error(error.error || response.statusText);
   }
-  
+
   return response.json();
 }
 
@@ -134,12 +134,12 @@ export async function getIngestionLog(params: {
   contentType?: string;
 }): Promise<IngestionLogResponse> {
   const queryParams = new URLSearchParams();
-  
+
   if (params.page) queryParams.append('page', params.page.toString());
   if (params.limit) queryParams.append('limit', params.limit.toString());
   if (params.status) queryParams.append('status', params.status);
   if (params.contentType) queryParams.append('contentType', params.contentType);
-  
+
   return fetchWithAuth(`/api/admin/ingestion/log?${queryParams.toString()}`);
 }
 
@@ -193,16 +193,16 @@ export async function triggerProcessing(maxBatches: number = 1): Promise<{ succe
 export function parseCSV(csvContent: string): QueueItem[] {
   const lines = csvContent.trim().split('\n');
   const items: QueueItem[] = [];
-  
+
   // Skip header if exists
   const startIndex = lines[0].toLowerCase().includes('source') ? 1 : 0;
-  
+
   for (let i = startIndex; i < lines.length; i++) {
     const line = lines[i].trim();
     if (!line) continue;
-    
+
     const [source, id, type, notes] = line.split(',').map(s => s.trim());
-    
+
     if (source && id && type) {
       items.push({
         externalSource: source.toUpperCase() as QueueItem['externalSource'],
@@ -212,7 +212,7 @@ export function parseCSV(csvContent: string): QueueItem[] {
       });
     }
   }
-  
+
   return items;
 }
 
@@ -222,11 +222,11 @@ export function parseCSV(csvContent: string): QueueItem[] {
 export async function queueFromCSV(file: File): Promise<{ success: boolean; queued: number; message: string }> {
   const content = await file.text();
   const items = parseCSV(content);
-  
+
   if (items.length === 0) {
     throw new Error('No valid items found in CSV file');
   }
-  
+
   return queueItems(items);
 }
 

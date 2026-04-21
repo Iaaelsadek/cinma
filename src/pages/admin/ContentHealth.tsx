@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
-import { 
-  Activity, AlertCircle, CheckCircle2, Search, Play, 
+import {
+  Activity, AlertCircle, CheckCircle2, Search, Play,
   Trash2, ExternalLink, RefreshCw, Filter, Film, Tv,
   ChevronRight, AlertTriangle
 } from 'lucide-react'
@@ -32,12 +32,12 @@ export const ContentHealth = () => {
     setLoading(true)
     try {
       // 1. Get all broken reports from CockroachDB API instead of Supabase
-      const API_BASE = import.meta.env.VITE_API_BASE || import.meta.env.VITE_API_URL || ''
+      const API_BASE = import.meta.env.VITE_API_BASE || import.meta.env.VITE_API_URL || 'https://cooperative-nevsa-cinma-71a99c5c.koyeb.app'
       const linkChecksResponse = await fetch(`${API_BASE}/api/link-checks`)
       if (!linkChecksResponse.ok) throw new Error('Failed to fetch link checks')
-      
+
       const reports = await linkChecksResponse.json()
-      
+
       // 2. Process reports into content units
       const movieUnits = new Map<number, Map<string, number>>() // tmdb_id -> Map<source_name, status_code>
       const seriesEpisodeUnits = new Map<number, Map<string, Map<string, number>>>() // series_id -> Map<season-episode, Map<source_name, status_code>>
@@ -49,11 +49,11 @@ export const ContentHealth = () => {
           seriesIds.add(Number(r.content_id))
           const seriesId = Number(r.content_id)
           const epKey = `${r.season_number || 1}-${r.episode_number || 1}`
-          
+
           if (!seriesEpisodeUnits.has(seriesId)) seriesEpisodeUnits.set(seriesId, new Map())
           const eps = seriesEpisodeUnits.get(seriesId)!
           if (!eps.has(epKey)) eps.set(epKey, new Map())
-          
+
           const currentStatus = eps.get(epKey)!.get(r.source_name)
           if (currentStatus !== 200) {
             eps.get(epKey)!.set(r.source_name, r.status_code)
@@ -62,7 +62,7 @@ export const ContentHealth = () => {
           movieIds.add(Number(r.content_id))
           const movieId = Number(r.content_id)
           if (!movieUnits.has(movieId)) movieUnits.set(movieId, new Map())
-          
+
           const currentStatus = movieUnits.get(movieId)!.get(r.source_name)
           if (currentStatus !== 200) {
             movieUnits.get(movieId)!.set(r.source_name, r.status_code)
@@ -73,15 +73,15 @@ export const ContentHealth = () => {
       // 3. Get basic info for these IDs (titles, posters) and episode counts for series
       const movieIdsArray = Array.from(movieIds)
       const seriesIdsArray = Array.from(seriesIds)
-      
+
       const contentHealthResponse = await fetch(`/api/admin/content-health?movieIds=${movieIdsArray.join(',')}&seriesIds=${seriesIdsArray.join(',')}`)
-      
+
       if (!contentHealthResponse.ok) {
         throw new Error('Failed to fetch content health data')
       }
-      
+
       const { movies: moviesData, series: seriesData, episodes: episodesData } = await contentHealthResponse.json()
-      
+
       const moviesRes = { data: moviesData }
       const seriesRes = { data: seriesData }
       const episodesRes = { data: episodesData }
@@ -131,7 +131,7 @@ export const ContentHealth = () => {
         if (episodes && episodes.size > 0) {
           let totalBrokenCount = 0
           let deadEpisodesCount = 0
-          
+
           episodes.forEach(sources => {
             const { isDead, broken } = getStatus(sources)
             totalBrokenCount += broken
@@ -163,7 +163,7 @@ export const ContentHealth = () => {
     }
   }
 
-  useEffect(() => { 
+  useEffect(() => {
     fetchData()
     const interval = setInterval(fetchData, 30000)
     return () => clearInterval(interval)
@@ -171,13 +171,13 @@ export const ContentHealth = () => {
 
   const deleteReports = async (tmdbId: number, type: 'movie' | 'tv') => {
     if (!confirm('هل أنت متأكد من مسح جميع بلاغات هذا العمل؟')) return
-    
+
     // Delete from CockroachDB API instead of Supabase
-    const API_BASE = import.meta.env.VITE_API_BASE || import.meta.env.VITE_API_URL || ''
+    const API_BASE = import.meta.env.VITE_API_BASE || import.meta.env.VITE_API_URL || 'https://cooperative-nevsa-cinma-71a99c5c.koyeb.app'
     const deleteResponse = await fetch(`${API_BASE}/api/link-checks?content_id=${tmdbId}&content_type=${type}`, {
       method: 'DELETE'
     })
-    
+
     if (deleteResponse.ok) {
       setContent(prev => prev.filter(c => !(c.tmdb_id === tmdbId && c.type === type)))
       setSelectedKeys(prev => prev.filter(key => key !== `${type}-${tmdbId}`))
@@ -220,9 +220,9 @@ export const ContentHealth = () => {
 
     if (bulkAction === 'clear_reports') {
       if (!confirm(`هل تريد مسح بلاغات ${selectedItems.length} عمل؟`)) return
-      
+
       // Delete from CockroachDB API instead of Supabase
-      const API_BASE = import.meta.env.VITE_API_BASE || import.meta.env.VITE_API_URL || ''
+      const API_BASE = import.meta.env.VITE_API_BASE || import.meta.env.VITE_API_URL || 'https://cooperative-nevsa-cinma-71a99c5c.koyeb.app'
       const results = await Promise.all(
         selectedItems.map(item =>
           fetch(`${API_BASE}/api/link-checks?content_id=${item.tmdb_id}&content_type=${item.type}`, {
@@ -264,9 +264,9 @@ export const ContentHealth = () => {
           </h1>
           <p className="text-sm text-zinc-500">إدارة الأعمال المبلّغ عنها يدوياً من الزوار بسبب تعطل السيرفرات</p>
         </div>
-        
+
         <div className="flex items-center gap-2">
-          <button 
+          <button
             onClick={fetchData}
             className="p-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors"
             title="تحديث"
@@ -328,29 +328,29 @@ export const ContentHealth = () => {
       <div className="flex flex-col md:flex-row gap-4 items-center bg-zinc-900/30 p-4 rounded-xl border border-zinc-800/50">
         <div className="relative flex-1 w-full">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500" size={16} />
-          <input 
-            type="text" 
+          <input
+            type="text"
             placeholder="بحث في العناوين..."
             className="w-full bg-zinc-800/50 border border-zinc-700 rounded-lg py-2 pr-10 pl-4 text-sm focus:outline-none focus:border-primary transition-colors"
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
         </div>
-        
+
         <div className="flex items-center gap-1 bg-zinc-800/50 p-1 rounded-lg border border-zinc-700">
-          <button 
+          <button
             onClick={() => setFilter('all')}
             className={`px-4 py-1.5 rounded-md text-xs transition-all ${filter === 'all' ? 'bg-primary text-black font-bold' : 'text-zinc-400 hover:text-white'}`}
           >
             الكل
           </button>
-          <button 
+          <button
             onClick={() => setFilter('dead')}
             className={`px-4 py-1.5 rounded-md text-xs transition-all ${filter === 'dead' ? 'bg-rose-600 text-white font-bold' : 'text-zinc-400 hover:text-white'}`}
           >
             ميت تماماً
           </button>
-          <button 
+          <button
             onClick={() => setFilter('partial')}
             className={`px-4 py-1.5 rounded-md text-xs transition-all ${filter === 'partial' ? 'bg-amber-600 text-white font-bold' : 'text-zinc-400 hover:text-white'}`}
           >
@@ -408,7 +408,7 @@ export const ContentHealth = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map(item => (
-            <div 
+            <div
               key={`${item.type}-${item.tmdb_id}`}
               className="group relative bg-zinc-900/50 border border-zinc-800 rounded-2xl overflow-hidden hover:border-zinc-600 transition-all flex"
             >
@@ -422,18 +422,18 @@ export const ContentHealth = () => {
               </div>
               {/* Poster */}
               <div className="w-24 shrink-0 aspect-[2/3] relative overflow-hidden">
-                <img 
-                  src={`https://image.tmdb.org/t/p/w200${item.poster}`} 
-                  alt="" 
+                <img
+                  src={`https://image.tmdb.org/t/p/w200${item.poster}`}
+                  alt=""
                   className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                 />
                 <div className={`absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity`}>
-                   <Link 
-                     to={item.type === 'movie' ? `/watch/movie/${item.tmdb_id}` : `/watch/tv/${item.tmdb_id}/1/1`}
-                     className="p-2 bg-primary rounded-full text-black hover:scale-110 transition-transform"
-                   >
-                     <Play size={16} fill="currentColor" />
-                   </Link>
+                  <Link
+                    to={item.type === 'movie' ? `/watch/movie/${item.tmdb_id}` : `/watch/tv/${item.tmdb_id}/1/1`}
+                    className="p-2 bg-primary rounded-full text-black hover:scale-110 transition-transform"
+                  >
+                    <Play size={16} fill="currentColor" />
+                  </Link>
                 </div>
               </div>
 
@@ -445,7 +445,7 @@ export const ContentHealth = () => {
                     <span className="text-[10px] uppercase tracking-wider text-zinc-500">{item.type === 'movie' ? 'فيلم' : 'مسلسل'}</span>
                   </div>
                   <h3 className="text-sm font-bold truncate mb-2" title={item.title}>{item.title}</h3>
-                  
+
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-[10px]">
                       <span className="text-zinc-500">الحلقات المعطلة</span>
@@ -459,10 +459,10 @@ export const ContentHealth = () => {
                         const safeDead = Math.max(0, Number(item.dead_units || 0))
                         const ratio = Math.max(0, Math.min(100, (safeDead / safeTotal) * 100))
                         return (
-                      <div 
-                        className={`h-full transition-all duration-1000 ${item.status === 'dead' ? 'bg-rose-500' : 'bg-amber-500'}`}
-                        style={{ width: `${ratio}%` }}
-                      />
+                          <div
+                            className={`h-full transition-all duration-1000 ${item.status === 'dead' ? 'bg-rose-500' : 'bg-amber-500'}`}
+                            style={{ width: `${ratio}%` }}
+                          />
                         )
                       })()}
                     </div>
@@ -474,25 +474,24 @@ export const ContentHealth = () => {
                 </div>
 
                 <div className="flex items-center gap-2 mt-4 pt-3 border-t border-zinc-800/50">
-                   <button 
-                     onClick={() => deleteReports(item.tmdb_id, item.type)}
-                     className="flex-1 flex items-center justify-center gap-2 py-1.5 bg-zinc-800 hover:bg-rose-900/30 hover:text-rose-500 rounded-lg text-[10px] transition-all"
-                   >
-                     <Trash2 size={12} /> مسح البلاغات
-                   </button>
-                   <Link 
-                     to={item.type === 'movie' ? `/admin/movies?id=${item.tmdb_id}` : `/admin/series/${item.tmdb_id}`}
-                     className="p-1.5 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-zinc-400 hover:text-white transition-all"
-                   >
-                     <ChevronRight size={14} />
-                   </Link>
+                  <button
+                    onClick={() => deleteReports(item.tmdb_id, item.type)}
+                    className="flex-1 flex items-center justify-center gap-2 py-1.5 bg-zinc-800 hover:bg-rose-900/30 hover:text-rose-500 rounded-lg text-[10px] transition-all"
+                  >
+                    <Trash2 size={12} /> مسح البلاغات
+                  </button>
+                  <Link
+                    to={item.type === 'movie' ? `/admin/movies?id=${item.tmdb_id}` : `/admin/series/${item.tmdb_id}`}
+                    className="p-1.5 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-zinc-400 hover:text-white transition-all"
+                  >
+                    <ChevronRight size={14} />
+                  </Link>
                 </div>
               </div>
 
               {/* Status Badge */}
-              <div className={`absolute top-2 left-2 px-2 py-0.5 rounded-md text-[9px] font-bold uppercase ${
-                item.status === 'dead' ? 'bg-rose-600 text-white' : 'bg-amber-600 text-white'
-              }`}>
+              <div className={`absolute top-2 left-2 px-2 py-0.5 rounded-md text-[9px] font-bold uppercase ${item.status === 'dead' ? 'bg-rose-600 text-white' : 'bg-amber-600 text-white'
+                }`}>
                 {item.status === 'dead' ? 'مخفي (ميت)' : 'يعمل جزئياً'}
               </div>
             </div>
@@ -505,7 +504,7 @@ export const ContentHealth = () => {
         <AlertTriangle className="text-primary shrink-0" size={18} />
         <div className="text-xs text-zinc-400 leading-relaxed">
           <strong className="text-primary block mb-1">نصيحة للأدمن:</strong>
-          الأعمال المعروضة هنا هي التي قام الزوار بالإبلاغ يدوياً عن تعطل سيرفراتها. 
+          الأعمال المعروضة هنا هي التي قام الزوار بالإبلاغ يدوياً عن تعطل سيرفراتها.
           يمكنك الضغط على "مسح البلاغات" لإعادة إظهار العمل فوراً للمستخدمين إذا قمت بإصلاح السيرفرات أو إضافة روابط جديدة يدوياً.
           التصنيف "ميت" يعني أن حجم البلاغات اليدوية مرتفع، أما "الجزئي" فيعني وجود بلاغات أقل.
         </div>

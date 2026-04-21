@@ -13,7 +13,7 @@
 import type { Movie, TVSeries } from '../types/database';
 import { CONFIG } from '../lib/constants';
 
-const API_BASE = CONFIG.API_BASE || '';
+const API_BASE = CONFIG.API_BASE || 'https://cooperative-nevsa-cinma-71a99c5c.koyeb.app';
 
 // ==========================================
 // Types

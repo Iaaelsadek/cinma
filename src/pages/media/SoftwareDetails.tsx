@@ -1,9 +1,9 @@
-import {useEffect, useState} from 'react'
+import { useEffect, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { useParams, Link } from 'react-router-dom'
 import { Download, Star, ArrowLeft, Cpu } from 'lucide-react'
 import { motion } from 'framer-motion'
-import {getSoftwareByIdDB} from '../../lib/db'
+import { getSoftwareByIdDB } from '../../lib/db'
 import { useLang } from '../../state/useLang'
 import { useAuth } from '../../hooks/useAuth'
 import { useQueryClient } from '@tanstack/react-query'
@@ -84,7 +84,7 @@ export const SoftwareDetails = () => {
     }
 
     try {
-      const apiBase = import.meta.env.VITE_API_BASE || ''
+      const apiBase = import.meta.env.VITE_API_BASE || 'https://cooperative-nevsa-cinma-71a99c5c.koyeb.app'
       const response = await fetch(`${apiBase}/api/ratings`, {
         method: 'POST',
         headers: {
@@ -114,7 +114,7 @@ export const SoftwareDetails = () => {
     }
 
     try {
-      const apiBase = import.meta.env.VITE_API_BASE || ''
+      const apiBase = import.meta.env.VITE_API_BASE || 'https://cooperative-nevsa-cinma-71a99c5c.koyeb.app'
       const response = await fetch(`${apiBase}/api/reviews`, {
         method: 'POST',
         headers: {
@@ -135,7 +135,7 @@ export const SoftwareDetails = () => {
 
       setShowReviewForm(false)
       toast.success(lang === 'ar' ? 'تم نشر المراجعة' : 'Review published')
-      
+
       // Refresh reviews list
       queryClient.invalidateQueries({ queryKey: ['reviews', externalId] })
     } catch (error: any) {
@@ -153,7 +153,7 @@ export const SoftwareDetails = () => {
       <div className="relative h-[40vh] md:h-[50vh] w-full overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#050505]/60 to-[#050505] z-10" />
         <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 z-10 mix-blend-overlay" />
-        
+
         {backdrop ? (
           <motion.img
             initial={{ scale: 1.1, opacity: 0 }}
@@ -166,19 +166,19 @@ export const SoftwareDetails = () => {
         ) : (
           <div className="h-full w-full bg-gradient-to-br from-sky-900/20 to-purple-900/20" />
         )}
-        
+
         {/* Back Button */}
         <div className="absolute top-6 left-6 z-50">
-           <Link to="/software" className="flex items-center gap-2 px-4 py-2 rounded-full bg-black/50 backdrop-blur-md border border-white/10 hover:bg-white/10 transition-colors">
-             <ArrowLeft size={18} />
-             <span>{lang === 'ar' ? 'رجوع' : 'Back'}</span>
-           </Link>
+          <Link to="/software" className="flex items-center gap-2 px-4 py-2 rounded-full bg-black/50 backdrop-blur-md border border-white/10 hover:bg-white/10 transition-colors">
+            <ArrowLeft size={18} />
+            <span>{lang === 'ar' ? 'رجوع' : 'Back'}</span>
+          </Link>
         </div>
       </div>
 
       <div className="relative z-20 px-4 md:px-12 max-w-[2400px] mx-auto w-full -mt-32">
         <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] gap-8">
-          
+
           {/* Poster Column */}
           <div className="space-y-6">
             <motion.div
@@ -194,7 +194,7 @@ export const SoftwareDetails = () => {
                 </div>
               )}
             </motion.div>
-            
+
             <a
               href={downloadUrl}
               target="_blank"
@@ -209,46 +209,46 @@ export const SoftwareDetails = () => {
           {/* Details Column */}
           <div className="pt-4 md:pt-32">
             <motion.div
-               initial={{ opacity: 0, x: 20 }}
-               animate={{ opacity: 1, x: 0 }}
-               transition={{ delay: 0.1 }}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.1 }}
             >
-               {/* Meta Badges */}
-               <div className="flex flex-wrap items-center gap-3 mb-4">
-                 <div className="px-3 py-1 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 text-sm font-bold flex items-center gap-1">
-                   <Star size={14} fill="currentColor" />
-                   {rating}
-                 </div>
-                 <div className="px-3 py-1 rounded-lg bg-white/5 border border-white/10 text-zinc-300 text-sm">
-                   v{version}
-                 </div>
-                 <div className="px-3 py-1 rounded-lg bg-white/5 border border-white/10 text-zinc-300 text-sm uppercase">
-                   {size}
-                 </div>
-                 <div className="px-3 py-1 rounded-lg bg-sky-500/10 border border-sky-500/20 text-sky-400 text-sm font-bold uppercase">
-                   {platform}
-                 </div>
-               </div>
+              {/* Meta Badges */}
+              <div className="flex flex-wrap items-center gap-3 mb-4">
+                <div className="px-3 py-1 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 text-sm font-bold flex items-center gap-1">
+                  <Star size={14} fill="currentColor" />
+                  {rating}
+                </div>
+                <div className="px-3 py-1 rounded-lg bg-white/5 border border-white/10 text-zinc-300 text-sm">
+                  v{version}
+                </div>
+                <div className="px-3 py-1 rounded-lg bg-white/5 border border-white/10 text-zinc-300 text-sm uppercase">
+                  {size}
+                </div>
+                <div className="px-3 py-1 rounded-lg bg-sky-500/10 border border-sky-500/20 text-sky-400 text-sm font-bold uppercase">
+                  {platform}
+                </div>
+              </div>
 
-               <h1 className="text-4xl md:text-6xl font-black text-white mb-6 leading-tight">
-                 {title}
-               </h1>
+              <h1 className="text-4xl md:text-6xl font-black text-white mb-6 leading-tight">
+                {title}
+              </h1>
 
-               <div className="prose prose-invert prose-lg max-w-none text-zinc-400 mb-8">
-                 <p>{description}</p>
-               </div>
-               
-               {/* Additional Info / Specs Placeholder */}
-               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-white/5 pt-8">
-                  <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
-                    <h3 className="text-zinc-500 text-sm mb-1 uppercase tracking-wider">Category</h3>
-                    <p className="font-semibold text-white">{row.category || 'Utility'}</p>
-                  </div>
-                  <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
-                    <h3 className="text-zinc-500 text-sm mb-1 uppercase tracking-wider">License</h3>
-                    <p className="font-semibold text-white">Free / Open Source</p>
-                  </div>
-               </div>
+              <div className="prose prose-invert prose-lg max-w-none text-zinc-400 mb-8">
+                <p>{description}</p>
+              </div>
+
+              {/* Additional Info / Specs Placeholder */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-white/5 pt-8">
+                <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
+                  <h3 className="text-zinc-500 text-sm mb-1 uppercase tracking-wider">Category</h3>
+                  <p className="font-semibold text-white">{row.category || 'Utility'}</p>
+                </div>
+                <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
+                  <h3 className="text-zinc-500 text-sm mb-1 uppercase tracking-wider">License</h3>
+                  <p className="font-semibold text-white">Free / Open Source</p>
+                </div>
+              </div>
 
             </motion.div>
 
@@ -260,7 +260,7 @@ export const SoftwareDetails = () => {
                   <h2 className="text-2xl font-bold text-white mb-4">
                     {lang === 'ar' ? 'التقييمات والمراجعات' : 'Ratings & Reviews'}
                   </h2>
-                  
+
                   <div className="flex flex-col md:flex-row gap-6 items-start">
                     {/* Aggregate Rating */}
                     <div className="flex-shrink-0">
@@ -327,7 +327,7 @@ export const SoftwareDetails = () => {
                     onDeleteReview={async (reviewId) => {
                       if (!user) return
                       try {
-                        const apiBase = import.meta.env.VITE_API_BASE || ''
+                        const apiBase = import.meta.env.VITE_API_BASE || 'https://cooperative-nevsa-cinma-71a99c5c.koyeb.app'
                         const response = await fetch(`${apiBase}/api/reviews/${reviewId}`, {
                           method: 'DELETE',
                           headers: {
@@ -347,7 +347,7 @@ export const SoftwareDetails = () => {
                         return
                       }
                       try {
-                        const apiBase = import.meta.env.VITE_API_BASE || ''
+                        const apiBase = import.meta.env.VITE_API_BASE || 'https://cooperative-nevsa-cinma-71a99c5c.koyeb.app'
                         const response = await fetch(`${apiBase}/api/reviews/${reviewId}/like`, {
                           method: 'POST',
                           headers: {

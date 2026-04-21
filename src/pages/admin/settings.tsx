@@ -4,7 +4,7 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import * as Switch from '@radix-ui/react-switch'
 import { toast } from '../../lib/toast-manager'
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+const API_BASE = import.meta.env.VITE_API_URL || 'https://cooperative-nevsa-cinma-71a99c5c.koyeb.app'
 
 type SettingsForm = {
   site_name: string
@@ -47,9 +47,9 @@ async function readSettings() {
   try {
     const response = await fetch(`${API_BASE}/api/settings`)
     if (!response.ok) throw new Error('Failed to fetch settings')
-    
+
     const { settings } = await response.json()
-    
+
     return {
       site_name: settings?.site_name || DEFAULTS.site_name,
       logo_url: settings?.logo_url || DEFAULTS.logo_url,

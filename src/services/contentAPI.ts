@@ -10,7 +10,7 @@
 
 import { CONFIG } from '../lib/constants'
 
-const API_BASE = CONFIG.API_BASE || ''
+const API_BASE = CONFIG.API_BASE || 'https://cooperative-nevsa-cinma-71a99c5c.koyeb.app'
 
 async function fetchAPI(endpoint: string, options?: RequestInit) {
   const url = API_BASE ? `${API_BASE}${endpoint}` : endpoint

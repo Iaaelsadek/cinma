@@ -19,7 +19,7 @@ import { fetchBatchContent, ContentDetails } from '../services/contentAPI'
 import { Profile } from '../lib/supabase'
 import { CONFIG } from '../lib/constants'
 
-const API_BASE = CONFIG.API_BASE || ''
+const API_BASE = CONFIG.API_BASE || 'https://cooperative-nevsa-cinma-71a99c5c.koyeb.app'
 
 interface Review {
   id: string
