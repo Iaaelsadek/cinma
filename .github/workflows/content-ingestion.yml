@@ -30,7 +30,7 @@ jobs:
         run: npm ci
 
       - name: Run Movies Ingestion
-        run: timeout 180m node scripts/ingestion/INGEST-MOVIES.js || true
+        run: timeout 180m node scripts/ingestion/INGEST-MOVIES-V2.js || true
         env:
           COCKROACHDB_URL: ${{ secrets.COCKROACHDB_URL }}
           TMDB_API_KEY: ${{ secrets.VITE_TMDB_API_KEY }}
@@ -45,8 +45,8 @@ jobs:
         with:
           name: ingestion-progress-movies-${{ github.run_number }}
           path: |
-            scripts/ingestion/progress-movies.json
-            scripts/ingestion/failed-pages-movies.json
+            scripts/ingestion/progress-movies-v2.json
+            scripts/ingestion/error-log-movies.json
           retention-days: 7
 
   ingest-series:
@@ -68,7 +68,7 @@ jobs:
         run: npm ci
 
       - name: Run Series Ingestion
-        run: timeout 180m node scripts/ingestion/INGEST-SERIES.js || true
+        run: timeout 180m node scripts/ingestion/INGEST-SERIES-V2.js || true
         env:
           COCKROACHDB_URL: ${{ secrets.COCKROACHDB_URL }}
           TMDB_API_KEY: ${{ secrets.VITE_TMDB_API_KEY }}
@@ -83,6 +83,6 @@ jobs:
         with:
           name: ingestion-progress-series-${{ github.run_number }}
           path: |
-            scripts/ingestion/progress-series.json
-            scripts/ingestion/failed-pages-series.json
+            scripts/ingestion/progress-series-v2.json
+            scripts/ingestion/error-log-series.json
           retention-days: 7

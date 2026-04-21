@@ -10,7 +10,7 @@ declare interface Movie {
   poster_path?: string;
   backdrop_path?: string;
   overview?: string;
-  release_date?: string;
+  release_date?: string | null;
   vote_average?: number;
   media_type?: 'movie';
   [key: string]: unknown;
@@ -111,3 +111,81 @@ declare type Logger = {
   debug: (...args: LogArgs) => void;
 };
 declare const logger: Logger;
+
+// Batch Content Item for API calls (matches contentAPI.ts but allows external_id)
+declare interface BatchContentItem {
+  id?: string;
+  external_id?: string;
+  content_type: 'movie' | 'tv' | 'game' | 'software';
+  external_source?: string;
+}
+
+// Review type for review system
+declare interface Review {
+  id: string;
+  user_id: string;
+  external_id: string;
+  external_source: string;
+  content_type: 'movie' | 'tv' | 'game' | 'software';
+  title?: string;
+  review_text: string;
+  rating?: number;
+  language: 'ar' | 'en';
+  contains_spoilers: boolean;
+  is_verified: boolean;
+  edit_count: number;
+  created_at: string;
+  updated_at: string;
+  user?: Profile;
+  helpful_count?: number;
+  is_liked?: boolean;
+}
+
+// Actor Details type
+declare interface ActorDetails {
+  id: string;
+  slug: string;
+  name: string;
+  name_ar?: string;
+  name_en?: string;
+  biography: string;
+  biography_ar?: string | null;
+  birthday: string | null;
+  place_of_birth: string | null;
+  profile_url: string | null;
+  profile_path: string | null;
+  known_for_department: string;
+}
+
+// TMDB Details type (extended with id property)
+declare interface TmdbDetails {
+  id?: number | string;
+  title?: string;
+  title_ar?: string;
+  title_en?: string;
+  original_title?: string;
+  name?: string;
+  name_ar?: string;
+  name_en?: string;
+  original_name?: string;
+  original_language?: string;
+  release_date?: string;
+  first_air_date?: string;
+  runtime?: number;
+  episode_run_time?: number[];
+  vote_average?: number;
+  vote_count?: number;
+  genres?: Array<{ id: number; name: string }>;
+  overview?: string;
+  overview_ar?: string;
+  overview_en?: string;
+  poster_path?: string | null;
+  backdrop_path?: string | null;
+  credits?: { cast?: any[]; crew?: any[] };
+  videos?: { results: Array<{ key: string; type: string; site: string }> };
+  external_ids?: { imdb_id?: string };
+  external_id?: string;
+  external_source?: string;
+  seasons?: Array<{ season_number: number; episode_count: number; name: string }>;
+  slug?: string;
+}
