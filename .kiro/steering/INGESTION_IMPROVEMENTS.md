@@ -311,32 +311,52 @@ async function processMovie(movieId, section) {
 
 ### 1. الهيكل الصحيح
 
-**سكريبتين فقط:**
-1. `INGEST-MOVIES.js` - كل الأفلام (بدون تقسيم)
-2. `INGEST-SERIES.js` - كل المسلسلات (بدون تقسيم)
+**ثلاثة سكريبتات:**
+1. `INGEST-MOVIES-V2.js` - كل الأفلام (بدون تقسيم)
+2. `INGEST-SERIES-V2.js` - كل المسلسلات (بدون تقسيم)
+3. `RETRY-FAILED-ITEMS.js` - إعادة محاولة العناصر الفاشلة ✨
 
 **لماذا؟**
 - ✅ الممثلين بيتسحبوا تلقائياً مع كل عمل
 - ✅ الأنمي موجود في Movies (أفلام) و TV Shows (مسلسلات)
 - ✅ لا حاجة لسكريبت منفصل للممثلين
 - ✅ لا حاجة لتقسيم لغوي (عربي/أجنبي)
+- ✅ نظام تلقائي لإصلاح الأخطاء
 
 ### 2. الميزات الجديدة:
-- ✅ استراتيجيات متعددة (popularity, release_date, vote_average, years, genres)
+- ✅ TMDB Daily ID Exports (لا حدود!)
 - ✅ Retry logic ذكي (400 → skip, 429 → retry, 5xx → retry)
-- ✅ Deduplication (تجنب معالجة نفس المحتوى مرتين)
-- ✅ Progress tracking محسّن (لكل استراتيجية)
-- ✅ Stats تفصيلية (total, skipped, filtered, duplicates, errors)
+- ✅ نظام شامل لتسجيل الأخطاء (3 أنواع)
+- ✅ تنبيهات للأخطاء المتكررة (بعد 10 فشل)
+- ✅ سكريبت تلقائي لإصلاح الأخطاء
+- ✅ Progress tracking محسّن
+- ✅ Stats تفصيلية (total, skipped, filtered, errors)
 - ✅ Concurrency = 50 (سرعة عالية)
 
-### 3. الاختبار:
-```bash
-# Test على عينة صغيرة
-node scripts/ingestion/INGEST-MOVIES.js --test --limit=100
+### 3. الاستخدام:
 
-# Production run
-node scripts/ingestion/INGEST-MOVIES.js
-node scripts/ingestion/INGEST-SERIES.js
+#### المرحلة 1: السحب الأولي
+```bash
+# سحب الأفلام
+node scripts/ingestion/INGEST-MOVIES-V2.js
+
+# سحب المسلسلات
+node scripts/ingestion/INGEST-SERIES-V2.js
+```
+
+#### المرحلة 2: إصلاح الأخطاء
+```bash
+# إعادة محاولة العناصر الفاشلة
+node scripts/ingestion/RETRY-FAILED-ITEMS.js
+
+# يمكن تشغيله عدة مرات حتى تقل الأخطاء
+```
+
+#### المرحلة 3: المراقبة
+```bash
+# فحص ملفات الأخطاء
+cat scripts/ingestion/error-log-movies.json
+cat scripts/ingestion/error-log-series.json
 ```
 
 ---
@@ -373,6 +393,59 @@ node scripts/ingestion/INGEST-SERIES.js
 
 ---
 
+## 🔄 نظام إصلاح الأخطاء التلقائي
+
+### RETRY-FAILED-ITEMS.js
+
+**الوظيفة:**
+- يقرأ `error-log-movies.json` و `error-log-series.json`
+- يحاول إصلاح كل خطأ (translation, tmdb, database)
+- يحذف العناصر الناجحة من القائمة
+- يحدّث ملفات الأخطاء بالعناصر المتبقية
+
+**الاستخدام:**
+```bash
+# بعد تشغيل INGEST-MOVIES-V2 أو INGEST-SERIES-V2
+node scripts/ingestion/RETRY-FAILED-ITEMS.js
+
+# يمكن تشغيله عدة مرات
+# في كل مرة، سيحاول إصلاح الأخطاء المتبقية
+```
+
+**المخرجات:**
+```
+🔄 Processing movies errors from: error-log-movies.json
+═══════════════════════════════════════════════════
+
+📝 Retrying 50 translation errors...
+   ✅ movie 12345 - translation fixed
+   ✅ movie 12346 - translation fixed
+   ❌ movie 12347 - still failing
+
+🌐 Retrying 80 TMDB errors...
+   ✅ movie 12348 - TMDB error fixed
+   ℹ️  movie 12349 not found in TMDB - removing from errors
+
+📝 Updated error log: error-log-movies.json
+   Before: 150 errors
+   After: 20 errors
+   Fixed: 130 ✅
+
+📊 FINAL STATS
+═══════════════════════════════════════════════════
+🎬 Movies: 130/150 fixed
+📺 Series: 45/50 fixed
+⏱  Time: 5.2 minutes
+```
+
+**الفوائد:**
+- ✅ إصلاح تلقائي للأخطاء المؤقتة
+- ✅ تقليل الأخطاء المتبقية تدريجياً
+- ✅ لا حاجة لإعادة تشغيل السكريبت الأساسي
+- ✅ يمكن تشغيله في أي وقت
+
+---
+
 **تم التوثيق بواسطة:** Kiro AI  
 **التاريخ:** 2026-04-21  
-**الحالة:** 🔴 URGENT - يحتاج تطبيق فوري
+**الحالة:** ✅ مكتمل - نظام شامل لاكتشاف وإصلاح الأخطاء
