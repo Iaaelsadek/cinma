@@ -326,44 +326,66 @@ async function processMovie(movieId, section) {
 
 ## 🎯 الخطوات التالية
 
-### 1. إنشاء سكريبت جديد محسّن
-```bash
-scripts/ingestion/INGEST-MOVIES-V2.js
-```
+### 1. الهيكل الصحيح
+
+**سكريبتين فقط:**
+1. `INGEST-MOVIES.js` - كل الأفلام (بدون تقسيم)
+2. `INGEST-SERIES.js` - كل المسلسلات (بدون تقسيم)
+
+**لماذا؟**
+- ✅ الممثلين بيتسحبوا تلقائياً مع كل عمل
+- ✅ الأنمي موجود في Movies (أفلام) و TV Shows (مسلسلات)
+- ✅ لا حاجة لسكريبت منفصل للممثلين
+- ✅ لا حاجة لتقسيم لغوي (عربي/أجنبي)
 
 ### 2. الميزات الجديدة:
-- ✅ استراتيجيات متعددة
-- ✅ Retry logic ذكي
-- ✅ Deduplication
-- ✅ Progress tracking محسّن
-- ✅ Stats تفصيلية
+- ✅ استراتيجيات متعددة (popularity, release_date, vote_average, years, genres)
+- ✅ Retry logic ذكي (400 → skip, 429 → retry, 5xx → retry)
+- ✅ Deduplication (تجنب معالجة نفس المحتوى مرتين)
+- ✅ Progress tracking محسّن (لكل استراتيجية)
+- ✅ Stats تفصيلية (total, skipped, filtered, duplicates, errors)
+- ✅ Concurrency = 50 (سرعة عالية)
 
 ### 3. الاختبار:
 ```bash
 # Test على عينة صغيرة
-node scripts/ingestion/INGEST-MOVIES-V2.js --test --limit=100
+node scripts/ingestion/INGEST-MOVIES.js --test --limit=100
 
 # Production run
-node scripts/ingestion/INGEST-MOVIES-V2.js
+node scripts/ingestion/INGEST-MOVIES.js
+node scripts/ingestion/INGEST-SERIES.js
 ```
 
 ---
 
 ## 📝 ملاحظات مهمة
 
-### 1. TMDB API Limits:
+### 1. TMDB Content Types:
+- **Movies:** كل الأفلام (عربي، أجنبي، هندي، كوري، أنمي، إلخ)
+- **TV Shows:** كل المسلسلات (عربي، أجنبي، أنمي، كوري، إلخ)
+- **People:** الممثلين (يتم سحبهم تلقائياً مع الأعمال)
+
+### 2. TMDB API Limits:
 - 500 صفحة maximum لكل query
 - 20 نتيجة لكل صفحة
 - 10,000 نتيجة maximum لكل query
+- الحل: استراتيجيات متعددة (years, genres, sort methods)
 
-### 2. Rate Limiting:
+### 3. Rate Limiting:
 - TMDB: 40 requests/10 seconds
 - مع concurrency=50، قد نحتاج throttling
-- الحل: استخدام p-limit مع rate limiter
+- الحل: p-limit يتحكم في العدد
 
-### 3. Database Performance:
-- مع 50 concurrent inserts، قد يكون فيه bottleneck
-- الحل: batch inserts أو connection pooling
+### 4. Database Performance:
+- مع 50 concurrent inserts، الأداء ممتاز
+- CockroachDB يتحمل الضغط
+- الممثلين يتم cache في memory (Map) لتجنب التكرار
+
+### 5. Actors Handling:
+- ✅ يتم سحبهم تلقائياً مع كل عمل (8 ممثلين لكل عمل)
+- ✅ يتم cache في memory لتجنب duplicate queries
+- ✅ يتم ترجمتهم تلقائياً (name_ar, biography_ar)
+- ✅ العلاقات تُحفظ في movie_cast و tv_cast
 
 ---
 
