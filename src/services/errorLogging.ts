@@ -48,6 +48,8 @@ class ErrorLoggingService {
   private lastToast: { message: string, time: number } | null = null;
 
   private readonly LOG_ENDPOINT = `${import.meta.env.VITE_API_URL || 'https://cooperative-nevsa-cinma-71a99c5c.koyeb.app'}/api/log`;
+  private logFailureCount = 0;
+  private readonly MAX_LOG_FAILURES = 3;
 
   constructor() {
     // We don't need Supabase client for logging anymore, we use the proxy
@@ -122,6 +124,13 @@ class ErrorLoggingService {
   private async processQueue() {
     if (this.isProcessing || this.queue.length === 0) return;
 
+    // Stop trying if logging endpoint is consistently failing
+    if (this.logFailureCount >= this.MAX_LOG_FAILURES) {
+      console.warn('Error logging disabled due to repeated failures');
+      this.queue = []; // Clear queue
+      return;
+    }
+
     this.isProcessing = true;
     const batch = this.queue.slice(0, this.batchSize);
 
@@ -133,8 +142,14 @@ class ErrorLoggingService {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(error)
-        }).catch(err => logger.error('Failed to send log:', err))
+        }).catch(err => {
+          this.logFailureCount++;
+          logger.error('Failed to send log:', err);
+        })
       ));
+
+      // Reset failure count on success
+      this.logFailureCount = 0;
 
       // Remove processed items
       this.queue = this.queue.slice(batch.length);
