@@ -7,7 +7,6 @@ import App from './App'
 import './index.css'
 import './styles/accessibility.css'
 import './styles/quran-player-accessibility.css'
-import { registerSW } from 'virtual:pwa-register'
 import { ErrorBoundary } from './components/common/ErrorBoundary'
 
 const queryClient = new QueryClient({
@@ -27,7 +26,8 @@ const queryClient = new QueryClient({
   },
 })
 
-registerSW({ immediate: false })
+// PWA disabled for now
+// registerSW({ immediate: false })
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
