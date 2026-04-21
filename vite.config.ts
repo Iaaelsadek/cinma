@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react-swc'
-import { VitePWA } from 'vite-plugin-pwa'
+// import { VitePWA } from 'vite-plugin-pwa' // Disabled - not needed
 import sitemap from 'vite-plugin-sitemap'
 
 export default defineConfig({
@@ -16,74 +16,7 @@ export default defineConfig({
   },
   plugins: [
     react(),
-    VitePWA({
-      registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png'],
-      // Disable install prompt - we're promoting the Android app instead
-      injectRegister: 'auto',
-      manifest: false, // Disable manifest to prevent PWA install prompts
-      workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-        navigateFallback: '/index.html',
-        navigateFallbackDenylist: [/^\/api\//], // Don't cache API routes
-        runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/image\.tmdb\.org\/.*/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'tmdb-images',
-              expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 30 }
-            }
-          },
-          {
-            urlPattern: /^https:\/\/api\.themoviedb\.org\/3\/.*/i,
-            handler: 'StaleWhileRevalidate',
-            options: {
-              cacheName: 'tmdb-api',
-              cacheableResponse: { statuses: [0, 200] },
-              expiration: { maxEntries: 300, maxAgeSeconds: 60 * 60 * 12 }
-            }
-          },
-          {
-            urlPattern: /\/api\/home(\?.*)?$/i,
-            handler: 'StaleWhileRevalidate',
-            options: {
-              cacheName: 'home-api',
-              cacheableResponse: { statuses: [0, 200] },
-              expiration: { maxEntries: 50, maxAgeSeconds: 60 * 10 }
-            }
-          },
-          {
-            urlPattern: /\/api\/runtime-config(\?.*)?$/i,
-            handler: 'StaleWhileRevalidate',
-            options: {
-              cacheName: 'runtime-config',
-              cacheableResponse: { statuses: [0, 200] },
-              expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 }
-            }
-          },
-          {
-            urlPattern: /\/data\/homepage_cache\.json$/i,
-            handler: 'StaleWhileRevalidate',
-            options: {
-              cacheName: 'home-static-data',
-              cacheableResponse: { statuses: [0, 200] },
-              expiration: { maxEntries: 20, maxAgeSeconds: 60 * 60 * 6 }
-            }
-          },
-          {
-            urlPattern: /\/api\/db\/(movies|tv)\/(trending|search)(\?.*)?$/i,
-            handler: 'StaleWhileRevalidate',
-            options: {
-              cacheName: 'crdb-api',
-              cacheableResponse: { statuses: [0, 200] },
-              expiration: { maxEntries: 100, maxAgeSeconds: 60 * 5 }
-            }
-          }
-        ]
-      },
-      devOptions: { enabled: false }
-    }),
+    // VitePWA disabled - not needed for now
     // DISABLED: We use backend/sitemap_generator.py for rich dynamic sitemap
     /* sitemap({ ... }) removed to prevent conflict */
   ],
