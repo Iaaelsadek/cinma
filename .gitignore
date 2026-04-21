@@ -45,9 +45,12 @@ server/migration/data/
 # Expo (Android App) - Don't track entire app
 android_app/
 
-# Large JSON files (progress tracking)
+# Large JSON files (progress tracking & TMDB exports)
 scripts/ingestion/failed-pages-*.json
 scripts/ingestion/progress-*.json
+scripts/ingestion/error-log-*.json
+scripts/ingestion/movie_ids.json
+scripts/ingestion/tv_series_ids.json
 
 # Test outputs
 test_output.txt
