@@ -164,6 +164,7 @@ const allowedOrigins = [
   'http://localhost:5174',
   'https://cinma.online',
   'https://www.cinma.online',
+  'https://cinma.pages.dev',
   process.env.VITE_APP_URL
 ].filter(Boolean)
 
