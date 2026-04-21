@@ -503,6 +503,7 @@ async function main() {
             if (attempt === 2) {
               console.error(`Page ${p}:`, e.message);
               saveFailedPage('tvSeries', p, e.message);
+              success = true; // ✅ CRITICAL FIX: Skip failed page after 3 retries
             }
           }
         }
@@ -533,6 +534,7 @@ async function main() {
             if (attempt === 2) {
               console.error(`Page ${p}:`, e.message);
               saveFailedPage('animation', p, e.message);
+              success = true; // ✅ CRITICAL FIX: Skip failed page after 3 retries
             }
           }
         }
