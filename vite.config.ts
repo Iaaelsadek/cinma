@@ -25,6 +25,7 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         navigateFallback: '/index.html',
+        navigateFallbackDenylist: [/^\/api\//], // Don't cache API routes
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/image\.tmdb\.org\/.*/i,
@@ -129,39 +130,39 @@ export default defineConfig({
             if (id.match(/[\\/]node_modules[\\/](react|react-dom|scheduler|react-router|react-router-dom|@remix-run)[\\/]/)) {
               return 'vendor-react';
             }
-            
+
             // Animation and UI libraries
             if (id.includes('framer-motion')) {
               return 'vendor-ui';
             }
-            
+
             if (id.includes('swiper')) {
               return 'vendor-ui';
             }
-            
+
             if (id.includes('lucide-react')) {
               return 'vendor-ui';
             }
-            
+
             // Media
             if (id.includes('react-player')) {
               return 'vendor-media';
             }
-            
+
             if (id.includes('recharts')) {
               return 'vendor-media';
             }
-            
+
             // API and networking
             if (id.includes('@supabase') || id.includes('axios') || id.includes('ky')) {
               return 'vendor-api';
             }
-            
+
             // State and data management
             if (id.includes('@tanstack') || id.includes('zustand') || id.includes('zod')) {
               return 'vendor-data';
             }
-            
+
             // All other dependencies
             return 'vendor';
           }
