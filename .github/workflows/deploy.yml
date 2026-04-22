@@ -131,15 +131,15 @@ jobs:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_TMDB_API_KEY: ${{ secrets.VITE_TMDB_API_KEY }}
+          VITE_TMDB_API_KEY_2: ${{ secrets.VITE_TMDB_API_KEY_2 }}
           VITE_GROQ_API_KEY: ${{ secrets.VITE_GROQ_API_KEY }}
           VITE_SITE_URL: ${{ secrets.VITE_SITE_URL }}
-          VITE_GEMINI_API_KEY: ${{ secrets.VITE_GEMINI_API_KEY }}
           VITE_SITE_NAME: ${{ secrets.VITE_SITE_NAME }}
           VITE_DOMAIN: ${{ secrets.VITE_DOMAIN }}
           VITE_API_URL: ${{ secrets.VITE_API_URL }}
           VITE_API_BASE: ${{ secrets.VITE_API_BASE }}
           VITE_API_KEY: ${{ secrets.VITE_API_KEY }}
-          VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
+          VITE_PEXELS_API_KEY: ${{ secrets.VITE_PEXELS_API_KEY }}
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4

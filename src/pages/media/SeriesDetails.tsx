@@ -18,7 +18,7 @@ import {
   getEpisodes
 } from '../../services/contentAPI';
 import { getTVByIdDB, getSeasonsDB, getEpisodesDB } from '../../lib/db';
-import { translateTitleToArabic } from '../../lib/gemini';
+import { translateTitleToArabic } from '../../lib/groq';
 import { useAuth } from '../../hooks/useAuth';
 import { toast } from '../../lib/toast-manager';
 import { AddToListModal } from '../../components/features/social/AddToListModal';

@@ -6,7 +6,6 @@ const requiredEnvVars = [
 ] as const
 
 const optionalEnvVars = [
-  'VITE_GEMINI_API_KEY',
   'VITE_GROQ_API_KEY',
   'VITE_MISTRAL_API_KEY',
   'VITE_APK_DOWNLOAD_URL',

@@ -1,6 +1,5 @@
 import { getHistory, getContinueWatching } from '../lib/supabase'
 import { tmdb } from '../lib/tmdb'
-import { callGeminiWithFallback } from '../lib/gemini'
 import { logger } from '../lib/logger'
 
 export type RecommendationItem = {
@@ -49,7 +48,7 @@ async function mapWithConcurrency<T, R>(
   return out
 }
 
-/** Fallback: Use CockroachDB API when Gemini API is unavailable */
+/** Fallback: Use CockroachDB API when Groq API is unavailable */
 async function tmdbFallback(userId: string): Promise<RecommendationItem[]> {
   const seen = new Set<string>()
   const results: RecommendationItem[] = []
@@ -203,7 +202,7 @@ async function summarizeGenres(userId: string): Promise<string[]> {
 
 async function generateTitles(genres: string[], userId: string): Promise<string[]> {
   try {
-    // Get last 5 history items to give Gemini more context
+    // Get last 5 history items to give AI more context
     const lastItems = await getHistory(userId)
     const context = await mapWithConcurrency(lastItems.slice(0, 5), 3, async (h) => {
       try {
@@ -218,31 +217,31 @@ async function generateTitles(genres: string[], userId: string): Promise<string[
         return null
       }
     })
-    const validContext = context.filter(Boolean).join(', ')
+    const validContext = context.filter(Boolean)
 
-    const prompt = `
-      You are a cinematic recommendation expert for a user with these favorite genres: ${genres.join(', ')}.
-      Recent history: ${validContext || "No recent history available"}.
-      
-      Task: Provide a list of 8 unique movie or TV show titles that this user would love.
-      Requirements:
-      1. Mix well-known hits with hidden gems.
-      2. Ensure they fit the genres and history provided.
-      3. Return ONLY the titles, one per line. No numbers, no extra text.
-      `;
+    // Call Groq backend endpoint (llama-3.3-70b - 283ms avg, ultra-fast)
+    const res = await fetch('/api/groq-recommendations', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        genres,
+        history: validContext
+      })
+    })
 
-    const text = await callGeminiWithFallback(prompt, "recommendations");
+    if (!res.ok) throw new Error('ai_api_error')
 
-    if (!text) throw new Error('gemini_error');
+    const data = await res.json() as { titles?: string[] }
+    const titles = data.titles || []
 
-    const lines = text.split('\n')
-      .map((l: string) => l.replace(/^\d+\.\s*/, '').trim())
-      .filter(Boolean);
+    if (titles.length === 0) throw new Error('no_titles_returned')
 
-    return lines.slice(0, 8);
+    return titles.slice(0, 8)
   } catch (err: any) {
-    logger.warn('[Recommendations] Gemini failed, falling back to CockroachDB genres', err)
-    return [];
+    logger.warn('[Recommendations] AI failed, falling back to CockroachDB genres', err)
+    return []
   }
 }
 

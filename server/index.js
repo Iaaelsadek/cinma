@@ -50,8 +50,8 @@ const require = createRequire(import.meta.url)
 const swaggerDocument = require('./docs/swagger.json')
 
 const app = express()
-const PORT = process.env.PORT || 8080  // Koyeb default port
-const HOST = process.env.HOST || '0.0.0.0'  // Koyeb requirement
+const PORT = process.env.PORT || 3001  // Local: 3001, Koyeb will override
+const HOST = process.env.HOST || '0.0.0.0'  // Bind to all interfaces
 
 // Admin key for protected endpoints
 const ADMIN_KEY = process.env.ADMIN_KEY
@@ -278,6 +278,19 @@ app.post('/api/chat', csrfProtection, chatLimiter, async (req, res) => {
     res.status(500).json({ error: 'حدث خطأ في السيرفر' })
   }
 })
+
+// ✅ AI endpoints (optimized based on benchmarks)
+// Summary: Mistral open-mistral-nemo (1.5s, excellent Arabic)
+// Recommendations: Groq llama-3.3-70b (283ms, ultra-fast)
+app.post('/api/groq-summary', apiLimiter, asyncHandler(async (req, res) => {
+  const groqSummaryHandler = (await import('./api/groq-summary.js')).default
+  await groqSummaryHandler(req, res)
+}))
+
+app.post('/api/groq-recommendations', apiLimiter, asyncHandler(async (req, res) => {
+  const groqRecommendationsHandler = (await import('./api/groq-recommendations.js')).default
+  await groqRecommendationsHandler(req, res)
+}))
 
 // مسار الـ embed proxy (بدون rate limiting عشان الفيديوهات)
 app.get('/api/embed-proxy', asyncHandler(async (req, res) => {

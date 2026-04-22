@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Sparkles, Brain, Loader2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { generateAiInsights } from '../../../lib/gemini'
+import { generateAiInsights } from '../../../lib/groq'
 import { clsx } from 'clsx'
 
 interface AiInsightsProps {
@@ -51,7 +51,7 @@ export const AiInsights = ({ title, type, overview, className }: AiInsightsProps
             تحليل الذكاء الاصطناعي
             <Sparkles size={14} className="text-primary animate-pulse" />
           </h3>
-          <p className="text-[10px] text-zinc-400 uppercase tracking-widest">Insights powered by Gemini</p>
+          <p className="text-[10px] text-zinc-400 uppercase tracking-widest">Insights powered by Groq AI</p>
         </div>
       </div>
 
