@@ -216,7 +216,7 @@ export const CategoryPage = () => {
   return (
     <div className="min-h-screen bg-luxury-obsidian pb-8 max-w-[2400px] mx-auto px-4 md:px-12 w-full">
       <Helmet>
-        <title>{`${title} | cinma.online`}</title>
+        <title>{`${title} | 4Cima`}</title>
         <meta name="description" content={description} />
         <meta property="og:title" content={title} />
         <meta property="og:description" content={description} />

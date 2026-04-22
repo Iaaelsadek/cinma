@@ -64,7 +64,7 @@ export const ClassicsWithFilters: React.FC = () => {
         description={seoData.description}
         keywords={seoData.keywords?.join(', ')}
         type="video.movie"
-        image="https://cinma.online/og-classics.jpg"
+        image="https://4cima.com/og-classics.jpg"
       />
 
       {/* Desktop: filters with spacing for neon grid */}

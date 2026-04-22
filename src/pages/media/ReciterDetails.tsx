@@ -63,7 +63,7 @@ export const ReciterDetails = () => {
   return (
     <div className="min-h-screen bg-[#050505] pb-6 text-zinc-100">
       <Helmet>
-        <title>{reciter.name} | {lang === 'ar' ? 'سينما أونلاين' : 'Cinema Online'}</title>
+        <title>{reciter.name} | {lang === 'ar' ? 'فور سيما' : '4Cima'}</title>
       </Helmet>
 
       {/* Header */}

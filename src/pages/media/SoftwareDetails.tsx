@@ -84,7 +84,7 @@ export const SoftwareDetails = () => {
     }
 
     try {
-      const apiBase = import.meta.env.VITE_API_BASE || 'https://cooperative-nevsa-cinma-71a99c5c.koyeb.app'
+      const apiBase = import.meta.env.VITE_API_BASE || 'https://api.4cima.com'
       const response = await fetch(`${apiBase}/api/ratings`, {
         method: 'POST',
         headers: {
@@ -114,7 +114,7 @@ export const SoftwareDetails = () => {
     }
 
     try {
-      const apiBase = import.meta.env.VITE_API_BASE || 'https://cooperative-nevsa-cinma-71a99c5c.koyeb.app'
+      const apiBase = import.meta.env.VITE_API_BASE || 'https://api.4cima.com'
       const response = await fetch(`${apiBase}/api/reviews`, {
         method: 'POST',
         headers: {
@@ -327,7 +327,7 @@ export const SoftwareDetails = () => {
                     onDeleteReview={async (reviewId) => {
                       if (!user) return
                       try {
-                        const apiBase = import.meta.env.VITE_API_BASE || 'https://cooperative-nevsa-cinma-71a99c5c.koyeb.app'
+                        const apiBase = import.meta.env.VITE_API_BASE || 'https://api.4cima.com'
                         const response = await fetch(`${apiBase}/api/reviews/${reviewId}`, {
                           method: 'DELETE',
                           headers: {
@@ -347,7 +347,7 @@ export const SoftwareDetails = () => {
                         return
                       }
                       try {
-                        const apiBase = import.meta.env.VITE_API_BASE || 'https://cooperative-nevsa-cinma-71a99c5c.koyeb.app'
+                        const apiBase = import.meta.env.VITE_API_BASE || 'https://api.4cima.com'
                         const response = await fetch(`${apiBase}/api/reviews/${reviewId}/like`, {
                           method: 'POST',
                           headers: {

@@ -1,9 +1,9 @@
 /**
- * 🎬 نظام الحركات - اونلاين سينما
+ * 🎬 نظام الحركات - فور سيما
  * Animation System with Framer Motion
  * 
  * @description نظام حركات احترافي باستخدام Framer Motion
- * @author Online Cinema Team
+ * @author 4Cima Team
  * @version 1.0.0
  */
 

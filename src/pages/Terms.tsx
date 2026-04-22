@@ -9,7 +9,7 @@ export const Terms = () => {
   return (
     <>
       <Helmet>
-        <title>{lang === 'ar' ? 'الشروط والأحكام - Cinema.online' : 'Terms of Service - Cinema.online'}</title>
+        <title>{lang === 'ar' ? 'الشروط والأحكام - 4Cima' : 'Terms of Service - 4Cima'}</title>
       </Helmet>
 
       <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950">
@@ -50,7 +50,7 @@ export const Terms = () => {
                   </div>
                   <div className="space-y-4 text-zinc-300 leading-relaxed">
                     <p>
-                      باستخدامك لموقع Cinema.online، فإنك توافق على الالتزام بهذه الشروط والأحكام وجميع القوانين واللوائح المعمول بها. 
+                      باستخدامك لموقع 4Cima، فإنك توافق على الالتزام بهذه الشروط والأحكام وجميع القوانين واللوائح المعمول بها. 
                       إذا كنت لا توافق على أي من هذه الشروط، يرجى عدم استخدام الموقع.
                     </p>
                     <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
@@ -69,7 +69,7 @@ export const Terms = () => {
                   </div>
                   <div className="space-y-4 text-zinc-300 leading-relaxed">
                     <p>
-                      يوفر Cinema.online معلومات عن الأفلام والمسلسلات والألعاب والبرامج. جميع المحتويات المعروضة هي لأغراض إعلامية فقط.
+                      يوفر 4Cima معلومات عن الأفلام والمسلسلات والألعاب والبرامج. جميع المحتويات المعروضة هي لأغراض إعلامية فقط.
                     </p>
                     <div className="grid md:grid-cols-2 gap-4 mt-4">
                       <div className="bg-slate-800/50 p-4 rounded-lg">
@@ -111,7 +111,7 @@ export const Terms = () => {
                       جميع المحتويات والعلامات التجارية المعروضة على الموقع هي ملك لأصحابها. نحن لا نستضيف أي محتوى محمي بحقوق الطبع والنشر.
                     </p>
                     <p>
-                      Cinema.online يعمل كدليل إعلامي فقط، ويوفر روابط لمحتوى متاح بشكل عام على الإنترنت من مصادر خارجية.
+                      4Cima يعمل كدليل إعلامي فقط، ويوفر روابط لمحتوى متاح بشكل عام على الإنترنت من مصادر خارجية.
                     </p>
                   </div>
                 </section>
@@ -175,7 +175,7 @@ export const Terms = () => {
                   </div>
                   <div className="space-y-4 text-zinc-300 leading-relaxed">
                     <p>
-                      عند إنشاء حساب على Cinema.online، أنت مسؤول عن:
+                      عند إنشاء حساب على 4Cima، أنت مسؤول عن:
                     </p>
                     <div className="bg-slate-800/50 p-4 rounded-lg space-y-2">
                       <p className="text-sm">✓ الحفاظ على سرية كلمة المرور الخاصة بك</p>
@@ -212,7 +212,7 @@ export const Terms = () => {
                   </div>
                   <div className="space-y-4 text-zinc-300 leading-relaxed">
                     <p>
-                      By using Cinema.online, you agree to be bound by these Terms of Service and all applicable laws and regulations. 
+                      By using 4Cima, you agree to be bound by these Terms of Service and all applicable laws and regulations. 
                       If you do not agree to these terms, please do not use the website.
                     </p>
                     <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
@@ -230,7 +230,7 @@ export const Terms = () => {
                   </div>
                   <div className="space-y-4 text-zinc-300 leading-relaxed">
                     <p>
-                      Cinema.online provides information about movies, TV series, games, and software. All content displayed is for informational purposes only.
+                      4Cima provides information about movies, TV series, games, and software. All content displayed is for informational purposes only.
                     </p>
                     <div className="grid md:grid-cols-2 gap-4 mt-4">
                       <div className="bg-slate-800/50 p-4 rounded-lg">
@@ -271,7 +271,7 @@ export const Terms = () => {
                       All content and trademarks displayed on the website belong to their respective owners. We do not host any copyrighted content.
                     </p>
                     <p>
-                      Cinema.online operates as an informational directory only, providing links to publicly available content on the internet from external sources.
+                      4Cima operates as an informational directory only, providing links to publicly available content on the internet from external sources.
                     </p>
                   </div>
                 </section>
@@ -332,7 +332,7 @@ export const Terms = () => {
                   </div>
                   <div className="space-y-4 text-zinc-300 leading-relaxed">
                     <p>
-                      When creating an account on Cinema.online, you are responsible for:
+                      When creating an account on 4Cima, you are responsible for:
                     </p>
                     <div className="bg-slate-800/50 p-4 rounded-lg space-y-2">
                       <p className="text-sm">✓ Maintaining the confidentiality of your password</p>

@@ -1,9 +1,9 @@
 /**
- * 🗄️ أنواع قاعدة البيانات - اونلاين سينما
+ * 🗄️ أنواع قاعدة البيانات - فور سيما
  * Database Types (Unified between Website & App)
  * 
  * @description أنواع موحدة لجميع جداول Supabase
- * @author Online Cinema Team
+ * @author 4Cima Team
  * @version 2.0.0
  * @updated 2026-03-15
  */

@@ -34,7 +34,7 @@ import dotenv from 'dotenv';
 import { readFileSync, writeFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { translateContent } from '../services/translation-service.js';
+import { translateContent } from '../../services/translation-service.js';
 import pLimit from 'p-limit';
 
 dotenv.config();

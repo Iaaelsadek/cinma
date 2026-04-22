@@ -1,8 +1,8 @@
 /**
- * 🔧 Ingestion API Service - Cinema.online Complete Rebuild
+ * 🔧 Ingestion API Service - 4Cima Complete Rebuild
  * 
  * @description Admin operations for ingestion pipeline management
- * @author Cinema.online Team
+ * @author 4Cima Team
  * 
  * ⚠️ CRITICAL: Connects to new Express server on Koyeb
  * ⚠️ All ingestion operations use CockroachDB via Express API
@@ -12,7 +12,7 @@ import { CONFIG } from '../lib/constants';
 import { supabase } from '../lib/supabase';
 
 // API Base URL - points to new Express server
-const API_BASE = CONFIG.API_BASE || import.meta.env.VITE_API_URL || 'https://cooperative-nevsa-cinma-71a99c5c.koyeb.app';
+const API_BASE = CONFIG.API_BASE || import.meta.env.VITE_API_URL || 'https://api.4cima.com';
 
 // API Key for authentication
 const API_KEY = import.meta.env.VITE_API_KEY || '';

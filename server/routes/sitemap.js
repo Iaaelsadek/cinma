@@ -10,7 +10,7 @@ import pool from '../../src/db/pool.js';
 
 const router = express.Router();
 
-const SITE_URL = 'https://cinma.online';
+const SITE_URL = 'https://4cima.com';
 
 /**
  * Helper: Generate XML sitemap

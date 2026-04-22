@@ -1,9 +1,9 @@
 /**
- * 🎬 خدمة روابط التشغيل - اونلاين سينما
+ * 🎬 خدمة روابط التشغيل - فور سيما
  * Stream Service (Unified with Android App)
  * 
  * @description خدمة موحدة 100% لجلب روابط التشغيل من السيرفرات المجانية
- * @author Online Cinema Team
+ * @author 4Cima Team
  * @version 1.0.0
  */
 

@@ -41,8 +41,8 @@ export const PlaysPage = ({ category }: { category?: string } = {}) => {
   }
 
   const seoTitle = activeCategory 
-    ? `${getCategoryTitle(activeCategory)} - المسرحيات | سينما أونلاين`
-    : "المسرحيات - سينما أونلاين"
+    ? `${getCategoryTitle(activeCategory)} - المسرحيات | فور سيما`
+    : "المسرحيات - فور سيما"
   
   const seoDescription = activeCategory
     ? `شاهد أفضل ${getCategoryTitle(activeCategory)} بجودة عالية وبدون إعلانات مزعجة.`
@@ -153,7 +153,7 @@ export const PlaysPage = ({ category }: { category?: string } = {}) => {
         title={seoTitle}
         description={seoDescription}
         type="website"
-        image="https://cinma.online/og-plays.jpg"
+        image="https://4cima.com/og-plays.jpg"
       />
 
       <QuantumHero items={heroItems} />

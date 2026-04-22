@@ -32,7 +32,7 @@ export const ContentHealth = () => {
     setLoading(true)
     try {
       // 1. Get all broken reports from CockroachDB API instead of Supabase
-      const API_BASE = import.meta.env.VITE_API_BASE || import.meta.env.VITE_API_URL || 'https://cooperative-nevsa-cinma-71a99c5c.koyeb.app'
+      const API_BASE = import.meta.env.VITE_API_BASE || import.meta.env.VITE_API_URL || 'https://api.4cima.com'
       const linkChecksResponse = await fetch(`${API_BASE}/api/link-checks`)
       if (!linkChecksResponse.ok) throw new Error('Failed to fetch link checks')
 
@@ -173,7 +173,7 @@ export const ContentHealth = () => {
     if (!confirm('هل أنت متأكد من مسح جميع بلاغات هذا العمل؟')) return
 
     // Delete from CockroachDB API instead of Supabase
-    const API_BASE = import.meta.env.VITE_API_BASE || import.meta.env.VITE_API_URL || 'https://cooperative-nevsa-cinma-71a99c5c.koyeb.app'
+    const API_BASE = import.meta.env.VITE_API_BASE || import.meta.env.VITE_API_URL || 'https://api.4cima.com'
     const deleteResponse = await fetch(`${API_BASE}/api/link-checks?content_id=${tmdbId}&content_type=${type}`, {
       method: 'DELETE'
     })
@@ -222,7 +222,7 @@ export const ContentHealth = () => {
       if (!confirm(`هل تريد مسح بلاغات ${selectedItems.length} عمل؟`)) return
 
       // Delete from CockroachDB API instead of Supabase
-      const API_BASE = import.meta.env.VITE_API_BASE || import.meta.env.VITE_API_URL || 'https://cooperative-nevsa-cinma-71a99c5c.koyeb.app'
+      const API_BASE = import.meta.env.VITE_API_BASE || import.meta.env.VITE_API_URL || 'https://api.4cima.com'
       const results = await Promise.all(
         selectedItems.map(item =>
           fetch(`${API_BASE}/api/link-checks?content_id=${item.tmdb_id}&content_type=${item.type}`, {

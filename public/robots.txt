@@ -4,4 +4,4 @@ Disallow: /admin
 Disallow: /api
 Disallow: /auth
 
-Sitemap: https://cinma.online/sitemap.xml
+Sitemap: https://4cima.com/sitemap.xml

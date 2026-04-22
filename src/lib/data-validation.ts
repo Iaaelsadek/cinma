@@ -1,9 +1,9 @@
 /**
- * 🔍 Data Validation Utilities - اونلاين سينما
+ * 🔍 Data Validation Utilities - فور سيما
  * Data Validation & Integrity Checks
  * 
  * @description Validates content data integrity and logs violations
- * @author Online Cinema Team
+ * @author 4Cima Team
  * @version 1.0.0
  */
 

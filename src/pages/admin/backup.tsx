@@ -66,7 +66,7 @@ const AdminBackupPage = () => {
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `cinma-online-backup-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.json`
+      a.download = `4cima-backup-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.json`
       a.click()
       URL.revokeObjectURL(url)
       setLastMeta({ exportedAt: body?.exportedAt, tableCount: body?.tableCount })

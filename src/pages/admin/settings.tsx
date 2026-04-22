@@ -4,7 +4,7 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import * as Switch from '@radix-ui/react-switch'
 import { toast } from '../../lib/toast-manager'
 
-const API_BASE = import.meta.env.VITE_API_URL || 'https://cooperative-nevsa-cinma-71a99c5c.koyeb.app'
+const API_BASE = import.meta.env.VITE_API_URL || 'https://api.4cima.com'
 
 type SettingsForm = {
   site_name: string
@@ -18,8 +18,8 @@ type SettingsForm = {
 }
 
 const DEFAULTS: SettingsForm = {
-  site_name: 'Cinema Online',
-  logo_url: 'https://cinma.online/logo.png',
+  site_name: '4Cima',
+  logo_url: 'https://4cima.com/logo.png',
   seo_title: 'Best Movies & Series',
   seo_desc: 'Watch the latest movies and series online in high quality.',
   seo_keywords: 'movies, series, cinema, online, watch',

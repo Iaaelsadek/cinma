@@ -279,7 +279,7 @@ export const WatchVideo = () => {
   return (
     <div className="min-h-screen bg-black text-white">
       <Helmet>
-        <title>{title} - Cinema Online</title>
+        <title>{title} - 4Cima</title>
         <meta name="description" content={description.slice(0, 160)} />
         <meta property="og:type" content="video.other" />
         <meta property="og:url" content={window.location.href} />

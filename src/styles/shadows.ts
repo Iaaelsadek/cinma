@@ -1,9 +1,9 @@
 /**
- * 🌑 نظام الظلال - اونلاين سينما
+ * 🌑 نظام الظلال - فور سيما
  * Elevation System with Shadows
  * 
  * @description نظام ظلال احترافي مستوحى من Material Design
- * @author Online Cinema Team
+ * @author 4Cima Team
  * @version 1.0.0
  */
 

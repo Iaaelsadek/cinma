@@ -212,34 +212,49 @@ async function fetchTMDB(endpoint, params = {}, retry = 0) {
 // ══════════════════════════════════════════════
 async function downloadDailyExport() {
     const today = new Date();
-    const mm = String(today.getMonth() + 1).padStart(2, '0');
-    const dd = String(today.getDate()).padStart(2, '0');
-    const yyyy = today.getFullYear();
+    
+    // Try today first, then yesterday if today fails
+    for (let daysAgo = 0; daysAgo <= 1; daysAgo++) {
+        const date = new Date(today);
+        date.setDate(date.getDate() - daysAgo);
+        
+        const mm = String(date.getMonth() + 1).padStart(2, '0');
+        const dd = String(date.getDate()).padStart(2, '0');
+        const yyyy = date.getFullYear();
 
-    const filename = `movie_ids_${mm}_${dd}_${yyyy}.json.gz`;
-    const url = `${CONFIG.EXPORT_URL}/${filename}`;
-    const outputPath = join(__dirname, 'movie_ids.json');
+        const filename = `movie_ids_${mm}_${dd}_${yyyy}.json.gz`;
+        const url = `${CONFIG.EXPORT_URL}/${filename}`;
+        const outputPath = join(__dirname, 'movie_ids.json');
 
-    console.log(`📥 Downloading daily export: ${url}`);
+        console.log(`📥 Downloading daily export (${daysAgo === 0 ? 'today' : 'yesterday'}): ${url}`);
 
-    try {
-        const response = await fetch(url);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                if (daysAgo === 0) {
+                    console.log(`   ⚠️ Today's export not available yet, trying yesterday...`);
+                    continue;
+                }
+                throw new Error(`HTTP ${response.status}`);
+            }
 
-        const gunzip = createGunzip();
-        const output = createWriteStream(outputPath);
+            const gunzip = createGunzip();
+            const output = createWriteStream(outputPath);
 
-        await pipeline(
-            Readable.fromWeb(response.body),
-            gunzip,
-            output
-        );
+            await pipeline(
+                Readable.fromWeb(response.body),
+                gunzip,
+                output
+            );
 
-        console.log(`✅ Downloaded and extracted to: ${outputPath}`);
-        return outputPath;
-    } catch (e) {
-        console.error(`❌ Failed to download daily export: ${e.message}`);
-        throw e;
+            console.log(`✅ Downloaded and extracted to: ${outputPath}`);
+            return outputPath;
+        } catch (e) {
+            if (daysAgo === 1) {
+                console.error(`❌ Failed to download daily export: ${e.message}`);
+                throw e;
+            }
+        }
     }
 }
 
@@ -396,16 +411,31 @@ async function insertMovie(movie) {
     }
 
     const englishTitle = trans.title_en || (movie.original_language === 'en' ? movie.original_title : null) || movie.title;
-    const slug = generateSlug(englishTitle);
-    if (!slug) return;
+    let slug = generateSlug(englishTitle);
+    if (!slug || slug.length < 2) {
+        slug = `movie-${movie.id}`;
+    }
+
+    // ✅ CRITICAL: Ensure slug is NEVER numeric-only
+    if (/^\d+$/.test(slug)) {
+        slug = `movie-${slug}`;
+    }
 
     let finalSlug = slug;
     const taken = await pool.query('SELECT id FROM movies WHERE slug=$1 AND id!=$2', [slug, movie.id]);
     if (taken.rows.length > 0) {
         const year = movie.release_date ? new Date(movie.release_date).getFullYear() : Math.random().toString(36).slice(2, 6);
         finalSlug = `${slug}-${year}`;
+        
+        // ✅ CRITICAL: Check again if slug with year is numeric-only
+        if (/^\d+$/.test(finalSlug)) {
+            finalSlug = `movie-${finalSlug}`;
+        }
+        
         const taken2 = await pool.query('SELECT id FROM movies WHERE slug=$1 AND id!=$2', [finalSlug, movie.id]);
-        if (taken2.rows.length > 0) finalSlug = `${slug}-${Math.random().toString(36).slice(2, 8)}`;
+        if (taken2.rows.length > 0) {
+            finalSlug = `${slug}-${Math.random().toString(36).slice(2, 8)}`;
+        }
     }
 
     const genres = (movie.genres || []).map(g => g.name);

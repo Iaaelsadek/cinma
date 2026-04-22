@@ -199,7 +199,7 @@ export const Home = () => {
     staleTime: 300000
   })
 
-  const description = lang === 'ar' ? 'منصة أونلاين سينما - تجربة المستقبل' : 'Online Cinema - The Future Experience'
+  const description = lang === 'ar' ? 'منصة فور سيما - تجربة المستقبل' : '4Cima - The Future Experience'
 
   // Memoize all arrays to prevent reference changes on every render
   const heroItems = useMemo(
@@ -226,7 +226,7 @@ export const Home = () => {
   return (
     <div className="min-h-screen text-white overflow-x-hidden selection:bg-cyan-500 selection:text-black">
       <SeoHead
-        title={lang === 'ar' ? 'أونلاين سينما - منصة الأفلام والمسلسلات الأولى' : 'Online Cinema - #1 Arabic Streaming Platform'}
+        title={lang === 'ar' ? 'فور سيما - منصة الأفلام والمسلسلات الأولى' : '4Cima - #1 Arabic Streaming Platform'}
         description={description}
         keywords={HOME_KEYWORDS}
       />

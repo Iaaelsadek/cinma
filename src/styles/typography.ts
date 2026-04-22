@@ -1,9 +1,9 @@
 /**
- * 📝 نظام الطباعة - اونلاين سينما
+ * 📝 نظام الطباعة - فور سيما
  * Professional Typography System
  * 
  * @description نظام طباعة احترافي يدعم العربية والإنجليزية
- * @author Online Cinema Team
+ * @author 4Cima Team
  * @version 1.0.0
  */
 

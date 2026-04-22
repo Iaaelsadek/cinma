@@ -24,7 +24,7 @@ export const PlaysWithFilters: React.FC<PlaysWithFiltersProps> = ({ category }) 
         description={seoData.description}
         keywords={seoData.keywords?.join(', ')}
         type="website"
-        image="https://cinma.online/og-plays.jpg"
+        image="https://4cima.com/og-plays.jpg"
       />
       <Suspense fallback={<div className="min-h-screen bg-[#0f0f0f] p-8"><SkeletonGrid count={12} /></div>}>
         <PlaysPage category={category} />

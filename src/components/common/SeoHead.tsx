@@ -19,7 +19,7 @@ interface SeoHeadProps {
 export const SeoHead = ({ 
   title, 
   description = 'أكبر منصة عربية لمشاهدة الأفلام والمسلسلات الأجنبية والعربية بجودة عالية. مكتبة ضخمة، سيرفرات سريعة، وبدون إعلانات مزعجة.',
-  image = 'https://placehold.co/1200x630/000000/FFFFFF/png?text=Online+Cinema',
+  image = 'https://placehold.co/1200x630/000000/FFFFFF/png?text=4Cima',
   type = 'website',
   rating,
   ratingCount,
@@ -31,12 +31,12 @@ export const SeoHead = ({
   noIndex = false
 }: SeoHeadProps) => {
   const { pathname } = useLocation()
-  const siteUrl = 'https://cinma.online'
+  const siteUrl = 'https://4cima.com'
   const normalizedPath = pathname === '/' ? '' : pathname.replace(/\/+$/, '')
   const url = normalizedPath
     ? `${siteUrl}${normalizedPath.startsWith('/') ? normalizedPath : `/${normalizedPath}`}`
     : siteUrl
-  const fullTitle = `${title} | أونلاين سينما`
+  const fullTitle = `${title} | فور سيما`
   const robots = noIndex ? 'noindex,follow' : 'index,follow'
 
   // Breadcrumb Schema
@@ -55,12 +55,12 @@ export const SeoHead = ({
   const organizationSchema = {
     "@context": "https://schema.org",
     "@type": "Organization",
-    "name": "Online Cinema",
+    "name": "4Cima",
     "url": siteUrl,
     "logo": `${siteUrl}/logo.svg`,
     "sameAs": [
-      "https://twitter.com/cinemaonline",
-      "https://facebook.com/cinemaonline"
+      "https://twitter.com/4cima",
+      "https://facebook.com/4cima"
     ]
   }
 
@@ -103,7 +103,7 @@ export const SeoHead = ({
     schema || contentSchema
   ].filter(Boolean)
 
-  const fullUrl = `https://cinma.online${pathname}`
+  const fullUrl = `https://4cima.com${pathname}`
 
   return (
     <Helmet>
@@ -119,7 +119,7 @@ export const SeoHead = ({
       <meta property="og:url" content={fullUrl} />
       <meta property="og:type" content={type} />
       <meta property="og:locale" content="ar_SA" />
-      <meta property="og:site_name" content="Cinma Online" />
+      <meta property="og:site_name" content="4Cima" />
 
       {/* Twitter */}
       <meta name="twitter:card" content="summary_large_image" />

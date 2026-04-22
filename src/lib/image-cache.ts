@@ -1,9 +1,9 @@
 /**
- * 🗄️ Image Cache - Cinema Online
+ * 🗄️ Image Cache - 4Cima
  * In-memory cache for image load status
  * 
  * @description Tracks image loading states to prevent redundant requests
- * @author Cinema Online Team
+ * @author 4Cima Team
  */
 
 type ImageStatus = 'loading' | 'success' | 'error';

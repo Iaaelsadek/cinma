@@ -135,7 +135,8 @@ export function generateWatchUrl(
     return `/watch/movie/${item}`
   }
 
-  const slug = item.slug || ''
+  // CRITICAL: Always use slug, fallback to id only if slug is missing
+  const slug = item.slug && item.slug.trim() !== '' ? item.slug : String(item.id || '')
   const contentType = (item.media_type || item.type || 'movie')
 
   // Software goes to /software/:slug
@@ -161,14 +162,15 @@ export function generateWatchUrl(
  * Generate content URL (detail page)
  */
 export function generateContentUrl(
-  item: { slug?: string | null; media_type?: string; type?: string } | string
+  item: { id?: number | string; slug?: string | null; media_type?: string; type?: string } | string
 ): string {
   // Handle string input
   if (typeof item === 'string') {
     return `/movie/${item}`
   }
 
-  const slug = item.slug || ''
+  // CRITICAL: Always use slug, fallback to id only if slug is missing
+  const slug = item.slug && item.slug.trim() !== '' ? item.slug : String(item.id || '')
   const contentType = (item.media_type || item.type || 'movie')
 
   // Map content types to correct URLs

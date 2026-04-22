@@ -168,28 +168,22 @@ export const QuantumNavbar = memo(() => {
           {/* Logo */}
           <PrefetchLink to="/" target="_self" className="group flex items-center gap-2 shrink-0">
             <div className="relative flex items-center justify-center">
-              <div className="relative z-10 font-black text-3xl tracking-tighter uppercase group-hover:scale-105 transition-transform duration-300 flex items-center gap-1">
+              <div className="relative z-10 font-black text-3xl tracking-tighter lowercase group-hover:scale-105 transition-transform duration-300 flex items-center gap-0.5" dir="ltr">
                 <span
-                  className="text-transparent bg-clip-text bg-gradient-to-r from-white via-white to-white/50 text-glitch-sm"
-                  data-text="Cinema"
+                  className="text-red-600 text-4xl animate-wiggle drop-shadow-[0_0_12px_rgba(220,38,38,0.9)]"
+                  style={{ 
+                    display: 'inline-block',
+                    transformOrigin: 'center'
+                  }}
                 >
-                  Cinema
+                  4
                 </span>
-                <span className="text-red-600 animate-pulse text-4xl mb-1 leading-[0] drop-shadow-[0_0_8px_rgba(220,38,38,0.8)]">.</span>
-                <div className="flex" dir="ltr">
-                  <span className="text-cyan-400 animate-neon-flicker-cyan drop-shadow-[0_0_10px_rgba(34,211,238,0.8)]">
-                    On
-                  </span>
-                  <span className="text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.6)]">
-                    li
-                  </span>
-                  <span className="text-cyan-400 animate-neon-flicker-cyan-alt drop-shadow-[0_0_10px_rgba(34,211,238,0.8)]">
-                    n
-                  </span>
-                  <span className="text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.6)]">
-                    e
-                  </span>
-                </div>
+                <span className="text-cyan-400 animate-neon-flicker-cyan drop-shadow-[0_0_10px_rgba(34,211,238,0.8)]">
+                  cima
+                </span>
+                <span className="text-white/70 text-2xl animate-pulse-white drop-shadow-[0_0_6px_rgba(255,255,255,0.4)]">
+                  .com
+                </span>
               </div>
               <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-purple-500/10 to-pink-500/10 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-full" />
             </div>

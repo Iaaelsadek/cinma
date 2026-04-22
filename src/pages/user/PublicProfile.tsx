@@ -100,7 +100,7 @@ export const PublicProfile = () => {
   return (
     <div className="max-w-[2400px] mx-auto px-4 md:px-12 w-full space-y-8 pt-24 pb-20">
       <Helmet>
-        <title>{profile.username} (@{profile.username}) - Cinema Online</title>
+        <title>{profile.username} (@{profile.username}) - 4Cima</title>
       </Helmet>
 
       {/* Profile Header */}

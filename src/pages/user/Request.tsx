@@ -226,7 +226,7 @@ export const RequestPage = () => {
   return (
     <div className="min-h-screen bg-[#050505] px-4 py-12 md:py-16">
       <Helmet>
-        <title>{lang === 'ar' ? 'طلب محتوى | سينما أونلاين' : 'Request Content | Cinema Online'}</title>
+        <title>{lang === 'ar' ? 'طلب محتوى | فور سيما' : 'Request Content | 4Cima'}</title>
       </Helmet>
 
       <div className="mx-auto max-w-lg">

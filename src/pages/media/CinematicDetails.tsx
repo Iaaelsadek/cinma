@@ -240,7 +240,7 @@ const CinematicDetails = () => {
         '@type': 'WatchAction',
         target: {
           '@type': 'EntryPoint',
-          urlTemplate: `https://cinma.online/watch/${data.id}?type=${type}`
+          urlTemplate: `https://4cima.com/watch/${data.id}?type=${type}`
         }
       }
     }

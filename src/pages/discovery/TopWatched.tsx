@@ -79,7 +79,7 @@ export const TopWatched = () => {
   return (
     <div className="min-h-screen text-white pb-4 max-w-[2400px] mx-auto px-4 md:px-12 w-full">
       <Helmet>
-        <title>{lang === 'ar' ? 'الأكثر مشاهدة - سينما أونلاين' : 'Top Watched - Cinema Online'}</title>
+        <title>{lang === 'ar' ? 'الأكثر مشاهدة - فور سيما' : 'Top Watched - 4Cima'}</title>
       </Helmet>
 
       <QuantumHero items={heroItems} />

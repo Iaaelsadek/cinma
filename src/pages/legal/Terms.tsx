@@ -5,13 +5,13 @@ export const Terms = () => {
   const { lang } = useLang()
   const title = lang === 'ar' ? 'الشروط والأحكام' : 'Terms & Conditions'
   const description = lang === 'ar'
-    ? 'الشروط التي تنظّم استخدام منصة أونلاين سينما ومحتواها.'
-    : 'The terms that govern your use of Online Cinema and its content.'
+    ? 'الشروط التي تنظّم استخدام منصة فور سيما ومحتواها.'
+    : 'The terms that govern your use of 4Cima and its content.'
 
   return (
     <div className="min-h-screen bg-luxury-obsidian px-4 md:px-12 pt-24 pb-12 text-white">
       <Helmet>
-        <title>{`${title} | cinma.online`}</title>
+        <title>{`${title} | 4Cima`}</title>
         <meta name="description" content={description} />
         <meta property="og:title" content={title} />
         <meta property="og:description" content={description} />

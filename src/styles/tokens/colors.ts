@@ -1,6 +1,6 @@
 /**
  * 🎨 Color Tokens - LUMEN Design System
- * Cinema Online - Design Token System
+ * 4Cima - Design Token System
  * 
  * @description Semantic color tokens for the LUMEN design system
  * @version 1.0.0

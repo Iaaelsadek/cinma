@@ -1,6 +1,6 @@
 /**
  * 🌑 Shadow Tokens - LUMEN Design System
- * Cinema Online - Design Token System
+ * 4Cima - Design Token System
  * 
  * @description Elevation levels and shadow tokens with gold glow effects
  * @version 1.0.0

@@ -24,8 +24,8 @@ export const SummariesPage = () => {
 
   // SEO metadata
   const seoTitle = lang === 'ar' 
-    ? 'ملخصات الأفلام - مراجعات سريعة | سينما أونلاين'
-    : 'Movie Summaries - Quick Reviews | Cinema Online'
+    ? 'ملخصات الأفلام - مراجعات سريعة | فور سيما'
+    : 'Movie Summaries - Quick Reviews | 4Cima'
   
   const seoDescription = lang === 'ar'
     ? 'شاهد ملخصات سريعة ومراجعات شاملة لأحدث الأفلام والمسلسلات.'

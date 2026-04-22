@@ -1,9 +1,9 @@
 /**
- * 🖼️ Image Utilities - Cinema Online
+ * 🖼️ Image Utilities - 4Cima
  * Utility functions for image URL validation and processing
  * 
  * @description Provides URL validation, sanitization, and fallback chain construction
- * @author Cinema Online Team
+ * @author 4Cima Team
  */
 
 /**

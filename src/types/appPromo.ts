@@ -3,7 +3,7 @@
  * أنواع البيانات لمكون App Promo Toast
  * 
  * @description تعريفات TypeScript لمكون التوست الترويجي
- * @author Online Cinema Team
+ * @author 4Cima Team
  * @version 1.0.0
  */
 

@@ -2,7 +2,7 @@
  * 🔔 Toast Manager - منع تكرار الإشعارات
  * 
  * @description نظام مركزي لإدارة الإشعارات ومنع التكرار
- * @author Online Cinema Team
+ * @author 4Cima Team
  */
 
 import { toast as sonnerToast } from 'sonner'

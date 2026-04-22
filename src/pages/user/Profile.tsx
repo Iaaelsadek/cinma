@@ -231,7 +231,7 @@ export const Profile = () => {
     try {
       const { data, error } = await supabase.auth.mfa.enroll({
         factorType: 'totp',
-        issuer: 'Cinema Online',
+        issuer: '4Cima',
         friendlyName: username || 'User'
       })
       if (error) throw error

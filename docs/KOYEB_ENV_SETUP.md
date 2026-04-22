@@ -110,7 +110,7 @@ Value: 0.0.0.0
 
 **يجب أن تشوف:**
 ```
-🚀 Cinema.online Server running on 0.0.0.0:8080
+🚀 4Cima Server running on 0.0.0.0:8080
 📚 API Docs: http://0.0.0.0:8080/api-docs
 🗄️  Database: CockroachDB (Primary Content)
 🔐 Auth: Supabase (User Data Only)

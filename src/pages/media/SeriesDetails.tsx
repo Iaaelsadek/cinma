@@ -264,7 +264,7 @@ const SeriesDetails = ({ slug: propSlug }: SeriesDetailsProps = {}) => {
       }
 
       try {
-        const apiBase = import.meta.env.VITE_API_BASE || 'https://cooperative-nevsa-cinma-71a99c5c.koyeb.app';
+        const apiBase = import.meta.env.VITE_API_BASE || 'https://api.4cima.com';
         const response = await fetch(
           `${apiBase}/api/ratings/user?external_id=${tvId}&content_type=tv`,
           {
@@ -300,7 +300,7 @@ const SeriesDetails = ({ slug: propSlug }: SeriesDetailsProps = {}) => {
     }
 
     try {
-      const apiBase = import.meta.env.VITE_API_BASE || 'https://cooperative-nevsa-cinma-71a99c5c.koyeb.app'
+      const apiBase = import.meta.env.VITE_API_BASE || 'https://api.4cima.com'
       const response = await fetch(`${apiBase}/api/ratings`, {
         method: 'POST',
         headers: {
@@ -330,7 +330,7 @@ const SeriesDetails = ({ slug: propSlug }: SeriesDetailsProps = {}) => {
     }
 
     try {
-      const apiBase = import.meta.env.VITE_API_BASE || 'https://cooperative-nevsa-cinma-71a99c5c.koyeb.app'
+      const apiBase = import.meta.env.VITE_API_BASE || 'https://api.4cima.com'
       const response = await fetch(`${apiBase}/api/reviews`, {
         method: 'POST',
         headers: {
@@ -383,7 +383,7 @@ const SeriesDetails = ({ slug: propSlug }: SeriesDetailsProps = {}) => {
         '@type': 'WatchAction',
         target: {
           '@type': 'EntryPoint',
-          urlTemplate: `https://cinma.online/series/${series.data?.id ?? ''}`,
+          urlTemplate: `https://4cima.com/series/${series.data?.id ?? ''}`,
         },
       },
     };

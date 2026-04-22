@@ -31,7 +31,7 @@ export const supabase = createClient(sbUrl, sbKey, {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
-    storageKey: 'cinema-online-auth-v3' // مفتاح فريد لضمان عدم تعارض الجلسات
+    storageKey: '4cima-auth-v3' // مفتاح فريد لضمان عدم تعارض الجلسات
   },
   db: {
     schema: 'public'

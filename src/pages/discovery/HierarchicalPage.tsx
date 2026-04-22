@@ -233,7 +233,7 @@ function generateTitle(
   parts.push(typeLabel)
 
   const title = parts.join(' ')
-  return `${title} | سينما أونلاين`
+  return `${title} | فور سيما`
 }
 
 /**
@@ -253,13 +253,13 @@ function generateDescription(
     if (preset) parts.push(preset)
     if (genre) parts.push(genre)
     if (year) parts.push(`من عام ${year}`)
-    parts.push('على سينما أونلاين')
+    parts.push('على فور سيما')
   } else {
     parts.push('Watch')
     if (preset) parts.push(preset)
     if (genre) parts.push(genre)
     if (year) parts.push(`from ${year}`)
-    parts.push('on Cinema Online')
+    parts.push('on 4Cima')
   }
 
   return parts.join(' ')

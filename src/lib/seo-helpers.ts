@@ -27,22 +27,22 @@ export function truncateDescription(text: string, maxLength: number = 160): stri
 export function generatePlaysSeoData(category?: string): SeoData {
   const categoryMap: Record<string, { title: string; description: string; keywords: string[] }> = {
     'adel-emam': {
-      title: 'مسرحيات عادل إمام - سينما أونلاين',
+      title: 'مسرحيات عادل إمام - فور سيما',
       description: 'استمتع بمشاهدة أفضل مسرحيات عادل إمام الكوميدية والاجتماعية بجودة عالية',
       keywords: ['عادل إمام', 'مسرحيات عادل إمام', 'كوميديا', 'مسرح مصري']
     },
     'classics': {
-      title: 'المسرحيات الكلاسيكية - سينما أونلاين',
+      title: 'المسرحيات الكلاسيكية - فور سيما',
       description: 'شاهد أفضل المسرحيات الكلاسيكية من العصر الذهبي للمسرح العربي',
       keywords: ['مسرحيات كلاسيكية', 'مسرح عربي', 'تراث مسرحي']
     },
     'gulf': {
-      title: 'المسرحيات الخليجية - سينما أونلاين',
+      title: 'المسرحيات الخليجية - فور سيما',
       description: 'استمتع بأفضل المسرحيات الخليجية من الكويت والسعودية والإمارات',
       keywords: ['مسرحيات خليجية', 'مسرح كويتي', 'مسرح سعودي', 'مسرح إماراتي']
     },
     'masrah-masr': {
-      title: 'مسرح مصر - سينما أونلاين',
+      title: 'مسرح مصر - فور سيما',
       description: 'شاهد جميع حلقات مسرح مصر بجودة عالية',
       keywords: ['مسرح مصر', 'أشرف عبد الباقي', 'كوميديا مصرية']
     }
@@ -54,7 +54,7 @@ export function generatePlaysSeoData(category?: string): SeoData {
 
   // Default SEO data for main plays page
   return {
-    title: 'المسرحيات - سينما أونلاين',
+    title: 'المسرحيات - فور سيما',
     description: 'استمتع بمشاهدة أفضل المسرحيات العربية والخليجية بجودة عالية',
     keywords: ['مسرحيات', 'مسرح عربي', 'مسرح خليجي', 'كوميديا']
   }
@@ -105,7 +105,7 @@ export function generateClassicsSeoData(filters?: {
     keywords.push(`أفلام ${langName}`)
   }
 
-  title += ' - سينما أونلاين'
+  title += ' - فور سيما'
   description = truncateDescription(description)
 
   return { title, description, keywords }
@@ -162,7 +162,7 @@ export function generateSummariesSeoData(filters?: {
     keywords.push(`${langName}`)
   }
 
-  title += ' - سينما أونلاين'
+  title += ' - فور سيما'
   description = truncateDescription(description)
 
   return { title, description, keywords }

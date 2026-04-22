@@ -29,7 +29,7 @@ const getPageTitle = (
 ): string => {
   const titles: Record<ContentType, Record<string, { ar: string; en: string }>> = {
     movies: {
-      all: { ar: 'الأفلام - سينما أونلاين', en: 'Movies - Cinema Online' },
+      all: { ar: 'الأفلام - فور سيما', en: 'Movies - 4Cima' },
       trending: { ar: 'الأفلام الرائجة', en: 'Trending Movies' },
       'top-rated': { ar: 'الأفلام الأعلى تقييماً', en: 'Top Rated Movies' },
       latest: { ar: 'أحدث الأفلام', en: 'Latest Movies' },
@@ -38,7 +38,7 @@ const getPageTitle = (
       summaries: { ar: 'ملخصات الأفلام', en: 'Movie Summaries' }
     },
     series: {
-      all: { ar: 'المسلسلات - سينما أونلاين', en: 'TV Series - Cinema Online' },
+      all: { ar: 'المسلسلات - فور سيما', en: 'TV Series - 4Cima' },
       trending: { ar: 'المسلسلات الرائجة', en: 'Trending Series' },
       'top-rated': { ar: 'المسلسلات الأعلى تقييماً', en: 'Top Rated Series' },
       latest: { ar: 'أحدث المسلسلات', en: 'Latest Series' },
@@ -48,7 +48,7 @@ const getPageTitle = (
       ramadan: { ar: 'مسلسلات رمضان', en: 'Ramadan Series' }
     },
     anime: {
-      all: { ar: 'الأنمي - سينما أونلاين', en: 'Anime - Cinema Online' },
+      all: { ar: 'الأنمي - فور سيما', en: 'Anime - 4Cima' },
       trending: { ar: 'الأنمي الرائج', en: 'Trending Anime' },
       'top-rated': { ar: 'الأنمي الأعلى تقييماً', en: 'Top Rated Anime' },
       latest: { ar: 'أحدث الأنمي', en: 'Latest Anime' },
@@ -57,14 +57,14 @@ const getPageTitle = (
       cartoon_series: { ar: 'مسلسلات كرتون', en: 'Cartoon Series' }
     },
     gaming: {
-      all: { ar: 'الألعاب - سينما أونلاين', en: 'Games - Cinema Online' },
+      all: { ar: 'الألعاب - فور سيما', en: 'Games - 4Cima' },
       trending: { ar: 'الألعاب الرائجة', en: 'Trending Games' },
       'top-rated': { ar: 'الألعاب الأعلى تقييماً', en: 'Top Rated Games' },
       latest: { ar: 'أحدث الألعاب', en: 'Latest Games' },
       upcoming: { ar: 'الألعاب القادمة', en: 'Upcoming Games' }
     },
     software: {
-      all: { ar: 'البرامج - سينما أونلاين', en: 'Software - Cinema Online' },
+      all: { ar: 'البرامج - فور سيما', en: 'Software - 4Cima' },
       trending: { ar: 'البرامج الرائجة', en: 'Trending Software' },
       'top-rated': { ar: 'البرامج الأعلى تقييماً', en: 'Top Rated Software' },
       latest: { ar: 'أحدث البرامج', en: 'Latest Software' },

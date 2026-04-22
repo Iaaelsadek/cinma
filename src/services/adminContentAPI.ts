@@ -2,7 +2,7 @@
  * 🔧 Admin Content API - CockroachDB Integration
  * 
  * @description Admin operations for content management using CockroachDB
- * @author Online Cinema Team
+ * @author 4Cima Team
  * 
  * ⚠️ CRITICAL: ALL admin content operations go through CockroachDB API
  * ⚠️ This file is for ADMIN operations only (create, update, delete)
@@ -10,7 +10,7 @@
 
 import { CONFIG } from '../lib/constants'
 
-const API_BASE = CONFIG.API_BASE || 'https://cooperative-nevsa-cinma-71a99c5c.koyeb.app'
+const API_BASE = CONFIG.API_BASE || 'https://api.4cima.com'
 
 async function fetchAPI(endpoint: string, options?: RequestInit) {
   const url = API_BASE ? `${API_BASE}${endpoint}` : endpoint

@@ -1,9 +1,9 @@
 /**
- * 🚫 نظام إخفاء الإعلانات - اونلاين سينما
+ * 🚫 نظام إخفاء الإعلانات - فور سيما
  * Ad Neutralization System
  * 
  * @description نظام لإخفاء الإعلانات المنبثقة من سيرفرات المحتوى
- * @author Online Cinema Team
+ * @author 4Cima Team
  * @version 1.0.0
  */
 

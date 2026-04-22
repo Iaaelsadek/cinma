@@ -1,5 +1,5 @@
 /**
- * SlugEngine - Centralized Slug Generation for Cinema.online
+ * SlugEngine - Centralized Slug Generation for 4Cima
  * 
  * This is the ONLY place in the entire codebase where slugs are generated.
  * No other file may contain slug generation logic.

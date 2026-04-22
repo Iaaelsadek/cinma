@@ -1,9 +1,9 @@
 /**
- * 🔍 استعلامات المحتوى الموحدة - اونلاين سينما
+ * 🔍 استعلامات المحتوى الموحدة - فور سيما
  * Unified Content Queries
  * 
  * @description استعلامات موحدة 100% بين الموقع والتطبيق
- * @author Online Cinema Team
+ * @author 4Cima Team
  * @version 2.0.0
  * 
  * ⚠️ CRITICAL: This file uses CockroachDB API endpoints for ALL content queries
@@ -13,7 +13,7 @@
 import type { Movie, TVSeries } from '../types/database';
 import { CONFIG } from '../lib/constants';
 
-const API_BASE = CONFIG.API_BASE || 'https://cooperative-nevsa-cinma-71a99c5c.koyeb.app';
+const API_BASE = CONFIG.API_BASE || 'https://api.4cima.com';
 
 // ==========================================
 // Types

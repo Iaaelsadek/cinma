@@ -240,9 +240,9 @@ export default function QuranRadio() {
         schema={{
           "@context": "https://schema.org",
           "@type": "RadioStation",
-          "name": "راديو القرآن الكريم - سينما أونلاين",
+          "name": "راديو القرآن الكريم - فور سيما",
           "description": "بث مباشر للقرآن الكريم على مدار الساعة",
-          "url": "https://cinma.online/discovery/quran-radio",
+          "url": "https://4cima.com/discovery/quran-radio",
           "broadcastFrequency": "Online Streaming",
           "genre": "Religious",
           "inLanguage": "ar"

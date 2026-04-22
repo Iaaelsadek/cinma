@@ -1,9 +1,9 @@
 /**
- * 📏 نظام المسافات - اونلاين سينما
+ * 📏 نظام المسافات - فور سيما
  * Consistent Spacing System
  * 
  * @description نظام مسافات متناسق بناءً على 4px base unit
- * @author Online Cinema Team
+ * @author 4Cima Team
  * @version 1.0.0
  */
 

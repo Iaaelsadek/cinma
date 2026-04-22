@@ -1,9 +1,9 @@
 /**
- * 🎨 نظام الألوان - اونلاين سينما
+ * 🎨 نظام الألوان - فور سيما
  * Netflix-inspired Dark Theme
  * 
  * @description نظام ألوان احترافي مستوحى من Netflix/Disney+/HBO Max
- * @author Online Cinema Team
+ * @author 4Cima Team
  * @version 1.0.0
  */
 

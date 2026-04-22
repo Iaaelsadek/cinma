@@ -1,6 +1,6 @@
 # 🚀 Ingestion Service - Quick Start Guide
 
-This directory contains the unified ingestion service for Cinema.online.
+This directory contains the unified ingestion service for 4Cima.
 
 ---
 

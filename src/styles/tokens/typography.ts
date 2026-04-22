@@ -1,6 +1,6 @@
 /**
  * 📝 Typography Tokens - LUMEN Design System
- * Cinema Online - Design Token System
+ * 4Cima - Design Token System
  * 
  * @description Typography tokens with support for Arabic (Cairo) and English (DM Sans)
  * @version 1.0.0

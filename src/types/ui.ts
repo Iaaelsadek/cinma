@@ -1,5 +1,5 @@
 /**
- * 🧩 UI Types - اونلاين سينما
+ * 🧩 UI Types - فور سيما
  * UI Component Types
  */
 

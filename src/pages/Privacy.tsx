@@ -9,7 +9,7 @@ export const Privacy = () => {
   return (
     <>
       <Helmet>
-        <title>{isAr ? 'سياسة الخصوصية - Cinema.online' : 'Privacy Policy - Cinema.online'}</title>
+        <title>{isAr ? 'سياسة الخصوصية - 4Cima' : 'Privacy Policy - 4Cima'}</title>
       </Helmet>
       <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950">
         <div className="relative overflow-hidden">
@@ -97,8 +97,8 @@ export const Privacy = () => {
               {isAr ? 'تواصل معنا' : 'Contact Us'}
             </h2>
             <p className="text-slate-400">
-              <a href="mailto:privacy@cinma.online" className="text-purple-400 hover:text-purple-300">
-                privacy@cinma.online
+              <a href="mailto:privacy@4cima.com" className="text-purple-400 hover:text-purple-300">
+                privacy@4cima.com
               </a>
             </p>
           </div>

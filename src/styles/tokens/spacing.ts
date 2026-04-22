@@ -1,6 +1,6 @@
 /**
  * 📏 Spacing Tokens - LUMEN Design System
- * Cinema Online - Design Token System
+ * 4Cima - Design Token System
  * 
  * @description 4px-based spacing scale for consistent layout
  * @version 1.0.0

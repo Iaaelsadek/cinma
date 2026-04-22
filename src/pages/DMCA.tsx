@@ -9,7 +9,7 @@ export const DMCA = () => {
   return (
     <>
       <Helmet>
-        <title>{lang === 'ar' ? 'سياسة DMCA - Cinema.online' : 'DMCA Policy - Cinema.online'}</title>
+        <title>{lang === 'ar' ? 'سياسة DMCA - 4Cima' : 'DMCA Policy - 4Cima'}</title>
       </Helmet>
 
       <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950">
@@ -49,7 +49,7 @@ export const DMCA = () => {
                     <div>
                       <h3 className="text-xl font-bold text-amber-400 mb-2">إشعار هام</h3>
                       <p className="text-zinc-300 leading-relaxed">
-                        Cinema.online لا يستضيف أي محتوى محمي بحقوق الطبع والنشر على خوادمنا. 
+                        4Cima لا يستضيف أي محتوى محمي بحقوق الطبع والنشر على خوادمنا. 
                         نحن نوفر فقط روابط لمحتوى متاح بشكل عام على الإنترنت من مصادر خارجية.
                       </p>
                     </div>
@@ -161,10 +161,10 @@ export const DMCA = () => {
                     <p>لتقديم إشعار DMCA، يرجى إرسال بريد إلكتروني إلى:</p>
                     <div className="bg-slate-900/50 p-4 rounded-lg">
                       <a 
-                        href="mailto:dmca@cinma.online" 
+                        href="mailto:dmca@4cima.com" 
                         className="text-cyan-400 hover:text-cyan-300 font-mono text-lg transition-colors"
                       >
-                        dmca@cinma.online
+                        dmca@4cima.com
                       </a>
                     </div>
                     <p className="text-sm text-zinc-400">
@@ -206,7 +206,7 @@ export const DMCA = () => {
                     <div>
                       <h3 className="text-xl font-bold text-amber-400 mb-2">Important Notice</h3>
                       <p className="text-zinc-300 leading-relaxed">
-                        Cinema.online does not host any copyrighted content on our servers. 
+                        4Cima does not host any copyrighted content on our servers. 
                         We only provide links to publicly available content on the internet from external sources.
                       </p>
                     </div>
@@ -318,10 +318,10 @@ export const DMCA = () => {
                     <p>To file a DMCA notice, please send an email to:</p>
                     <div className="bg-slate-900/50 p-4 rounded-lg">
                       <a 
-                        href="mailto:dmca@cinma.online" 
+                        href="mailto:dmca@4cima.com" 
                         className="text-cyan-400 hover:text-cyan-300 font-mono text-lg transition-colors"
                       >
-                        dmca@cinma.online
+                        dmca@4cima.com
                       </a>
                     </div>
                     <p className="text-sm text-zinc-400">

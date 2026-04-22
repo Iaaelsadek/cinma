@@ -47,7 +47,7 @@ class ErrorLoggingService {
   private readonly STORAGE_KEY = 'error_logs_queue';
   private lastToast: { message: string, time: number } | null = null;
 
-  private readonly LOG_ENDPOINT = `${import.meta.env.VITE_API_URL || 'https://cooperative-nevsa-cinma-71a99c5c.koyeb.app'}/api/log`;
+  private readonly LOG_ENDPOINT = `${import.meta.env.VITE_API_URL || 'https://api.4cima.com'}/api/log`;
   private logFailureCount = 0;
   private readonly MAX_LOG_FAILURES = 3;
 

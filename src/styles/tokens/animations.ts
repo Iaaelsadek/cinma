@@ -1,6 +1,6 @@
 /**
  * 🎬 Animation Tokens - LUMEN Design System
- * Cinema Online - Design Token System
+ * 4Cima - Design Token System
  * 
  * @description Animation durations and easing functions
  * @version 1.0.0

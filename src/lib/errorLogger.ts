@@ -51,7 +51,7 @@ class ErrorLogger {
   private async sendToMonitoring(log: ErrorLog) {
     try {
       // TODO: Integrate with Sentry, LogRocket, or similar
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://cooperative-nevsa-cinma-71a99c5c.koyeb.app'
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://api.4cima.com'
       await fetch(`${apiUrl}/api/log-error`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

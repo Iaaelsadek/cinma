@@ -1,4 +1,4 @@
-// server/index.js - Cinema.online Complete Rebuild - Production-Ready Server
+// server/index.js - 4Cima Complete Rebuild - Production-Ready Server
 console.log('[BOOT FILE]', import.meta.url)
 import express from 'express'
 import cors from 'cors'
@@ -162,8 +162,8 @@ const adminLimiter = rateLimit({
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:5174',
-  'https://cinma.online',
-  'https://www.cinma.online',
+  'https://4cima.com',
+  'https://www.4cima.com',
   process.env.VITE_APP_URL
 ].filter(Boolean)
 
@@ -177,7 +177,7 @@ app.use(cors({
     if (!origin) return callback(null, true)
 
     // Allow all Cloudflare Pages subdomains
-    if (origin.endsWith('.cinma.pages.dev') || origin === 'https://cinma.pages.dev') {
+    if (origin.endsWith('.4cima.pages.dev') || origin === 'https://4cima.pages.dev') {
       return callback(null, true)
     }
 
@@ -288,9 +288,9 @@ app.get('/api/embed-proxy', asyncHandler(async (req, res) => {
 app.get('/api/runtime-config', (req, res) => {
   res.json({
     VITE_TMDB_API_KEY: process.env.VITE_TMDB_API_KEY || '',
-    VITE_SITE_NAME: process.env.VITE_SITE_NAME || 'اونلاين سينما',
-    VITE_DOMAIN: process.env.VITE_DOMAIN || 'cinma.online',
-    VITE_SITE_URL: process.env.VITE_SITE_URL || 'https://cinma.online'
+    VITE_SITE_NAME: process.env.VITE_SITE_NAME || 'فور سيما',
+    VITE_DOMAIN: process.env.VITE_DOMAIN || '4cima.com',
+    VITE_SITE_URL: process.env.VITE_SITE_URL || 'https://4cima.com'
   })
 })
 
@@ -424,7 +424,7 @@ app.use(errorHandler)
 
 // ✅ Graceful Shutdown (Feature #13)
 const server = app.listen(PORT, HOST, () => {
-  console.log(`🚀 Cinema.online Server running on ${HOST}:${PORT}`)
+  console.log(`🚀 4Cima Server running on ${HOST}:${PORT}`)
   console.log(`📚 API Docs: http://${HOST}:${PORT}/api-docs`)
   console.log(`🗄️  Database: CockroachDB (Primary Content)`)
   console.log(`🔐 Auth: Supabase (User Data Only)`)

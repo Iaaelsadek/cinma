@@ -19,7 +19,7 @@ import { fetchBatchContent, ContentDetails } from '../services/contentAPI'
 import { Profile } from '../lib/supabase'
 import { CONFIG } from '../lib/constants'
 
-const API_BASE = CONFIG.API_BASE || 'https://cooperative-nevsa-cinma-71a99c5c.koyeb.app'
+const API_BASE = CONFIG.API_BASE || 'https://api.4cima.com'
 
 interface Review {
   id: string
@@ -245,10 +245,10 @@ export const ReviewPage = () => {
     ? review.review_text.substring(0, 200) + '...'
     : review.review_text
 
-  const pageUrl = `https://cinma.online/reviews/${review.id}`
+  const pageUrl = `https://4cima.com/reviews/${review.id}`
   const pageImage = contentPoster.startsWith('http')
     ? contentPoster
-    : `https://cinma.online${contentPoster}`
+    : `https://4cima.com${contentPoster}`
 
   return (
     <>
@@ -264,7 +264,7 @@ export const ReviewPage = () => {
         <meta property="og:description" content={pageDescription} />
         <meta property="og:image" content={pageImage} />
         <meta property="og:locale" content={review.language === 'ar' ? 'ar_SA' : 'en_US'} />
-        <meta property="og:site_name" content="Cinma Online" />
+        <meta property="og:site_name" content="4Cima" />
 
         {/* Twitter Card */}
         <meta name="twitter:card" content="summary_large_image" />

@@ -63,7 +63,7 @@ export const SummariesWithFilters: React.FC = () => {
         description={seoData.description}
         keywords={seoData.keywords?.join(', ')}
         type="website"
-        image="https://cinma.online/og-summaries.jpg"
+        image="https://4cima.com/og-summaries.jpg"
       />
 
       {/* Desktop: filters with spacing for neon grid */}

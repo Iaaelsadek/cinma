@@ -65,8 +65,8 @@ export const DownloadApp = () => {
   return (
     <>
       <Helmet>
-        <title>{t('تحميل التطبيق', 'Download App')} - Cinema Online</title>
-        <meta name="description" content={t('حمّل تطبيق اونلاين سينما للأندرويد واستمتع بتجربة مشاهدة أفضل', 'Download Online Cinema Android app for a better viewing experience')} />
+        <title>{t('تحميل التطبيق', 'Download App')} - 4Cima</title>
+        <meta name="description" content={t('حمّل تطبيق فور سيما للأندرويد واستمتع بتجربة مشاهدة أفضل', 'Download 4Cima Android app for a better viewing experience')} />
       </Helmet>
 
       <div className="min-h-screen bg-black text-white">
@@ -87,7 +87,7 @@ export const DownloadApp = () => {
               </div>
 
               <h1 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-white via-white to-primary bg-clip-text text-transparent">
-                {t('حمّل تطبيق اونلاين سينما', 'Download Online Cinema')}
+                {t('حمّل تطبيق فور سيما', 'Download 4Cima')}
               </h1>
 
               <p className="text-lg md:text-xl text-zinc-400 max-w-2xl mx-auto">

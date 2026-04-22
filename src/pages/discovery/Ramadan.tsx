@@ -58,7 +58,7 @@ export const RamadanPage = () => {
   return (
     <div className="min-h-screen text-white pb-4 max-w-[2400px] mx-auto px-4 md:px-12 w-full">
       <Helmet>
-        <title>{lang === 'ar' ? 'مسلسلات رمضان - سينما أونلاين' : 'Ramadan Series - Cinema Online'}</title>
+        <title>{lang === 'ar' ? 'مسلسلات رمضان - فور سيما' : 'Ramadan Series - 4Cima'}</title>
       </Helmet>
 
       {/* Hero Section */}

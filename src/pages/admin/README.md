@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Ingestion Dashboard is the control center for Cinema.online's content ingestion pipeline. It provides real-time monitoring, manual queue management, and batch processing controls.
+The Ingestion Dashboard is the control center for 4Cima's content ingestion pipeline. It provides real-time monitoring, manual queue management, and batch processing controls.
 
 ## Access
 
@@ -277,4 +277,4 @@ All API calls are wrapped in try-catch blocks:
 
 **Last Updated**: 2026-04-02  
 **Component**: IngestionDashboard.tsx  
-**Author**: Cinema.online Team
+**Author**: 4Cima Team

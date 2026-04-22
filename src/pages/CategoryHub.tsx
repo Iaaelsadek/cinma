@@ -322,12 +322,12 @@ export const CategoryHub = ({ type: propsType = 'movie', category: propsCategory
   }, [category, genresList])
 
   const hubTitle = `${type === 'movie' ? 'أفلام' : 'مسلسلات'} ${categoryTitle} ${year || ''} ${genre || ''} ${rating ? `تقييم ${rating}+` : ''}`.trim()
-  const hubDesc = `استكشف أفضل ${hubTitle} على سينما أونلاين - جودة عالية ومترجم`
+  const hubDesc = `استكشف أفضل ${hubTitle} على فور سيما - جودة عالية ومترجم`
 
   return (
     <div className="min-h-screen pt-16 max-w-[2400px] mx-auto px-4 md:px-12 w-full pb-8">
       <SeoHead
-        title={`${hubTitle} | سينما أونلاين`}
+        title={`${hubTitle} | فور سيما`}
         description={hubDesc}
       />
 

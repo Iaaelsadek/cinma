@@ -1,9 +1,9 @@
 /**
- * 🔲 نظام الحدود - اونلاين سينما
+ * 🔲 نظام الحدود - فور سيما
  * Border System
  * 
  * @description نظام حدود موحد للمكونات
- * @author Online Cinema Team
+ * @author 4Cima Team
  * @version 1.0.0
  */
 

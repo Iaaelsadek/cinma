@@ -538,7 +538,7 @@ export const VideoPlayer = ({ url, subtitles = [], introStart, introEnd, title, 
             {/* Top Bar: Title */}
             <div className="p-6 flex justify-between items-start pointer-events-auto">
               <h3 className="text-white font-bold text-lg drop-shadow-lg opacity-80">
-                {title || (lang === 'ar' ? 'مشغل سينما أونلاين' : 'Cinema Online Player')}
+                {title || (lang === 'ar' ? 'مشغل فور سيما' : '4Cima Player')}
               </h3>
             </div>
 

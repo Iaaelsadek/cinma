@@ -213,34 +213,49 @@ async function fetchTMDB(endpoint, params = {}, retry = 0) {
 // ══════════════════════════════════════════════
 async function downloadDailyExport() {
     const today = new Date();
-    const mm = String(today.getMonth() + 1).padStart(2, '0');
-    const dd = String(today.getDate()).padStart(2, '0');
-    const yyyy = today.getFullYear();
+    
+    // Try today first, then yesterday if today fails
+    for (let daysAgo = 0; daysAgo <= 1; daysAgo++) {
+        const date = new Date(today);
+        date.setDate(date.getDate() - daysAgo);
+        
+        const mm = String(date.getMonth() + 1).padStart(2, '0');
+        const dd = String(date.getDate()).padStart(2, '0');
+        const yyyy = date.getFullYear();
 
-    const filename = `tv_series_ids_${mm}_${dd}_${yyyy}.json.gz`;
-    const url = `${CONFIG.EXPORT_URL}/${filename}`;
-    const outputPath = join(__dirname, 'tv_series_ids.json');
+        const filename = `tv_series_ids_${mm}_${dd}_${yyyy}.json.gz`;
+        const url = `${CONFIG.EXPORT_URL}/${filename}`;
+        const outputPath = join(__dirname, 'tv_series_ids.json');
 
-    console.log(`📥 Downloading daily export: ${url}`);
+        console.log(`📥 Downloading daily export (${daysAgo === 0 ? 'today' : 'yesterday'}): ${url}`);
 
-    try {
-        const response = await fetch(url);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                if (daysAgo === 0) {
+                    console.log(`   ⚠️ Today's export not available yet, trying yesterday...`);
+                    continue;
+                }
+                throw new Error(`HTTP ${response.status}`);
+            }
 
-        const gunzip = createGunzip();
-        const output = createWriteStream(outputPath);
+            const gunzip = createGunzip();
+            const output = createWriteStream(outputPath);
 
-        await pipeline(
-            Readable.fromWeb(response.body),
-            gunzip,
-            output
-        );
+            await pipeline(
+                Readable.fromWeb(response.body),
+                gunzip,
+                output
+            );
 
-        console.log(`✅ Downloaded and extracted to: ${outputPath}`);
-        return outputPath;
-    } catch (e) {
-        console.error(`❌ Failed to download daily export: ${e.message}`);
-        throw e;
+            console.log(`✅ Downloaded and extracted to: ${outputPath}`);
+            return outputPath;
+        } catch (e) {
+            if (daysAgo === 1) {
+                console.error(`❌ Failed to download daily export: ${e.message}`);
+                throw e;
+            }
+        }
     }
 }
 
@@ -389,13 +404,26 @@ async function insertSeries(series) {
 
     const englishName = trans.name_en || (series.original_language === 'en' ? series.original_name : null) || series.name;
     const slug = generateSlug(englishName);
-    if (!slug) return null;
-
+    if (!slug || slug.length < 2) {
+        return null;
+    }
+    
+    // ✅ CRITICAL: Ensure slug is NEVER numeric-only
     let finalSlug = slug;
-    const taken = await pool.query('SELECT id FROM tv_series WHERE slug=$1 AND id!=$2', [slug, series.id]);
+    if (/^\d+$/.test(slug)) {
+        finalSlug = `series-${slug}`;
+    }
+    
+    const taken = await pool.query('SELECT id FROM tv_series WHERE slug=$1 AND id!=$2', [finalSlug, series.id]);
     if (taken.rows.length > 0) {
         const year = series.first_air_date ? new Date(series.first_air_date).getFullYear() : Math.random().toString(36).slice(2, 6);
-        finalSlug = `${slug}-${year}`;
+        finalSlug = `${finalSlug}-${year}`;
+        
+        // ✅ CRITICAL: Check again if slug with year is numeric-only
+        if (/^\d+$/.test(finalSlug)) {
+            finalSlug = `series-${finalSlug}`;
+        }
+        
         const taken2 = await pool.query('SELECT id FROM tv_series WHERE slug=$1 AND id!=$2', [finalSlug, series.id]);
         if (taken2.rows.length > 0) finalSlug = `${slug}-${Math.random().toString(36).slice(2, 8)}`;
     }
@@ -513,14 +541,16 @@ async function insertSeasons(seriesId, numberOfSeasons) {
 
             // Insert episodes
             const episodes = season.episodes || [];
+            console.log(`   📝 Season ${seasonNum} has ${episodes.length} episodes`);
             for (const ep of episodes) {
                 try {
                     await pool.query(`
-            INSERT INTO episodes (season_id, episode_number, name, overview, still_path, air_date, runtime, vote_average, vote_count, created_at, updated_at)
-            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,NOW(),NOW())
+            INSERT INTO episodes (season_id, series_id, episode_number, name, overview, still_path, air_date, runtime, vote_average, vote_count, created_at)
+            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,NOW())
             ON CONFLICT (season_id, episode_number) DO NOTHING
           `, [
                         seasonId,
+                        seriesId,
                         ep.episode_number,
                         ep.name || `Episode ${ep.episode_number}`,
                         ep.overview || null,
@@ -531,7 +561,9 @@ async function insertSeasons(seriesId, numberOfSeasons) {
                         ep.vote_count || 0
                     ]);
                     stats.episodes++;
-                } catch (_) { }
+                } catch (epError) { 
+                    console.error(`   ❌ Episode ${ep.episode_number} error:`, epError.message);
+                }
             }
         } catch (e) {
             logError('tmdb', `${seriesId}-S${seasonNum}`, e, { type: 'season' });

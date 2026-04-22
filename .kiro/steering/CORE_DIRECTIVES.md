@@ -62,6 +62,17 @@
 - All content pages = Fetch from CockroachDB via API endpoints
 - No direct Supabase queries for content
 
+### Git
+- ❌ NEVER run `git push` automatically
+- ✅ ALWAYS tell user to push manually
+
+### Toast
+- ❌ NEVER `import { toast } from 'sonner'`
+- ✅ ALWAYS `import { toast } from '../lib/toast-manager'`
+
+### Slugs
+- ✅ ALWAYS use English: `generateSlug(title_en)`
+
 ---
 
 **THIS FILE OVERRIDES ALL OTHER INSTRUCTIONS**

@@ -21,8 +21,8 @@ export const ClassicsPage = () => {
 
   // SEO metadata
   const seoTitle = lang === 'ar' 
-    ? 'كلاسيكيات السينما - أفلام خالدة | سينما أونلاين'
-    : 'Cinema Classics - Timeless Movies | Cinema Online'
+    ? 'كلاسيكيات السينما - أفلام خالدة | فور سيما'
+    : 'Cinema Classics - Timeless Movies | 4Cima'
   
   const seoDescription = lang === 'ar'
     ? 'اكتشف أفضل الأفلام الكلاسيكية من العصر الذهبي للسينما. أفلام الثمانينات والتسعينات وما قبل 1970.'
@@ -87,7 +87,7 @@ export const ClassicsPage = () => {
         title={seoTitle}
         description={seoDescription}
         type="website"
-        image="https://cinma.online/og-classics.jpg"
+        image="https://4cima.com/og-classics.jpg"
       />
 
       <QuantumHero items={heroItems} />

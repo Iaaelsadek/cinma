@@ -9,7 +9,7 @@ import { typographyTokens } from './src/styles/tokens/typography'
 
 /**
  * LUMEN Design System — Light through darkness.
- * Cinema Online. Premium, cinematic, universal (TV/tablet/mobile/desktop).
+ * 4Cima. Premium, cinematic, universal (TV/tablet/mobile/desktop).
  * 
  * Extended with Design Token System for consistency and maintainability.
  */
@@ -139,6 +139,8 @@ export default {
         'pulse-white': 'pulse-white 3s ease-in-out infinite',
         'neon-flash': 'neon-flash 1.5s infinite ease-in-out',
         'shimmer': 'shimmer 1.5s infinite',
+        'wiggle': 'wiggle 3s ease-in-out infinite',
+        'bounce': 'bounce 2s ease-in-out infinite',
       },
       keyframes: {
         'lumen-breathe': {
@@ -152,6 +154,16 @@ export default {
         float: {
           '0%, 100%': { transform: 'translateY(0)' },
           '50%': { transform: 'translateY(-20px)' },
+        },
+        wiggle: {
+          '0%, 100%': { transform: 'rotate(0deg) translateY(0)' },
+          '25%': { transform: 'rotate(-8deg) translateY(-3px)' },
+          '50%': { transform: 'rotate(0deg) translateY(-6px)' },
+          '75%': { transform: 'rotate(8deg) translateY(-3px)' },
+        },
+        bounce: {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-10px)' },
         },
         'pulse-glow': {
           '0%, 100%': { opacity: '0.5', transform: 'scale(1)' },

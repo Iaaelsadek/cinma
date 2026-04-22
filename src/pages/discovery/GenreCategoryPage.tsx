@@ -35,7 +35,7 @@ export const GenreCategoryPage: React.FC<GenreCategoryPageProps> = ({ contentTyp
   return (
     <>
       <Helmet>
-        <title>{title} - سينما أونلاين</title>
+        <title>{title} - فور سيما</title>
       </Helmet>
       <UnifiedSectionPage
         contentType={contentType}

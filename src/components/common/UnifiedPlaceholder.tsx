@@ -51,7 +51,7 @@ export const UnifiedPlaceholder: React.FC<UnifiedPlaceholderProps> = ({
   const Icon = CONTENT_TYPE_ICONS[contentType];
   const dimensions = SIZE_DIMENSIONS[size];
 
-  const text = lang === 'ar' ? 'سينما أونلاين' : 'Cinema Online';
+  const text = lang === 'ar' ? 'فور سيما' : '4Cima';
 
   return (
     <div
